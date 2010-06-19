@@ -1,0 +1,9 @@
+<stack>
+  <description brief="seabee3">seabee3</description>
+  <author>Maintained by Edward T. Kaszubski</author>
+  <license>BSD</license>  
+  <review status="unreviewed" notes=""/>
+  <url>http://ros.org/wiki/seabee3</url>
+  <depend stack="ros" />
+
+</stack>
