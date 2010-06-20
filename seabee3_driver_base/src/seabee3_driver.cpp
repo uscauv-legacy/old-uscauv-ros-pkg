@@ -9,6 +9,7 @@ using namespace std;
 
 seabee3_driver::seabee3_driver()
 {
+	ROS_INFO("creating new BeeStem instance");
 	itsStem = new BeeStem3("/dev/ttyUSB0");
 	itsUpdateHeading = 0;
 	itsUpdateDepth = 0;
@@ -114,6 +115,15 @@ void seabee3_driver::setValuesFromJoystick()
 
 	itsStem->setThruster(BeeStem3::MotorControllerIDs::STRAFE_FRONT_THRUSTER, frontVal);
 	itsStem->setThruster(BeeStem3::MotorControllerIDs::STRAFE_BACK_THRUSTER, backVal);
+}
+
+void seabee3_driver::readPressure(int & intlPressure, int & extPressure)
+{
+	int accelX, accelY, accelZ, compassHeading, compassPitch, compassRoll,desiredHeading, desiredDepth, desiredSpeed,headingK, headingP, headingD, headingI, headingOutput,  depthK, depthP, depthD, depthI, depthOutput;
+	char killSwitc;
+    
+	itsStem->getSensors(accelX, accelY, accelZ, compassHeading, compassPitch, compassRoll, intlPressure, extPressure,desiredHeading, desiredDepth, desiredSpeed,headingK, headingP, headingD, headingI, headingOutput,  depthK, depthP, depthD, depthI, depthOutput, killSwitc);
+	
 }
 
 void seabee3_driver::step()

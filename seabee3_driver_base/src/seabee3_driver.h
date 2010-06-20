@@ -90,6 +90,8 @@ public:
 	~seabee3_driver();
 	
 	void step();
+	
+	void readPressure(int & intlPressure, int & extPressure);
 
 	void fireDevice(int deviceID);
 	

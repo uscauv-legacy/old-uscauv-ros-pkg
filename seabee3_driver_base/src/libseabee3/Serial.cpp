@@ -654,6 +654,7 @@ std::vector<unsigned char> Serial::readFrame(const unsigned char frameStart, con
 // ######################################################################
 int Serial::write(const void* buffer, const int nbytes)
 {
+	
         //char c[3] = { 0xff, 0x01, 0xff };
         //::write(dev, c, 3);
 
@@ -671,7 +672,11 @@ int Serial::write(const void* buffer, const int nbytes)
         */
 
         if(n==-1)
+        {
                 serialErrno = serialErrWriteFailed;
+                printf("Error writing data to serial port");
+			}
+                
 
         return n;
 }
