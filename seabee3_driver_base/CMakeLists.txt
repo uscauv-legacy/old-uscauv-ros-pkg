@@ -19,14 +19,12 @@ set(LIBRARY_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/lib)
 #uncomment if you have defined messages
 rosbuild_genmsg()
 #uncomment if you have defined services
-#rosbuild_gensrv()
+rosbuild_gensrv()
 
 #common commands for building c++ executables and libraries
-rosbuild_add_library(libseabee3 src/libseabee3/BeeStem3.cpp src/libseabee3/Serial.cpp)
-rosbuild_add_library(seabee3_driver src/seabee3_driver.cpp)
+rosbuild_add_library(libseabee3 src/libseabee3/BeeStem3.cpp src/libseabee3/Serial.cpp src/libseabee3/BeeStem3_driver.cpp)
 #target_link_libraries(${PROJECT_NAME} another_library)
 #rosbuild_add_boost_directories()
 #rosbuild_link_boost(${PROJECT_NAME} thread)
 rosbuild_add_executable(seabee3_driver_base src/seabee3_driver_base.cpp)
 target_link_libraries(seabee3_driver_base libseabee3)
-target_link_libraries(seabee3_driver_base seabee3_driver)

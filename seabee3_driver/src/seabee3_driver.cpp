@@ -1,5 +1,6 @@
 #include <ros/ros.h>
 #include <tf/transform_broadcaster.h>
+#include <control_toolbox/pid.h>
 
 #include <xsens_node/IMUData.h>
 #include <seabee3_driver_base/MotorCntl.h>
@@ -13,6 +14,11 @@ std::queue<xsens_node::IMUData> * IMUDataCache;
 std::queue<geometry_msgs::Twist> * TwistCache;
 ros::Time * velocity_sample_start;
 seabee3_driver_base::MotorCntl * motorCntlMsg;
+double * desiredHeading, *maxHeadingError;
+ros::Time * lastHeadingUpdateTime;
+ros::Time * lastHeadingPidUpdateTime;
+
+control_toolbox::Pid * pid_controller;
 
 tf::Vector3 * vel_est_lin;
 tf::Vector3 * vel_est_ang;
@@ -92,7 +98,35 @@ void updateMotorCntlFromTwist(const geometry_msgs::TwistConstPtr & twist)
 	updateMotorCntlMsg(*motorCntlMsg, axis_strafe, vel_diff_lin.getY() * 100.0);
 	updateMotorCntlMsg(*motorCntlMsg, axis_depth, vel_diff_lin.getZ() * 100.0);
 	updateMotorCntlMsg(*motorCntlMsg, axis_roll, vel_diff_ang.getX() * 100.0);
-	updateMotorCntlMsg(*motorCntlMsg, axis_heading, vel_diff_ang.getZ() * 100.0);
+	//updateMotorCntlMsg(*motorCntlMsg, axis_heading, vel_diff_ang.getZ() * 100.0);
+	
+	if(*lastHeadingUpdateTime != ros::Time(-1))
+	{
+		ros::Duration dt = ros::Time::now() - *lastHeadingUpdateTime;
+		
+		*desiredHeading -= twist->angular.z * dt.toSec();
+	}
+	
+	*lastHeadingUpdateTime = ros::Time::now();
+}
+
+void headingPidStep()
+{
+	if(*lastHeadingPidUpdateTime != ros::Time(-1))
+	{
+		ros::Duration dt = ros::Time::now() - *lastHeadingPidUpdateTime;
+		
+		double headingError = IMUDataCache->front().ori.z - *desiredHeading;
+		
+		headingError = abs(headingError) > *maxHeadingError ? *maxHeadingError * headingError / abs(headingError) : headingError;
+		
+		double motorVal = pid_controller->updatePid(headingError, dt);
+		
+		motorVal = abs(motorVal > 100) ? 100 * motorVal / abs(motorVal) : motorVal;
+		
+		updateMotorCntlMsg(*motorCntlMsg, axis_heading, motorVal);
+	}
+	*lastHeadingPidUpdateTime = ros::Time::now();
 }
 
 void IMUDataCallback(const xsens_node::IMUDataConstPtr & data)
@@ -132,6 +166,25 @@ int main(int argc, char** argv)
 	ros::Subscriber imu_sub = n.subscribe("IMUData", 100, IMUDataCallback);
 	ros::Subscriber cmd_vel_sub = n.subscribe("seabee3/cmd_vel", 100, CmdVelCallback);
 	
+	desiredHeading = new double(0.0);
+	lastHeadingUpdateTime = new ros::Time(ros::Time(-1));
+	lastHeadingPidUpdateTime = new ros::Time(ros::Time(-1));
+	
+	pid_controller = new control_toolbox::Pid;
+	
+	double pid_p, pid_i, pid_i_min, pid_i_max, pid_d;
+	
+	n.param("heading_err_cap_thresh", *maxHeadingError, 25.0);
+	n.param("pid_p", pid_p, 10.0);
+	n.param("pid_i", pid_i, 0.2);
+	n.param("pid_d", pid_d, 0.2);
+	n.param("pid_i_max", pid_i_max, 1.0);
+	n.param("pid_i_min", pid_i_min, -1.0);
+	
+	pid_controller->initPid(pid_p, pid_i, pid_d, pid_i_max, pid_i_min);
+	
+	pid_controller->reset();
+	
 	motorCntlMsg = new seabee3_driver_base::MotorCntl;
 	motorCntlMsg->motors[0] = 0;
 	motorCntlMsg->motors[1] = 0;
@@ -158,6 +211,7 @@ int main(int argc, char** argv)
 	
 	while(ros::ok())
 	{
+		headingPidStep();
 		motor_cntl_pub.publish(*motorCntlMsg);
 		ros::spinOnce();
 		ros::Rate(20).sleep();

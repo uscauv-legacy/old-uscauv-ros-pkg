@@ -104,7 +104,10 @@ int main(int argc, char** argv)
 	ori_comp_total = new tf::Vector3(0, 0, 0);
 	ori_data_cache = new std::queue<tf::Vector3>;
 	
-	mImuDriver = new XSensDriver;
+	int usbIndex;
+	n.param("usbIndex", usbIndex, 1);
+	
+	mImuDriver = new XSensDriver((unsigned int)usbIndex);
 	if( !mImuDriver->initMe() )
 	{
 		ROS_WARN("Failed to connect to IMU. Exiting...");

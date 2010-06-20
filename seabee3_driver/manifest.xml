@@ -9,6 +9,7 @@
   <review status="unreviewed" notes=""/>
   <url>http://ros.org/wiki/seabee3_driver</url>
   <depend package="roscpp"/>
+  <depend package="control_toolbox" />
   <depend package="seabee3_driver_base" />
   <depend package="xsens_node" />
   <depend package="geometry_msgs" />

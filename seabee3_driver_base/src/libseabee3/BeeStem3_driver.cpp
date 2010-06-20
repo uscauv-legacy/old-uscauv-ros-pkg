@@ -1,44 +1,46 @@
-#include "seabee3_driver.h"
+#include "libseabee3/BeeStem3_driver.h"
 
 #include <iostream>
 #include <stdlib.h>
-
-//#include "Robots/SeaBeeIII/XBox360RemoteControlI.H"
+#include <sstream>
 
 using namespace std;
 
-seabee3_driver::seabee3_driver()
+BeeStem3Driver::BeeStem3Driver(unsigned int usbIndex)
 {
-	ROS_INFO("creating new BeeStem instance");
-	itsStem = new BeeStem3("/dev/ttyUSB0");
+	mUsbIndex = usbIndex;
+	stringstream portURI;
+	portURI << "/dev/ttyUSB" << mUsbIndex;
+	itsStem = new BeeStem3(portURI.str());
 	itsUpdateHeading = 0;
 	itsUpdateDepth = 0;
 	itsUpdateSpeed = 0;
 	itsLastUpdateHeading = 0;
 	itsLastUpdateDepth = 0;
 	itsLastUpdateSpeed = 0;
-	mShooterState = ShooterState::Idle;
-	mDropperState = DropperState::AllIdle;
-	mFiringDeviceID = FiringDeviceID::Null;
 	
 	//itsKillSwitch->configure("/dev/ttyUSB1",57600);
 	mFlags.initFlag = false;
 	//itsJSValues.resize(8);
 	itsButValues.resize(20);
 	// init trigger values
-	itsJSMappings[XBox360RemoteControl::Keys::Actions::SURFACE] = -100;
-	itsJSMappings[XBox360RemoteControl::Keys::Actions::DIVE] = -100;
+	itsJSMappings[Actions::SURFACE] = -100;
+	itsJSMappings[Actions::DIVE] = -100;
 	//itsJSValues[4] = -100; //this only works if those axes are properly mapped
 	//itsJSValues[5] = -100;
+	
+	dropper1_ready = true;
+	dropper2_ready = true;
+	shooter_ready = true;
 }
 
 // ######################################################################
-seabee3_driver::~seabee3_driver()
+BeeStem3Driver::~BeeStem3Driver()
 {
 }
 
 // ######################################################################
-void seabee3_driver::initPose()
+void BeeStem3Driver::initPose()
 {
 	mFlags.initFlag = true;
 
@@ -68,56 +70,7 @@ void seabee3_driver::initPose()
 	//itsStemMutex.unlock();
 }
 
-/*void seabee3_driver::registerTopics()
-{
-	LINFO("Registering BeeStem Message");
-	this->registerPublisher("BeeStemMessageTopic");
-	registerSubscription("BeeStemMotorControllerMessageTopic");
-	registerSubscription("XBox360RemoteControlMessageTopic");
-	registerSubscription("BeeStemConfigTopic");
-}*/
-
-void seabee3_driver::setValuesFromJoystick()
-{
-	int rightVal = itsJSMappings[XBox360RemoteControl::Keys::Actions::SPEED] * -1;//itsJSValues[1]*-1;
-	int leftVal = itsJSMappings[XBox360RemoteControl::Keys::Actions::SPEED];//itsJSValues[1];
-
-	itsStem->setThruster(BeeStem3::MotorControllerIDs::FWD_RIGHT_THRUSTER, rightVal);
-	itsStem->setThruster(BeeStem3::MotorControllerIDs::FWD_LEFT_THRUSTER, leftVal);
-
-	//  itsJSValues[5], itsJSValues[4]
-	//cout << itsJSMappings[XBox360RemoteControlI::Keys::Axes::Actions::SURFACE] << endl;
-	//cout << itsJSMappings[XBox360RemoteControlI::Keys::Axes::Actions::DIVE] << endl;
-	int depthVal = int((float(itsJSMappings[XBox360RemoteControl::Keys::Actions::SURFACE]) + 100.0) / 2.0 - (float(itsJSMappings[XBox360RemoteControl::Keys::Actions::DIVE]) + 100.0) / 2.0);
-	//cout << depthVal << endl;
-	//cout << "-----" << endl;
-
-	int depthValRight = depthVal;
-	int depthValLeft = depthVal;
-
-	//   if(itsButValues[5])
-	//     {
-	//       depthValRight = 75;
-	//       depthValLeft = -75;
-	//     }
-	//   else if(itsButValues[4])
-	//     {
-	//       depthValRight = -75;
-	//       depthValLeft = 75;
-	//     }
-
-	itsStem->setThruster(BeeStem3::MotorControllerIDs::DEPTH_RIGHT_THRUSTER, depthValRight);
-	itsStem->setThruster(BeeStem3::MotorControllerIDs::DEPTH_LEFT_THRUSTER, depthValLeft);
-
-	//itsJSValues[2], itsJSValues[0]
-	int frontVal = itsJSMappings[XBox360RemoteControl::Keys::Actions::HEADING] + itsJSMappings[XBox360RemoteControl::Keys::Actions::STRAFE] * -1;
-	int backVal = itsJSMappings[XBox360RemoteControl::Keys::Actions::HEADING] * -1 + itsJSMappings[XBox360RemoteControl::Keys::Actions::STRAFE] * -1;
-
-	itsStem->setThruster(BeeStem3::MotorControllerIDs::STRAFE_FRONT_THRUSTER, frontVal);
-	itsStem->setThruster(BeeStem3::MotorControllerIDs::STRAFE_BACK_THRUSTER, backVal);
-}
-
-void seabee3_driver::readPressure(int & intlPressure, int & extPressure)
+void BeeStem3Driver::readPressure(int & intlPressure, int & extPressure)
 {
 	int accelX, accelY, accelZ, compassHeading, compassPitch, compassRoll,desiredHeading, desiredDepth, desiredSpeed,headingK, headingP, headingD, headingI, headingOutput,  depthK, depthP, depthD, depthI, depthOutput;
 	char killSwitc;
@@ -126,104 +79,10 @@ void seabee3_driver::readPressure(int & intlPressure, int & extPressure)
 	
 }
 
-void seabee3_driver::step()
+void BeeStem3Driver::step()
 {
 	if (!mFlags.initFlag)
 		initPose();
-
-	if(mFlags.needsUpdateFromJoystick)
-	{
-		setValuesFromJoystick();
-		mFlags.needsUpdateFromJoystick = false;
-	}
-
-	/****************
-	** arm devices **
-	****************/
-
-	//first, put all devices at last idle state
-	mShooterState = mShooterState == ShooterState::Armed ? ShooterState::Idle : mShooterState;
-	mDropperState = mDropperState == DropperState::Stage1Armed ? DropperState::AllIdle : mDropperState;
-	mDropperState = mDropperState == DropperState::Stage2Armed ? DropperState::Stage1Idle : mDropperState;
-
-	//then, arm the currently selected device
-	switch (mFiringDeviceID)
-	{
-	case FiringDeviceID::Shooter:
-		mShooterState = mShooterState == ShooterState::Idle ? ShooterState::Armed : mShooterState;
-		break;
-	case FiringDeviceID::DropperStage1:
-		mDropperState = mDropperState == DropperState::AllIdle ? DropperState::Stage1Armed : mDropperState;
-		break;
-	case FiringDeviceID::DropperStage2:
-		mDropperState = mDropperState == DropperState::Stage1Idle ? DropperState::Stage2Armed : mDropperState;
-		break;
-	}
-
-	/*******************************
-	** set firing mode on devices **
-	*******************************/
-	if(abs(itsJSMappings[XBox360RemoteControl::Keys::Actions::FIRE_DEV]) > 0) //fire key pressed
-	{
-		if (mShooterState == ShooterState::Armed)
-		{
-			cout << "Shooter set to fire!" << endl;
-			mShooterState = ShooterState::Firing;
-		}
-		else if(mDropperState == DropperState::Stage1Armed)
-		{
-			cout << "Dropper stage1 set to drop!" << endl;
-			mDropperState = DropperState::Stage1Dropping;
-		}
-		else if(mDropperState == DropperState::Stage2Armed)
-		{
-			cout << "Dropper stage2 set to drop!" << endl;
-			mDropperState = DropperState::Stage2Dropping;
-		}
-	}
-	else if(abs(itsJSMappings[XBox360RemoteControl::Keys::Actions::FIRE_DEV]) == 0) //fire key released
-	{
-		if (mShooterState == ShooterState::Reset)
-		{
-			cout << "Shooter reset" << endl;
-			mShooterState = ShooterState::Idle;
-		}
-		else if(mDropperState == DropperState::Stage1Reset)
-		{
-			cout << "Dropper stage1 reset" << endl;
-			mDropperState = DropperState::Stage1Idle;
-			/* //uncomment to auto-advance between stage1 and stage2
-			 *
-			 * mFiringDeviceID = FiringDeviceID::DropperStage2
-			 */
-		}
-		else if(mDropperState == DropperState::Stage2Reset)
-		{
-			cout << "Dropper stage2 reset" << endl;
-			mDropperState = DropperState::AllIdle;
-		}
-	}
-
-	/*****************************************
-	** fire devices, then reset firing mode **
-	*****************************************/
-	if (mShooterState == ShooterState::Firing)
-	{
-		fireDevice(FiringDeviceID::Shooter);
-		mShooterState = ShooterState::Reset;
-	}
-	else if(mDropperState == DropperState::Stage1Dropping)
-	{
-		fireDevice(FiringDeviceID::DropperStage1);
-		mDropperState = DropperState::Stage1Reset;
-	}
-	else if(mDropperState == DropperState::Stage2Dropping)
-	{
-		fireDevice(FiringDeviceID::DropperStage2);
-		mDropperState = DropperState::Stage2Reset;
-	}
-
-	//done
 
 	int accelX, accelY, accelZ;
 	int compassHeading, compassPitch, compassRoll;
@@ -301,7 +160,7 @@ void seabee3_driver::step()
 	*/
 }
 
-void seabee3_driver::fireDevice(int deviceID)
+void BeeStem3Driver::fireDevice(int deviceID)
 {
 	switch(deviceID)
 	{
@@ -310,21 +169,21 @@ void seabee3_driver::fireDevice(int deviceID)
 		itsStem->setThruster(BeeStem3::MotorControllerIDs::SHOOTER, 95);
 		usleep(50 * 1000);
 		itsStem->setThruster(BeeStem3::MotorControllerIDs::SHOOTER, 0);
-		mShooterState = ShooterState::Reset;
+		shooter_ready = false;
 		break;
 	case FiringDeviceID::DropperStage1:
 		cout << "Dropping first marker!" << endl;
 		itsStem->setThruster(BeeStem3::MotorControllerIDs::DROPPER_STAGE1, 95);
 		usleep(50 * 1000);
 		itsStem->setThruster(BeeStem3::MotorControllerIDs::DROPPER_STAGE1, 0);
-		mDropperState = DropperState::Stage1Reset;
+		dropper1_ready = false;
 		break;
 	case FiringDeviceID::DropperStage2:
 		cout << "Dropping second marker!" << endl;
 		itsStem->setThruster(BeeStem3::MotorControllerIDs::DROPPER_STAGE2, 95);
 		usleep(50 * 1000);
 		itsStem->setThruster(BeeStem3::MotorControllerIDs::DROPPER_STAGE2, 0);
-		mDropperState = DropperState::Stage2Reset;
+		dropper2_ready = false;
 		break;
 	}
 }
@@ -334,10 +193,10 @@ void seabee3_driver::fireDevice(int deviceID)
 		RobotSimEvents::JoyStickControlMessagePtr msg = RobotSimEvents::JoyStickControlMessagePtr::dynamicCast(eMsg);
 		LINFO("Got message %d %s %d",msg->axis,msg->axisName.c_str(), msg->axisVal);
 
-		itsJSMappings[XBox360RemoteControl::Keys::Actions::toInt[msg->axisName]] = msg->axisVal;
+		itsJSMappings[Actions::toInt[msg->axisName]] = msg->axisVal;
 
 		static bool deviceCycleBtnWaitingReset = false; //prevent it from cycling really f-ing fast through devices
-		if(XBox360RemoteControl::Keys::Actions::toInt[msg->axisName] == XBox360RemoteControl::Keys::Actions::ARM_NEXT_DEV)
+		if(Actions::toInt[msg->axisName] == Actions::ARM_NEXT_DEV)
 		{
 			if(msg->axisVal > 0 && !deviceCycleBtnWaitingReset)
 			{
@@ -410,7 +269,7 @@ void seabee3_driver::fireDevice(int deviceID)
 		}
 	}*/
 
-/*void seabee3_driver::getMotorControllerMsg(RobotSimEvents::BeeStemMotorControllerMessagePtr & msg, int mc0, int mc1, int mc2, int mc3, int mc4, int mc5, int mc6, int mc7, int mc8)
+/*void BeeStem3Driver::getMotorControllerMsg(RobotSimEvents::BeeStemMotorControllerMessagePtr & msg, int mc0, int mc1, int mc2, int mc3, int mc4, int mc5, int mc6, int mc7, int mc8)
 {
 	vector<int> values;
 	values.resize(BeeStem3::NUM_MOTOR_CONTROLLERS);

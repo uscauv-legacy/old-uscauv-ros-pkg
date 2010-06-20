@@ -1,7 +1,12 @@
 <launch>
-	<node pkg="seabee3_driver_base" type="seabee3_driver_base" name="seabee3_driver_base" />
-	<mode pkg="xsens_node" type="xsens_node" name="xsens_node" />
-	<node pkg="seabee3_driver" type="seabee3_driver" name="seabee3_driver" />
+	<node pkg="seabee3_driver_base" type="seabee3_driver_base" name="seabee3_driver_base">
+		<param name="usbIndex" type="int" value="0" />
+	</node>
+	<mode pkg="xsens_node" type="xsens_node" name="xsens_node">
+		<param name="usbIndex" type="int" value="2" />
+	</node>
+	
+	<include file="$(find seabee3_launch)/seabee3_driver_tuned.launch />
 	
 	<!--<include file="$(find seabee3_launch)/teleop_joy.launch" />-->
 </launch>
