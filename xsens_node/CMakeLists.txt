@@ -22,7 +22,7 @@ rosbuild_genmsg()
 rosbuild_gensrv()
 
 #common commands for building c++ executables and libraries
-rosbuild_add_library(xsens_lib src/xsens_lib/xsens_driver.cpp src/xsens_lib/cmt1.cpp src/xsens_lib/cmt2.cpp src/xsens_lib/cmt3.cpp src/xsens_lib/cmtmessage.cpp src/xsens_lib/cmtpacket.cpp src/xsens_lib/cmtscan.cpp src/xsens_lib/xsens_std.cpp src/xsens_lib/xsens_time.cpp)
+rosbuild_add_library(xsens src/xsens/xsens_driver.cpp src/xsens/cmt1.cpp src/xsens/cmt2.cpp src/xsens/cmt3.cpp src/xsens/cmtmessage.cpp src/xsens/cmtpacket.cpp src/xsens/cmtscan.cpp src/xsens/xsens_std.cpp src/xsens/xsens_time.cpp)
 #rosbuild_add_library(${PROJECT_NAME} include/cmt1.cpp)
 #rosbuild_add_library(${PROJECT_NAME} include/cmt2.cpp)
 #rosbuild_add_library(${PROJECT_NAME} include/cmt3.cpp)
@@ -35,4 +35,4 @@ rosbuild_add_library(xsens_lib src/xsens_lib/xsens_driver.cpp src/xsens_lib/cmt1
 #rosbuild_add_boost_directories()
 #rosbuild_link_boost(${PROJECT_NAME} thread)
 rosbuild_add_executable(xsens_node src/xsens_node.cpp)
-target_link_libraries(xsens_node xsens_lib)
+target_link_libraries(xsens_node xsens)

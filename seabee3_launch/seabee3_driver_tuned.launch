@@ -1,0 +1,9 @@
+<launch>
+	<param name="heading_err_cap_thresh" type="double" value="25.0" />
+	<param name="pid_p" type="double" value="10.0" />
+	<param name="pid_i" type="double" value="0.0" />
+	<param name="pid_d" type="double" value="0.0" />
+	<param name="pid_i_max" type="double" value="1.0" />
+	<param name="pid_i_min" type="double" value="-1.0" />
+	<node pkg="seabee3_driver" type="seabee3_driver" name="seabee3_driver" />
+</launch>

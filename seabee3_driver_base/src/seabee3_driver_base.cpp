@@ -1,5 +1,5 @@
 #include <ros/ros.h>
-#include "libseabee3/BeeStem3_driver.h"
+#include "seabee3_beestem/BeeStem3_driver.h"
 #include "seabee3_driver_base/Pressure.h"
 #include "seabee3_driver_base/MotorCntl.h"
 #include "seabee3_driver_base/Dropper1Action.h"
@@ -62,7 +62,7 @@ int main (int argc, char** argv)
 	ros::init(argc, argv, "seabee3_driver_base");
 	ros::NodeHandle n;
 	
-	n.param("usbIndex", usbIndex, 0);
+	n.param("seabee3_driver_base/usbIndex", usbIndex, 0);
 	
 	ROS_INFO("constructing new driver instance");
 	mDriver = new BeeStem3Driver(usbIndex);
@@ -74,8 +74,8 @@ int main (int argc, char** argv)
 	ros::Publisher extl_pressure_pub = n.advertise<seabee3_driver_base::Pressure>("seabee3/ExtlPressure", 100);
 	
 	ros::ServiceServer dropper1action_srv = n.advertiseService("seabee3/Dropper1Action", Dropper1ActionCB);
-	ros::ServiceServer dropper2action_srv = n.advertiseService("seabee3/Dropper1Action", Dropper2ActionCB);
-	ros::ServiceServer shooter_srv = n.advertiseService("seabee3/Dropper1Action", ShooterActionCB);
+	ros::ServiceServer dropper2action_srv = n.advertiseService("seabee3/Dropper2Action", Dropper2ActionCB);
+	ros::ServiceServer shooter_srv = n.advertiseService("seabee3/ShooterAction", ShooterActionCB);
 		
 	while(ros::ok())
 	{
