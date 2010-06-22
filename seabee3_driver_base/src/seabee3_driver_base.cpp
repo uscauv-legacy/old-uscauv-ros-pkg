@@ -1,10 +1,10 @@
 #include <ros/ros.h>
-#include "seabee3_beestem/BeeStem3_driver.h"
-#include "seabee3_driver_base/Pressure.h"
-#include "seabee3_driver_base/MotorCntl.h"
-#include "seabee3_driver_base/Dropper1Action.h"
-#include "seabee3_driver_base/Dropper2Action.h"
-#include "seabee3_driver_base/ShooterAction.h"
+#include <seabee3_beestem/BeeStem3_driver.h>
+#include <seabee3_driver_base/Pressure.h>
+#include <seabee3_driver_base/MotorCntl.h>
+#include <seabee3_driver_base/Dropper1Action.h>
+#include <seabee3_driver_base/Dropper2Action.h>
+#include <seabee3_driver_base/ShooterAction.h>
 
 BeeStem3Driver * mDriver;
 int usbIndex;
