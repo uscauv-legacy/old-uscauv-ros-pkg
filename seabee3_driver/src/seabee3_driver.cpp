@@ -3,8 +3,11 @@
 #include <control_toolbox/pid.h>
 
 #include <xsens_node/IMUData.h>
+#include <seabee3_driver/SetDesiredDepth.h>
+#include <seabee3_driver/SetDesiredRPY.h>
 #include <seabee3_driver_base/MotorCntl.h>
 #include <geometry_msgs/Twist.h>
+#include <geometry_msgs/Vector3.h>
 
 #include <seabee3_beestem/BeeStem3.h>
 
@@ -14,7 +17,9 @@ xsens_node::IMUData * IMUDataCache;
 geometry_msgs::Twist * TwistCache;
 ros::Time * velocity_sample_start;
 seabee3_driver_base::MotorCntl * motorCntlMsg;
-double * desiredHeading, *maxHeadingError, *desiredChangeInHeadingPerSec;
+geometry_msgs::Vector3 * desiredRPY, * desiredChangeInRPYPerSec;
+double * maxHeadingError;
+int * desiredDepth, * desiredChangeInDepthPerSec;
 ros::Time * lastHeadingUpdateTime;
 ros::Time * lastHeadingPidUpdateTime;
 
@@ -106,12 +111,16 @@ void updateMotorCntlFromTwist(const geometry_msgs::TwistConstPtr & twist)
 	{
 		ros::Duration dt = ros::Time::now() - *lastHeadingUpdateTime;
 
-		*desiredChangeInHeadingPerSec = 100.0 * twist->angular.z;
+		desiredChangeInRPYPerSec->x = 100.0 * twist->angular.x;
+		desiredChangeInRPYPerSec->y = 100.0 * twist->angular.y;
+		desiredChangeInRPYPerSec->z = 100.0 * twist->angular.z;
+		
+		*desiredChangeInDepthPerSec = 5.0 * twist->linear.z;
 
-		//ROS_INFO("heading: %f desired heading: %f dt: %f", IMUDataCache->ori.z, *desiredHeading, dt.toSec());
+		//ROS_INFO("heading: %f desired heading: %f dt: %f", IMUDataCache->ori.z, *desiredRPY.z, dt.toSec());
 		
 //		if(!IMUDataCache->empty())
-//			ROS_INFO("desired heading: %f actualHeading: %f dt: %f", *desiredHeading, IMUDataCache->front().ori.z, dt.toSec());
+//			ROS_INFO("desired heading: %f actualHeading: %f dt: %f", *desiredRPY.z, IMUDataCache->front().ori.z, dt.toSec());
 	}
 	
 	*lastHeadingUpdateTime = ros::Time::now();
@@ -123,13 +132,13 @@ void headingPidStep()
 	{
 		ros::Duration dt = ros::Time::now() - *lastHeadingPidUpdateTime;
 		
-		*desiredHeading -= *desiredChangeInHeadingPerSec * dt.toSec();
+		desiredRPY->z -= desiredChangeInRPYPerSec->z * dt.toSec();
 
-		Seabee3Util::normalizeAngle(*desiredHeading);
+		Seabee3Util::normalizeAngle(desiredRPY->z);
 
 		//actual - desired; 0 - 40 = -40;
 		//desired -> actual; 40 -> 0 = 40 cw = -40
-		double headingError = Seabee3Util::angleDistRel(*desiredHeading, IMUDataCache->ori.z);
+		double headingError = Seabee3Util::angleDistRel(desiredRPY->z, IMUDataCache->ori.z);
 		
 		headingError = abs(headingError) > *maxHeadingError ? *maxHeadingError * headingError / abs(headingError) : headingError;
 		
@@ -139,7 +148,7 @@ void headingPidStep()
 		
 		motorVal = abs(motorVal) > 100 ? 100 * motorVal / abs(motorVal) : motorVal;
 
-		ROS_INFO("heading: %f desired heading: %f motorValue: %f", IMUDataCache->ori.z, *desiredHeading, motorVal);
+		ROS_INFO("heading: %f desired heading: %f motorValue: %f", IMUDataCache->ori.z, desiredRPY->z, motorVal);
 		
 		updateMotorCntlMsg(*motorCntlMsg, axis_heading, motorVal);
 
@@ -174,6 +183,26 @@ void CmdVelCallback(const geometry_msgs::TwistConstPtr & twist)
 	updateMotorCntlFromTwist(twist);
 }
 
+bool setDesiredDepthCallback(seabee3_driver::SetDesiredDepth::Request & req, seabee3_driver::SetDesiredDepth::Response & resp)
+{
+	if(req.Mask > 0)
+		*desiredDepth = req.DesiredDepth;
+	resp.CurrentDesiredDepth = *desiredDepth;
+	return true;
+}
+
+bool setDesiredRPYCallback(seabee3_driver::SetDesiredRPY::Request & req, seabee3_driver::SetDesiredRPY::Response & resp)
+{
+	if(req.Mask.x > 0.0)
+		desiredRPY->x = req.DesiredRPY.x;
+	if(req.Mask.y > 0.0)
+		desiredRPY->y = req.DesiredRPY.y;
+	if(req.Mask.z > 0.0)
+		desiredRPY->z = req.DesiredRPY.z;
+	resp.CurrentDesiredRPY = *desiredRPY;
+	return true;
+}
+
 int main(int argc, char** argv)
 {
 	ros::init(argc, argv, "seabee3_driver");
@@ -189,8 +218,10 @@ int main(int argc, char** argv)
 	ros::Subscriber imu_sub = n.subscribe("IMUData", 1, IMUDataCallback);
 	ros::Subscriber cmd_vel_sub = n.subscribe("seabee3/cmd_vel", 1, CmdVelCallback);
 	
-	desiredHeading = new double(0.0);
-	desiredChangeInHeadingPerSec = new double(0.0);
+	desiredRPY = new geometry_msgs::Vector3; desiredRPY->x = 0; desiredRPY->y = 0; desiredRPY->z = 0;
+	desiredChangeInRPYPerSec = new geometry_msgs::Vector3; desiredChangeInRPYPerSec->x = 0; desiredChangeInRPYPerSec->y = 0; desiredChangeInRPYPerSec->z = 0;
+	desiredDepth = new int(0);
+	desiredChangeInDepthPerSec = new int(0);
 	maxHeadingError = new double(0.0);
 	lastHeadingUpdateTime = new ros::Time(ros::Time(-1));
 	lastHeadingPidUpdateTime = new ros::Time(ros::Time(-1));
@@ -211,28 +242,16 @@ int main(int argc, char** argv)
 	pid_controller->reset();
 	
 	motorCntlMsg = new seabee3_driver_base::MotorCntl;
-	motorCntlMsg->motors[0] = 0;
-	motorCntlMsg->motors[1] = 0;
-	motorCntlMsg->motors[2] = 0;
-	motorCntlMsg->motors[3] = 0;
-	motorCntlMsg->motors[4] = 0;
-	motorCntlMsg->motors[5] = 0;
-	motorCntlMsg->motors[5] = 0;
-	motorCntlMsg->motors[7] = 0;
-	motorCntlMsg->motors[8] = 0;
 	
-	motorCntlMsg->mask[0] = 0;
-	motorCntlMsg->mask[1] = 0;
-	motorCntlMsg->mask[2] = 0;
-	motorCntlMsg->mask[3] = 0;
-	motorCntlMsg->mask[4] = 0;
-	motorCntlMsg->mask[5] = 0;
-	motorCntlMsg->mask[6] = 0;
-	motorCntlMsg->mask[7] = 0;
-	motorCntlMsg->mask[8] = 0;
+	for(int i = 0; i < BeeStem3::NUM_MOTOR_CONTROLLERS; i ++)
+	{
+		motorCntlMsg->motors[i] = 0;
+		motorCntlMsg->mask[i] = 0;
+	}
 	
-	//motor_cntl_pub = new ros::Publisher;
 	ros::Publisher motor_cntl_pub = n.advertise<seabee3_driver_base::MotorCntl>("seabee3/MotorCntl", 1);
+	ros::ServiceServer setDesiredDepth_srv = n.advertiseService("seabee3/setDesiredDepth", setDesiredDepthCallback);
+	ros::ServiceServer setDesiredRPY_srv = n.advertiseService("seabee3/setDesiredRPY", setDesiredRPYCallback);
 	
 	while(ros::ok())
 	{
