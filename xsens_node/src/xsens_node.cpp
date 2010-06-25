@@ -16,6 +16,7 @@ tf::Vector3 * drift_comp_total;
 //tf::Vector3 * rpy_zero_total;
 XSensDriver * mImuDriver;
 double * sampleTime;
+const static unsigned int IMU_DATA_CACHE_SIZE = 2;
 
 void operator += (XSensDriver::Vector3 & v1, tf::Vector3 & v2)
 {
@@ -58,17 +59,19 @@ void updateIMUData()
 		//std::cout << std::flush;
 		tf::Vector3 temp;
 		mImuDriver->ori >> temp;
-		ori_data_cache->push(temp);
 		
-		while(ori_data_cache->size() > 2)
+		while(ori_data_cache->size() >= IMU_DATA_CACHE_SIZE)
 		{
 			ori_data_cache->pop();
 		}
+		
+		ori_data_cache->push(temp);
 	}
 }
 
 void runRPYOriCalibration(int n = 10)
 {
+	*ori_comp *= 0.0; //reset the vector to <0, 0, 0>
 	for(int i = 0; i < n && ros::ok(); i ++)
 	{
 		updateIMUData();
@@ -78,11 +81,12 @@ void runRPYOriCalibration(int n = 10)
 		//ROS_INFO("sample %d: x %f y %f z %f", i, diff.getX(), diff.getY(), diff.getZ());
 	}
 	
-	*ori_comp /= (float)(-n);
+	*ori_comp /= (double)(-n);
 }
 
 void runRPYDriftCalibration(int n = 10)
 {
+	*drift_comp *= 0.0; //reset the vector to <0, 0, 0>
 	for(int i = 0; i < n && ros::ok(); i ++)
 	{
 		updateIMUData();
@@ -93,9 +97,9 @@ void runRPYDriftCalibration(int n = 10)
 		//ROS_INFO("sample %d: x %f y %f z %f", i, diff.getX(), diff.getY(), diff.getZ());
 	}
 	
-	*sampleTime = (double)n * 0.1;
+	//*sampleTime = (double)n / 110.0;
 	
-	*drift_comp /= (double)(-n);
+	*drift_comp /= (double)(-n); //avg drift per cycle
 }
 
 bool CalibrateRPYOriCallback (xsens_node::CalibrateRPYOri::Request &req, xsens_node::CalibrateRPYOri::Response &res)
@@ -124,9 +128,9 @@ int main(int argc, char** argv)
 {
 	ros::init(argc, argv, "xsens_node");
 	ros::NodeHandle n;
-	ros::Publisher imu_pub = n.advertise<xsens_node::IMUData>("xsens/IMUData", 1);
-	ros::ServiceServer CalibrateRPYDrift_srv = n.advertiseService("xsens/CalibrateRPYDrift", CalibrateRPYDriftCallback);
-	ros::ServiceServer CalibrateRPYOri_srv = n.advertiseService("xsens/CalibrateRPYOri", CalibrateRPYOriCallback);
+	ros::Publisher imu_pub = n.advertise<xsens_node::IMUData>("/xsens/IMUData", 1);
+	ros::ServiceServer CalibrateRPYDrift_srv = n.advertiseService("/xsens/CalibrateRPYDrift", CalibrateRPYDriftCallback);
+	ros::ServiceServer CalibrateRPYOri_srv = n.advertiseService("/xsens/CalibrateRPYOri", CalibrateRPYOriCallback);
 	
 	sampleTime = new double(1.0);
 	ori_comp = new tf::Vector3(0, 0, 0);
@@ -136,7 +140,7 @@ int main(int argc, char** argv)
 	ori_data_cache = new std::queue<tf::Vector3>;
 	
 	int usbIndex;
-	n.param("xsens_node/usbIndex", usbIndex, 1);
+	n.param("/xsens/usbIndex", usbIndex, 2);
 	
 	mImuDriver = new XSensDriver((unsigned int)usbIndex);
 	if( !mImuDriver->initMe() )
@@ -158,7 +162,7 @@ int main(int argc, char** argv)
 		mImuDriver->gyro >> msg.gyro;
 		mImuDriver->mag >> msg.mag;
 		
-		*drift_comp_total += (*drift_comp * ((1.0 / 110.0) / *sampleTime));
+		*drift_comp_total += *drift_comp;// * *sampleTime;
 		
 		//ROS_INFO("Offset x %f y %f z %f", ori_comp_total->getX(), ori_comp_total->getY(), ori_comp_total->getZ());
 		
