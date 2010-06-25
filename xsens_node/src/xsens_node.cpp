@@ -72,8 +72,7 @@ void runRPYOriCalibration(int n = 10)
 	for(int i = 0; i < n && ros::ok(); i ++)
 	{
 		updateIMUData();
-		tf::Vector3 diff (ori_data_cache->front() - ori_data_cache->back());
-		*ori_comp += diff;
+		*ori_comp += ori_data_cache->front();
 		ros::spinOnce();
 		ros::Rate(110).sleep();
 		//ROS_INFO("sample %d: x %f y %f z %f", i, diff.getX(), diff.getY(), diff.getZ());
