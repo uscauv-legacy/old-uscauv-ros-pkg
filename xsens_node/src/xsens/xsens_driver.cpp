@@ -216,7 +216,7 @@ int XSensDriver::doHardwareScan(xsens::Cmt3 &cmt3, CmtDeviceId deviceIds[])
 	std::cout << usbChar << std::endl;
 	
 	//CmtPortInfo port = {0,0,0,usbChar};
-	CmtPortInfo port = {0,0,0,"/dev/ttyUSB0"};
+	CmtPortInfo port = {0,0,0,"/dev/ttyUSB1"};
 
 	unsigned long portCount = 0;
 	int mtCount;

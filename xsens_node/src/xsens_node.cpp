@@ -67,7 +67,7 @@ void updateIMUData()
 	}
 }
 
-void runRPYOriCalibration(int n)
+void runRPYOriCalibration(int n = 10)
 {
 	for(int i = 0; i < n && ros::ok(); i ++)
 	{
@@ -82,7 +82,7 @@ void runRPYOriCalibration(int n)
 	*ori_comp /= (float)(-n);
 }
 
-void runRPYDriftCalibration(int n)
+void runRPYDriftCalibration(int n = 10)
 {
 	for(int i = 0; i < n && ros::ok(); i ++)
 	{
@@ -94,9 +94,9 @@ void runRPYDriftCalibration(int n)
 		//ROS_INFO("sample %d: x %f y %f z %f", i, diff.getX(), diff.getY(), diff.getZ());
 	}
 	
-	*sampleTime = (float)n * 0.1f;
+	*sampleTime = (double)n * 0.1;
 	
-	*drift_comp /= (float)(-n);
+	*drift_comp /= (double)(-n);
 }
 
 bool CalibrateRPYOriCallback (xsens_node::CalibrateRPYOri::Request &req, xsens_node::CalibrateRPYOri::Response &res)
@@ -129,7 +129,7 @@ int main(int argc, char** argv)
 	ros::ServiceServer CalibrateRPYDrift_srv = n.advertiseService("xsens/CalibrateRPYDrift", CalibrateRPYDriftCallback);
 	ros::ServiceServer CalibrateRPYOri_srv = n.advertiseService("xsens/CalibrateRPYOri", CalibrateRPYOriCallback);
 	
-	*sampleTime = 1.0;
+	sampleTime = new double(1.0);
 	ori_comp = new tf::Vector3(0, 0, 0);
 	drift_comp = new tf::Vector3(0, 0, 0);
 	drift_comp_total = new tf::Vector3(0, 0, 0);
@@ -159,7 +159,7 @@ int main(int argc, char** argv)
 		mImuDriver->gyro >> msg.gyro;
 		mImuDriver->mag >> msg.mag;
 		
-		*drift_comp_total += (*drift_comp * ((1.0f / 110.0f) / *sampleTime));
+		*drift_comp_total += (*drift_comp * ((1.0 / 110.0) / *sampleTime));
 		
 		//ROS_INFO("Offset x %f y %f z %f", ori_comp_total->getX(), ori_comp_total->getY(), ori_comp_total->getZ());
 		
