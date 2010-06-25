@@ -16,7 +16,7 @@ tf::Vector3 * drift_comp_total;
 //tf::Vector3 * rpy_zero_total;
 XSensDriver * mImuDriver;
 double * sampleTime;
-const static unsigned int IMU_DATA_CACHE_SIZE = 2;
+const static int IMU_DATA_CACHE_SIZE = 2;
 
 void operator += (XSensDriver::Vector3 & v1, tf::Vector3 & v2)
 {
@@ -87,19 +87,20 @@ void runRPYOriCalibration(int n = 10)
 void runRPYDriftCalibration(int n = 10)
 {
 	*drift_comp *= 0.0; //reset the vector to <0, 0, 0>
+	updateIMUData();
+	*drift_comp = ori_data_cache->front();
 	for(int i = 0; i < n && ros::ok(); i ++)
 	{
 		updateIMUData();
-		tf::Vector3 diff (ori_data_cache->front() - ori_data_cache->back());
-		*drift_comp += diff;
 		ros::spinOnce();
 		ros::Rate(110).sleep();
 		//ROS_INFO("sample %d: x %f y %f z %f", i, diff.getX(), diff.getY(), diff.getZ());
 	}
+	*drift_comp -= ori_data_cache->front();
 	
 	//*sampleTime = (double)n / 110.0;
 	
-	*drift_comp /= (double)(-n); //avg drift per cycle
+	*drift_comp /= (double)(n); //avg drift per cycle
 }
 
 bool CalibrateRPYOriCallback (xsens_node::CalibrateRPYOri::Request &req, xsens_node::CalibrateRPYOri::Response &res)
