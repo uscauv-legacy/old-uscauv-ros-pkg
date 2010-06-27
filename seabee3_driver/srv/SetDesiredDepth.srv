@@ -1,3 +1,4 @@
+int8 Mode
 int32 Mask
 int32 DesiredDepth
 ---

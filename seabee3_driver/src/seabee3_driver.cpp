@@ -186,19 +186,34 @@ void CmdVelCallback(const geometry_msgs::TwistConstPtr & twist)
 bool setDesiredDepthCallback(seabee3_driver::SetDesiredDepth::Request & req, seabee3_driver::SetDesiredDepth::Response & resp)
 {
 	if(req.Mask > 0)
-		*desiredDepth = req.DesiredDepth;
+		if(req.Mode == 1)
+			*desiredDepth += req.DesiredDepth;
+		else
+			*desiredDepth = req.DesiredDepth;
 	resp.CurrentDesiredDepth = *desiredDepth;
 	return true;
 }
 
 bool setDesiredRPYCallback(seabee3_driver::SetDesiredRPY::Request & req, seabee3_driver::SetDesiredRPY::Response & resp)
 {
-	if(req.Mask.x > 0.0)
-		desiredRPY->x = req.DesiredRPY.x;
-	if(req.Mask.y > 0.0)
-		desiredRPY->y = req.DesiredRPY.y;
-	if(req.Mask.z > 0.0)
-		desiredRPY->z = req.DesiredRPY.z;
+	if(req.Mask.x > 0.0f)
+		if(req.Mode.x == 1.0f)
+			desiredRPY->x += req.DesiredRPY.x;
+		else
+			desiredRPY->x = req.DesiredRPY.x;
+			
+	if(req.Mask.y > 0.0f)
+		if(req.Mode.y == 1.0f)
+			desiredRPY->y += req.DesiredRPY.y;
+		else
+			desiredRPY->y = req.DesiredRPY.y;
+			
+	if(req.Mask.z > 0.0f)
+		if(req.Mode.z == 1.0f)
+			desiredRPY->z += req.DesiredRPY.z;
+		else
+			desiredRPY->z = req.DesiredRPY.z;
+		
 	resp.CurrentDesiredRPY = *desiredRPY;
 	return true;
 }
