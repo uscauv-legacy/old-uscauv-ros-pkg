@@ -1,9 +1,14 @@
 <stack>
-  <description brief="seabee3">seabee3</description>
+  <description brief="seabee3-ros-pkg">seabee3-ros-pkg</description>
   <author>Maintained by Edward T. Kaszubski</author>
   <license>BSD</license>  
   <review status="unreviewed" notes=""/>
   <url>http://ros.org/wiki/seabee3</url>
   <depend stack="ros" />
+  <depend stack="camera_drivers" />
+  <depend pkg="tf" />
+  <depend pkg="geometry_msgs" />
+  <depend pkg="joy" />
+  <depend pkg="control_toolbox" />
 
 </stack>
