@@ -1,0 +1,15 @@
+<launch>
+	<group ns="camera_front_r">
+		<node name="pgr_camera" pkg="pgr_camera" type="pgr_camera_node" respawn="false" output="screen">
+			<param name="width" type="int" value="640"/>
+			<param name="height" type="int" value="480"/>
+			<param name="format" value="Y8" />
+			<param name="frame_rate" type="int" value="15" />
+			<param name="intrinsics_ini" type="str" value="$(find pgr_camera)/test_intrinsics.ini" />
+			<param name="camera_name" type="str" value="camera0" />
+		</node>
+		<group ns="camera">
+			<node name="image_proc" pkg="image_proc" type="image_proc" />
+		</group>
+	</group>
+</launch>

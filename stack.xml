@@ -5,10 +5,10 @@
   <review status="unreviewed" notes=""/>
   <url>http://ros.org/wiki/seabee3</url>
   <depend stack="ros" />
-  <depend stack="camera_drivers" />
+  <depend pkg="pgr_camera" />
   <depend pkg="tf" />
   <depend pkg="geometry_msgs" />
   <depend pkg="joy" />
   <depend pkg="control_toolbox" />
-
+  <rosdep name="pgr_camera" />
 </stack>
