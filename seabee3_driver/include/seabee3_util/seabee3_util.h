@@ -31,4 +31,16 @@ public:
 		
 		a = result + c_a_diff;
 	}
+	
+	template <typename _T>
+	static void capValue(_T & target, const _T & magCap)
+	{
+		capValue(target, -magCap, magCap);
+	}
+	
+	template <typename _T>
+	static void capValue(_T & target, const _T & lowerCap, const _T & upperCap)
+	{
+		target = target < lowerCap ? lowerCap : (target > upperCap ? upperCap : target); //teh 1337
+	}
 };
