@@ -1,0 +1,16 @@
+<package>
+  <description brief="seabee3_mission_control">
+
+     seabee3_mission_control
+
+  </description>
+  <author>Michael Montalbo</author>
+  <license>BSD</license>
+  <review status="unreviewed" notes=""/>
+  <url>http://ros.org/wiki/seabee3_mission_control</url>
+  <depend package="roscpp"/>
+  <depend package="seabee3_driver"/>
+  <depend package="geometry_msgs" />
+</package>
+
+
