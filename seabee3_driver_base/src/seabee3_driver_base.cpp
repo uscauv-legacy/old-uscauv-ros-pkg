@@ -1,5 +1,6 @@
 #include <ros/ros.h>
 #include <seabee3_beestem/BeeStem3_driver.h>
+#include <seabee3_driver_base/KillSwitch.h>
 #include <seabee3_driver_base/Pressure.h>
 #include <seabee3_driver_base/MotorCntl.h>
 #include <seabee3_driver_base/Dropper1Action.h>
@@ -72,6 +73,7 @@ int main (int argc, char** argv)
 	
 	ros::Publisher intl_pressure_pub = n.advertise<seabee3_driver_base::Pressure>("seabee3/IntlPressure", 100);
 	ros::Publisher extl_pressure_pub = n.advertise<seabee3_driver_base::Pressure>("seabee3/ExtlPressure", 100);
+	ros::Publisher kill_switch_pub = n.advertise<seabee3_driver_base::KillSwitch>("seabee3/KillSwitch", 100);
 	
 	ros::ServiceServer dropper1action_srv = n.advertiseService("seabee3/Dropper1Action", Dropper1ActionCB);
 	ros::ServiceServer dropper2action_srv = n.advertiseService("seabee3/Dropper2Action", Dropper2ActionCB);
@@ -79,16 +81,19 @@ int main (int argc, char** argv)
 		
 	while(ros::ok())
 	{
-		seabee3_driver_base::Pressure intlPressureMsg;
-		seabee3_driver_base::Pressure extlPressureMsg;
-		
-		mDriver->readPressure(intlPressureMsg.Value, extlPressureMsg.Value);
-		
-		intl_pressure_pub.publish(intlPressureMsg);
-		extl_pressure_pub.publish(extlPressureMsg);
-		
-		ros::spinOnce();
-		ros::Rate(20).sleep();
+	  seabee3_driver_base::Pressure intlPressureMsg;
+	  seabee3_driver_base::Pressure extlPressureMsg;
+	  seabee3_driver_base::KillSwitch killSwitchMsg;
+	  
+	  mDriver->readPressure(intlPressureMsg.Value, extlPressureMsg.Value);
+	  mDriver->readKillSwitch(killSwitchMsg.Value);
+	  
+	  intl_pressure_pub.publish(intlPressureMsg);
+	  extl_pressure_pub.publish(extlPressureMsg);
+	  kill_switch_pub.publish(killSwitchMsg);
+	  
+	  ros::spinOnce();
+	  ros::Rate(20).sleep();
 	}
 	ros::spin();
 	return 0;
