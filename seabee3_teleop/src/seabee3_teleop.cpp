@@ -41,9 +41,9 @@ int main(int argc, char** argv)
 	n.param("speed", speed, 0);
 	n.param("strafe", strafe, 1);
 	n.param("surface", surface, 2);
-	n.param("dive", dive, 3);
+	n.param("dive", dive, 5);
 	n.param("heading", heading, 4);
-	n.param("roll", roll, 5);
+	n.param("roll", roll, 3);
 	
 	n.param("speed_scale", speed_s, 1.0);
 	n.param("strafe_scale", strafe_s, 1.0);

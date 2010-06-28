@@ -1,8 +1,4 @@
 <launch>
-	<node name="front_lt_camera_vew" pkg="image_vew" type="image_view" />
-	<node name="front_lt_camera_vew" pkg="image_vew" type="image_view" />
-	<node name="front_lt_camera_vew" pkg="image_vew" type="image_view" />
-	<node name="front_lt_camera_vew" pkg="image_vew" type="image_view" />
-	
-	<node pkg="
+	<include file="$(find seabee3_launch)/front_cameras.launch" />
+	<include file="$(find seabee3_launch)/down_cameras.launch" />
 </launch>

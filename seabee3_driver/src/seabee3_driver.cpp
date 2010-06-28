@@ -20,10 +20,12 @@ ros::Time * velocity_sample_start;
 seabee3_driver_base::MotorCntl * motorCntlMsg;
 seabee3_driver_base::Pressure * extlPressureCache;
 geometry_msgs::Vector3 * desiredRPY, * errorInRPY, * desiredChangeInRPYPerSec;
-double *maxRollError, *maxPitchError, * maxHeadingError;
+double *maxRollError, *maxPitchError, * maxHeadingError, *desiredSpeed, *desiredStrafe;
 int *maxDepthError, * desiredDepth, * errorInDepth, * desiredChangeInDepthPerSec;
 ros::Time * lastUpdateTime;
 ros::Time * lastPidUpdateTime;
+
+bool depthInitialized;
 
 control_toolbox::Pid * pid_D, * pid_R, * pid_P, * pid_Y;
 
@@ -47,7 +49,7 @@ void updateMotorCntlMsg(seabee3_driver_base::MotorCntl & msg, int axis, int p_va
 	switch(axis)
 	{
 		case axis_speed:
-			msg.motors[BeeStem3::MotorControllerIDs::FWD_RIGHT_THRUSTER] = -value;
+			msg.motors[BeeStem3::MotorControllerIDs::FWD_RIGHT_THRUSTER] = value;
 			msg.motors[BeeStem3::MotorControllerIDs::FWD_LEFT_THRUSTER] = value;
 			msg.mask[BeeStem3::MotorControllerIDs::FWD_RIGHT_THRUSTER] = 1;
 			msg.mask[BeeStem3::MotorControllerIDs::FWD_LEFT_THRUSTER] = 1;
@@ -55,44 +57,28 @@ void updateMotorCntlMsg(seabee3_driver_base::MotorCntl & msg, int axis, int p_va
 		case axis_strafe:
 			msg.motors[BeeStem3::MotorControllerIDs::STRAFE_FRONT_THRUSTER] += value;
 			msg.motors[BeeStem3::MotorControllerIDs::STRAFE_BACK_THRUSTER] += value;
-			if(msg.mask[BeeStem3::MotorControllerIDs::STRAFE_FRONT_THRUSTER] == 1 && msg.mask[BeeStem3::MotorControllerIDs::STRAFE_BACK_THRUSTER] == 1)
-			{
-				msg.motors[BeeStem3::MotorControllerIDs::STRAFE_FRONT_THRUSTER] /= 2;
-				msg.motors[BeeStem3::MotorControllerIDs::STRAFE_BACK_THRUSTER] /= 2;
-			}
+			
 			msg.mask[BeeStem3::MotorControllerIDs::STRAFE_FRONT_THRUSTER] = 1;
 			msg.mask[BeeStem3::MotorControllerIDs::STRAFE_BACK_THRUSTER] = 1;
 			break;
 		case axis_depth:
 			msg.motors[BeeStem3::MotorControllerIDs::DEPTH_RIGHT_THRUSTER] += value;
 			msg.motors[BeeStem3::MotorControllerIDs::DEPTH_LEFT_THRUSTER] += value;
-			if(msg.mask[BeeStem3::MotorControllerIDs::DEPTH_RIGHT_THRUSTER] == 1 && msg.mask[BeeStem3::MotorControllerIDs::DEPTH_LEFT_THRUSTER] == 1)
-			{
-				msg.motors[BeeStem3::MotorControllerIDs::DEPTH_RIGHT_THRUSTER] /= 2;
-				msg.motors[BeeStem3::MotorControllerIDs::DEPTH_LEFT_THRUSTER] /= 2;
-			}
+			
 			msg.mask[BeeStem3::MotorControllerIDs::DEPTH_RIGHT_THRUSTER] = 1;
 			msg.mask[BeeStem3::MotorControllerIDs::DEPTH_LEFT_THRUSTER] = 1;
 			break;
 		case axis_roll:
 			msg.motors[BeeStem3::MotorControllerIDs::DEPTH_RIGHT_THRUSTER] += value;
 			msg.motors[BeeStem3::MotorControllerIDs::DEPTH_LEFT_THRUSTER] += -value;
-			if(msg.mask[BeeStem3::MotorControllerIDs::DEPTH_RIGHT_THRUSTER] == 1 && msg.mask[BeeStem3::MotorControllerIDs::DEPTH_LEFT_THRUSTER] == 1)
-			{
-				msg.motors[BeeStem3::MotorControllerIDs::DEPTH_RIGHT_THRUSTER] /= 2;
-				msg.motors[BeeStem3::MotorControllerIDs::DEPTH_LEFT_THRUSTER] /= 2;
-			}
+			
 			msg.mask[BeeStem3::MotorControllerIDs::DEPTH_RIGHT_THRUSTER] = 1;
 			msg.mask[BeeStem3::MotorControllerIDs::DEPTH_LEFT_THRUSTER] = 1;
 			break;
 		case axis_heading:
 			msg.motors[BeeStem3::MotorControllerIDs::STRAFE_FRONT_THRUSTER] += -value;
 			msg.motors[BeeStem3::MotorControllerIDs::STRAFE_BACK_THRUSTER] += value;
-			if(msg.mask[BeeStem3::MotorControllerIDs::STRAFE_FRONT_THRUSTER] == 1 && msg.mask[BeeStem3::MotorControllerIDs::STRAFE_BACK_THRUSTER] == 1)
-			{
-				msg.motors[BeeStem3::MotorControllerIDs::STRAFE_FRONT_THRUSTER] /= 2;
-				msg.motors[BeeStem3::MotorControllerIDs::STRAFE_BACK_THRUSTER] /= 2;
-			}
+			
 			msg.mask[BeeStem3::MotorControllerIDs::STRAFE_FRONT_THRUSTER] = 1;
 			msg.mask[BeeStem3::MotorControllerIDs::STRAFE_BACK_THRUSTER] = 1;
 			break;
@@ -112,19 +98,17 @@ void updateMotorCntlFromTwist(const geometry_msgs::TwistConstPtr & twist)
 	tf::Vector3 vel_diff_lin (vel_desired_lin - *vel_est_lin);
 	tf::Vector3 vel_diff_ang (vel_desired_ang - *vel_est_ang);
 	
-	for(int i = 0; i < BeeStem3::NUM_MOTOR_CONTROLLERS; i ++)
-	{
-		motorCntlMsg->mask[i] = 0;
-		motorCntlMsg->motors[i] = 0;
-	}
-	
 	/*ROS_INFO("-----------------------------------------------------");
 	
 	ROS_INFO("linear x %f y %f z %f", vel_desired_lin.getX(), vel_desired_lin.getY(), vel_desired_lin.getZ());
 	ROS_INFO("angular x %f y %f z %f", vel_desired_ang.getX(), vel_desired_ang.getY(), vel_desired_ang.getZ());*/
 	
-	updateMotorCntlMsg(*motorCntlMsg, axis_speed, vel_diff_lin.getX() * 100.0);
-	updateMotorCntlMsg(*motorCntlMsg, axis_strafe, vel_diff_lin.getY() * 100.0);
+	*desiredSpeed = vel_diff_lin.getX() * 100.0;
+	*desiredStrafe = vel_diff_lin.getY() * 50.0;
+	//*desiredDepth = vel_diff_lin.getZ() * 100.0;
+	
+	//updateMotorCntlMsg(*motorCntlMsg, axis_speed, vel_diff_lin.getX() * 100.0);
+	//updateMotorCntlMsg(*motorCntlMsg, axis_strafe, vel_diff_lin.getY() * 50.0);
 	//updateMotorCntlMsg(*motorCntlMsg, axis_depth, vel_diff_lin.getZ() * 100.0);
 	//updateMotorCntlMsg(*motorCntlMsg, axis_roll, vel_diff_ang.getX() * 100.0);
 	//updateMotorCntlMsg(*motorCntlMsg, axis_heading, vel_diff_ang.getZ() * 100.0);
@@ -133,10 +117,10 @@ void updateMotorCntlFromTwist(const geometry_msgs::TwistConstPtr & twist)
 	{
 		//ros::Duration dt = ros::Time::now() - *lastHeadingUpdateTime;
 		
-		*desiredChangeInDepthPerSec = 5.0 * twist->linear.z;
-		desiredChangeInRPYPerSec->x = 25.0 * twist->angular.x;
-		desiredChangeInRPYPerSec->y = 25.0 * twist->angular.y;
-		desiredChangeInRPYPerSec->z = 25.0 * twist->angular.z;
+		*desiredChangeInDepthPerSec = 50.0 * twist->linear.z;
+		desiredChangeInRPYPerSec->x = 50.0 * twist->angular.x;
+		desiredChangeInRPYPerSec->y = 50.0 * twist->angular.y;
+		desiredChangeInRPYPerSec->z = 50.0 * twist->angular.z;
 
 		//ROS_INFO("heading: %f desired heading: %f dt: %f", IMUDataCache->ori.z, *desiredRPY.z, dt.toSec());
 		
@@ -151,9 +135,19 @@ void headingPidStep()
 {
 	if(*lastPidUpdateTime != ros::Time(-1))
 	{
+		for(int i = 0; i < BeeStem3::NUM_MOTOR_CONTROLLERS; i ++)
+		{
+			motorCntlMsg->mask[i] = 0;
+			motorCntlMsg->motors[i] = 0;
+		}
+		
 		ros::Duration dt = ros::Time::now() - *lastPidUpdateTime;
 		
+		desiredRPY->x -= desiredChangeInRPYPerSec->x * dt.toSec();
+		desiredRPY->y -= desiredChangeInRPYPerSec->y * dt.toSec();
 		desiredRPY->z -= desiredChangeInRPYPerSec->z * dt.toSec();
+		
+		*desiredDepth -= (int)(*desiredChangeInDepthPerSec * dt.toSec());
 
 		Seabee3Util::normalizeAngle(desiredRPY->x);
 		Seabee3Util::normalizeAngle(desiredRPY->y);
@@ -162,7 +156,8 @@ void headingPidStep()
 		//actual - desired; 0 - 40 = -40;
 		//desired -> actual; 40 -> 0 = 40 cw = -40
 		//double headingError = Seabee3Util::angleDistRel(desiredRPY->z, IMUDataCache->ori.z);
-		errorInDepth = desiredDepth - extlPressureCache->Value;
+		
+		*errorInDepth = *desiredDepth - extlPressureCache->Value;
 		errorInRPY->x = Seabee3Util::angleDistRel(desiredRPY->x, IMUDataCache->ori.x);
 		errorInRPY->y = Seabee3Util::angleDistRel(desiredRPY->y, IMUDataCache->ori.y);
 		errorInRPY->z = Seabee3Util::angleDistRel(desiredRPY->z, IMUDataCache->ori.z);
@@ -174,24 +169,31 @@ void headingPidStep()
 		
 		//headingError = abs(headingError) > *maxHeadingError ? *maxHeadingError * headingError / abs(headingError) : headingError;
 		
-		double depthMotorVal = 1.0 * pid_D->updatePid((double)(*errorInDepth), dt);
+		double speedMotorVal = 1.0 * *desiredSpeed;
+		double strafeMotorVal = 1.0 * *desiredStrafe;
+		double depthMotorVal = -1.0 * pid_D->updatePid((double)(*errorInDepth), dt);
 		double rollMotorVal = -1.0 * pid_R->updatePid(errorInRPY->x, dt);
 		double pitchMotorVal = -1.0 * pid_P->updatePid(errorInRPY->y, dt);
 		double headingMotorVal = -1.0 * pid_Y->updatePid(errorInRPY->z, dt);
 
 		//ROS_INFO("initial motor val: %f", motorVal);
 		
-		Seabee3Util::capValue(rollMotorVal, 100.0);
-		Seabee3Util::capValue(pitchMotorVal, 100.0);
-		Seabee3Util::capValue(headingMotorVal, 100.0);
+		Seabee3Util::capValue(rollMotorVal, 50.0);
+		Seabee3Util::capValue(pitchMotorVal, 50.0);
+		Seabee3Util::capValue(headingMotorVal, 50.0);
+		Seabee3Util::capValue(depthMotorVal, 50.0);
 		
 		//motorVal = abs(motorVal) > 100 ? 100 * motorVal / abs(motorVal) : motorVal;
 
-		//ROS_INFO("heading: %f desired heading: %f motorValue: %f", IMUDataCache->ori.z, desiredRPY->z, motorVal);
+		//ROS_INFO("heading: %f desired heading: %f heading error: %f motorValue: %f", IMUDataCache->ori.z, desiredRPY->z, errorInRPY->z, headingMotorVal);
 		
+		//ROS_INFO("Depth; desired: %d current %d error %d motorVal %f", *desiredDepth, extlPressureCache->Value, *errorInDepth, depthMotorVal);
+		
+		updateMotorCntlMsg(*motorCntlMsg, axis_speed, speedMotorVal);
+		updateMotorCntlMsg(*motorCntlMsg, axis_strafe, strafeMotorVal);
 		updateMotorCntlMsg(*motorCntlMsg, axis_depth, depthMotorVal);
-		updateMotorCntlMsg(*motorCntlMsg, axis_roll, rollMotorVal);
-		updateMotorCntlMsg(*motorCntlMsg, axis_pitch, pitchMotorVal);
+		//updateMotorCntlMsg(*motorCntlMsg, axis_roll, rollMotorVal);
+		//updateMotorCntlMsg(*motorCntlMsg, axis_pitch, pitchMotorVal);
 		updateMotorCntlMsg(*motorCntlMsg, axis_heading, headingMotorVal);
 
 		//ROS_INFO("heading error: %f motorVal: %f", headingError, motorVal);
@@ -207,6 +209,7 @@ void IMUDataCallback(const xsens_node::IMUDataConstPtr & data)
 		IMUDataCache->ori.z -= 360;
 	while(IMUDataCache->ori.z < 0)
 		IMUDataCache->ori.z += 360;
+	//ROS_INFO("x %f y %f z %f", IMUDataCache->ori.x, IMUDataCache->ori.y, IMUDataCache->ori.z);
 	//while(IMUDataCache->size() > 5)
 	//{
 	//	IMUDataCache->pop();
@@ -254,6 +257,11 @@ bool setDesiredRPYCallback(seabee3_driver::SetDesiredRPY::Request & req, seabee3
 void ExtlPressureCallback(const seabee3_driver_base::PressureConstPtr & extlPressure)
 {
 	*extlPressureCache = *extlPressure;
+	if(!depthInitialized)
+	{
+		*desiredDepth = extlPressureCache->Value;
+		depthInitialized = true;
+	}
 }
 
 int main(int argc, char** argv)
@@ -268,9 +276,9 @@ int main(int argc, char** argv)
 	IMUDataCache = new xsens_node::IMUData;
 	TwistCache = new geometry_msgs::Twist;
 	
-	ros::Subscriber imu_sub = n.subscribe("IMUData", 1, IMUDataCallback);
+	ros::Subscriber imu_sub = n.subscribe("/xsens/IMUData", 1, IMUDataCallback);
 	ros::Subscriber cmd_vel_sub = n.subscribe("seabee3/cmd_vel", 1, CmdVelCallback);
-	ros::Subscriber extl_depth_sub = n.subscribe("seabee3/ExtllPressure", 1, ExtlPressureCallback);
+	ros::Subscriber extl_depth_sub = n.subscribe("seabee3/ExtlPressure", 1, ExtlPressureCallback);
 	
 	desiredRPY = new geometry_msgs::Vector3; desiredRPY->x = 0; desiredRPY->y = 0; desiredRPY->z = 0;
 	errorInRPY = new geometry_msgs::Vector3; errorInRPY->x = 0; errorInRPY->y = 0; errorInRPY->z = 0;
@@ -284,6 +292,12 @@ int main(int argc, char** argv)
 	maxHeadingError = new double(0.0);
 	lastUpdateTime = new ros::Time(ros::Time(-1));
 	lastPidUpdateTime = new ros::Time(ros::Time(-1));
+	extlPressureCache = new seabee3_driver_base::Pressure;
+	
+	desiredSpeed = new double(0.0);
+	desiredStrafe = new double(0.0);
+	
+	depthInitialized = false;
 	
 	pid_D = new control_toolbox::Pid;
 	pid_R = new control_toolbox::Pid;
@@ -301,20 +315,20 @@ int main(int argc, char** argv)
 	n.param("pitch_err_cap_thresh", *maxPitchError, 25.0);
 	n.param("heading_err_cap_thresh", *maxHeadingError, 25.0);
 	
-	n.param("pid_D_p", pid_D_p, 10.0);
-	n.param("pid_D_i", pid_D_i, 0.2);
+	n.param("pid_D_p", pid_D_p, 2.5);
+	n.param("pid_D_i", pid_D_i, 0.05);
 	n.param("pid_D_d", pid_D_d, 0.2);
 	
-	n.param("pid_R_p", pid_R_p, 10.0);
-	n.param("pid_R_i", pid_R_i, 0.2);
+	n.param("pid_R_p", pid_R_p, 2.5);
+	n.param("pid_R_i", pid_R_i, 0.05);
 	n.param("pid_R_d", pid_R_d, 0.2);
 	
-	n.param("pid_P_p", pid_P_p, 10.0);
-	n.param("pid_P_i", pid_P_i, 0.2);
+	n.param("pid_P_p", pid_P_p, 2.5);
+	n.param("pid_P_i", pid_P_i, 0.05);
 	n.param("pid_P_d", pid_P_d, 0.2);
 	
-	n.param("pid_Y_p", pid_Y_p, 10.0);
-	n.param("pid_Y_i", pid_Y_i, 0.2);
+	n.param("pid_Y_p", pid_Y_p, 2.5);
+	n.param("pid_Y_i", pid_Y_i, 0.05);
 	n.param("pid_Y_d", pid_Y_d, 0.2);
 	
 	n.param("pid_i_max", pid_i_max, 1.0);
