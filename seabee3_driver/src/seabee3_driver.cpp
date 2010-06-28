@@ -228,7 +228,7 @@ void CmdVelCallback(const geometry_msgs::TwistConstPtr & twist)
 bool setDesiredDepthCallback(seabee3_driver::SetDesiredDepth::Request & req, seabee3_driver::SetDesiredDepth::Response & resp)
 {
 	if(req.Mask > 0)
-		*desiredDepth = req.DesiredDepth + (req.Mode == 1 ? *desiredDepth : 0);
+		*desiredDepth = req.DesiredDepth + (req.Mode == 1 ? extlPressureCache->Value : 0);
 		
 	resp.CurrentDesiredDepth = *desiredDepth;
 	resp.ErrorInDepth = *errorInDepth;
@@ -238,13 +238,13 @@ bool setDesiredDepthCallback(seabee3_driver::SetDesiredDepth::Request & req, sea
 bool setDesiredRPYCallback(seabee3_driver::SetDesiredRPY::Request & req, seabee3_driver::SetDesiredRPY::Response & resp)
 {
 	if(req.Mask.x > 0.0f)
-		desiredRPY->x = (req.Mode.x == 1.0f ? desiredRPY->x : 0);
+		desiredRPY->x = req.DesiredRPY.x + (req.Mode.x == 1.0f ? IMUDataCache->ori.x : 0);
 			
 	if(req.Mask.y > 0.0f)
-		desiredRPY->y = (req.Mode.y == 1.0f ? desiredRPY->y : 0);
+		desiredRPY->y = req.DesiredRPY.y + (req.Mode.y == 1.0f ? IMUDataCache->ori.y : 0);
 			
 	if(req.Mask.z > 0.0f)
-		desiredRPY->z = (req.Mode.z == 1.0f ? desiredRPY->z : 0);
+		desiredRPY->z = req.DesiredRPY.z + (req.Mode.z == 1.0f ? IMUDataCache->ori.z : 0);
 		
 	resp.CurrentDesiredRPY = *desiredRPY;
 	resp.ErrorInRPY = *errorInRPY;
