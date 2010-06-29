@@ -1,0 +1,20 @@
+<package>
+  <description brief="bin_finder">
+
+     bin_finder
+
+  </description>
+  <author>Michael Wei</author>
+  <license>BSD</license>
+  <review status="unreviewed" notes=""/>
+  <url>http://ros.org/wiki/bin_finder</url>
+  <depend package="roscpp"/>
+  <depend package="sensor_msgs"/>
+  <depend package="image_transport"/>
+  <depend package="opencv2"/>
+  <depend package="cv_bridge"/>
+  <depend package="std_msgs"/>
+
+</package>
+
+
