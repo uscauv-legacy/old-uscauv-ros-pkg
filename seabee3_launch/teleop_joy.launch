@@ -14,5 +14,5 @@
 	<param name="roll_scale" type="double" value="-1.0" />
 	
 	<node pkg="joy" type="joy_node" name="joy_node" />
-	<node pkg="seabee3_teleop" type="seabee3_teleop" name="seabee3_teleop" />
+	<node pkg="seabee3_teleop" type="seabee3_teleop" name="seabee3_teleop" output="screen" />
 </launch>

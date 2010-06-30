@@ -1,9 +1,9 @@
 <launch>
 	<param name="seabee3_driver_base/usbIndex" type="int" value="0" />
-	<node pkg="seabee3_driver_base" type="seabee3_driver_base" name="seabee3_driver_base" />
+	<node pkg="seabee3_driver_base" type="seabee3_driver_base" name="seabee3_driver_base" output="screen" />
 
 	<param name="xsens_node/usbIndex" type="int" value="2" />
-	<node pkg="xsens_node" type="xsens_node" name="xsens_node" />
+	<node pkg="xsens_node" type="xsens_node" name="xsens_node" output="screen" />
 	
 	<include file="$(find seabee3_launch)/seabee3_driver_tuned.launch" />
 	
