@@ -26,5 +26,6 @@ rosbuild_gensrv()
 #target_link_libraries(${PROJECT_NAME} another_library)
 #rosbuild_add_boost_directories()
 #rosbuild_link_boost(${PROJECT_NAME} thread)
-rosbuild_add_executable(color_segmenter src/color_segmenter.cpp)
 #target_link_libraries(example ${PROJECT_NAME})
+
+#rosbuild_add_executable(color_segmenter src/color_segmenter.cpp)
