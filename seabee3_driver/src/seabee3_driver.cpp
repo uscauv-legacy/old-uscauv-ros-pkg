@@ -46,48 +46,59 @@ void updateMotorCntlMsg(seabee3_driver_base::MotorCntl & msg, int axis, int p_va
 	//int value = abs(p_value) > 100 ? 100 * abs(p_value) / p_value : p_value;
 	//if(axis == axis_heading)	
 	//	ROS_INFO("value: %d", value);
+	
+	int motor1, motor2;
+	double motor1_scale = 1.0, motor2_scale = 1.0;
+	
 	switch(axis)
 	{
 		case axis_speed:
-			msg.motors[BeeStem3::MotorControllerIDs::FWD_RIGHT_THRUSTER] = value;
-			msg.motors[BeeStem3::MotorControllerIDs::FWD_LEFT_THRUSTER] = value;
-			msg.mask[BeeStem3::MotorControllerIDs::FWD_RIGHT_THRUSTER] = 1;
-			msg.mask[BeeStem3::MotorControllerIDs::FWD_LEFT_THRUSTER] = 1;
+			motor1 = BeeStem3::MotorControllerIDs::FWD_RIGHT_THRUSTER;
+			motor2 = BeeStem3::MotorControllerIDs::FWD_LEFT_THRUSTER;
 			break;
 		case axis_strafe:
-			msg.motors[BeeStem3::MotorControllerIDs::STRAFE_FRONT_THRUSTER] += value;
-			msg.motors[BeeStem3::MotorControllerIDs::STRAFE_BACK_THRUSTER] += value;
-			
-			msg.mask[BeeStem3::MotorControllerIDs::STRAFE_FRONT_THRUSTER] = 1;
-			msg.mask[BeeStem3::MotorControllerIDs::STRAFE_BACK_THRUSTER] = 1;
+			motor1 = BeeStem3::MotorControllerIDs::STRAFE_FRONT_THRUSTER;
+			motor2 = BeeStem3::MotorControllerIDs::STRAFE_BACK_THRUSTER;
 			break;
 		case axis_depth:
-			msg.motors[BeeStem3::MotorControllerIDs::DEPTH_RIGHT_THRUSTER] += value;
-			msg.motors[BeeStem3::MotorControllerIDs::DEPTH_LEFT_THRUSTER] += value;
-			
-			msg.mask[BeeStem3::MotorControllerIDs::DEPTH_RIGHT_THRUSTER] = 1;
-			msg.mask[BeeStem3::MotorControllerIDs::DEPTH_LEFT_THRUSTER] = 1;
+			motor1 = BeeStem3::MotorControllerIDs::DEPTH_RIGHT_THRUSTER;
+			motor2 = BeeStem3::MotorControllerIDs::DEPTH_LEFT_THRUSTER;
 			break;
 		case axis_roll:
-			msg.motors[BeeStem3::MotorControllerIDs::DEPTH_RIGHT_THRUSTER] += value;
-			msg.motors[BeeStem3::MotorControllerIDs::DEPTH_LEFT_THRUSTER] += -value;
-			
-			msg.mask[BeeStem3::MotorControllerIDs::DEPTH_RIGHT_THRUSTER] = 1;
-			msg.mask[BeeStem3::MotorControllerIDs::DEPTH_LEFT_THRUSTER] = 1;
+			motor1 = BeeStem3::MotorControllerIDs::DEPTH_RIGHT_THRUSTER;
+			motor2 = BeeStem3::MotorControllerIDs::DEPTH_LEFT_THRUSTER;
+			motor2_scale = -1.0;
 			break;
 		case axis_heading:
-			msg.motors[BeeStem3::MotorControllerIDs::STRAFE_FRONT_THRUSTER] += -value;
-			msg.motors[BeeStem3::MotorControllerIDs::STRAFE_BACK_THRUSTER] += value;
-			
-			msg.mask[BeeStem3::MotorControllerIDs::STRAFE_FRONT_THRUSTER] = 1;
-			msg.mask[BeeStem3::MotorControllerIDs::STRAFE_BACK_THRUSTER] = 1;
+			motor1 = BeeStem3::MotorControllerIDs::STRAFE_FRONT_THRUSTER;
+			motor2 = BeeStem3::MotorControllerIDs::STRAFE_BACK_THRUSTER;
+			motor1_scale = -1.0;
 			break;
 	}
 	
-	/*for(int i = 0; i < BeeStem3::NUM_MOTOR_CONTROLLERS; i ++)
+	int motor1_val = msg.motors[motor1];
+	int motor2_val = msg.motors[motor2];
+	
+	motor1_val += motor1_scale * value;
+	motor2_val += motor2_scale * value;
+	
+	Seabee3Util::capValueProp(motor1_val, motor2_val, 100);
+	
+	/*int largest = abs(msg.motors[motor1]) > abs(msg.motors[motor2]) ? msg.motors[motor1] : msg.motors[motor2];
+	if(abs(largest) > 100)
 	{
-		ROS_INFO("axis %d mask %d value %d", i, msg.mask[i], msg.motors[i]);
+		int largest_sign = abs(largest) / largest;
+		int motor1_sign = abs(msg.motors[motor1]) / msg.motors[motor1];
+		int motor2_sign = abs(msg.motors[motor2]) / msg.motors[motor2];
+		msg.motors[motor1] -= (largest * largest_sign - 100 ) * motor1_sign;
+		msg.motors[motor2] -= (largest * largest_sign - 100 ) * motor2_sign;
 	}*/
+	
+	msg.motors[motor1] = motor1_val;
+	msg.motors[motor2] = motor2_val;
+	
+	msg.mask[motor1] = 1;
+	msg.mask[motor2] = 1;
 }
 
 void updateMotorCntlFromTwist(const geometry_msgs::TwistConstPtr & twist)
@@ -104,7 +115,7 @@ void updateMotorCntlFromTwist(const geometry_msgs::TwistConstPtr & twist)
 	ROS_INFO("angular x %f y %f z %f", vel_desired_ang.getX(), vel_desired_ang.getY(), vel_desired_ang.getZ());*/
 	
 	*desiredSpeed = vel_diff_lin.getX() * 100.0;
-	*desiredStrafe = vel_diff_lin.getY() * 50.0;
+	*desiredStrafe = vel_diff_lin.getY() * 100.0;
 	//*desiredDepth = vel_diff_lin.getZ() * 100.0;
 	
 	//updateMotorCntlMsg(*motorCntlMsg, axis_speed, vel_diff_lin.getX() * 100.0);
@@ -117,10 +128,10 @@ void updateMotorCntlFromTwist(const geometry_msgs::TwistConstPtr & twist)
 	{
 		//ros::Duration dt = ros::Time::now() - *lastHeadingUpdateTime;
 		
-		*desiredChangeInDepthPerSec = 50.0 * twist->linear.z;
-		desiredChangeInRPYPerSec->x = 50.0 * twist->angular.x;
-		desiredChangeInRPYPerSec->y = 50.0 * twist->angular.y;
-		desiredChangeInRPYPerSec->z = 50.0 * twist->angular.z;
+		*desiredChangeInDepthPerSec = 100.0 * twist->linear.z;
+		desiredChangeInRPYPerSec->x = 100.0 * twist->angular.x;
+		desiredChangeInRPYPerSec->y = 100.0 * twist->angular.y;
+		desiredChangeInRPYPerSec->z = 100.0 * twist->angular.z;
 
 		//ROS_INFO("heading: %f desired heading: %f dt: %f", IMUDataCache->ori.z, *desiredRPY.z, dt.toSec());
 		
@@ -173,15 +184,15 @@ void headingPidStep()
 		double strafeMotorVal = 1.0 * *desiredStrafe;
 		double depthMotorVal = -1.0 * pid_D->updatePid((double)(*errorInDepth), dt);
 		double rollMotorVal = -1.0 * pid_R->updatePid(errorInRPY->x, dt);
-		double pitchMotorVal = -1.0 * pid_P->updatePid(errorInRPY->y, dt);
+		//double pitchMotorVal = -1.0 * pid_P->updatePid(errorInRPY->y, dt);
 		double headingMotorVal = -1.0 * pid_Y->updatePid(errorInRPY->z, dt);
 
 		//ROS_INFO("initial motor val: %f", motorVal);
 		
-		Seabee3Util::capValue(rollMotorVal, 50.0);
+		/*Seabee3Util::capValue(rollMotorVal, 50.0);
 		Seabee3Util::capValue(pitchMotorVal, 50.0);
 		Seabee3Util::capValue(headingMotorVal, 50.0);
-		Seabee3Util::capValue(depthMotorVal, 50.0);
+		Seabee3Util::capValue(depthMotorVal, 50.0);*/
 		
 		//motorVal = abs(motorVal) > 100 ? 100 * motorVal / abs(motorVal) : motorVal;
 
@@ -192,7 +203,7 @@ void headingPidStep()
 		updateMotorCntlMsg(*motorCntlMsg, axis_speed, speedMotorVal);
 		updateMotorCntlMsg(*motorCntlMsg, axis_strafe, strafeMotorVal);
 		updateMotorCntlMsg(*motorCntlMsg, axis_depth, depthMotorVal);
-		//updateMotorCntlMsg(*motorCntlMsg, axis_roll, rollMotorVal);
+		updateMotorCntlMsg(*motorCntlMsg, axis_roll, rollMotorVal);
 		//updateMotorCntlMsg(*motorCntlMsg, axis_pitch, pitchMotorVal);
 		updateMotorCntlMsg(*motorCntlMsg, axis_heading, headingMotorVal);
 

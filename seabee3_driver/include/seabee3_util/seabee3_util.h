@@ -1,8 +1,9 @@
+#include <math.h>
 class Seabee3Util
 {
 public:
 	template <typename _T>
-	static _T angleDistRel(const _T & a1, const _T & a2)
+	static _T angleDistRel(const _T & a1, const _T & a2) //return the distance D from @a1 to @a2 such that -180 < D < 180
 	{
 		_T c = a1 - a2;
 		
@@ -19,7 +20,7 @@ public:
 	}
 	
 	template <typename _T>
-	static void normalizeAngle(_T & a)
+	static void normalizeAngle(_T & a) //force @a into 0 <= @a <= 360
 	{
 		//const _T c_p_360 ( 360 );
 		//const int c_p_i_360 = (int) c_p_360;
@@ -33,14 +34,31 @@ public:
 	}
 	
 	template <typename _T>
-	static void capValue(_T & target, const _T & magCap)
+	static void capValue(_T & target, const _T & magCap) //cap @target between -@magCap and @magCap
 	{
 		capValue(target, -magCap, magCap);
 	}
 	
 	template <typename _T>
-	static void capValue(_T & target, const _T & lowerCap, const _T & upperCap)
+	static void capValue(_T & target, const _T & lowerCap, const _T & upperCap) //cap @target between @lowerCap and @upperCap
 	{
 		target = target < lowerCap ? lowerCap : (target > upperCap ? upperCap : target); //teh 1337
+	}
+	
+	template <typename _T>
+	static void capValueProp(_T & t1, _T & t2, const _T magCap) //scale @t1 and @t2 down by the same amount such that -@magCap <= t1, t2 <= magCap
+	{
+		const _T largest = fabs(t1) > fabs(t2) ? t1 : t2;
+		
+		if(fabs(largest) > fabs(magCap))
+		{
+			//_T diff = fabs(largest) - magCap;
+			const double div = fabs( (double)largest ) / fabs( (double)magCap ); //explicit use of double for scaling only
+			const double t1_cpy (t1);
+			const double t2_cpy (t2);
+			
+			t1 = _T ( round( t1_cpy / div ) );
+			t2 = _T ( round( t2_cpy / div ) );
+		}
 	}
 };
