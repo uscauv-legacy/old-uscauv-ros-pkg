@@ -9,6 +9,8 @@
 			<param name="intrinsics_ini" type="str" value="$(find pgr_camera)/test_intrinsics.ini" />
 			<param name="camera_name" type="str" value="camera0" />
 		</node>
-		<node name="image_proc" pkg="image_proc" type="image_proc" />
+		<group ns="camera">
+			<node name="image_proc" pkg="image_proc" type="image_proc" />
+		</group>
 	</group>
 </launch>
