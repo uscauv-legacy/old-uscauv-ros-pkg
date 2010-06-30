@@ -4,7 +4,9 @@
 #include <cv_bridge/CvBridge.h>
 #include <opencv/cv.h>
 #include <opencv/highgui.h>
-
+#include <vector>
+#include <utility>
+#include <cmath>
 
 #define MIN_CENTER_DIST		15
 #define MIN_AREA					150
@@ -14,6 +16,56 @@ int thresh = 42;
 double angle_thresh = 0.4;
 uint itsWidth = 320;
 uint itsHeight = 240;
+
+class Point2D
+{
+public:
+	Point2D() : i(0), j(0) {}
+	Point2D(int _i, int _j) : i(_i), j(_j){}
+	int i;
+	int j;
+};
+
+class Quadrilateral
+{
+public:
+	Quadrilateral() : ratio(0.0), angle(0.0){}
+	float ratio;
+	float angle;
+	Point2D tl;
+	Point2D tr;
+	Point2D bl;
+	Point2D br;
+	Point2D center;
+};
+
+class LineSegment2D
+{
+public:
+	LineSegment2D();
+	LineSegment2D(Point2D a, Point2D b) : point1(a), point2(b){}
+	Point2D point1;
+	Point2D point2;
+};
+
+float distance(Point2D p1, Point2D p2)
+{
+	int d1 = p1.i - p2.i;
+	int d2 = p1.j - p2.j;
+	return sqrt(float(d1 * d1 + d2 * d2));
+}
+
+float lineLength(LineSegment2D line)
+{
+	return distance(line.point1, line.point2);	
+}
+
+double lineAngle(LineSegment2D line)
+{
+	float o = (float)(line.point1.j - line.point2.j);
+	float a = (float)(line.point1.i - line.point2.i);
+	return atan(o/a);
+}
 
 // helper function:
 // finds a cosine of angle between vectors
@@ -197,7 +249,7 @@ void findBin(const sensor_msgs::ImageConstPtr &img)
 		isFwdCamera = true;
 	*/
 	sensor_msgs::CvBridge bridge;
-/*
+
 	if(true)//img.initialized())
 	{
 
@@ -209,33 +261,41 @@ void findBin(const sensor_msgs::ImageConstPtr &img)
 
 		cvReleaseImage( &img0 );
 
-		RobotSimEvents::QuadrilateralIceVector quadVect;
-		ImageIceMod::QuadrilateralIce quad;
-		Point2D<int> avgCenter(0,0);
-		std::multimap<int,Point2D<int> > tempPoints;
+		//RobotSimEvents::QuadrilateralIceVector quadVect;
+		//ImageIceMod::QuadrilateralIce quad;
+		//Point2D<int> avgCenter(0,0);
+		//std::multimap<int,Point2D<int> > tempPoints;
+
+		std::vector<Quadrilateral> quadVect;
+		Quadrilateral quad;
+		Point2D avgCenter;
+		std::multimap<int, Point2D> tempPoints;
 
 		// iterate over all the quadrilateral points found
 		for(int i=0; i < cvsquares->total; i++)
 		{
 			// get an individual point
-			Point2D<int> quadPoint;
+			//Point2D<int> quadPoint;
+			Point2D quadPoint;
 			quadPoint.i = ((CvPoint*)cvGetSeqElem(cvsquares, i))->x;
 			quadPoint.j = ((CvPoint*)cvGetSeqElem(cvsquares, i))->y;
 			
 			// add current point's position to running average of point positions
-			avgCenter += Point2D<int>(quadPoint.i,quadPoint.j);
+			//avgCenter += Point2D<int>(quadPoint.i,quadPoint.j);
+			avgCenter.i += quadPoint.i;
+			avgCenter.j += quadPoint.j;
 
 			// add the point to map, sorted by point Y-axis position
-			tempPoints.insert(make_pair(quadPoint.j,quadPoint));
+			tempPoints.insert(std::make_pair(quadPoint.j,quadPoint));
 
 			//LINFO("tempPoints size: %d\n",tempPoints.size());
 
 			// if we have added the 4th point on the quadrilateral
 			if (tempPoints.size() == 4)
 			{
-				std::vector<Point2D<int> > tempVec;
+				std::vector<Point2D> tempVec;
 
-				for(std::map<int,Point2D<int > >::const_iterator it = tempPoints.begin();
+				for(std::map<int,Point2D>::const_iterator it = tempPoints.begin();
 						it != tempPoints.end(); ++it)
 				{
 					tempVec.push_back(it->second);
@@ -282,7 +342,9 @@ void findBin(const sensor_msgs::ImageConstPtr &img)
 
 				// divide by total number of averaged points
 				// to get current quad's center position
-				avgCenter /= Point2D<int>(4,4);
+				//avgCenter /= Point2D<int>(4,4);
+				avgCenter.i /= 4;
+				avgCenter.j /= 4;
 				quad.center.i = avgCenter.i;
 				quad.center.j = avgCenter.j;
 
@@ -292,8 +354,10 @@ void findBin(const sensor_msgs::ImageConstPtr &img)
 				// to a prev. quad's center in order to avoid duplicates
 				for(uint j = 0; j < quadVect.size(); j++)
 				{
-					if(avgCenter.distance(Point2D<int>(quadVect[j].center.i,quadVect[j].center.j))
-						< MIN_CENTER_DIST)
+					Point2D temp = Point2D(quadVect[j].center.i, quadVect[j].center.j);
+					//if(avgCenter.distance(Point2D<int>(quadVect[j].center.i,quadVect[j].center.j))
+					//	< MIN_CENTER_DIST)
+					if (distance(avgCenter, temp) < MIN_CENTER_DIST)
 					{
 						isDupe = true;
 					}
@@ -302,6 +366,7 @@ void findBin(const sensor_msgs::ImageConstPtr &img)
 				// not dupe so add it to vector
 				if(!isDupe)
 				{
+/*
 					LineSegment2D vertLine = LineSegment2D((Point2D<int>(quad.tr.i,quad.tr.j) +
 						Point2D<int>(quad.tl.i,quad.tl.j))/2,
 						(Point2D<int>(quad.br.i,quad.br.j) +
@@ -311,9 +376,17 @@ void findBin(const sensor_msgs::ImageConstPtr &img)
 						Point2D<int>(quad.bl.i,quad.bl.j))/2,
 						(Point2D<int>(quad.tr.i,quad.tr.j) +
 						Point2D<int>(quad.br.i,quad.br.j))/2);
-					
+*/
+					Point2D v1 = Point2D((quad.tr.i + quad.tl.i)/2, (quad.tr.j + quad.tl.j)/2);
+					Point2D v2 = Point2D((quad.br.i + quad.bl.i)/2, (quad.br.j + quad.bl.j)/2);
+					Point2D h1 = Point2D((quad.tl.i + quad.bl.i)/2, (quad.tl.j + quad.bl.j)/2);
+					Point2D h2 = Point2D((quad.tr.i + quad.br.i)/2, (quad.tr.j + quad.br.j)/2);
+					LineSegment2D vertLine = LineSegment2D(v1, v2);
+					LineSegment2D horizLine = LineSegment2D(h1, h2);
+
 					float ratio = 0.0;
 					float angle = 0.0;
+/*
 					if(vertLine.length() > horizLine.length())
 					{
 						if(horizLine.length() > 0)
@@ -327,6 +400,21 @@ void findBin(const sensor_msgs::ImageConstPtr &img)
 							ratio = horizLine.length() / vertLine.length();
 
 						angle = horizLine.angle();
+					}
+*/
+					if(lineLength(vertLine) > lineLength(horizLine))
+					{
+						if(lineLength(horizLine) > 0)
+							ratio = lineLength(vertLine) / lineLength(horizLine);
+
+						angle = lineAngle(vertLine);
+					}
+					else
+					{
+						if(lineLength(vertLine) > 0)
+							ratio = lineLength(horizLine) / lineLength(vertLine);
+
+						angle = lineAngle(horizLine);
 					}
 
 					// change angle to degrees
@@ -345,6 +433,7 @@ void findBin(const sensor_msgs::ImageConstPtr &img)
 					quadVect.push_back(quad);
 
 					// draw the quad on the image
+/*
 					drawLine(img,Point2D<int>(quad.tr.i,quad.tr.j),
 						Point2D<int>(quad.br.i,quad.br.j),
 						PixRGB<byte>(0,255,0),2);
@@ -358,35 +447,40 @@ void findBin(const sensor_msgs::ImageConstPtr &img)
 						Point2D<int>(quad.tr.i,quad.tr.j),
 						PixRGB<byte>(0,255,0),2);
 
+
 					char* str = new char[20];
 					sprintf(str,"%1.2f, %2.1f",ratio,angle);
 					writeText(img,Point2D<int>(quad.center.i,quad.center.j),str);
 					delete [] str;
+*/
 				}
 
 			// re-initialize for next quad
-			quad = ImageIceMod::QuadrilateralIce();
-			avgCenter = Point2D<int>(0,0);
+			//quad = ImageIceMod::QuadrilateralIce();
+			//avgCenter = Point2D<int>(0,0);
+			quad = Quadrilateral();
+			avgCenter = Point2D();
 			tempPoints.clear();
 		}
 	}
 
-	itsOfs->writeRGB(img, "Vision Rectangle Image",
-		FrameInfo("Vision Rectangle Image", SRC_POS));
+	//itsOfs->writeRGB(img, "Vision Rectangle Image",
+	//	FrameInfo("Vision Rectangle Image", SRC_POS));
 
-	itsOfs->updateNext();
+	//itsOfs->updateNext();
 
 	if (quadVect.size() > 0)
 	{
-		RobotSimEvents::VisionRectangleMessagePtr msg = new RobotSimEvents::VisionRectangleMessage;
+		/*RobotSimEvents::VisionRectangleMessagePtr msg = new RobotSimEvents::VisionRectangleMessage;
 		msg->quads = quadVect;
 		msg->isFwdCamera = isFwdCamera;
 		this->publish("VisionRectangleMessageTopic", msg);
+		*/
 	}
 
 	cvReleaseMemStorage( &storage );
 	}
-*/
+
 }
 
 
