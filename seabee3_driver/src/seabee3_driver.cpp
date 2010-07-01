@@ -46,8 +46,9 @@ control_toolbox::Pid * pid_D, * pid_R, * pid_P, * pid_Y;
 #define axis_pitch 4
 #define axis_heading 5
 
-#define axis_depth_p 6
-#define axis_strafe_p 7
+#define axis_depth_rel 6
+#define axis_strafe_rel 7
+#define axis_heading_rel 8
 
 void updateMotorCntlMsg(seabee3_driver_base::MotorCntl & msg, int axis, int p_value)
 {
@@ -58,43 +59,45 @@ void updateMotorCntlMsg(seabee3_driver_base::MotorCntl & msg, int axis, int p_va
 	
 	switch(axis)
 	{
-		case axis_speed:
+		case axis_speed: //relative to the robot
 			motor1 = BeeStem3::MotorControllerIDs::FWD_RIGHT_THRUSTER;
 			motor2 = BeeStem3::MotorControllerIDs::FWD_LEFT_THRUSTER;
 			motor1_scale = speed_m1_dir;
 			motor2_scale = speed_m2_dir;
 			break;
-		case axis_strafe:
-			updateMotorCntlMsg(msg, axis_strafe_p, value * cos( Seabee3Util::degToRad( IMUDataCache->ori.x ) ) );
-			updateMotorCntlMsg(msg, axis_depth_p, value * sin( Seabee3Util::degToRad( IMUDataCache->ori.x ) ) );
+		case axis_strafe: //absolute; relative to the world
+			updateMotorCntlMsg(msg, axis_strafe_rel, value * cos( Seabee3Util::degToRad( IMUDataCache->ori.x ) ) );
+			updateMotorCntlMsg(msg, axis_depth_rel, value * sin( Seabee3Util::degToRad( IMUDataCache->ori.x ) ) );
 			return;
-		case axis_strafe_p:
+		case axis_strafe_rel: //relative to the robot
 			motor1 = BeeStem3::MotorControllerIDs::STRAFE_FRONT_THRUSTER;
 			motor2 = BeeStem3::MotorControllerIDs::STRAFE_BACK_THRUSTER;
 			motor1_scale = strafe_m1_dir;
 			motor2_scale = strafe_m2_dir;
 			break;
-		case axis_depth:
-			updateMotorCntlMsg(msg, axis_depth_p, value * cos( Seabee3Util::degToRad( IMUDataCache->ori.x ) ) );
-			updateMotorCntlMsg(msg, axis_strafe_p, value * sin( Seabee3Util::degToRad( IMUDataCache->ori.x ) ) );
+		case axis_depth: //absolute; relative to the world
+			updateMotorCntlMsg(msg, axis_depth_rel, value * -cos( Seabee3Util::degToRad( IMUDataCache->ori.x ) ) );
+			updateMotorCntlMsg(msg, axis_strafe_rel, value * sin( Seabee3Util::degToRad( IMUDataCache->ori.x ) ) );
 			return;
-		case axis_depth_p:
+		case axis_depth_rel: //relative to the robot
 			motor1 = BeeStem3::MotorControllerIDs::DEPTH_RIGHT_THRUSTER;
 			motor2 = BeeStem3::MotorControllerIDs::DEPTH_LEFT_THRUSTER;
 			motor1_scale = depth_m1_dir;
 			motor2_scale = depth_m2_dir;
 			break;
-		case axis_roll:
+		case axis_roll: //absolute; relative to the world
 			motor1 = BeeStem3::MotorControllerIDs::DEPTH_RIGHT_THRUSTER;
 			motor2 = BeeStem3::MotorControllerIDs::DEPTH_LEFT_THRUSTER;
 			motor1_scale = roll_m1_dir;
 			motor2_scale = roll_m2_dir;
 			break;
-		case axis_pitch: //more complex maneuver requires the utilization of a combination of other axes
-			updateMotorCntlMsg(msg, axis_speed, value);
-			updateMotorCntlMsg(msg, axis_depth, value);
+		case axis_pitch: //pitch is only available as seabee starts to roll; make sure that's the case here
+			updateMotorCntlMsg(msg, axis_heading_rel, value * sin( Seabee3Util::degToRad( IMUDataCache->ori.x ) ) );
 			return;
-		case axis_heading:
+		case axis_heading: //absolute; relative to the world
+			updateMotorCntlMsg(msg, axis_heading_rel, value * cos( Seabee3Util::degToRad( IMUDataCache->ori.x ) ) );
+			return;
+		case axis_heading_rel: //relative to the robot
 			motor1 = BeeStem3::MotorControllerIDs::STRAFE_FRONT_THRUSTER;
 			motor2 = BeeStem3::MotorControllerIDs::STRAFE_BACK_THRUSTER;
 			motor1_scale = heading_m1_dir;
