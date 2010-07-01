@@ -67,7 +67,7 @@ void updateMotorCntlMsg(seabee3_driver_base::MotorCntl & msg, int axis, int p_va
 			break;
 		case axis_strafe: //absolute; relative to the world
 			updateMotorCntlMsg(msg, axis_strafe_rel, value * cos( Seabee3Util::degToRad( IMUDataCache->ori.x ) ) );
-			updateMotorCntlMsg(msg, axis_depth_rel, value * sin( Seabee3Util::degToRad( IMUDataCache->ori.x ) ) );
+			updateMotorCntlMsg(msg, axis_depth_rel, value * -sin( Seabee3Util::degToRad( IMUDataCache->ori.x ) ) );
 			return;
 		case axis_strafe_rel: //relative to the robot
 			motor1 = BeeStem3::MotorControllerIDs::STRAFE_FRONT_THRUSTER;
@@ -77,7 +77,7 @@ void updateMotorCntlMsg(seabee3_driver_base::MotorCntl & msg, int axis, int p_va
 			break;
 		case axis_depth: //absolute; relative to the world
 			updateMotorCntlMsg(msg, axis_depth_rel, value * -cos( Seabee3Util::degToRad( IMUDataCache->ori.x ) ) );
-			updateMotorCntlMsg(msg, axis_strafe_rel, value * sin( Seabee3Util::degToRad( IMUDataCache->ori.x ) ) );
+			updateMotorCntlMsg(msg, axis_strafe_rel, value * -sin( Seabee3Util::degToRad( IMUDataCache->ori.x ) ) );
 			return;
 		case axis_depth_rel: //relative to the robot
 			motor1 = BeeStem3::MotorControllerIDs::DEPTH_RIGHT_THRUSTER;
@@ -92,7 +92,7 @@ void updateMotorCntlMsg(seabee3_driver_base::MotorCntl & msg, int axis, int p_va
 			motor2_scale = roll_m2_dir;
 			break;
 		case axis_pitch: //pitch is only available as seabee starts to roll; make sure that's the case here
-			updateMotorCntlMsg(msg, axis_heading_rel, value * sin( Seabee3Util::degToRad( IMUDataCache->ori.x ) ) );
+			updateMotorCntlMsg(msg, axis_heading_rel, value * -sin( Seabee3Util::degToRad( IMUDataCache->ori.x ) ) );
 			return;
 		case axis_heading: //absolute; relative to the world
 			updateMotorCntlMsg(msg, axis_heading_rel, value * cos( Seabee3Util::degToRad( IMUDataCache->ori.x ) ) );
@@ -203,7 +203,7 @@ void headingPidStep()
 		double strafeMotorVal = 1.0 * desiredStrafe;
 		double depthMotorVal = -1.0 * pid_D->updatePid(errorInDepth, dt);
 		double rollMotorVal = -1.0 * pid_R->updatePid(errorInRPY->x, dt);
-		//double pitchMotorVal = -1.0 * pid_P->updatePid(errorInRPY->y, dt);
+		double pitchMotorVal = -1.0 * pid_P->updatePid(errorInRPY->y, dt);
 		double headingMotorVal = -1.0 * pid_Y->updatePid(errorInRPY->z, dt);
 
 		//ROS_INFO("initial motor val: %f", motorVal);
@@ -223,7 +223,7 @@ void headingPidStep()
 		updateMotorCntlMsg(*motorCntlMsg, axis_strafe, strafeMotorVal);
 		updateMotorCntlMsg(*motorCntlMsg, axis_depth, depthMotorVal);
 		updateMotorCntlMsg(*motorCntlMsg, axis_roll, rollMotorVal);
-		//updateMotorCntlMsg(*motorCntlMsg, axis_pitch, pitchMotorVal);
+		updateMotorCntlMsg(*motorCntlMsg, axis_pitch, pitchMotorVal);
 		updateMotorCntlMsg(*motorCntlMsg, axis_heading, headingMotorVal);
 
 		//ROS_INFO("heading error: %f motorVal: %f", headingError, motorVal);
