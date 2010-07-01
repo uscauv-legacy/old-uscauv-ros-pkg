@@ -61,4 +61,14 @@ public:
 			t2 = _T ( round( t2_cpy / div ) );
 		}
 	}
+	
+	static double degToRad(double const &deg)
+	{
+		return deg * M_PI / 180.0;
+	}
+	
+	static double radToDeg(double const &rad)
+	{
+		return rad * 180.0 / M_PI;
+	}
 };

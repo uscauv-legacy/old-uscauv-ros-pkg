@@ -46,6 +46,9 @@ control_toolbox::Pid * pid_D, * pid_R, * pid_P, * pid_Y;
 #define axis_pitch 4
 #define axis_heading 5
 
+#define axis_depth_p 6
+#define axis_strafe_p 7
+
 void updateMotorCntlMsg(seabee3_driver_base::MotorCntl & msg, int axis, int p_value)
 {
 	int value = p_value;
@@ -62,12 +65,20 @@ void updateMotorCntlMsg(seabee3_driver_base::MotorCntl & msg, int axis, int p_va
 			motor2_scale = speed_m2_dir;
 			break;
 		case axis_strafe:
+			updateMotorCntlMsg(msg, axis_strafe_p, value * cos( Seabee3Util::degToRad( IMUDataCache->ori.x ) ) );
+			updateMotorCntlMsg(msg, axis_depth_p, value * sin( Seabee3Util::degToRad( IMUDataCache->ori.x ) ) );
+			return;
+		case axis_strafe_p:
 			motor1 = BeeStem3::MotorControllerIDs::STRAFE_FRONT_THRUSTER;
 			motor2 = BeeStem3::MotorControllerIDs::STRAFE_BACK_THRUSTER;
 			motor1_scale = strafe_m1_dir;
 			motor2_scale = strafe_m2_dir;
 			break;
 		case axis_depth:
+			updateMotorCntlMsg(msg, axis_depth_p, value * cos( Seabee3Util::degToRad( IMUDataCache->ori.x ) ) );
+			updateMotorCntlMsg(msg, axis_strafe_p, value * sin( Seabee3Util::degToRad( IMUDataCache->ori.x ) ) );
+			return;
+		case axis_depth_p:
 			motor1 = BeeStem3::MotorControllerIDs::DEPTH_RIGHT_THRUSTER;
 			motor2 = BeeStem3::MotorControllerIDs::DEPTH_LEFT_THRUSTER;
 			motor1_scale = depth_m1_dir;

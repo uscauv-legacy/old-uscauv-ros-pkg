@@ -36,7 +36,7 @@
 	<param name="depth_m1_dir" type="double" value="1.0" />
 	<param name="depth_m2_dir" type="double" value="1.0" />
 	
-	<param name="roll_m1_dir" type="double" value="1.0" />
+	<param name="roll_m1_dir" type="double" value="-1.0" />
 	<param name="roll_m2_dir" type="double" value="1.0" />
 	
 	<param name="heading_m1_dir" type="double" value="-1.0" />
