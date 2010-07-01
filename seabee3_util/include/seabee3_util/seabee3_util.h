@@ -62,12 +62,12 @@ public:
 		}
 	}
 	
-	static double degToRad(double const &deg)
+	static double degToRad(const double &deg)
 	{
 		return deg * M_PI / 180.0;
 	}
 	
-	static double radToDeg(double const &rad)
+	static double radToDeg(const double &rad)
 	{
 		return rad * 180.0 / M_PI;
 	}
