@@ -1,0 +1,22 @@
+<package>
+  <description brief="buoy_finder">
+
+     buoy_finder
+
+  </description>
+  <author>USCART</author>
+  <license>BSD</license>
+  <review status="unreviewed" notes="totally awesome!"/>
+  <url>http://ros.org/wiki/buoy_finder</url>
+  <depend package="image_transport"/>
+  <depend package="sensor_msgs"/>
+  <depend package="opencv2"/>
+  <depend package="roscpp"/>
+  <depend package="geometry_msgs"/>
+  <depend package="tf"/>
+  <depend package="cv_bridge"/>
+  <depend package="dynamic_reconfigure"/>
+  <depend package="driver_base"/>
+</package>
+
+
