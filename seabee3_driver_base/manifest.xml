@@ -10,8 +10,9 @@
   <url>http://ros.org/wiki/seabee3_driver_base</url>
   <depend package="roscpp"/>
   <export>
-    <cpp cflags="-I${prefix}/include -I${prefix}/msg/cpp -I${prefix}/srv/cpp"/>
+    <cpp cflags="-I${prefix}/include -I${prefix}/msg/cpp -I${prefix}/srv/cpp" lflags="-L/home/uscr/ros/stacks/seabee3-ros-pkg/seabee3_driver_base/lib"/>
   </export>
 </package>
+ 
 
 
