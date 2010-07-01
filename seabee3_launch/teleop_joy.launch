@@ -8,10 +8,10 @@
 	
 	<param name="speed_scale" type="double" value="-1.0" />
 	<param name="strafe_scale" type="double" value="-1.0" />
-	<param name="surface_scale" type="double" value="-1.0" />
-	<param name="dive_scale" type="double" value="-1.0" />
+	<param name="surface_scale" type="double" value="-0.25" />
+	<param name="dive_scale" type="double" value="-0.25" />
 	<param name="heading_scale" type="double" value="-1.0" />
-	<param name="roll_scale" type="double" value="-1.0" />
+	<param name="roll_scale" type="double" value="-0.25" />
 	
 	<node pkg="joy" type="joy_node" name="joy_node" />
 	<node pkg="seabee3_teleop" type="seabee3_teleop" name="seabee3_teleop" output="screen" />
