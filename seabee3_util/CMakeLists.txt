@@ -17,15 +17,14 @@ set(EXECUTABLE_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/bin)
 set(LIBRARY_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/lib)
 
 #uncomment if you have defined messages
-rosbuild_genmsg()
+#rosbuild_genmsg()
 #uncomment if you have defined services
-rosbuild_gensrv()
+#rosbuild_gensrv()
 
 #common commands for building c++ executables and libraries
-#rosbuild_add_library(seabee3_util src/seabee3_util/seabee3_util.cpp)
+rosbuild_add_library(seabee3_util src/seabee3_util/seabee3_util.cpp)
 #target_link_libraries(${PROJECT_NAME} another_library)
 #rosbuild_add_boost_directories()
 #rosbuild_link_boost(${PROJECT_NAME} thread)
-#link_directories("${PROJECT_SOURCE_DIR}/../seabee3_util/lib")
-rosbuild_add_executable(seabee3_driver src/seabee3_driver.cpp)
-#target_link_libraries(seabee3_driver seabee3_util)
+#rosbuild_add_executable(example examples/example.cpp)
+#target_link_libraries(example ${PROJECT_NAME})

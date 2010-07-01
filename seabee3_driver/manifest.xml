@@ -13,9 +13,10 @@
   <depend package="seabee3_driver_base" />
   <depend package="xsens_node" />
   <depend package="geometry_msgs" />
+  <depend package="seabee3_util" />
   <depend package="tf"/>
   <export>
-    <cpp cflags="-I${prefix}/include -I${prefix}/msg/cpp -I${prefix}/srv/cpp"/>
+    <cpp cflags="-I${prefix}/include -I${prefix}/msg/cpp -I${prefix}/srv/cpp" /> <!-- lflags="-L/{prefix}/../seabee3_util/lib"/>-->
   </export>
 
 </package>

@@ -48,11 +48,7 @@ control_toolbox::Pid * pid_D, * pid_R, * pid_P, * pid_Y;
 
 void updateMotorCntlMsg(seabee3_driver_base::MotorCntl & msg, int axis, int p_value)
 {
-	//ROS_INFO("updateMotorCntlMsg()");
 	int value = p_value;
-	//int value = abs(p_value) > 100 ? 100 * abs(p_value) / p_value : p_value;
-	//if(axis == axis_heading)	
-	//	ROS_INFO("value: %d", value);
 	
 	int motor1, motor2;
 	double motor1_scale = 1.0, motor2_scale = 1.0;
