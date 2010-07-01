@@ -1,5 +1,6 @@
 #include <ros/ros.h>
 #include <sensor_msgs/Image.h>
+#include <geometry_msgs/Point.h>
 #include <image_transport/image_transport.h>
 #include <cv_bridge/CvBridge.h>
 #include <opencv/cv.h>
@@ -9,13 +10,16 @@
 #include <cmath>
 
 #define MIN_CENTER_DIST		15
-#define MIN_AREA					150
+#define MIN_AREA		150
 #define CORNER_TOLERANCE	4
 
 int thresh = 42;
 double angle_thresh = 0.4;
 uint itsWidth = 320;
 uint itsHeight = 240;
+
+ros::Publisher binPositionPub;
+image_transport::Publisher binImagePub;
 
 class Point2D
 {
@@ -259,7 +263,8 @@ void findBin(const sensor_msgs::ImageConstPtr &img)
 
 		CvSeq *cvsquares = findSquares4( img0, storage );
 
-		cvReleaseImage( &img0 );
+		// Release the image later after we have drawn on it
+		// cvReleaseImage( &img0 );
 
 		//RobotSimEvents::QuadrilateralIceVector quadVect;
 		//ImageIceMod::QuadrilateralIce quad;
@@ -453,6 +458,15 @@ void findBin(const sensor_msgs::ImageConstPtr &img)
 					writeText(img,Point2D<int>(quad.center.i,quad.center.j),str);
 					delete [] str;
 */
+
+					cvLine(img0, cv::Point(quad.tr.i, quad.tr.j),
+						cv::Point(quad.br.i, quad.br.j), cvScalar(0, 255, 0), 2);
+					cvLine(img0, cv::Point(quad.br.i, quad.br.j),
+						cv::Point(quad.bl.i, quad.bl.j), cvScalar(0, 255, 0), 2);
+					cvLine(img0, cv::Point(quad.bl.i, quad.bl.j),
+						cv::Point(quad.tl.i, quad.tl.j), cvScalar(0, 255, 0), 2);
+					cvLine(img0, cv::Point(quad.tl.i, quad.tl.j),
+						cv::Point(quad.tr.i, quad.tr.j), cvScalar(0, 255, 0), 2);
 				}
 
 			// re-initialize for next quad
@@ -461,24 +475,36 @@ void findBin(const sensor_msgs::ImageConstPtr &img)
 			quad = Quadrilateral();
 			avgCenter = Point2D();
 			tempPoints.clear();
+			}
 		}
-	}
 
-	//itsOfs->writeRGB(img, "Vision Rectangle Image",
-	//	FrameInfo("Vision Rectangle Image", SRC_POS));
+		//itsOfs->writeRGB(img, "Vision Rectangle Image",
+		//	FrameInfo("Vision Rectangle Image", SRC_POS));
 
-	//itsOfs->updateNext();
+		//itsOfs->updateNext();
 
-	if (quadVect.size() > 0)
-	{
-		/*RobotSimEvents::VisionRectangleMessagePtr msg = new RobotSimEvents::VisionRectangleMessage;
-		msg->quads = quadVect;
-		msg->isFwdCamera = isFwdCamera;
-		this->publish("VisionRectangleMessageTopic", msg);
-		*/
-	}
+		if (quadVect.size() > 0)
+		{
+			/*RobotSimEvents::VisionRectangleMessagePtr msg = new RobotSimEvents::VisionRectangleMessage;
+			msg->quads = quadVect;
+			msg->isFwdCamera = isFwdCamera;
+			this->publish("VisionRectangleMessageTopic", msg);
+			*/
 
-	cvReleaseMemStorage( &storage );
+			for (uint a = 0; a < quadVect.size(); a++)
+			{
+				geometry_msgs::Point binCenter;
+				binCenter.x = quadVect[a].center.i;
+				binCenter.y = quadVect[a].center.j;
+				binCenter.z = 0.0;
+				binPositionPub.publish(binCenter);
+			}
+			binImagePub.publish(bridge.cvToImgMsg(img0));
+			
+		}
+
+		cvReleaseMemStorage(&storage);
+		cvReleaseImage(&img0);
 	}
 
 }
@@ -487,6 +513,18 @@ void findBin(const sensor_msgs::ImageConstPtr &img)
 int main(int argc, char** argv)
 {
 	ros::init(argc, argv, "bin_finder");
-	ros::NodeHandle n;
+	ros::NodeHandle nh;
+	image_transport::ImageTransport it(nh);
+
+	// Register publisher for the center of the bin position in an image
+	binPositionPub = nh.advertise<geometry_msgs::Point>("bin_position", 10);
+
+	// Register publisher for image with bins highlighted
+	binImagePub = it.advertise("bin_image", 10);
+
+	// Subscribe to an image topic
+	image_transport::Subscriber sub = it.subscribe("image_rect_color", 100, findBin);
+
+	ros::spin();
 }
 
