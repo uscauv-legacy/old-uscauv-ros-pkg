@@ -5,6 +5,7 @@
 #include <tf/tf.h>
 #include <opencv/cv.h>
 #include <cv_bridge/CvBridge.h>
+#include "cvutility.h"
 
 using namespace cv;
 
@@ -21,43 +22,25 @@ void imageCallback(const sensor_msgs::ImageConstPtr& msg)
 	ROS_INFO("GOT AN IMAGE!");
 
 	Mat img(bridge.imgMsgToCv(msg));
-	Mat hsvImg;
-	Mat hImg;
-	Mat redImg;
+	IplImage iplImg = img;
+	
+	Mat redImg = cvFilterHS(&iplImg,40,220,0,255,0);
+	dilate(redImg, redImg, Mat(), Point(-1,-1), 3);
+	erode(redImg, redImg, Mat(), Point(-1,-1), 3);
 
-	cvtColor(img, redImg, CV_BGR2GRAY);
-	////Convert image to hsv
-	//cvtColor(img, hsvImg, CV_BGR2HSV);
-
-	////Extract the hue channel
-	//vector<Mat> hsvChannels;
-	//split(hsvImg, hsvChannels);
-	//hImg = hsvChannels[0];
-
-	////FIXXXXX ME!!!
-	//// 255 - abs(hImg-target_hue)
-	//subtract(hImg, Scalar(target_hue), hImg);
-	//hImg = abs(hImg);
-	//subtract(Scalar(255), hImg, redImg);
-
-	////Threshold the image for red
-	////	adaptiveThreshold(hImg, redImg, 
-
-	// Smooth the image to reduce false detections from speckles
-	GaussianBlur( redImg, redImg, Size(9, 9), 2, 2 );
-
+	//Mat redImg;
+	
 	//Run a circle hough transform on the image to detect circular outlines
 	vector<Vec3f> circles;
 	HoughCircles(redImg, circles, CV_HOUGH_GRADIENT,
 			2, redImg.rows/4, 200, 100 );
-
 
 	//Show the debug image if requested
 	if(show_dbg_img != 0)
 	{
 		Mat dbgImg = redImg;
 		//Print out an annoying message so that we remember to disable the debug image
-		ROS_INFO("Showing Debug Image");
+		ROS_INFO("Showing Debug Image - got %lu circles", circles.size());
 		for( size_t i = 0; i < circles.size(); i++ )
 		{
 			Point center(cvRound(circles[i][0]), cvRound(circles[i][1]));
@@ -89,7 +72,7 @@ int main(int argc, char* argv[])
 
 	//Register the show debug image parameter
 	nh.param("show_dbg_img", show_dbg_img, 1);
-	nh.param("target_hue", target_hue, 128);
+	nh.param("target_hue", target_hue, 60);
 
 	//Register a publisher for the 3D position of the buoy
 	pos_pub = new ros::Publisher(nh.advertise<geometry_msgs::Vector3>("perception/buoy_pos", 1));
@@ -100,6 +83,7 @@ int main(int argc, char* argv[])
 	//Register a subscriber to an input image
 	image_transport::Subscriber sub = it.subscribe("image", 1, imageCallback);
 
+	ROS_INFO("SPINNNING UP");
 	ros::spin();
 
 	return 0;
