@@ -1,0 +1,16 @@
+<package>
+  <description brief="image_stream">
+
+     image_stream
+
+  </description>
+  <author>USCART</author>
+  <license>BSD</license>
+  <review status="unreviewed" notes=""/>
+  <url>http://ros.org/wiki/image_stream</url>
+	<depend package="image_transport"/>
+	<depend package="opencv2"/>
+	<depend package="cv_bridge"/>
+</package>
+
+

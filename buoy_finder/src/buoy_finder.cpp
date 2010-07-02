@@ -18,6 +18,7 @@ int target_hue;
 
 void imageCallback(const sensor_msgs::ImageConstPtr& msg)
 {
+	ROS_INFO("GOT AN IMAGE!");
 
 	Mat img(bridge.imgMsgToCv(msg));
 	Mat hsvImg;
@@ -84,6 +85,7 @@ int main(int argc, char* argv[])
 	ros::init(argc, argv, "buoy_finder");
 	ros::NodeHandle nh;
 	image_transport::ImageTransport it(nh);
+	ROS_INFO("STARTING UP");
 
 	//Register the show debug image parameter
 	nh.param("show_dbg_img", show_dbg_img, 1);
