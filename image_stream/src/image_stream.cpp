@@ -26,6 +26,7 @@ int main(int argc, char* argv[])
 	int start;
 	int end;
 	int digits;
+	int rate;
 
 	int test;
 	nh.param("test", test, 0);
@@ -34,12 +35,13 @@ int main(int argc, char* argv[])
 	nh.param("end",    end,         0);
 	nh.param("digits", digits,      0);
 	nh.param("ext",    file_ext,    std::string(""));
+	nh.param("rate",   rate,        15);
 
 	//Register a publisher for an image
 	img_pub = new image_transport::Publisher(it.advertise("image_stream/image_color", 1));
 
 	int curr_frame = start;
-	while(curr_frame <= end)
+	while(ros::ok() && curr_frame <= end)
 	{
 		std::stringstream filename;
 		filename << file_prefix << std::setfill('0') << std::setw(digits) << curr_frame << file_ext;
@@ -52,6 +54,7 @@ int main(int argc, char* argv[])
 		img_pub->publish(bridge.cvToImgMsg(&iplImg));
 
 		ros::spinOnce();
+		ros::Rate(rate).sleep();
 		curr_frame++;
 	}
 
