@@ -29,3 +29,9 @@ rosbuild_add_library(buoy_finder src/cvutility.cpp)
 #rosbuild_link_boost(${PROJECT_NAME} thread)
 rosbuild_add_executable(buoy_finder src/buoy_finder.cpp)
 #target_link_libraries(example ${PROJECT_NAME})
+
+# add dynamic reconfigure api
+rosbuild_find_ros_package(dynamic_reconfigure)
+include(~/ros/stacks/driver_common/dynamic_reconfigure/cmake/cfgbuild.cmake)
+gencfg()
+rosbuild_add_executable(buoy_finder src/buoy_finder.cpp)

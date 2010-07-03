@@ -4,12 +4,16 @@
      color_segmenter
 
   </description>
-  <author>Edward T. Kaszubski</author>
+  <author>Michael Montalbo</author>
   <license>BSD</license>
   <review status="unreviewed" notes=""/>
   <url>http://ros.org/wiki/color_segmenter</url>
   <depend package="image_transport" />
   <depend package="sensor_msgs" />
+  <depend package="opencv2" />
+  <depend package="cv_bridge" />
+  <depend package="roscpp" />
+  <depend package="std_msgs" />
   <export>
     <cpp cflags="-I${prefix}/include -I${prefix}/msg/cpp -I${prefix}/srv/cpp"/>
   </export>

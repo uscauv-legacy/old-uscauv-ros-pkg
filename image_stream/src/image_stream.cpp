@@ -27,15 +27,15 @@ int main(int argc, char* argv[])
 	int end;
 	int digits;
 	int rate;
+	bool loop;
 
-	int test;
-	nh.param("test", test, 0);
 	nh.param("prefix", file_prefix, std::string(""));
 	nh.param("start",  start,       0);
 	nh.param("end",    end,         0);
 	nh.param("digits", digits,      0);
 	nh.param("ext",    file_ext,    std::string(""));
 	nh.param("rate",   rate,        15);
+	nh.param("loop",   loop,        false);
 
 	//Register a publisher for an image
 	img_pub = new image_transport::Publisher(it.advertise("image_stream/image_color", 1));
@@ -56,6 +56,9 @@ int main(int argc, char* argv[])
 		ros::spinOnce();
 		ros::Rate(rate).sleep();
 		curr_frame++;
+
+		if(curr_frame > end && loop)
+		  curr_frame = start;
 	}
 
 	return 0;

@@ -121,10 +121,6 @@ char itsDiveCount;
 int itsHeadingVal;
 int itsHeadingError;
 
-// Stores whether or not PID is currently enabled. Prevents us from sending multiple disable PID messages
-// to the BeeStem in the evolve() loop.
-bool itsPIDEnabled;
-
 // Whether or not we should set a new speed in the control loop
 bool itsSpeedEnabled;
 
@@ -136,17 +132,6 @@ ros::ServiceClient driver_depth;
 ros::ServiceClient driver_rpy;
 //ros::ServiceClient driver_calibrate;
 ros::Publisher driver_speed;
-
-void enablePID()
-{
-  // enable PID
-}
-
-void disablePID()
-{
-  // set speed to 0
-  // disable PID
-}
 
 void initSensorVotes()
 {
@@ -255,6 +240,13 @@ void set_heading(int heading)
     }
 }
 
+void resetPID()
+{
+  set_depth(0);
+  set_heading(0);
+  set_speed(0);
+}
+
 void killSwitchCallback(const seabee3_driver_base::KillSwitchConstPtr & msg)
 {
   itsKillSwitchState = msg->Value;
@@ -294,8 +286,6 @@ void state_init()
 
       // Indicate that PATH SensorVote vals have been set
       itsSensorVotes[PATH].init = true;
-
-      enablePID();
     }
   // Dive States 2 through 4
   else if(itsDepthVal != -1 &&
@@ -379,12 +369,11 @@ int main(int argc, char** argv)
   itsDiveCount = 0;
   itsHeadingVal = -1;
   itsHeadingError = 0;
-  itsPIDEnabled = false;
   itsSpeedEnabled = false;
   itsLastDecayTime = ros::Time(-1);
   // initialize SensorVotes
   initSensorVotes();
-  disablePID();
+  resetPID();
 
   ros::init(argc, argv, "seabee3_mission_control");
   ros::NodeHandle n;
@@ -429,7 +418,7 @@ int main(int argc, char** argv)
 
 	  // only decay the weights every 1 second
 	  if(itsLastDecayTime == ros::Time(-1) ||
-	     (ros::Time::now() - itsLastDecayTime) > ros::Duration(1))
+	     (ros::Time::now() - itsLastDecayTime) >= ros::Duration(1))
 	    {	      
 	      itsLastDecayTime = ros::Time::now();
 	      decayWeights();
@@ -501,8 +490,7 @@ int main(int argc, char** argv)
       else
 	{
 	  ROS_INFO("Waiting for kill switch...\n");
-	  itsPIDEnabled = false;
-	  disablePID();
+	  resetPID();
 	  
 	  itsDepthVal = -1;
 	  itsDepthError = 0;

@@ -433,12 +433,13 @@ int main(int argc, char** argv)
 	ros::ServiceServer setDesiredDepth_srv = n.advertiseService("seabee3/setDesiredDepth", setDesiredDepthCallback);
 	ros::ServiceServer setDesiredRPY_srv = n.advertiseService("seabee3/setDesiredRPY", setDesiredRPYCallback);
 	
+	
 	while(ros::ok())
 	{
-		headingPidStep();
-		motor_cntl_pub.publish(*motorCntlMsg);
-		ros::spinOnce();
-		ros::Rate(20).sleep();
+	  headingPidStep();
+	  motor_cntl_pub.publish(*motorCntlMsg);
+	  ros::spinOnce();
+	  ros::Rate(20).sleep();
 	}
 	
 	ros::spin();

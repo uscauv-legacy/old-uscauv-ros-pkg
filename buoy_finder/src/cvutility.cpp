@@ -27,7 +27,7 @@ IplImage* cvFilterHS(IplImage* src,int Hmin,int Hmax, int Smin, int Smax, int mo
         if(temp[0] >= Hmin && temp[0] <= Hmax && temp[1] >= Smin && temp[1]<= Smax ){
 
              if(!mode)
-               ((uchar*)(mask->imageData + mask->widthStep*j))[i] = 0;
+               ((uchar*)(mask->imageData + mask->widthStep*j))[i] = 255;
         }
         else{
 
@@ -37,7 +37,7 @@ IplImage* cvFilterHS(IplImage* src,int Hmin,int Hmax, int Smin, int Smax, int mo
                temp2[2] = 0;
              }
              else
-               ((uchar*)(mask->imageData + mask->widthStep*j))[i] = 255;
+               ((uchar*)(mask->imageData + mask->widthStep*j))[i] = 0;
 
         }
      }
