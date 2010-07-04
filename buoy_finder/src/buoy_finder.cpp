@@ -8,6 +8,8 @@
 #include "cvutility.h"
 #include <dynamic_reconfigure/server.h>
 #include <buoy_finder/BuoyFinderConfig.h>
+#include "cvBlob/Blob.h"
+#include "cvBlob/BlobResult.h"
 
 using namespace cv;
 
@@ -36,22 +38,39 @@ void reconfigureCallback(buoy_finder::BuoyFinderConfig &config, uint32_t level)
   s_min = config.s_min;
   s_max = config.s_max;
   //mode = config.mode;
+  mode = 0;
 }
 
 void imageCallback(const sensor_msgs::ImageConstPtr& msg)
 {
-  ROS_INFO("Received image.");
+  // ROS_INFO("Received image.");
 
   Mat img(bridge.imgMsgToCv(msg));
   IplImage iplImg = img;
 	
   Mat redImg = cvFilterHS(&iplImg,h_min,h_max,s_min,s_max,mode);
 
-  dilate(redImg, redImg, Mat(), Point(-1,-1), 3);
+  
+  dilate(redImg, redImg, Mat(), Point(-1,-1), 10);
   erode(redImg, redImg, Mat(), Point(-1,-1), 3);
 
-  //Mat redImg;
-	
+
+  IplImage blobImg = redImg;
+  cvFlipBinaryImg(&blobImg);
+
+  CBlobResult blobs;
+  blobs = CBlobResult(&blobImg, NULL, 0, false);
+
+  blobs.Filter(blobs, B_EXCLUDE, CBlobGetArea(), B_LESS, 5);
+  blobs.Filter(blobs, B_EXCLUDE, CBlobGetArea(), B_GREATER, 10000);
+
+
+  CBlob biggestBlob;
+  blobs.GetNthBlob(CBlobGetArea(), 0, biggestBlob);
+
+  float blobX = (biggestBlob.MinX() + biggestBlob.MaxX()) / 2.0;
+  float blobY = (biggestBlob.MinY() + biggestBlob.MaxY()) / 2.0;
+
   //Run a circle hough transform on the image to detect circular outlines
   /*  vector<Vec3f> circles;
   HoughCircles(redImg, circles, CV_HOUGH_GRADIENT,
@@ -61,18 +80,25 @@ void imageCallback(const sensor_msgs::ImageConstPtr& msg)
   //Show the debug image if requested
   if(show_dbg_img != 0)
     {
-      Mat dbgImg = redImg;
-      //Print out an annoying message so that we remember to disable the debug image
-      //ROS_INFO("Showing Debug Image - got %lu circles", circles.size());
- //      for( size_t i = 0; i < circles.size(); i++ )
-// 	{
-// 	  Point center(cvRound(circles[i][0]), cvRound(circles[i][1]));
-// 	  int radius = cvRound(circles[i][2]);
-// 	  // draw the circle center
-// 	  circle( dbgImg, center, 3, Scalar(0,255,0), -1, 8, 0 );
-// 	  // draw the circle outline
-// 	  circle( dbgImg, center, radius, Scalar(0,0,255), 3, 8, 0 );
-// 	}
+      Mat dbgImg;
+      cvtColor(redImg, dbgImg, CV_GRAY2RGB);
+
+      if(blobs.GetNumBlobs() > 0)
+	{
+	  //Print out an annoying message so that we remember to disable the debug image
+	  ROS_INFO("Showing Debug Image - max blob at %f,%f area %f (%d total)", blobX, blobY, biggestBlob.Area(), blobs.GetNumBlobs());
+	  //      for( size_t i = 0; i < circles.size(); i++ )
+	  // 	{
+	  // 	  Point center(cvRound(circles[i][0]), cvRound(circles[i][1]));
+	  // 	  int radius = cvRound(circles[i][2]);
+	  // 	  // draw the circle center
+	  Point center(blobX, blobY);
+	  rectangle( dbgImg, Point(biggestBlob.MinX(),biggestBlob.MinY()), Point(biggestBlob.MaxX(),biggestBlob.MaxY()), Scalar(0,255,0));
+	  circle( dbgImg, center, 3, Scalar(0,255,0), -1, 8, 0 );
+	  // draw the circle outline
+	  circle( dbgImg, center, 5, Scalar(0,0,255), 3, 8, 0 );
+	  // 	}
+	}
 
       //Convert our debug image to an IplImage and send it out
       IplImage iplImg = dbgImg;

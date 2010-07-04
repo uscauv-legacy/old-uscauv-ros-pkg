@@ -48,6 +48,22 @@ IplImage* cvFilterHS(IplImage* src,int Hmin,int Hmax, int Smin, int Smax, int mo
   return mask;
 }
 
+void cvFlipBinaryImg(IplImage* src)
+{
+  for(int i = 0; i < src->width; i++)
+    {
+      for(int j = 0; j < src->height; j++)
+	{
+	  if(((uchar*)(src->imageData + src->widthStep*j))[i] == 255)	    
+	    ((uchar*)(src->imageData + src->widthStep*j))[i] = 0;
+	  else
+	    ((uchar*)(src->imageData + src->widthStep*j))[i] = 255;
+	}
+
+    }
+
+}
+
 IplImage* cvFilterRGB(IplImage* src,int Rmin,int Rmax, int Gmin, int Gmax,int Bmin, int Bmax, int mode)
 {
 
