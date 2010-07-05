@@ -7,24 +7,19 @@
 #include <seabee3_driver/SetDesiredDepth.h>
 #include <seabee3_driver/SetDesiredRPY.h>
 #include <seabee3_driver_base/KillSwitch.h>
+#include <buoy_finder/ColorBlobArray.h>
 
 /* SeaBee3 Mission States */
 #define STATE_INIT          0
 #define STATE_DO_GATE       1
 #define STATE_FIRST_BUOY    2
 #define STATE_SECOND_BUOY   3
+#define STATE_HEDGE         4
 
 // max speed sub can go
 #define MAX_SPEED              75.0
 
-// pose error must be below GATE_POSE_ERR_THRESH
-// in order to sleep for fwd gate time
-#define GATE_POSE_ERR_THRESH   10
-
-// quick hack to calculate barbwire position based on
-// percentage of img dims
-#define IMG_WIDTH              320.0
-#define IMG_HEIGHT             240.0
+#define BUOY_HIT_AREA 10000.0
 
 // minimum diff needed between current pose and last pose
 // in order for beestem  message to be sent out
@@ -127,6 +122,13 @@ bool itsSpeedEnabled;
 // The last time weights were decayed
 ros::Time itsLastDecayTime;
 
+// Order of buoys to hit
+int itsFirstBuoy;
+float itsFirstBuoyArea;
+int itsSecondBuoy;
+float itsSecondBuoyArea;
+
+// Publishers / Subscribers / Clients
 ros::Subscriber kill_switch_sub;
 ros::ServiceClient driver_depth;
 ros::ServiceClient driver_rpy;
@@ -252,6 +254,41 @@ void killSwitchCallback(const seabee3_driver_base::KillSwitchConstPtr & msg)
   itsKillSwitchState = msg->Value;
 }
 
+void buoyFinderCallback(const buoy_finder::ColorBlobArrayConstPtr & msg)
+{
+  for(int i = 0; i < msg->ColorBlobs.size(); i++)
+    {
+      buoy_finder::ColorBlob blob = msg->ColorBlobs[i];
+
+      if(blob.Color == itsFirstBuoy)
+	{
+	  itsFirstBuoyArea = blob.Area;
+
+	  itsSensorVotes[FIRST_BUOY].heading.val = blob.X * itsHeadingCorrScale;
+	  itsSensorVotes[FIRST_BUOY].depth.val = blob.Y * itsDepthCorrScale;
+
+	  if(itsCurrentState == STATE_FIRST_BUOY)
+	    {
+	      itsSensorVotes[FIRST_BUOY].heading.weight = 1.0;
+	      itsSensorVotes[FIRST_BUOY].depth.weight = 1.0;
+	    }
+	}
+      else if(blob.Color == itsSecondBuoy)
+	{
+	  itsSecondBuoyArea = blob.Area;
+
+	  itsSensorVotes[SECOND_BUOY].heading.val = blob.X * itsHeadingCorrScale;
+	  itsSensorVotes[SECOND_BUOY].depth.val = blob.Y * itsDepthCorrScale;
+
+	  if(itsCurrentState == STATE_SECOND_BUOY)
+	    {
+	      itsSensorVotes[SECOND_BUOY].heading.weight = 1.0;
+	      itsSensorVotes[SECOND_BUOY].depth.weight = 1.0;
+	    }
+	}
+    }
+}
+
 // ######################################################################
 void state_init()
 {
@@ -342,10 +379,24 @@ void state_first_buoy()
 
   // Decay the weight we place on PATH SensorVote's heading
   itsSensorVotes[FIRST_BUOY].heading.decay = 0.005;
-  //ROS_INFO("heading weight: %f",itsSensorVotes[BUOY].heading.weight);
+  itsSensorVotes[FIRST_BUOY].depth.decay = 0.005;
+
+  ROS_INFO("heading val: %f, weight: %f",
+	   itsSensorVotes[FIRST_BUOY].heading.val,
+	   itsSensorVotes[FIRST_BUOY].heading.weight);
+
+  ROS_INFO("depth val: %f, weight: %f",
+	   itsSensorVotes[FIRST_BUOY].depth.val,
+	   itsSensorVotes[FIRST_BUOY].depth.weight);
 
   //check for state transition: i.e. buoy is large enough to be
   // considered a "hit" and update to next state
+  if(itsFirstBuoyArea >= BUOY_HIT_AREA)
+    {
+      itsSensorVotes[FIRST_BUOY].heading.weight = 0.0;
+      itsSensorVotes[FIRST_BUOY].depth.weight = 0.0;
+      itsCurrentState = STATE_SECOND_BUOY;
+    }         
 }
 
 // ######################################################################
@@ -353,8 +404,28 @@ void state_second_buoy()
 {
   ROS_INFO("Hitting Second Buoy");
 
-  //itsCurrentState = STATE_DO_BARBWIRE;
+  // Decay the weight we place on PATH SensorVote's heading
+  itsSensorVotes[SECOND_BUOY].heading.decay = 0.005;
+  itsSensorVotes[SECOND_BUOY].depth.decay = 0.005;
+
+  ROS_INFO("heading val: %f, weight: %f",
+	   itsSensorVotes[SECOND_BUOY].heading.val,
+	   itsSensorVotes[SECOND_BUOY].heading.weight);
+
+  ROS_INFO("depth val: %f, weight: %f",
+	   itsSensorVotes[SECOND_BUOY].depth.val,
+	   itsSensorVotes[SECOND_BUOY].depth.weight);
+  
+  //check for state transition: i.e. buoy is large enough to be
+  // considered a "hit" and update to next state
+  if(itsSecondBuoyArea >= BUOY_HIT_AREA)
+    {
+      itsSensorVotes[SECOND_BUOY].heading.weight = 0.0;
+      itsSensorVotes[SECOND_BUOY].depth.weight = 0.0;
+      itsCurrentState = STATE_HEDGE;
+    }   
 }
+
 
 int main(int argc, char** argv)
 {
@@ -382,8 +453,10 @@ int main(int argc, char** argv)
   n.param("gate_time", itsGateTime, 40.0);
   n.param("gate_depth", itsGateDepth, 85.0);
   n.param("heading_corr_scale", itsHeadingCorrScale, 125.0);
-  n.param("depth_corr_scale", itsDepthCorrScale, 100.0);
+  n.param("depth_corr_scale", itsDepthCorrScale, 50.0);
   n.param("speed_corr_scale", itsSpeedCorrScale, 1.0);
+  n.param("first_buoy", itsFirstBuoy, buoy_finder::ColorBlob::RED);
+  n.param("second_buoy", itsSecondBuoy, buoy_finder::ColorBlob::YELLOW);
 
   kill_switch_sub = n.subscribe("seabee3/KillSwitch", 100, killSwitchCallback);
 	
@@ -391,6 +464,8 @@ int main(int argc, char** argv)
   driver_depth = n.serviceClient<seabee3_driver::SetDesiredDepth>("seabee3/setDesiredDepth");
   driver_rpy = n.serviceClient<seabee3_driver::SetDesiredRPY>("seabee3/setDesiredRPY");
   driver_speed = n.advertise<geometry_msgs::Twist>("seabee3/cmd_vel", 1);
+
+  ros::Subscriber buoy_finder_sub = n.subscribe("perception/buoy_pos", 100, buoyFinderCallback);
 
   while(ros::ok())
     {	  
@@ -468,10 +543,7 @@ int main(int argc, char** argv)
 	      
 	      
 	  // Calculate the speed we should be going based on heading and depth error
-	  int headingErr = compositeHeading - its_current_heading;
-	  int depthErr = compositeDepth - its_current_ex_pressure;
-	      
-	  itsPoseError = sqrt((float)(headingErr*headingErr + depthErr*depthErr));
+	  itsPoseError = sqrt((float)(itsHeadingError*itsHeadingError + itsDepthError*itsDepthError));
 	      
 	  float speedCorr = itsPoseError * itsSpeedCorrScale;
 	      

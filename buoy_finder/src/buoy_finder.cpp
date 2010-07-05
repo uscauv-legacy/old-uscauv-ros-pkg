@@ -60,7 +60,7 @@ void imageCallback(const sensor_msgs::ImageConstPtr& msg)
   blobs = CBlobResult(&blobImg, NULL, 0, false);
 
   blobs.Filter(blobs, B_EXCLUDE, CBlobGetArea(), B_LESS, 5);
-  blobs.Filter(blobs, B_EXCLUDE, CBlobGetArea(), B_GREATER, 10000);
+  blobs.Filter(blobs, B_EXCLUDE, CBlobGetArea(), B_GREATER, 15000);
 
 
   //Show the debug image if requested
@@ -79,8 +79,12 @@ void imageCallback(const sensor_msgs::ImageConstPtr& msg)
 	  float bX = (biggestBlob.MinX() + biggestBlob.MaxX()) / 2.0;
 	  float bY = (biggestBlob.MinY() + biggestBlob.MaxY()) / 2.0;
 
+	  // normalize buoy position relative to image center
+	  float nbX = (bX / blobImg.width) - 0.5;
+	  float nbY = (bY / blobImg.height) - 0.5;
+
 	  //Print out an annoying message so that we remember to disable the debug image
-	  ROS_INFO("Showing Debug Image - max blob at %f,%f area %f (%d total)", bX, bY, bArea, blobs.GetNumBlobs());
+	  ROS_INFO("Showing Debug Image - max blob at %f,%f area %f (%d total)", nbX, nbY, bArea, blobs.GetNumBlobs());
 
 	  Point center(bX, bY);
 	  rectangle( dbgImg, Point(biggestBlob.MinX(),biggestBlob.MinY()), Point(biggestBlob.MaxX(),biggestBlob.MaxY()), Scalar(0,255,0));
@@ -107,13 +111,17 @@ void imageCallback(const sensor_msgs::ImageConstPtr& msg)
       float blobX = (currentBlob.MinX() + currentBlob.MaxX()) / 2.0;
       float blobY = (currentBlob.MinY() + currentBlob.MaxY()) / 2.0;
 
+      // normalize buoy position relative to image center
+      blobX = (blobX / blobImg.width) - 0.5;
+      blobY = (blobY / blobImg.height) - 0.5;
+	  
       buoy_finder::ColorBlob msgBlob;
       msgBlob.X = blobX;
       msgBlob.Y = blobY;
       msgBlob.Area = blobArea;
-
+      msgBlob.Color = buoy_finder::ColorBlob::RED;
       
-      msgBlobs.push_back(msgBlob);
+      msgBlobs.ColorBlobs.push_back(msgBlob);
     }
 
   buoy_pub->publish(msgBlobs);

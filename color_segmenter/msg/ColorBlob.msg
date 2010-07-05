@@ -1,3 +1,3 @@
 float32 X
 float32 Y
-float32 Mass
+float32 Area

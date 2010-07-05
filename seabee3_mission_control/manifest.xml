@@ -11,6 +11,5 @@
   <depend package="roscpp"/>
   <depend package="seabee3_driver"/>
   <depend package="geometry_msgs" />
+  <depend package="buoy_finder"/>
 </package>
-
-
