@@ -47,7 +47,7 @@
 
 #include <seabee3_beestem/BeeStem3.h>
 
-#include <seabee3_util/seabee3_util.h>
+#include <localization_tools/Util.h>
 
 xsens_node::IMUData * IMUDataCache;
 geometry_msgs::Twist * TwistCache;
@@ -101,8 +101,8 @@ void updateMotorCntlMsg(seabee3_driver_base::MotorCntl & msg, int axis, int p_va
 			motor2_scale = speed_m2_dir;
 			break;
 		case axis_strafe: //absolute; relative to the world
-			updateMotorCntlMsg(msg, axis_strafe_rel, value * cos( Seabee3Util::degToRad( IMUDataCache->ori.x ) ) );
-			updateMotorCntlMsg(msg, axis_depth_rel, value * -sin( Seabee3Util::degToRad( IMUDataCache->ori.x ) ) );
+			updateMotorCntlMsg(msg, axis_strafe_rel, value * cos( LocalizationUtil::degToRad( IMUDataCache->ori.x ) ) );
+			updateMotorCntlMsg(msg, axis_depth_rel, value * -sin( LocalizationUtil::degToRad( IMUDataCache->ori.x ) ) );
 			return;
 		case axis_strafe_rel: //relative to the robot
 			motor1 = BeeStem3::MotorControllerIDs::STRAFE_FRONT_THRUSTER;
@@ -111,8 +111,8 @@ void updateMotorCntlMsg(seabee3_driver_base::MotorCntl & msg, int axis, int p_va
 			motor2_scale = strafe_m2_dir;
 			break;
 		case axis_depth: //absolute; relative to the world
-			updateMotorCntlMsg(msg, axis_depth_rel, value * -cos( Seabee3Util::degToRad( IMUDataCache->ori.x ) ) );
-			updateMotorCntlMsg(msg, axis_strafe_rel, value * -sin( Seabee3Util::degToRad( IMUDataCache->ori.x ) ) );
+			updateMotorCntlMsg(msg, axis_depth_rel, value * -cos( LocalizationUtil::degToRad( IMUDataCache->ori.x ) ) );
+			updateMotorCntlMsg(msg, axis_strafe_rel, value * -sin( LocalizationUtil::degToRad( IMUDataCache->ori.x ) ) );
 			return;
 		case axis_depth_rel: //relative to the robot
 			motor1 = BeeStem3::MotorControllerIDs::DEPTH_RIGHT_THRUSTER;
@@ -127,10 +127,10 @@ void updateMotorCntlMsg(seabee3_driver_base::MotorCntl & msg, int axis, int p_va
 			motor2_scale = roll_m2_dir;
 			break;
 		case axis_pitch: //pitch is only available as seabee starts to roll; make sure that's the case here
-			updateMotorCntlMsg(msg, axis_heading_rel, value * -sin( Seabee3Util::degToRad( IMUDataCache->ori.x ) ) );
+			updateMotorCntlMsg(msg, axis_heading_rel, value * -sin( LocalizationUtil::degToRad( IMUDataCache->ori.x ) ) );
 			return;
 		case axis_heading: //absolute; relative to the world
-			updateMotorCntlMsg(msg, axis_heading_rel, value * cos( Seabee3Util::degToRad( IMUDataCache->ori.x ) ) );
+			updateMotorCntlMsg(msg, axis_heading_rel, value * cos( LocalizationUtil::degToRad( IMUDataCache->ori.x ) ) );
 			return;
 		case axis_heading_rel: //relative to the robot
 			motor1 = BeeStem3::MotorControllerIDs::STRAFE_FRONT_THRUSTER;
@@ -146,7 +146,7 @@ void updateMotorCntlMsg(seabee3_driver_base::MotorCntl & msg, int axis, int p_va
 	motor1_val += motor1_scale * value;
 	motor2_val += motor2_scale * value;
 	
-	Seabee3Util::capValueProp(motor1_val, motor2_val, 100);
+	LocalizationUtil::capValueProp(motor1_val, motor2_val, 100);
 	
 	msg.motors[motor1] = motor1_val;
 	msg.motors[motor2] = motor2_val;
@@ -214,23 +214,23 @@ void headingPidStep()
 		
 		desiredDepth -= desiredChangeInDepthPerSec * dt.toSec();
 
-		Seabee3Util::normalizeAngle(desiredRPY->x);
-		Seabee3Util::normalizeAngle(desiredRPY->y);
-		Seabee3Util::normalizeAngle(desiredRPY->z);
+		LocalizationUtil::normalizeAngle(desiredRPY->x);
+		LocalizationUtil::normalizeAngle(desiredRPY->y);
+		LocalizationUtil::normalizeAngle(desiredRPY->z);
 
 		//actual - desired; 0 - 40 = -40;
 		//desired -> actual; 40 -> 0 = 40 cw = -40
-		//double headingError = Seabee3Util::angleDistRel(desiredRPY->z, IMUDataCache->ori.z);
+		//double headingError = LocalizationUtil::angleDistRel(desiredRPY->z, IMUDataCache->ori.z);
 		
 		errorInDepth = desiredDepth - extlPressureCache->Value;
-		errorInRPY->x = Seabee3Util::angleDistRel(desiredRPY->x, IMUDataCache->ori.x);
-		errorInRPY->y = Seabee3Util::angleDistRel(desiredRPY->y, IMUDataCache->ori.y);
-		errorInRPY->z = Seabee3Util::angleDistRel(desiredRPY->z, IMUDataCache->ori.z);
+		errorInRPY->x = LocalizationUtil::angleDistRel(desiredRPY->x, IMUDataCache->ori.x);
+		errorInRPY->y = LocalizationUtil::angleDistRel(desiredRPY->y, IMUDataCache->ori.y);
+		errorInRPY->z = LocalizationUtil::angleDistRel(desiredRPY->z, IMUDataCache->ori.z);
 		
-		Seabee3Util::capValue(errorInDepth, maxDepthError);
-		Seabee3Util::capValue(errorInRPY->x, maxRollError);
-		Seabee3Util::capValue(errorInRPY->y, maxPitchError);
-		Seabee3Util::capValue(errorInRPY->z, maxHeadingError);
+		LocalizationUtil::capValue(errorInDepth, maxDepthError);
+		LocalizationUtil::capValue(errorInRPY->x, maxRollError);
+		LocalizationUtil::capValue(errorInRPY->y, maxPitchError);
+		LocalizationUtil::capValue(errorInRPY->z, maxHeadingError);
 		
 		//headingError = abs(headingError) > *maxHeadingError ? *maxHeadingError * headingError / abs(headingError) : headingError;
 		
@@ -243,10 +243,10 @@ void headingPidStep()
 
 		//ROS_INFO("initial motor val: %f", motorVal);
 		
-		/*Seabee3Util::capValue(rollMotorVal, 50.0);
-		Seabee3Util::capValue(pitchMotorVal, 50.0);
-		Seabee3Util::capValue(headingMotorVal, 50.0);
-		Seabee3Util::capValue(depthMotorVal, 50.0);*/
+		/*LocalizationUtil::capValue(rollMotorVal, 50.0);
+		LocalizationUtil::capValue(pitchMotorVal, 50.0);
+		LocalizationUtil::capValue(headingMotorVal, 50.0);
+		LocalizationUtil::capValue(depthMotorVal, 50.0);*/
 		
 		//motorVal = abs(motorVal) > 100 ? 100 * motorVal / abs(motorVal) : motorVal;
 
@@ -342,8 +342,8 @@ int main(int argc, char** argv)
 	TwistCache = new geometry_msgs::Twist;
 	
 	ros::Subscriber imu_sub = n.subscribe("/xsens/IMUData", 1, IMUDataCallback);
-	ros::Subscriber cmd_vel_sub = n.subscribe("seabee3/cmd_vel", 1, CmdVelCallback);
-	ros::Subscriber extl_depth_sub = n.subscribe("seabee3/ExtlPressure", 1, ExtlPressureCallback);
+	ros::Subscriber cmd_vel_sub = n.subscribe("cmd_vel", 1, CmdVelCallback);
+	ros::Subscriber extl_depth_sub = n.subscribe("ExtlPressure", 1, ExtlPressureCallback);
 	
 	desiredRPY = new geometry_msgs::Vector3; desiredRPY->x = 0; desiredRPY->y = 0; desiredRPY->z = 0;
 	errorInRPY = new geometry_msgs::Vector3; errorInRPY->x = 0; errorInRPY->y = 0; errorInRPY->z = 0;
@@ -429,9 +429,9 @@ int main(int argc, char** argv)
 		motorCntlMsg->mask[i] = 0;
 	}
 	
-	ros::Publisher motor_cntl_pub = n.advertise<seabee3_driver_base::MotorCntl>("seabee3/MotorCntl", 1);
-	ros::ServiceServer setDesiredDepth_srv = n.advertiseService("seabee3/setDesiredDepth", setDesiredDepthCallback);
-	ros::ServiceServer setDesiredRPY_srv = n.advertiseService("seabee3/setDesiredRPY", setDesiredRPYCallback);
+	ros::Publisher motor_cntl_pub = n.advertise<seabee3_driver_base::MotorCntl>("MotorCntl", 1);
+	ros::ServiceServer setDesiredDepth_srv = n.advertiseService("setDesiredDepth", setDesiredDepthCallback);
+	ros::ServiceServer setDesiredRPY_srv = n.advertiseService("setDesiredRPY", setDesiredRPYCallback);
 	
 	
 	while(ros::ok())

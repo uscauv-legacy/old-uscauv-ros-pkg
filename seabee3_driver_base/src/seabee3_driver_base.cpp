@@ -99,21 +99,21 @@ int main (int argc, char** argv)
 	ros::init(argc, argv, "seabee3_driver_base");
 	ros::NodeHandle n;
 	
-	n.param("seabee3_driver_base/usbIndex", usbIndex, 0);
+	n.param("usbIndex", usbIndex, 0);
 	
 	ROS_INFO("constructing new driver instance");
 	mDriver = new BeeStem3Driver(usbIndex);
 	
 	ROS_INFO("subscribing to MotorCntl");
-	ros::Subscriber motor_cntl_sub = n.subscribe("seabee3/MotorCntl", 100, motorCntlCallback);
+	ros::Subscriber motor_cntl_sub = n.subscribe("MotorCntl", 100, motorCntlCallback);
 	
-	ros::Publisher intl_pressure_pub = n.advertise<seabee3_driver_base::Pressure>("seabee3/IntlPressure", 100);
-	ros::Publisher extl_pressure_pub = n.advertise<seabee3_driver_base::Pressure>("seabee3/ExtlPressure", 100);
-	ros::Publisher kill_switch_pub = n.advertise<seabee3_driver_base::KillSwitch>("seabee3/KillSwitch", 100);
+	ros::Publisher intl_pressure_pub = n.advertise<seabee3_driver_base::Pressure>("IntlPressure", 100);
+	ros::Publisher extl_pressure_pub = n.advertise<seabee3_driver_base::Pressure>("ExtlPressure", 100);
+	ros::Publisher kill_switch_pub = n.advertise<seabee3_driver_base::KillSwitch>("KillSwitch", 100);
 	
-	ros::ServiceServer dropper1action_srv = n.advertiseService("seabee3/Dropper1Action", Dropper1ActionCB);
-	ros::ServiceServer dropper2action_srv = n.advertiseService("seabee3/Dropper2Action", Dropper2ActionCB);
-	ros::ServiceServer shooter_srv = n.advertiseService("seabee3/ShooterAction", ShooterActionCB);
+	ros::ServiceServer dropper1action_srv = n.advertiseService("Dropper1Action", Dropper1ActionCB);
+	ros::ServiceServer dropper2action_srv = n.advertiseService("Dropper2Action", Dropper2ActionCB);
+	ros::ServiceServer shooter_srv = n.advertiseService("ShooterAction", ShooterActionCB);
 		
 	while(ros::ok())
 	{

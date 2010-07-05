@@ -22,7 +22,7 @@ set(LIBRARY_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/lib)
 #rosbuild_gensrv()
 
 #common commands for building c++ executables and libraries
-rosbuild_add_library(seabee3_util src/seabee3_util/seabee3_util.cpp)
+rosbuild_add_library(localization_defs src/landmark_map/LandmarkMap.cpp src/landmark_map/Landmark.cpp src/localization_tools/LandmarkSensor.cpp src/localization_tools/LocalizationParticle.cpp src/localization_tools/Util.cpp)
 #target_link_libraries(${PROJECT_NAME} another_library)
 #rosbuild_add_boost_directories()
 #rosbuild_link_boost(${PROJECT_NAME} thread)

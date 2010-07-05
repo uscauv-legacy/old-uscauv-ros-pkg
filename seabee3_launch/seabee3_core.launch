@@ -1,11 +1,10 @@
 <launch>
-	<param name="seabee3_driver_base/usbIndex" type="int" value="0" />
-	<node pkg="seabee3_driver_base" type="seabee3_driver_base" name="seabee3_driver_base" output="screen" />
+	<group ns="/seabee3">
+		<include file="$(find seabee3_launch)/seabee3_driver_base.launch" />
+		<include file="$(find seabee3_launch)/seabee3_driver_tuned.launch" />
+	</group>
 
-	<param name="xsens_node/usbIndex" type="int" value="2" />
-	<node pkg="xsens_node" type="xsens_node" name="xsens_node" output="screen" />
-	
-	<include file="$(find seabee3_launch)/seabee3_driver_tuned.launch" />
-	
-	<!--<include file="$(find seabee3_launch)/teleop_joy.launch" />-->
+	<group ns="/xsens">
+		<include file="$(find seabee3_launch)/xsens_node.launch" />
+	</group>
 </launch>

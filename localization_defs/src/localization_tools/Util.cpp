@@ -1,6 +1,6 @@
 /*******************************************************************************
  *
- *      seabee3_util
+ *      LocalizationUtil
  * 
  *      Copyright (c) 2010, Edward T. Kaszubski (ekaszubski@gmail.com)
  *      All rights reserved.
@@ -33,4 +33,4 @@
  *
  *******************************************************************************/
 
-#include <seabee3_util/seabee3_util.h>
+#include <localization_tools/Util.h>
