@@ -1,4 +1,4 @@
 <launch>
-	<param name="seabee3_driver_base/usbIndex" type="int" value="0" />
+	<param name="usbIndex" type="int" value="0" />
 	<node pkg="seabee3_driver_base" type="seabee3_driver_base" name="seabee3_driver_base" output="screen" />
 </launch>
