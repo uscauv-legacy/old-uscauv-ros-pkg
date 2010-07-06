@@ -436,13 +436,13 @@ int main(int argc, char** argv)
 	image_transport::ImageTransport it(nh);
 
 	// Register publisher for the center of the bin position in an image
-	binPositionPub = nh.advertise<geometry_msgs::Point>("bin_position", 10);
+	binPositionPub = nh.advertise<geometry_msgs::Point>("bin_position", 1);
 
 	// Register publisher for image with bins highlighted
-	binImagePub = it.advertise("bin_image", 10);
+	binImagePub = it.advertise("bin_image", 1);
 
 	// Subscribe to an image topic
-	image_transport::Subscriber sub = it.subscribe("image", 100, findBin);
+	image_transport::Subscriber sub = it.subscribe("image", 1, findBin);
 
 	ros::spin();
 }
