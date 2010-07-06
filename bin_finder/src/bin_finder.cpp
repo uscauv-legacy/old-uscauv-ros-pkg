@@ -246,268 +246,187 @@ CvSeq* findSquares4(IplImage* img, CvMemStorage* storage)
 
 void findBin(const sensor_msgs::ImageConstPtr &img)
 {
-	/*
-	//LINFO("Image Received: %d", itsFrameCount);
-	bool isFwdCamera = false;
-	if(cameraId == "FwdCamera")
-		isFwdCamera = true;
-	*/
 	sensor_msgs::CvBridge bridge;
+	CvMemStorage* storage = cvCreateMemStorage(0);
+	IplImage* img0 = bridge.imgMsgToCv(img);
+	CvSeq *cvsquares = findSquares4( img0, storage );
 
-	if(true)//img.initialized())
+	// Release the image later after we have drawn on it
+	// cvReleaseImage( &img0 );
+
+	std::vector<Quadrilateral> quadVect;
+	Quadrilateral quad;
+	Point2D avgCenter;
+	std::multimap<int, Point2D> tempPoints;
+
+	// iterate over all the quadrilateral points found
+	for(int i=0; i < cvsquares->total; i++)
 	{
+		// get an individual point
+		Point2D quadPoint;
+		quadPoint.i = ((CvPoint*)cvGetSeqElem(cvsquares, i))->x;
+		quadPoint.j = ((CvPoint*)cvGetSeqElem(cvsquares, i))->y;
+		
+		// add current point's position to running average of point positions
+		//avgCenter += Point2D<int>(quadPoint.i,quadPoint.j);
+		avgCenter.i += quadPoint.i;
+		avgCenter.j += quadPoint.j;
 
-		CvMemStorage* storage = cvCreateMemStorage(0);
-		//IplImage* img0 = img2ipl(img);
-		IplImage* img0 = bridge.imgMsgToCv(img);
-
-		CvSeq *cvsquares = findSquares4( img0, storage );
-
-		// Release the image later after we have drawn on it
-		// cvReleaseImage( &img0 );
-
-		//RobotSimEvents::QuadrilateralIceVector quadVect;
-		//ImageIceMod::QuadrilateralIce quad;
-		//Point2D<int> avgCenter(0,0);
-		//std::multimap<int,Point2D<int> > tempPoints;
-
-		std::vector<Quadrilateral> quadVect;
-		Quadrilateral quad;
-		Point2D avgCenter;
-		std::multimap<int, Point2D> tempPoints;
-
-		// iterate over all the quadrilateral points found
-		for(int i=0; i < cvsquares->total; i++)
+		// add the point to map, sorted by point Y-axis position
+		tempPoints.insert(std::make_pair(quadPoint.j,quadPoint));
+		//LINFO("tempPoints size: %d\n",tempPoints.size());
+		// if we have added the 4th point on the quadrilateral
+		if (tempPoints.size() == 4)
 		{
-			// get an individual point
-			//Point2D<int> quadPoint;
-			Point2D quadPoint;
-			quadPoint.i = ((CvPoint*)cvGetSeqElem(cvsquares, i))->x;
-			quadPoint.j = ((CvPoint*)cvGetSeqElem(cvsquares, i))->y;
-			
-			// add current point's position to running average of point positions
-			//avgCenter += Point2D<int>(quadPoint.i,quadPoint.j);
-			avgCenter.i += quadPoint.i;
-			avgCenter.j += quadPoint.j;
+			std::vector<Point2D> tempVec;
 
-			// add the point to map, sorted by point Y-axis position
-			tempPoints.insert(std::make_pair(quadPoint.j,quadPoint));
-
-			//LINFO("tempPoints size: %d\n",tempPoints.size());
-
-			// if we have added the 4th point on the quadrilateral
-			if (tempPoints.size() == 4)
+			for(std::map<int,Point2D>::const_iterator it = tempPoints.begin();
+					it != tempPoints.end(); ++it)
 			{
-				std::vector<Point2D> tempVec;
+				tempVec.push_back(it->second);
+			}
 
-				for(std::map<int,Point2D>::const_iterator it = tempPoints.begin();
-						it != tempPoints.end(); ++it)
+			// compare first two points to determine which is top left
+			// and which is top right
+			if(tempVec[0].i < tempVec[1].i)
+			{
+				quad.tl.i = tempVec[0].i;
+				quad.tr.i = tempVec[1].i;
+
+				quad.tl.j = tempVec[0].j;
+				quad.tr.j = tempVec[1].j;
+			}
+			else
+			{
+				quad.tr.i = tempVec[0].i;
+				quad.tl.i = tempVec[1].i;
+               
+				quad.tr.j = tempVec[0].j;
+				quad.tl.j = tempVec[1].j;
+			}
+
+			// compare second two points to determine bottom left and
+			// bottom right
+			if(tempVec[2].i < tempVec[3].i)
+			{
+				quad.bl.i = tempVec[2].i;
+				quad.br.i = tempVec[3].i;
+
+				quad.bl.j = tempVec[2].j;
+				quad.br.j = tempVec[3].j;
+			}
+			else
+			{
+				quad.br.i = tempVec[2].i;
+				quad.bl.i = tempVec[3].i;
+
+				quad.br.j = tempVec[2].j;
+				quad.bl.j = tempVec[3].j;
+			}
+
+
+			// divide by total number of averaged points
+			// to get current quad's center position
+			//avgCenter /= Point2D<int>(4,4);
+			avgCenter.i /= 4;
+			avgCenter.j /= 4;
+			quad.center.i = avgCenter.i;
+			quad.center.j = avgCenter.j;
+
+			bool isDupe = false;
+
+			// make sure the quad's center is not too close
+			// to a prev. quad's center in order to avoid duplicates
+			for(uint j = 0; j < quadVect.size(); j++)
+			{
+				Point2D temp = Point2D(quadVect[j].center.i, quadVect[j].center.j);
+				//if(avgCenter.distance(Point2D<int>(quadVect[j].center.i,quadVect[j].center.j))
+				//	< MIN_CENTER_DIST)
+				if (distance(avgCenter, temp) < MIN_CENTER_DIST)
 				{
-					tempVec.push_back(it->second);
+					isDupe = true;
 				}
+			}
 
-				// compare first two points to determine which is top left
-				// and which is top right
-				if(tempVec[0].i < tempVec[1].i)
+			// not dupe so add it to vector
+			if(!isDupe)
+			{
+				Point2D v1 = Point2D((quad.tr.i + quad.tl.i)/2, (quad.tr.j + quad.tl.j)/2);
+				Point2D v2 = Point2D((quad.br.i + quad.bl.i)/2, (quad.br.j + quad.bl.j)/2);
+				Point2D h1 = Point2D((quad.tl.i + quad.bl.i)/2, (quad.tl.j + quad.bl.j)/2);
+				Point2D h2 = Point2D((quad.tr.i + quad.br.i)/2, (quad.tr.j + quad.br.j)/2);
+				LineSegment2D vertLine = LineSegment2D(v1, v2);
+				LineSegment2D horizLine = LineSegment2D(h1, h2);
+
+				float ratio = 0.0;
+				float angle = 0.0;
+
+				if(lineLength(vertLine) > lineLength(horizLine))
 				{
-					quad.tl.i = tempVec[0].i;
-					quad.tr.i = tempVec[1].i;
+					if(lineLength(horizLine) > 0)
+						ratio = lineLength(vertLine) / lineLength(horizLine);
 
-					quad.tl.j = tempVec[0].j;
-					quad.tr.j = tempVec[1].j;
+					angle = lineAngle(vertLine);
 				}
 				else
 				{
-					quad.tr.i = tempVec[0].i;
-					quad.tl.i = tempVec[1].i;
-                
-					quad.tr.j = tempVec[0].j;
-					quad.tl.j = tempVec[1].j;
+					if(lineLength(vertLine) > 0)
+						ratio = lineLength(horizLine) / lineLength(vertLine);
+
+					angle = lineAngle(horizLine);
 				}
 
-				// compare second two points to determine bottom left and
-				// bottom right
-				if(tempVec[2].i < tempVec[3].i)
-				{
-					quad.bl.i = tempVec[2].i;
-					quad.br.i = tempVec[3].i;
+				// change angle to degrees
+				angle = angle * (180/M_PI);
 
-					quad.bl.j = tempVec[2].j;
-					quad.br.j = tempVec[3].j;
-				}
+				// normalize angle so that zero degrees is facing forawrd
+				// turning to the right is [0 -> 90]
+				// turning to the left is [0 -> -90]
+				if(angle < 0)
+					angle += 90;
 				else
-				{
-					quad.br.i = tempVec[2].i;
-					quad.bl.i = tempVec[3].i;
+					angle += -90;
 
-					quad.br.j = tempVec[2].j;
-					quad.bl.j = tempVec[3].j;
-				}
+				quad.ratio = ratio;
+				quad.angle = angle;
+				quadVect.push_back(quad);
 
-
-				// divide by total number of averaged points
-				// to get current quad's center position
-				//avgCenter /= Point2D<int>(4,4);
-				avgCenter.i /= 4;
-				avgCenter.j /= 4;
-				quad.center.i = avgCenter.i;
-				quad.center.j = avgCenter.j;
-
-				bool isDupe = false;
-
-				// make sure the quad's center is not too close
-				// to a prev. quad's center in order to avoid duplicates
-				for(uint j = 0; j < quadVect.size(); j++)
-				{
-					Point2D temp = Point2D(quadVect[j].center.i, quadVect[j].center.j);
-					//if(avgCenter.distance(Point2D<int>(quadVect[j].center.i,quadVect[j].center.j))
-					//	< MIN_CENTER_DIST)
-					if (distance(avgCenter, temp) < MIN_CENTER_DIST)
-					{
-						isDupe = true;
-					}
-				}
-
-				// not dupe so add it to vector
-				if(!isDupe)
-				{
-/*
-					LineSegment2D vertLine = LineSegment2D((Point2D<int>(quad.tr.i,quad.tr.j) +
-						Point2D<int>(quad.tl.i,quad.tl.j))/2,
-						(Point2D<int>(quad.br.i,quad.br.j) +
-						Point2D<int>(quad.bl.i,quad.bl.j))/2);
-
-					LineSegment2D horizLine = LineSegment2D((Point2D<int>(quad.tl.i,quad.tl.j) +
-						Point2D<int>(quad.bl.i,quad.bl.j))/2,
-						(Point2D<int>(quad.tr.i,quad.tr.j) +
-						Point2D<int>(quad.br.i,quad.br.j))/2);
-*/
-					Point2D v1 = Point2D((quad.tr.i + quad.tl.i)/2, (quad.tr.j + quad.tl.j)/2);
-					Point2D v2 = Point2D((quad.br.i + quad.bl.i)/2, (quad.br.j + quad.bl.j)/2);
-					Point2D h1 = Point2D((quad.tl.i + quad.bl.i)/2, (quad.tl.j + quad.bl.j)/2);
-					Point2D h2 = Point2D((quad.tr.i + quad.br.i)/2, (quad.tr.j + quad.br.j)/2);
-					LineSegment2D vertLine = LineSegment2D(v1, v2);
-					LineSegment2D horizLine = LineSegment2D(h1, h2);
-
-					float ratio = 0.0;
-					float angle = 0.0;
-/*
-					if(vertLine.length() > horizLine.length())
-					{
-						if(horizLine.length() > 0)
-							ratio = vertLine.length() / horizLine.length();
-
-						angle = vertLine.angle();
-					}
-					else
-					{
-						if(vertLine.length() > 0)
-							ratio = horizLine.length() / vertLine.length();
-
-						angle = horizLine.angle();
-					}
-*/
-					if(lineLength(vertLine) > lineLength(horizLine))
-					{
-						if(lineLength(horizLine) > 0)
-							ratio = lineLength(vertLine) / lineLength(horizLine);
-
-						angle = lineAngle(vertLine);
-					}
-					else
-					{
-						if(lineLength(vertLine) > 0)
-							ratio = lineLength(horizLine) / lineLength(vertLine);
-
-						angle = lineAngle(horizLine);
-					}
-
-					// change angle to degrees
-					angle = angle * (180/M_PI);
-
-					// normalize angle so that zero degrees is facing forawrd
-					// turning to the right is [0 -> 90]
-					// turning to the left is [0 -> -90]
-					if(angle < 0)
-						angle += 90;
-					else
-						angle += -90;
-
-					quad.ratio = ratio;
-					quad.angle = angle;
-					quadVect.push_back(quad);
-
-					// draw the quad on the image
-/*
-					drawLine(img,Point2D<int>(quad.tr.i,quad.tr.j),
-						Point2D<int>(quad.br.i,quad.br.j),
-						PixRGB<byte>(0,255,0),2);
-					drawLine(img,Point2D<int>(quad.br.i,quad.br.j),
-						Point2D<int>(quad.bl.i,quad.bl.j),
-						PixRGB<byte>(0,255,0),2);
-					drawLine(img,Point2D<int>(quad.bl.i,quad.bl.j),
-						Point2D<int>(quad.tl.i,quad.tl.j),
-						PixRGB<byte>(0,255,0),2);
-					drawLine(img,Point2D<int>(quad.tl.i,quad.tl.j),
-						Point2D<int>(quad.tr.i,quad.tr.j),
-						PixRGB<byte>(0,255,0),2);
-
-
-					char* str = new char[20];
-					sprintf(str,"%1.2f, %2.1f",ratio,angle);
-					writeText(img,Point2D<int>(quad.center.i,quad.center.j),str);
-					delete [] str;
-*/
-
-					cvLine(img0, cv::Point(quad.tr.i, quad.tr.j),
-						cv::Point(quad.br.i, quad.br.j), cvScalar(0, 255, 0), 2);
-					cvLine(img0, cv::Point(quad.br.i, quad.br.j),
-						cv::Point(quad.bl.i, quad.bl.j), cvScalar(0, 255, 0), 2);
-					cvLine(img0, cv::Point(quad.bl.i, quad.bl.j),
-						cv::Point(quad.tl.i, quad.tl.j), cvScalar(0, 255, 0), 2);
-					cvLine(img0, cv::Point(quad.tl.i, quad.tl.j),
-						cv::Point(quad.tr.i, quad.tr.j), cvScalar(0, 255, 0), 2);
-				}
+				// draw the quad on the image
+				cvLine(img0, cv::Point(quad.tr.i, quad.tr.j),
+					cv::Point(quad.br.i, quad.br.j), cvScalar(0, 255, 0), 2);
+				cvLine(img0, cv::Point(quad.br.i, quad.br.j),
+					cv::Point(quad.bl.i, quad.bl.j), cvScalar(0, 255, 0), 2);
+				cvLine(img0, cv::Point(quad.bl.i, quad.bl.j),
+					cv::Point(quad.tl.i, quad.tl.j), cvScalar(0, 255, 0), 2);
+				cvLine(img0, cv::Point(quad.tl.i, quad.tl.j),
+					cv::Point(quad.tr.i, quad.tr.j), cvScalar(0, 255, 0), 2);
+			}
 
 			// re-initialize for next quad
-			//quad = ImageIceMod::QuadrilateralIce();
-			//avgCenter = Point2D<int>(0,0);
 			quad = Quadrilateral();
 			avgCenter = Point2D();
 			tempPoints.clear();
-			}
 		}
-
-		//itsOfs->writeRGB(img, "Vision Rectangle Image",
-		//	FrameInfo("Vision Rectangle Image", SRC_POS));
-
-		//itsOfs->updateNext();
-
-		if (quadVect.size() > 0)
-		{
-			/*RobotSimEvents::VisionRectangleMessagePtr msg = new RobotSimEvents::VisionRectangleMessage;
-			msg->quads = quadVect;
-			msg->isFwdCamera = isFwdCamera;
-			this->publish("VisionRectangleMessageTopic", msg);
-			*/
-
-			for (uint a = 0; a < quadVect.size(); a++)
-			{
-				geometry_msgs::Point binCenter;
-				binCenter.x = quadVect[a].center.i;
-				binCenter.y = quadVect[a].center.j;
-				binCenter.z = 0.0;
-				binPositionPub.publish(binCenter);
-			}
-			binImagePub.publish(bridge.cvToImgMsg(img0));
-			
-		}
-
-		cvReleaseMemStorage(&storage);
-		cvReleaseImage(&img0);
 	}
 
+	if (quadVect.size() > 0)
+	{
+		for (uint a = 0; a < quadVect.size(); a++)
+		{
+			geometry_msgs::Point binCenter;
+			binCenter.x = quadVect[a].center.i;
+			binCenter.y = quadVect[a].center.j;
+			binCenter.z = 0.0;
+			binPositionPub.publish(binCenter);
+		}
+		binImagePub.publish(bridge.cvToImgMsg(img0));
+		
+	}
+
+	cvReleaseMemStorage(&storage);
+	//cvReleaseImage(&img0);
 }
+
 
 
 int main(int argc, char** argv)
@@ -523,7 +442,7 @@ int main(int argc, char** argv)
 	binImagePub = it.advertise("bin_image", 10);
 
 	// Subscribe to an image topic
-	image_transport::Subscriber sub = it.subscribe("image_rect_color", 100, findBin);
+	image_transport::Subscriber sub = it.subscribe("image", 100, findBin);
 
 	ros::spin();
 }
