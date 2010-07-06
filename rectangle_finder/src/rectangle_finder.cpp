@@ -9,6 +9,8 @@
 #include <utility>
 #include <cmath>
 
+#include <rectangle_finder/RectangleMsg.h>
+
 #define MIN_CENTER_DIST		15
 #define MIN_AREA		150
 #define CORNER_TOLERANCE	4
@@ -18,8 +20,8 @@ double angle_thresh = 0.4;
 uint itsWidth = 320;
 uint itsHeight = 240;
 
-ros::Publisher binPositionPub;
-image_transport::Publisher binImagePub;
+ros::Publisher rectanglePub;
+image_transport::Publisher rectangleImagePub;
 
 class Point2D
 {
@@ -244,7 +246,7 @@ CvSeq* findSquares4(IplImage* img, CvMemStorage* storage)
 }
 
 
-void findBin(const sensor_msgs::ImageConstPtr &img)
+void findRectangle(const sensor_msgs::ImageConstPtr &img)
 {
 	sensor_msgs::CvBridge bridge;
 	CvMemStorage* storage = cvCreateMemStorage(0);
@@ -413,13 +415,24 @@ void findBin(const sensor_msgs::ImageConstPtr &img)
 	{
 		for (uint a = 0; a < quadVect.size(); a++)
 		{
-			geometry_msgs::Point binCenter;
-			binCenter.x = quadVect[a].center.i;
-			binCenter.y = quadVect[a].center.j;
-			binCenter.z = 0.0;
-			binPositionPub.publish(binCenter);
+			rectangle_finder::RectangleMsg msg;
+			msg.Center.x = quadVect[a].center.i;
+			msg.Center.y = quadVect[a].center.j;
+			msg.Center.z = 0.0;
+			
+			/// ToDo: Implement rectangle size calculation
+			
+			msg.Dim.x = 0.0;
+			msg.Dim.y = 0.0;
+			msg.Dim.z = 0.0;
+			
+			/// ToDo: Implement rectangle orientation calculation
+			
+			msg.Ori = 0.0;
+			
+			rectanglePub.publish(msg);
 		}
-		binImagePub.publish(bridge.cvToImgMsg(img0));
+		rectangleImagePub.publish(bridge.cvToImgMsg(img0));
 		
 	}
 
@@ -431,18 +444,18 @@ void findBin(const sensor_msgs::ImageConstPtr &img)
 
 int main(int argc, char** argv)
 {
-	ros::init(argc, argv, "bin_finder");
-	ros::NodeHandle nh;
+	ros::init(argc, argv, "rectangle_finder");
+	ros::NodeHandle nh("~");
 	image_transport::ImageTransport it(nh);
 
 	// Register publisher for the center of the bin position in an image
-	binPositionPub = nh.advertise<geometry_msgs::Point>("bin_position", 1);
+	rectanglePub = nh.advertise<rectangle_finder::RectangleMsg>("rectangle_data", 1);
 
 	// Register publisher for image with bins highlighted
-	binImagePub = it.advertise("bin_image", 1);
+	rectangleImagePub = it.advertise("rectangle_image", 1);
 
 	// Subscribe to an image topic
-	image_transport::Subscriber sub = it.subscribe("image", 1, findBin);
+	image_transport::Subscriber sub = it.subscribe("image", 1, findRectangle);
 
 	ros::spin();
 }
