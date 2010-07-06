@@ -71,6 +71,7 @@ int main (int argc, char** argv)
   ros::NodeHandle n;
 
   blobDetect();
+  ros::spin();
 
   // 	ros::ServiceServer SegmentImage_srv = n.advertiseService("/color_segmenter/SegmentImage", SegmentImageCallback);
 	

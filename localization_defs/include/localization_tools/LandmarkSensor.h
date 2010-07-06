@@ -93,8 +93,8 @@ public:
 	static sonar_node::SonarScanArray generateVirtualSensorMessage ( const LocalizationParticle & part, const LandmarkMap & map )
 	{
 		sonar_node::SonarScanArray result;
-		std::vector<Landmark> landmarks = map.fetchLandmarksById(Landmark::LandmarkId::Pinger);
-		for(int i = 0; i < landmarks.size(); i ++)
+		std::vector<Landmark> landmarks = map.fetchLandmarksByType(Landmark::LandmarkType::Pinger);
+		for(unsigned int i = 0; i < landmarks.size(); i ++)
 		{
 			cv::Point2d theVector = LocalizationUtil::vectorTo(part.mState.mCenter, landmarks[i].mCenter);
 			sonar_node::SonarScan theScan;

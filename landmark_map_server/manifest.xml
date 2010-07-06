@@ -9,8 +9,11 @@
   <review status="unreviewed" notes=""/>
   <url>http://ros.org/wiki/landmark_map_server</url>
   <depend package="roscpp" />
-  <depend package="landmark_map" />
-  <depend pachage="yaml_cpp" />
+  <depend package="localization_defs" />
+  <depend package="yaml_cpp" />
+  <depend package="opencv2" />
+  <depend package="tf" />
+  <depend package="visualization_msgs" />
   <export>
     <cpp cflags="-I${prefix}/include -I${prefix}/msg/cpp -I${prefix}/srv/cpp" lflags="-L/{prefix}/lib"/>
   </export>

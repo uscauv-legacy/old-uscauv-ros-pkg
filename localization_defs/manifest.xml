@@ -10,9 +10,10 @@
   <url>http://ros.org/wiki/localization_defs</url>
   <depend package="roscpp"/>
   <depend package="opencv2" />
-  <depend package="std_msgs" />
   <depend package="buoy_finder" />
   <depend package="sonar_node" />
+  <depend package="visualization_msgs" />
+  <depend package="geometry_msgs" />
   <export>
     <cpp cflags="-I${prefix}/include -I${prefix}/msg/cpp -I${prefix}/srv/cpp" lflags="-L/{prefix}/lib"/>
   </export>

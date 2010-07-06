@@ -1,6 +1,6 @@
 <launch>
-	<group ns="camera_down_l">
 
+	<group ns="camera_down_l">
 		<node name="camera_uid" pkg="camera1394" type="camera1394_node">
 			<param name="bayer_pattern" type="string" value="rggb"/>
 			<param name="guid" type="string" value="00b09d010090f9de"/>
@@ -9,6 +9,6 @@
 		<group ns="camera">
 			<node name="image_proc" pkg="image_proc" type="image_proc" />
 		</group>
-
+		
 	</group>
 </launch>

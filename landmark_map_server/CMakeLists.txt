@@ -26,5 +26,6 @@ set(LIBRARY_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/lib)
 #target_link_libraries(${PROJECT_NAME} another_library)
 #rosbuild_add_boost_directories()
 #rosbuild_link_boost(${PROJECT_NAME} thread)
+link_directories("${PROJECT_SOURCE_DIR}/../localization_defs/lib") #this is retarded; I shouldn't have to fucking do this to get the fucking thing to link
 rosbuild_add_executable(landmark_map_server src/landmark_map_server.cpp)
-#target_link_libraries(example ${PROJECT_NAME})
+target_link_libraries(landmark_map_server localization_defs)

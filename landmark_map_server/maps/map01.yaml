@@ -1,0 +1,29 @@
+dim: [10.0, 10.0]
+landmarks:
+- type: 0
+  center: [0.0, 2.0, 5.0]
+  ori: 0.0
+  color: 0
+
+- type: 0
+  center: [0.0, 1.5.0, 5.0]
+  ori: 0.0
+  color: 5
+  
+- type: 0
+  center: [0.0, 1.0, 5.0]
+  ori: 0.0
+  color: 10
+
+- type: 1
+  center: [5.0, -5.0, 0.0]
+  ori: 0.0
+  id: 0
+
+- type: 2
+  center: [0.0, 0.0, 0.0]
+  ori: -45
+
+- type: 2
+  center: [-5.0, -5.0, 0.0]
+  ori: 0
