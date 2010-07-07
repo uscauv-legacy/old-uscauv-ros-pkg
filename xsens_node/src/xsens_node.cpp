@@ -38,7 +38,7 @@
 #include <xsens_node/IMUData.h>
 #include <xsens_node/CalibrateRPYOri.h>
 #include <xsens_node/CalibrateRPYDrift.h>
-#include <xsens_node/SetRPYOriOffset.h>
+#include <xsens_node/SetRPYOffset.h>
 
 #include <ros/ros.h>
 #include <tf/tf.h>
@@ -140,7 +140,7 @@ void runRPYDriftCalibration(int n = 10)
 	*drift_comp /= (double)(n); //avg drift per cycle
 }
 
-bool SetRPYOriOffsetCallback (xsens_node::SetRPYOriOffset::Request &req, xsens_node::SetRPYOriOffset::Response &res)
+bool SetRPYOffsetCallback (xsens_node::SetRPYOffset::Request &req, xsens_node::SetRPYOffset::Response &res)
 {
 	//Mode = 1 : set change in rpy offset; else set absolute rpy offset
 	if(req.Mask.x != 0.0)
@@ -180,12 +180,12 @@ bool CalibrateRPYDriftCallback (xsens_node::CalibrateRPYDrift::Request &req, xse
 int main(int argc, char** argv)
 {
 	ros::init(argc, argv, "xsens_node");
-	ros::NodeHandle n;
+	ros::NodeHandle n("~");
 	ros::Publisher imu_pub_calib = n.advertise<xsens_node::IMUData>("data_calibrated", 1);
 	ros::Publisher imu_pub_raw = n.advertise<xsens_node::IMUData>("data_raw", 1);
 	ros::ServiceServer CalibrateRPYDrift_srv = n.advertiseService("CalibrateRPYDrift", CalibrateRPYDriftCallback);
 	ros::ServiceServer CalibrateRPYOri_srv = n.advertiseService("CalibrateRPYOri", CalibrateRPYOriCallback);
-	ros::ServiceServer SetRPYOriOffset_srv = n.advertiseService("SetRPYOriOffset", SetRPYOriOffsetCallback);
+	ros::ServiceServer SetRPYOffset_srv = n.advertiseService("SetRPYOffset", SetRPYOffsetCallback);
 	
 	sampleTime = new double(1.0);
 	ori_comp = new tf::Vector3(0, 0, 0);
@@ -196,7 +196,7 @@ int main(int argc, char** argv)
 	ori_data_cache = new std::queue<tf::Vector3>;
 	
 	int usbIndex;
-	n.param("usbIndex", usbIndex, 2);
+	n.param("usb_index", usbIndex, 2);
 	
 	mImuDriver = new XSensDriver((unsigned int)usbIndex);
 	if( !mImuDriver->initMe() )
