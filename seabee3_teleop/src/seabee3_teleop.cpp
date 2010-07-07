@@ -71,7 +71,7 @@ void joyCallback(const joy::Joy::ConstPtr& joy)
 int main(int argc, char** argv)
 {
 	ros::init(argc, argv, "seabee3_teleop");
-	ros::NodeHandle n;
+	ros::NodeHandle n("~");
 	
 	n.param("speed", speed, 0);
 	n.param("strafe", strafe, 1);
