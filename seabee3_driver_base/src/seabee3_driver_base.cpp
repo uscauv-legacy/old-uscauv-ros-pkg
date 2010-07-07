@@ -103,11 +103,11 @@ int main (int argc, char** argv)
 	mDriver = new BeeStem3Driver(usbIndex);
 	
 	ROS_INFO("subscribing to MotorCntl");
-	ros::Subscriber motor_cntl_sub = n.subscribe("/seabee3/MotorCntl", 100, motorCntlCallback);
+	ros::Subscriber motor_cntl_sub = n.subscribe("/seabee3/MotorCntl", 1, motorCntlCallback);
 	
-	ros::Publisher intl_pressure_pub = n.advertise<seabee3_driver_base::Pressure>("/seabee3/IntlPressure", 100);
-	ros::Publisher extl_pressure_pub = n.advertise<seabee3_driver_base::Pressure>("/seabee3/ExtlPressure", 100);
-	ros::Publisher kill_switch_pub = n.advertise<seabee3_driver_base::KillSwitch>("/seabee3/KillSwitch", 100);
+	ros::Publisher intl_pressure_pub = n.advertise<seabee3_driver_base::Pressure>("/seabee3/IntlPressure", 1);
+	ros::Publisher extl_pressure_pub = n.advertise<seabee3_driver_base::Pressure>("/seabee3/ExtlPressure", 1);
+	ros::Publisher kill_switch_pub = n.advertise<seabee3_driver_base::KillSwitch>("/seabee3/KillSwitch", 1);
 	
 	ros::ServiceServer dropper1action_srv = n.advertiseService("/seabee3/Dropper1Action", Dropper1ActionCB);
 	ros::ServiceServer dropper2action_srv = n.advertiseService("/seabee3/Dropper2Action", Dropper2ActionCB);
