@@ -22,9 +22,10 @@ set(LIBRARY_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/lib)
 #rosbuild_gensrv()
 
 #common commands for building c++ executables and libraries
-rosbuild_add_library(flsl_util src/flsl_util/LocalizationParticle.cpp)
+#rosbuild_add_library(flsl_util src/flsl_util/LocalizationParticle.cpp)
 #target_link_libraries(${PROJECT_NAME} another_library)
 #rosbuild_add_boost_directories()
 #rosbuild_link_boost(${PROJECT_NAME} thread)
+link_directories("${PROJECT_SOURCE_DIR}/../localization_defs/lib")
 rosbuild_add_executable(flsl src/flsl.cpp)
-target_link_libraries(flsl flsl_util)
+target_link_libraries(flsl localization_defs)

@@ -36,8 +36,7 @@
 #include <xsens/xsens_driver.h>
 
 #include <xsens_node/IMUData.h>
-#include <xsens_node/CalibrateRPYOri.h>
-#include <xsens_node/CalibrateRPYDrift.h>
+#include <xsens_node/CalibrateRPY.h>
 #include <xsens_node/SetRPYOffset.h>
 
 #include <ros/ros.h>
@@ -155,7 +154,7 @@ bool SetRPYOffsetCallback (xsens_node::SetRPYOffset::Request &req, xsens_node::S
 	return true;
 }
 
-bool CalibrateRPYOriCallback (xsens_node::CalibrateRPYOri::Request &req, xsens_node::CalibrateRPYOri::Response &res)
+bool CalibrateRPYOriCallback (xsens_node::CalibrateRPY::Request &req, xsens_node::CalibrateRPY::Response &res)
 {
 	int numSamples = req.NumSamples;
 	
@@ -166,7 +165,7 @@ bool CalibrateRPYOriCallback (xsens_node::CalibrateRPYOri::Request &req, xsens_n
 	return true;
 }
 
-bool CalibrateRPYDriftCallback (xsens_node::CalibrateRPYDrift::Request &req, xsens_node::CalibrateRPYDrift::Response &res)
+bool CalibrateRPYDriftCallback (xsens_node::CalibrateRPY::Request &req, xsens_node::CalibrateRPY::Response &res)
 {
 	int numSamples = req.NumSamples;
 	

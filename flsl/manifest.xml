@@ -13,7 +13,7 @@
   <depend package="geometry_msgs" />
   <depend package="std_msgs" />
   <depend package="opencv2" />
-  <depend package="landmark_map" />
+  <depend package="localization_defs" />
   <depend package="landmark_map_server" />
   <export>
     <cpp cflags="-I${prefix}/include -I${prefix}/msg/cpp -I${prefix}/srv/cpp" lflags="-L/{prefix}/lib"/>

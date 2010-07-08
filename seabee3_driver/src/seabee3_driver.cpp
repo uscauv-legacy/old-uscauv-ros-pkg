@@ -332,7 +332,7 @@ void ExtlPressureCallback(const seabee3_driver_base::PressureConstPtr & extlPres
 int main(int argc, char** argv)
 {
 	ros::init(argc, argv, "seabee3_driver");
-	ros::NodeHandle n;
+	ros::NodeHandle n("~");
 	
 	//vel_est_lin = new tf::Vector3(0, 0, 0);
 	//vel_est_ang = new tf::Vector3(0, 0, 0);
@@ -341,9 +341,9 @@ int main(int argc, char** argv)
 	IMUDataCache = new xsens_node::IMUData;
 	TwistCache = new geometry_msgs::Twist;
 	
-	ros::Subscriber imu_sub = n.subscribe("/xsens/IMUData", 1, IMUDataCallback);
-	ros::Subscriber cmd_vel_sub = n.subscribe("cmd_vel", 1, CmdVelCallback);
-	ros::Subscriber extl_depth_sub = n.subscribe("ExtlPressure", 1, ExtlPressureCallback);
+	ros::Subscriber imu_sub = n.subscribe("imu_data", 1, IMUDataCallback); //likely necessary to remap this to something real ie. /xsens/data_calibrated
+	ros::Subscriber cmd_vel_sub = n.subscribe("/seabee3/cmd_vel", 1, CmdVelCallback);
+	ros::Subscriber extl_depth_sub = n.subscribe("/seabee3/extl_pressure", 1, ExtlPressureCallback);
 	
 	desiredRPY = new geometry_msgs::Vector3; desiredRPY->x = 0; desiredRPY->y = 0; desiredRPY->z = 0;
 	errorInRPY = new geometry_msgs::Vector3; errorInRPY->x = 0; errorInRPY->y = 0; errorInRPY->z = 0;
@@ -366,10 +366,10 @@ int main(int argc, char** argv)
 	double pid_P_p, pid_P_i, pid_P_d;
 	double pid_Y_p, pid_Y_i, pid_Y_d;
 	
-	n.param("depth_err_cap_thresh", maxDepthError, 25.0);
-	n.param("roll_err_cap_thresh", maxRollError, 25.0);
-	n.param("pitch_err_cap_thresh", maxPitchError, 25.0);
-	n.param("heading_err_cap_thresh", maxHeadingError, 25.0);
+	n.param("depth_err_cap", maxDepthError, 25.0);
+	n.param("roll_err_cap", maxRollError, 25.0);
+	n.param("pitch_err_cap", maxPitchError, 25.0);
+	n.param("heading_err_cap", maxHeadingError, 25.0);
 	
 	n.param("pid_D_p", pid_D_p, 2.5);
 	n.param("pid_D_i", pid_D_i, 0.05);
@@ -429,9 +429,9 @@ int main(int argc, char** argv)
 		motorCntlMsg->mask[i] = 0;
 	}
 	
-	ros::Publisher motor_cntl_pub = n.advertise<seabee3_driver_base::MotorCntl>("MotorCntl", 1);
-	ros::ServiceServer setDesiredDepth_srv = n.advertiseService("setDesiredDepth", setDesiredDepthCallback);
-	ros::ServiceServer setDesiredRPY_srv = n.advertiseService("setDesiredRPY", setDesiredRPYCallback);
+	ros::Publisher motor_cntl_pub = n.advertise<seabee3_driver_base::MotorCntl>("/seabee3/motor_cntl", 1);
+	ros::ServiceServer setDesiredDepth_srv = n.advertiseService("/seabee3/setDesiredDepth", setDesiredDepthCallback);
+	ros::ServiceServer setDesiredRPY_srv = n.advertiseService("/seabee3/setDesiredRPY", setDesiredRPYCallback);
 	
 	
 	while(ros::ok())
