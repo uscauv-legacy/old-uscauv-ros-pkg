@@ -15,6 +15,8 @@ public:
 		const static int Buoy = 	0;
 		const static int Pinger = 	1;
 		const static int Pipe = 	2;
+		const static int Bin = 		3;
+		const static int Window = 	4;
 	};
 	
 	struct ColorIds
