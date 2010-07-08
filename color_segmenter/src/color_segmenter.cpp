@@ -19,8 +19,8 @@
 #include "cvBlob/Blob.h"
 #include "cvBlob/BlobResult.h"
 
-#define RED_H_MIN 75
-#define RED_H_MAX 255
+#define RED_H_MIN 0
+#define RED_H_MAX 95
 #define RED_S_MIN 0
 #define RED_S_MAX 255
 
@@ -39,8 +39,8 @@
 #define GREEN_S_MIN 0
 #define GREEN_S_MAX 255
 
-#define BLUE_H_MIN 75
-#define BLUE_H_MAX 255
+#define BLUE_H_MIN 52
+#define BLUE_H_MAX 127
 #define BLUE_S_MIN 0
 #define BLUE_S_MAX 255
 
@@ -137,6 +137,7 @@ void reconfigureCallback(color_segmenter::ColorSegmenterConfig &config, uint32_t
 
 color_segmenter::ColorBlobArray filterColor(int color)
 {
+	ROS_INFO("filtering image for color: %d", color);
   IplImage img = itsCurrentImage;
 	
   int h_min = colors[color].h_min;
@@ -157,7 +158,7 @@ color_segmenter::ColorBlobArray filterColor(int color)
   blobs = CBlobResult(&fImg, NULL, 0, false);
 
   blobs.Filter(blobs, B_EXCLUDE, CBlobGetArea(), B_LESS, 5);
-  blobs.Filter(blobs, B_EXCLUDE, CBlobGetArea(), B_GREATER, 15000);
+  blobs.Filter(blobs, B_EXCLUDE, CBlobGetArea(), B_GREATER, 99999);
 
   color_segmenter::ColorBlobArray msgBlobs;
 
@@ -227,6 +228,7 @@ void imageCallback(const sensor_msgs::ImageConstPtr& msg)
 
 bool segmentImageCallback(color_segmenter::SegmentImage::Request & req, color_segmenter::SegmentImage::Response & resp)
 {
+	ROS_INFO("got a request to segment an image for color: %d", req.DesiredColor);
   boost::mutex::scoped_lock lock(image_mutex); 
   int colorId = req.DesiredColor; //getColorId(req.DesiredColor);
 
@@ -234,6 +236,7 @@ bool segmentImageCallback(color_segmenter::SegmentImage::Request & req, color_se
     return false;		
  
   resp.BlobArray = filterColor(colorId);
+  ROS_INFO("found %d blobs after filtering image", (int)resp.BlobArray.ColorBlobs.size() );
 
   if(resp.BlobArray.ColorBlobs.size() > 0)
     return true;
@@ -284,7 +287,7 @@ void initColorRanges()
 int main (int argc, char** argv)
 {
   ros::init(argc, argv, "color_segmenter");
-  ros::NodeHandle n;
+  ros::NodeHandle n("~");
 
   image_transport::ImageTransport it(n);
 

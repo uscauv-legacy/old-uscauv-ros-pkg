@@ -12,7 +12,7 @@ std::string map_topic;
 int main( int argc, char* argv[] )
 {
 	ros::init(argc, argv, "flsl");
-	ros::NodeHandle n;
+	ros::NodeHandle n("~");
 	n.param("map_topic", map_topic, std::string("/landmark_map") );
 	
 	

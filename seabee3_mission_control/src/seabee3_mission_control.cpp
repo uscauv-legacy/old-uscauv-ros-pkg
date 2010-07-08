@@ -464,7 +464,7 @@ int main(int argc, char** argv)
   resetPID();
 
   ros::init(argc, argv, "seabee3_mission_control");
-  ros::NodeHandle n;
+  ros::NodeHandle n("~");
 
   // initialize command-line parameters
   n.param("gate_time", itsGateTime, 40.0);

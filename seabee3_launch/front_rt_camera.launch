@@ -1,16 +1,15 @@
 <launch>
-	<group ns="camera_front_r">
-		<param name="camSN" type="int" value="9501150" />
-		<node name="camera" pkg="pgr_camera" type="pgr_camera_node" respawn="false" output="screen">
-			<param name="width" type="int" value="640"/>
-			<param name="height" type="int" value="480"/>
-			<param name="format" value="Y8" />
-			<param name="frame_rate" type="int" value="15" />
-			<param name="intrinsics_ini" type="str" value="$(find pgr_camera)/test_intrinsics.ini" />
-			<param name="camera_name" type="str" value="camera0" />
+
+	<group ns="camera_front_r" >
+		<node name="camera_front_l" pkg="camera1394" type="camera1394_node">
+			<param name="frame_id" type="string" value="camera_front_r" />
+			<param name="bayer_pattern" type="string" value="rggb"/>
+			<param name="guid" type="string" value="00b09d010090f9d-"/>
 		</node>
+
 		<group ns="camera">
 			<node name="image_proc" pkg="image_proc" type="image_proc" />
 		</group>
-	</group>
+	
+	</group>	
 </launch>

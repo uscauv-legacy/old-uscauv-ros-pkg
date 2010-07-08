@@ -15,6 +15,7 @@
 ros::ServiceClient seg_img_srv;
 color_segmenter::SegmentImage seg_img;
 double heading_corr_scale, depth_corr_scale, distance_scale;
+int runBuoyDemo;
 
 //std::queue<localization_defs::LandmarkMsg> messageQueue;
 std::queue<visualization_msgs::Marker> markerQueue;
@@ -26,9 +27,15 @@ struct RectangleParams
 	double rectangleParam2;
 };
 
+namespace Demo
+{
+	landmark_finder::FindLandmarks::Request buoyDemoReq;
+	landmark_finder::FindLandmarks::Response buoyDemoResp;
+}
+
 struct BlobParams
 {
-	BlobParams(double min = 0.0, double max = 9999.0, double heading_scale = 125.0, double depth_scale = 50.0, double dist_scale = 7000.0)
+	BlobParams(double min = 0.0, double max = 99999.0, double heading_scale = 1.0, double depth_scale = 1.0, double dist_scale = 7000.0)
 	{
 		minBlobSize = min;
 		maxBlobSize = max;
@@ -52,10 +59,11 @@ BlobParams mWindowBlobParams;
 //find the biggest blob within the defined limits or return false if there are none that meet the requirements
 bool findBiggestBlob(const int & desiredColor, color_segmenter::ColorBlob & resp, const BlobParams & blobParams = BlobParams())
 {
-	color_segmenter::SegmentImage seg_img;
+	ROS_INFO("calling color_segmenter to find all blobs with color %d", desiredColor);
 	seg_img.request.DesiredColor = desiredColor;
 	if(seg_img_srv.call(seg_img))
 	{
+		ROS_INFO("found %d blobs; using the largest one", (int)seg_img.response.BlobArray.ColorBlobs.size());
 		color_segmenter::ColorBlob biggestBlob;
 		
 		//if the biggest blob is less than the min size threshold or if the smallest blob is greater than the max size threshold, no blobs will match; return false
@@ -77,12 +85,12 @@ bool findBiggestBlob(const int & desiredColor, color_segmenter::ColorBlob & resp
 		
 		return true;
 	}
+	ROS_INFO("didn't find any blobs");
 	return false;
 }
 
 bool findBlobs(const int & desiredColor, color_segmenter::ColorBlobArray & resp, const BlobParams & blobParams = BlobParams())
 {
-	color_segmenter::SegmentImage seg_img;
 	seg_img.request.DesiredColor = desiredColor;
 	if(seg_img_srv.call(seg_img))
 	{
@@ -109,10 +117,12 @@ bool findBlobs(const int & desiredColor, color_segmenter::ColorBlobArray & resp,
 
 bool FindBuoysCallback(landmark_finder::FindLandmarks::Request & req, landmark_finder::FindLandmarks::Response & resp)
 {
+	ROS_INFO("looking for buoys...");
 	bool atLeastOneBuoyFound = false;
 	
 	for(unsigned int i = 0; i < req.Ids.size(); i ++)
 	{
+		ROS_INFO("color: %d", req.Ids[i]);
 		color_segmenter::ColorBlob blob;
 		//FindLandmarks/Ids[] is just a list of unique identifiers; for bins it would be the img id; for buoys and windows it's the colors; for pingers it's the frequency id; for pipes it's not used
 		bool lastResult = findBiggestBlob(req.Ids[i], blob, mBuoyBlobParams);
@@ -120,6 +130,7 @@ bool FindBuoysCallback(landmark_finder::FindLandmarks::Request & req, landmark_f
 		
 		if(lastResult)
 		{
+			ROS_INFO("found a buoy");
 			//blob.Area -> -x
 			//blob.X    -> y
 			//blob.Y    -> z
@@ -136,14 +147,19 @@ bool FindBuoysCallback(landmark_finder::FindLandmarks::Request & req, landmark_f
 				ROS_WARN( "unable to do transformation: [%s]", ex.what());
 			}
 			
-			LandmarkTypes::Buoy theBuoyRel ( cv::Point3d( blob.Area, blob.X, blob.Y ), 0.0, blob.Color );
-			LandmarkTypes::Buoy theBuoyAbs ( cv::Point3d( blob.Area + mapOffset.getOrigin().x(), blob.X + mapOffset.getOrigin().y(), blob.Y + mapOffset.getOrigin().z() ), 0.0, blob.Color );
+			LandmarkTypes::Buoy theBuoy ( cv::Point3d( blob.Area, -blob.X, -blob.Y ), 0.0, req.Ids[i] );
+			//LandmarkTypes::Buoy theBuoyAbs ( cv::Point3d( blob.Area + mapOffset.getOrigin().x(), blob.X + mapOffset.getOrigin().y(), blob.Y + mapOffset.getOrigin().z() ), 0.0, req.Ids[i] );
 			
-			resp.Landmarks.push_back( theBuoyRel.createMsg() ); //for the fuckin' win; I knew those localization_defs would come in handy
+			resp.Landmarks.push_back( theBuoy.createMsg() ); //for the fuckin' win; I knew those localization_defs would come in handy
 			
+			theBuoy.mCenter.x += mapOffset.getOrigin().x();
+			theBuoy.mCenter.y += mapOffset.getOrigin().y();
+			theBuoy.mCenter.z += mapOffset.getOrigin().z();
 			//we're assuming there's only one buoy of each color available at a given time, so we can use blob.Color as a uniqe ID
-			markerQueue.push(theBuoyAbs.createMarker( "/landmark_map", blob.Color, "_finder" ) ); //append "_finder" to the namespace: <type>_finder<id>
+			markerQueue.push(theBuoy.createMarker( "/landmark_map", req.Ids[i], "_finder" ) ); //append "_finder" to the namespace: <type>_finder<id>
 		}
+		else
+			ROS_INFO("no buoys of that color were found");
 	}
 	
 	return atLeastOneBuoyFound;
@@ -173,9 +189,11 @@ int main(int argc, char* argv[])
 {
 	ros::init(argc, argv, "landmark_finder");
 	ros::NodeHandle n("~");
+	
+	n.param("buoy_finder/run_demo", runBuoyDemo, 0);
 
-	n.param("buoy_finder/blob_params/heading_corr_scale", mBuoyBlobParams.heading_corr_scale, 125.0);
-	n.param("buoy_finder/blob_params/depth_corr_scale", mBuoyBlobParams.depth_corr_scale, 50.0);
+	n.param("buoy_finder/blob_params/heading_corr_scale", mBuoyBlobParams.heading_corr_scale, 1.0);
+	n.param("buoy_finder/blob_params/depth_corr_scale", mBuoyBlobParams.depth_corr_scale, 1.0);
 	n.param("buoy_finder/blob_params/distance_scale", mBuoyBlobParams.distance_scale, 7000.0);
 
 	n.param("pipe_finder/blob_params/heading_corr_scale", mPipeBlobParams.heading_corr_scale, 125.0);
@@ -200,22 +218,37 @@ int main(int argc, char* argv[])
 	ros::ServiceServer pinger_finder_srv = n.advertiseService("FindPingers", FindPingersCallback);
 	ros::ServiceServer window_finder_srv = n.advertiseService("FindWindows", FindWindowsCallback);
 
-	seg_img_srv = n.serviceClient<color_segmenter::SegmentImage>("color_segmenter/segmentImage");
+	seg_img_srv = n.serviceClient<color_segmenter::SegmentImage>("/color_segmenter/segmentImage");
 	
 	ros::Publisher marker_pub = n.advertise<visualization_msgs::Marker>("landmarks", 1);
 	
 	tl = new tf::TransformListener;
 	
+	if(runBuoyDemo == 1)
+	{
+		Demo::buoyDemoReq.Ids.push_back(0); //red
+		Demo::buoyDemoReq.Ids.push_back(4); //blue
+	}
+	
 	while( ros::ok() )
 	{
+		if(runBuoyDemo == 1)
+		{
+			FindBuoysCallback(Demo::buoyDemoReq, Demo::buoyDemoResp);
+		}
 		//publish any new markers that may have been generated
 		while( !markerQueue.empty() )
 		{
+			ROS_INFO("publishing marker...");
 			marker_pub.publish( markerQueue.front() );
 			markerQueue.pop();
 		}
-		ros::spin();
-		ros::Rate(10).sleep();
+		ros::spinOnce();
+		
+		if(runBuoyDemo == 1)
+			ros::Rate(3).sleep();
+		else
+			ros::Rate(10).sleep();
 	}
  
 	return 0;
