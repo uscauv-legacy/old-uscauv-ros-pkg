@@ -4,7 +4,7 @@
   <license>BSD</license>  
   <review status="unreviewed" notes=""/>
   <url>http://ros.org/wiki/seabee3</url>
-  <depend stack="ros" />
+  <depend pkg="ros" />
   <depend pkg="pgr_camera" />
   <depend pkg="tf" />
   <depend pkg="geometry_msgs" />
