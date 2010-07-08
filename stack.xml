@@ -4,11 +4,16 @@
   <license>BSD</license>  
   <review status="unreviewed" notes=""/>
   <url>http://ros.org/wiki/seabee3</url>
-  <depend pkg="ros" />
-  <depend pkg="pgr_camera" />
-  <depend pkg="tf" />
-  <depend pkg="geometry_msgs" />
-  <depend pkg="joy" />
-  <depend pkg="control_toolbox" />
-  <rosdep name="pgr_camera" />
+  <depend stack="ros" />
+  <depend stack="common_msgs" />
+  <depend stack="joystick_drivers" />
+  <depend stack="geometry" />
+  <depend stack="camera_drivers" />
+  <depend stack="visualization_common" />
+  <depend stack="visualization" />
+  <depend stack="vision_opencv" />
+  <depend stack="image_common" />
+  <depend stack="driver_common" />
+  <depend stack="common" />
+<!--  <depend name="control_toolbox" /> -->
 </stack>

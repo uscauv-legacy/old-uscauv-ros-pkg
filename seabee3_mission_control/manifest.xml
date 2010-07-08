@@ -10,6 +10,8 @@
   <url>http://ros.org/wiki/seabee3_mission_control</url>
   <depend package="roscpp"/>
   <depend package="seabee3_driver"/>
+  <depend package="seabee3_driver_base" />
   <depend package="geometry_msgs" />
-  <depend package="buoy_finder"/>
+  <depend package="landmark_finder" />
+  <depend package="localization_defs" />
 </package>

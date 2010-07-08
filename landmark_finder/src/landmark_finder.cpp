@@ -128,19 +128,21 @@ bool FindBuoysCallback(landmark_finder::FindLandmarks::Request & req, landmark_f
 			
 			try
 			{
-				tl->waitForTransform("/landmark_map", "/seabee3/base_link", ros::Time(0), ros::Duration(5.0));
-				tl->lookupTransform("/landmark_map", "/seabee3/base_link", ros::Time(0), mapOffset);
+				tl->waitForTransform("/landmark_map", "/seabee3/front_lt_camera", ros::Time(0), ros::Duration(5.0));
+				tl->lookupTransform("/landmark_map", "/seabee3/front_lt_camera", ros::Time(0), mapOffset);
 			}   
 			catch( tf::TransformException &ex )
 			{
 				ROS_WARN( "unable to do transformation: [%s]", ex.what());
 			}
 			
-			LandmarkTypes::Buoy theBuoy ( cv::Point3d( -blob.Area + mapOffset.getOrigin().x(), blob.X + mapOffset.getOrigin().y(), blob.Y + mapOffset.getOrigin().z() ), 0.0, blob.Color );
+			LandmarkTypes::Buoy theBuoyRel ( cv::Point3d( blob.Area, blob.X, blob.Y ), 0.0, blob.Color );
+			LandmarkTypes::Buoy theBuoyAbs ( cv::Point3d( blob.Area + mapOffset.getOrigin().x(), blob.X + mapOffset.getOrigin().y(), blob.Y + mapOffset.getOrigin().z() ), 0.0, blob.Color );
+			
+			resp.Landmarks.push_back( theBuoyRel.createMsg() ); //for the fuckin' win; I knew those localization_defs would come in handy
 			
 			//we're assuming there's only one buoy of each color available at a given time, so we can use blob.Color as a uniqe ID
-			markerQueue.push(theBuoy.createMarker( "/landmark_map", blob.Color, "_finder" ) ); //append "_finder" to the namespace: <type>_finder<id>
-			resp.Landmarks.push_back( theBuoy.createMsg() ); //for the fuckin' win; I knew those localization_defs would come in handy
+			markerQueue.push(theBuoyAbs.createMarker( "/landmark_map", blob.Color, "_finder" ) ); //append "_finder" to the namespace: <type>_finder<id>
 		}
 	}
 	

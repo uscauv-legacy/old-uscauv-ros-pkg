@@ -9,7 +9,7 @@ public:
 	
 	struct LandmarkType
 	{
-		const static int NumTypes =	3;
+		const static int NumTypes =	5;
 		
 		const static int None =		-1;
 		const static int Buoy = 	0;

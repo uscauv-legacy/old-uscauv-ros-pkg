@@ -7,7 +7,8 @@
 #include <seabee3_driver/SetDesiredDepth.h>
 #include <seabee3_driver/SetDesiredRPY.h>
 #include <seabee3_driver_base/KillSwitch.h>
-#include <buoy_finder/BuoyPos.h>
+#include <landmark_finder/FindLandmarks.h>
+#include <landmark_map/Landmark.h>
 
 /* SeaBee3 Mission States */
 #define STATE_INIT          0
@@ -123,16 +124,16 @@ bool itsSpeedEnabled;
 ros::Time itsLastDecayTime;
 
 // Order of buoys to hit
-std::string itsFirstBuoyColor;
+int itsFirstBuoyColor;
 float itsFirstBuoyArea;
-std::string itsSecondBuoyColor;
+int itsSecondBuoyColor;
 float itsSecondBuoyArea;
 
 // Publishers / Subscribers / Clients
 ros::Subscriber kill_switch_sub;
 ros::ServiceClient driver_depth;
 ros::ServiceClient driver_rpy;
-ros::ServiceClient buoy_finder_srv;
+ros::ServiceClient landmark_finder_srv;
 //ros::ServiceClient driver_calibrate;
 ros::Publisher driver_speed;
 
@@ -353,15 +354,16 @@ void state_first_buoy()
     itsSpeedEnabled = true;
  
   // Request a buoy position update
-  buoy_finder::BuoyPos buoy_pos;
-  buoy_pos.request.DesiredColor = itsFirstBuoyColor;
+  landmark_finder::FindLandmarks find_buoy;
+  find_buoy.request.Type = Landmark::LandmarkType::Buoy;
+  find_buoy.request.Ids.push_back(itsFirstBuoyColor);
 
   // if a buoy is found
-  if(buoy_finder_srv.call(buoy_pos))
+  if(landmark_finder_srv.call(find_buoy))
     {
       // update position of buoy
-      itsSensorVotes[FIRST_BUOY].heading.val = buoy_pos.response.RelativeHeading;
-      itsSensorVotes[FIRST_BUOY].depth.val = buoy_pos.response.RelativeDepth;
+      itsSensorVotes[FIRST_BUOY].heading.val = find_buoy.response.Landmarks[0].Center.y;
+      itsSensorVotes[FIRST_BUOY].depth.val = find_buoy.response.Landmarks[0].Center.z;
 
       // reset decayed buoy weights
       itsSensorVotes[FIRST_BUOY].heading.weight = 1.0;
@@ -369,7 +371,7 @@ void state_first_buoy()
 
       //check for state transition: i.e. buoy is close enough to be
       // considered a "hit" and update to next state
-      if(buoy_pos.response.Distance <= BUOY_HIT_DISTANCE)
+      if(find_buoy.response.Landmarks[0].Center.x <= BUOY_HIT_DISTANCE)
 	{
 	  itsSensorVotes[FIRST_BUOY].heading.weight = 0.0;
 	  itsSensorVotes[FIRST_BUOY].depth.weight = 0.0;
@@ -403,15 +405,16 @@ void state_second_buoy()
     itsSpeedEnabled = true;
  
   // Request a buoy position update
-  buoy_finder::BuoyPos buoy_pos;
-  buoy_pos.request.DesiredColor = itsSecondBuoyColor;
+  landmark_finder::FindLandmarks find_buoy;
+  find_buoy.request.Type = Landmark::LandmarkType::Buoy;
+  find_buoy.request.Ids.push_back(itsSecondBuoyColor);
 
   // if a buoy is found
-  if(buoy_finder_srv.call(buoy_pos))
+  if(landmark_finder_srv.call(find_buoy))
     {
       // update position of buoy
-      itsSensorVotes[SECOND_BUOY].heading.val = buoy_pos.response.RelativeHeading;
-      itsSensorVotes[SECOND_BUOY].depth.val = buoy_pos.response.RelativeDepth;
+      itsSensorVotes[SECOND_BUOY].heading.val = find_buoy.response.Landmarks[0].Center.y;
+      itsSensorVotes[SECOND_BUOY].depth.val = find_buoy.response.Landmarks[0].Center.z;
 
       // reset decayed buoy weights
       itsSensorVotes[SECOND_BUOY].heading.weight = 1.0;
@@ -419,7 +422,7 @@ void state_second_buoy()
 
       //check for state transition: i.e. buoy is close enough to be
       // considered a "hit" and update to next state
-      if(buoy_pos.response.Distance <= BUOY_HIT_DISTANCE)
+      if(find_buoy.response.Landmarks[0].Center.x <= BUOY_HIT_DISTANCE)
 	{
 	  itsSensorVotes[SECOND_BUOY].heading.weight = 0.0;
 	  itsSensorVotes[SECOND_BUOY].depth.weight = 0.0;
@@ -469,15 +472,15 @@ int main(int argc, char** argv)
   n.param("heading_corr_scale", itsHeadingCorrScale, 125.0);
   n.param("depth_corr_scale", itsDepthCorrScale, 50.0);
   n.param("speed_corr_scale", itsSpeedCorrScale, 1.0);
-  n.param("first_buoy_color", itsFirstBuoyColor, std::string("red"));
-  n.param("second_buoy_color", itsSecondBuoyColor, std::string("yellow"));
+  n.param("first_buoy_color", itsFirstBuoyColor, 0);
+  n.param("second_buoy_color", itsSecondBuoyColor, 2);
 
   kill_switch_sub = n.subscribe("seabee3/KillSwitch", 100, killSwitchCallback);
 	
   //driver_calibrate = n.serviceClient<xsens_node::CalibrateRPYOri>("xsens/CalibrateRPYOri");
   driver_depth = n.serviceClient<seabee3_driver::SetDesiredDepth>("seabee3/setDesiredDepth");
   driver_rpy = n.serviceClient<seabee3_driver::SetDesiredRPY>("seabee3/setDesiredRPY");
-  buoy_finder_srv = n.serviceClient<buoy_finder::BuoyPos>("buoy_finder/buoy_pos");
+  landmark_finder_srv = n.serviceClient<landmark_finder::FindLandmarks>("landmark_finder/FindBuoys");
   driver_speed = n.advertise<geometry_msgs::Twist>("seabee3/cmd_vel", 1);
 
   //  ros::Subscriber buoy_finder_sub = n.subscribe("perception/buoy_pos", 100, buoyFinderCallback);
