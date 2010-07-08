@@ -68,28 +68,37 @@ std::string show_dbg_color;
 Mat itsCurrentImage;
 boost::mutex image_mutex;
 
+struct BlobColorDefs
+{
+	const static int RED = 0;
+	const static int ORANGE = 1;
+	const static int YELLOW = 2;
+	const static int GREEN = 3;
+	const static int BLUE = 4;
+};
+
 string stringToLowercase(std::string strToConvert)
 {
   for(unsigned int i=0;i<strToConvert.length();i++)
     strToConvert[i] = tolower(strToConvert[i]);
   
   return strToConvert;
-} 
+}
 
 int getColorId(std::string color)
 {
   color = stringToLowercase(color);
 
   if(!color.compare("red"))
-    return ColorBlob::RED;
+    return BlobColorDefs::RED;
   else if(!color.compare("orange"))
-    return ColorBlob::ORANGE;
+    return BlobColorDefs::ORANGE;
   else if(!color.compare("yellow"))
-    return ColorBlob::YELLOW;
+    return BlobColorDefs::YELLOW;
   else if(!color.compare("green"))
-    return ColorBlob::GREEN;
+    return BlobColorDefs::GREEN;
   else if(!color.compare("blue"))
-    return ColorBlob::BLUE;
+    return BlobColorDefs::BLUE;
   else 
     return -1;
 }
@@ -100,30 +109,30 @@ void reconfigureCallback(color_segmenter::ColorSegmenterConfig &config, uint32_t
   //            config.red_h_min, config.red_h_max, config.red_s_min, config.red_s_max,
   // 	   config.orange_h_min, config.orange_h_max, config.orange_s_min, config.orange_s_max);
   
-  colors[ColorBlob::RED].h_min = config.red_h_min;
-  colors[ColorBlob::RED].h_max = config.red_h_max;
-  colors[ColorBlob::RED].s_min = config.red_s_min;
-  colors[ColorBlob::RED].s_max = config.red_s_max;
+  colors[BlobColorDefs::RED].h_min = config.red_h_min;
+  colors[BlobColorDefs::RED].h_max = config.red_h_max;
+  colors[BlobColorDefs::RED].s_min = config.red_s_min;
+  colors[BlobColorDefs::RED].s_max = config.red_s_max;
 
-  colors[ColorBlob::ORANGE].h_min = config.orange_h_min;
-  colors[ColorBlob::ORANGE].h_max = config.orange_h_max;
-  colors[ColorBlob::ORANGE].s_min = config.orange_s_min;
-  colors[ColorBlob::ORANGE].s_max = config.orange_s_max;
+  colors[BlobColorDefs::ORANGE].h_min = config.orange_h_min;
+  colors[BlobColorDefs::ORANGE].h_max = config.orange_h_max;
+  colors[BlobColorDefs::ORANGE].s_min = config.orange_s_min;
+  colors[BlobColorDefs::ORANGE].s_max = config.orange_s_max;
 
-  colors[ColorBlob::YELLOW].h_min = config.yellow_h_min;
-  colors[ColorBlob::YELLOW].h_max = config.yellow_h_max;
-  colors[ColorBlob::YELLOW].s_min = config.yellow_s_min;
-  colors[ColorBlob::YELLOW].s_max = config.yellow_s_max;
+  colors[BlobColorDefs::YELLOW].h_min = config.yellow_h_min;
+  colors[BlobColorDefs::YELLOW].h_max = config.yellow_h_max;
+  colors[BlobColorDefs::YELLOW].s_min = config.yellow_s_min;
+  colors[BlobColorDefs::YELLOW].s_max = config.yellow_s_max;
 
-  colors[ColorBlob::GREEN].h_min = config.green_h_min;
-  colors[ColorBlob::GREEN].h_max = config.green_h_max;
-  colors[ColorBlob::GREEN].s_min = config.green_s_min;
-  colors[ColorBlob::GREEN].s_max = config.green_s_max;
+  colors[BlobColorDefs::GREEN].h_min = config.green_h_min;
+  colors[BlobColorDefs::GREEN].h_max = config.green_h_max;
+  colors[BlobColorDefs::GREEN].s_min = config.green_s_min;
+  colors[BlobColorDefs::GREEN].s_max = config.green_s_max;
 
-  colors[ColorBlob::BLUE].h_min = config.blue_h_min;
-  colors[ColorBlob::BLUE].h_max = config.blue_h_max;
-  colors[ColorBlob::BLUE].s_min = config.blue_s_min;
-  colors[ColorBlob::BLUE].s_max = config.blue_s_max;
+  colors[BlobColorDefs::BLUE].h_min = config.blue_h_min;
+  colors[BlobColorDefs::BLUE].h_max = config.blue_h_max;
+  colors[BlobColorDefs::BLUE].s_min = config.blue_s_min;
+  colors[BlobColorDefs::BLUE].s_max = config.blue_s_max;
 }
 
 color_segmenter::ColorBlobArray filterColor(int color)
@@ -219,7 +228,7 @@ void imageCallback(const sensor_msgs::ImageConstPtr& msg)
 bool segmentImageCallback(color_segmenter::SegmentImage::Request & req, color_segmenter::SegmentImage::Response & resp)
 {
   boost::mutex::scoped_lock lock(image_mutex); 
-  int colorId = getColorId(req.DesiredColor);
+  int colorId = req.DesiredColor; //getColorId(req.DesiredColor);
 
   if(colorId < 0)
     return false;		
@@ -241,35 +250,35 @@ void initColorRanges()
   red.h_max = RED_H_MAX;
   red.s_min = RED_S_MIN;
   red.s_max = RED_S_MAX;
-  colors[ColorBlob::RED] = red;
+  colors[BlobColorDefs::RED] = red;
 
   ColorRange orange;
   orange.h_min = ORANGE_H_MIN;
   orange.h_max = ORANGE_H_MAX;
   orange.s_min = ORANGE_S_MIN;
   orange.s_max = ORANGE_S_MAX;
-  colors[ColorBlob::ORANGE] = orange;
+  colors[BlobColorDefs::ORANGE] = orange;
 
   ColorRange yellow;
   yellow.h_min = YELLOW_H_MIN;
   yellow.h_max = YELLOW_H_MAX;
   yellow.s_min = YELLOW_S_MIN;
   yellow.s_max = YELLOW_S_MAX;
-  colors[ColorBlob::YELLOW] = yellow;
+  colors[BlobColorDefs::YELLOW] = yellow;
 
   ColorRange green;
   green.h_min = GREEN_H_MIN;
   green.h_max = GREEN_H_MAX;
   green.s_min = GREEN_S_MIN;
   green.s_max = GREEN_S_MAX;
-  colors[ColorBlob::GREEN] = green;
+  colors[BlobColorDefs::GREEN] = green;
 
   ColorRange blue;
   blue.h_min = BLUE_H_MIN;
   blue.h_max = BLUE_H_MAX;
   blue.s_min = BLUE_S_MIN;
   blue.s_max = BLUE_S_MAX;
-  colors[ColorBlob::BLUE] = blue;
+  colors[BlobColorDefs::BLUE] = blue;
 }
 
 int main (int argc, char** argv)

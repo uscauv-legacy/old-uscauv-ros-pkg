@@ -1,0 +1,26 @@
+<package>
+  <description brief="landmark_finder">
+
+     landmark_finder
+
+  </description>
+  <author>Edward T. Kaszubski</author>
+  <license>BSD</license>
+  <review status="unreviewed" notes=""/>
+  <url>http://ros.org/wiki/landmark_finder</url>
+  <depend package="roscpp"/>
+  <depend package="rectangle_finder"/>
+  <depend package="color_segmenter"/>
+  <depend package="opencv2"/>
+  <depend package="tf"/>
+  <depend package="geometry_msgs"/>
+  <depend package="localization_defs" />
+  <depend package="visualization_msgs"/>
+  <depend package="image_transport" />
+  <export>
+    <cpp cflags="-I${prefix}/include -I${prefix}/msg/cpp -I${prefix}/srv/cpp" lflags="-L/{prefix}/lib"/>
+  </export>
+
+</package>
+
+

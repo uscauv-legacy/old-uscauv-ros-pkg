@@ -1,3 +1,3 @@
-string DesiredColor
+uint8 DesiredColor
 ---
 color_segmenter/ColorBlobArray BlobArray

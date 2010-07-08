@@ -22,16 +22,17 @@ public:
 	struct ColorIds
 	{
 		const static int red		= 0 ;
-		const static int lred		= 1 ;
-		const static int orange		= 2 ;
-		const static int yellow		= 3 ;
-		const static int lrgreen	= 4 ;
-		const static int green		= 5 ;
-		const static int lgreen		= 6 ;
-		const static int lbgreen	= 7 ;
-		const static int blugreen	= 8 ;
-		const static int lgblue		= 9 ;
-		const static int blue		= 10;
+		const static int orange		= 1 ;
+		const static int yellow		= 2 ;
+		const static int green		= 3 ;
+		const static int blue		= 4;
+		
+		const static int lred		= 5 ;
+		const static int lrgreen	= 6 ;
+		const static int lgreen		= 7 ;
+		const static int lbgreen	= 8 ;
+		const static int blugreen	= 9 ;
+		const static int lgblue		= 10 ;
 		const static int lblue		= 11;
 		const static int lrblue		= 12;
 		const static int purple		= 13;
@@ -69,7 +70,7 @@ public:
 	Landmark();
 	Landmark(cv::Point3d center, double orientation, cv::Point3d dim, int shapeType);
 	
-	visualization_msgs::Marker createMarker(const std::string & frame, const int id) const;
+	visualization_msgs::Marker createMarker(const std::string & frame, const int id, const std::string & ns_ext = "") const;
 	localization_defs::LandmarkMsg createMsg() const;
 
 	cv::Point3d mCenter; //position relative to the center of the map (which is always the origin, <0, 0, 0>)

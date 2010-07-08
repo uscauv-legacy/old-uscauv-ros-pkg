@@ -19,7 +19,7 @@ Landmark::Landmark(cv::Point3d center = cv::Point3d(0.0, 0.0, 0.0), double orien
 	mId = -1;
 }
 
-visualization_msgs::Marker Landmark::createMarker(const std::string & frame, const int id) const
+visualization_msgs::Marker Landmark::createMarker(const std::string & frame, const int id, const std::string & ns_ext) const
 {
 	visualization_msgs::Marker marker;
 	
@@ -36,7 +36,7 @@ visualization_msgs::Marker Landmark::createMarker(const std::string & frame, con
 		case LandmarkType::Pipe: ss << "pipe"; break;
 	}
 	
-	ss << id;
+	ss << ns_ext << id;
 	
 	marker.ns = ss.str();
 	marker.id = 0;

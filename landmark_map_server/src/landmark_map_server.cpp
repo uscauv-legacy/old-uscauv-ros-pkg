@@ -9,7 +9,8 @@
 #include <localization_defs/LandmarkMapMsg.h>
 #include <visualization_msgs/MarkerArray.h>
 
-std::string map_uri, map_frame;
+std::string map_uri;
+const std::string map_frame = "/landmark_map";
 std::vector<Landmark> mLandmarks;
 
 void operator >> (const YAML::Node & node, cv::Point3d & p)
@@ -79,7 +80,7 @@ int main( int argc, char* argv[] )
 	ros::NodeHandle n("~");
 	
 	n.param("map_uri", map_uri, std::string("null") );
-	n.param("map_frame", map_frame, std::string("/landmark_map") );
+	//n.param("map_frame", map_frame, std::string("/landmark_map") );
 	
 	ROS_INFO("Attempting to open map file at %s", map_uri.c_str());
 	
@@ -91,8 +92,8 @@ int main( int argc, char* argv[] )
 		return 1;
 	}
 	
-	ros::Publisher marker_pub = n.advertise<visualization_msgs::Marker>("landmarks", 0);
-	ros::Publisher map_pub = n.advertise<localization_defs::LandmarkMapMsg>("landmark_map", 0);
+	ros::Publisher marker_pub = n.advertise<visualization_msgs::Marker>("landmarks", 1);
+	ros::Publisher map_pub = n.advertise<localization_defs::LandmarkMapMsg>("landmark_map", 1);
 	
 	YAML::Parser parser(fin);
 	YAML::Node doc;
