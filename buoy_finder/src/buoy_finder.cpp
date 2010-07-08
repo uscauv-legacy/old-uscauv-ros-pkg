@@ -1,161 +1,52 @@
 // Use the image_transport classes instead.
 #include <ros/ros.h>
 #include <image_transport/image_transport.h>
-#include <geometry_msgs/Vector3.h>
 #include <tf/tf.h>
 #include <opencv/cv.h>
-#include <cv_bridge/CvBridge.h>
-#include <dynamic_reconfigure/server.h>
-#include <buoy_finder/BuoyFinderConfig.h>
-#include <buoy_finder/ColorBlobArray.h>
-#include "cvutility.h"
-#include "cvBlob/Blob.h"
-#include "cvBlob/BlobResult.h"
+#include <color_segmenter/SegmentImage.h>
+#include <buoy_finder/BuoyPos.h>
 
 using namespace cv;
 
-ros::Publisher *buoy_pub; 
-image_transport::Publisher *dbg_img_pub;
+ros::ServiceClient seg_img_srv;
+double heading_corr_scale, depth_corr_scale, distance_scale;
 
-sensor_msgs::CvBridge bridge;
-
-#define BUOY_H_MIN 75
-#define BUOY_H_MAX 255
-#define BUOY_S_MIN 0
-#define BUOY_S_MAX 255
-
-int show_dbg_img;
-int h_min, h_max,s_min,s_max,mode;
-
-void reconfigureCallback(buoy_finder::BuoyFinderConfig &config, uint32_t level)
+bool buoyPosCallback(buoy_finder::BuoyPos::Request & req, buoy_finder::BuoyPos::Response & resp)
 {
-  ROS_INFO("Reconfigure request : %d %d %d %d %d",
-           config.h_min, config.h_max, config.s_min, config.s_max, config.mode);  
+  color_segmenter::SegmentImage seg_img;
+  seg_img.request.DesiredColor = req.DesiredColor;
 
-  
-
-  h_min = config.h_min;
-  h_max = config.h_max;
-  s_min = config.s_min;
-  s_max = config.s_max;
-  //mode = config.mode;
-}
-
-void imageCallback(const sensor_msgs::ImageConstPtr& msg)
-{
-  Mat img(bridge.imgMsgToCv(msg));
-  IplImage iplImg = img;
-	
-  Mat redImg = cvFilterHS(&iplImg,h_min,h_max,s_min,s_max,mode);
-
-  
-  dilate(redImg, redImg, Mat(), Point(-1,-1), 10);
-  erode(redImg, redImg, Mat(), Point(-1,-1), 3);
-
-
-  IplImage blobImg = redImg;
-  cvFlipBinaryImg(&blobImg);
-
-  CBlobResult blobs;
-  blobs = CBlobResult(&blobImg, NULL, 0, false);
-
-  blobs.Filter(blobs, B_EXCLUDE, CBlobGetArea(), B_LESS, 5);
-  blobs.Filter(blobs, B_EXCLUDE, CBlobGetArea(), B_GREATER, 15000);
-
-
-  //Show the debug image if requested
-  if(show_dbg_img != 0)
+  if(seg_img_srv.call(seg_img))
     {
-      Mat dbgImg;
-      cvtColor(redImg, dbgImg, CV_GRAY2RGB);
+      color_segmenter::ColorBlob biggestBlob = seg_img.response.BlobArray.ColorBlobs[0];
+      float bX = biggestBlob.X;
+      float bY = biggestBlob.Y;
+      float bArea = biggestBlob.Area;
 
-      if(blobs.GetNumBlobs() > 0)
-	{
+      resp.RelativeHeading = bX*heading_corr_scale;
+      resp.RelativeDepth = bY*depth_corr_scale;
+      resp.Distance = distance_scale / bArea;
 
-	  CBlob biggestBlob;
-	  blobs.GetNthBlob(CBlobGetArea(), 0, biggestBlob);
-	  
-	  float bArea = biggestBlob.Area();
-	  float bX = (biggestBlob.MinX() + biggestBlob.MaxX()) / 2.0;
-	  float bY = (biggestBlob.MinY() + biggestBlob.MaxY()) / 2.0;
-
-	  // normalize buoy position relative to image center
-	  float nbX = (bX / blobImg.width) - 0.5;
-	  float nbY = (bY / blobImg.height) - 0.5;
-
-	  //Print out an annoying message so that we remember to disable the debug image
-	  ROS_INFO("Showing Debug Image - max blob at %f,%f area %f (%d total)", nbX, nbY, bArea, blobs.GetNumBlobs());
-
-	  Point center(bX, bY);
-	  rectangle( dbgImg, Point(biggestBlob.MinX(),biggestBlob.MinY()), Point(biggestBlob.MaxX(),biggestBlob.MaxY()), Scalar(0,255,0));
- 	  // draw the circle center
-	  circle( dbgImg, center, 3, Scalar(0,255,0), -1, 8, 0 );
-	  // draw the circle outline
-	  circle( dbgImg, center, 5, Scalar(0,0,255), 3, 8, 0 );
-	}
-
-      //Convert our debug image to an IplImage and send it out
-      IplImage iplImg = dbgImg;
-      dbg_img_pub->publish(bridge.cvToImgMsg(&iplImg));
+      return true;
     }
-
-  buoy_finder::ColorBlobArray msgBlobs;
-
-  CBlob currentBlob;
-
-  for(int i = 0; i < blobs.GetNumBlobs(); i++)
-    {
-      blobs.GetNthBlob(CBlobGetArea(), i, currentBlob);
-      
-      float blobArea = currentBlob.Area();
-      float blobX = (currentBlob.MinX() + currentBlob.MaxX()) / 2.0;
-      float blobY = (currentBlob.MinY() + currentBlob.MaxY()) / 2.0;
-
-      // normalize buoy position relative to image center
-      blobX = (blobX / blobImg.width) - 0.5;
-      blobY = (blobY / blobImg.height) - 0.5;
-	  
-      buoy_finder::ColorBlob msgBlob;
-      msgBlob.X = blobX;
-      msgBlob.Y = blobY;
-      msgBlob.Area = blobArea;
-      msgBlob.Color = buoy_finder::ColorBlob::RED;
-      
-      msgBlobs.ColorBlobs.push_back(msgBlob);
-    }
-
-  buoy_pub->publish(msgBlobs);
+  else
+    return false;
 }
 
 int main(int argc, char* argv[])
 {
   ros::init(argc, argv, "buoy_finder");
-  ros::NodeHandle nh;
-  image_transport::ImageTransport it(nh);
+  ros::NodeHandle n;
 
-  //Register the show debug image parameter
-  nh.param("show_dbg_img", show_dbg_img, 1);
+  n.param("heading_corr_scale", heading_corr_scale, 125.0);
+  n.param("depth_corr_scale", depth_corr_scale, 50.0);
+  n.param("distance_scale", distance_scale, 7000.0);
 
-  //Register a publisher for the position of the buoy
-  buoy_pub = new ros::Publisher(nh.advertise<buoy_finder::ColorBlobArray>("perception/buoy_pos", 1));
+  ros::ServiceServer buoy_pos_srv = n.advertiseService("buoy_pos", buoyPosCallback);
 
-  //Register a publisher for a debug image
-  dbg_img_pub = new image_transport::Publisher(it.advertise("perception/buoy_debug_image", 1));
-
-  //Register a subscriber to an input image
-  image_transport::Subscriber sub = it.subscribe("image", 1, imageCallback);
-
-  dynamic_reconfigure::Server<buoy_finder::BuoyFinderConfig> srv;
-  dynamic_reconfigure::Server<buoy_finder::BuoyFinderConfig>::CallbackType f = boost::bind(&reconfigureCallback, _1, _2);
-  srv.setCallback(f);
-
-  h_min = BUOY_H_MIN;
-  h_max = BUOY_H_MAX;
-  s_min = BUOY_S_MIN;
-  s_max = BUOY_S_MAX;
-  mode = 0;
-
+  seg_img_srv = n.serviceClient<color_segmenter::SegmentImage>("color_segmenter/segmentImage");
+ 
   ros::spin();
-
+ 
   return 0;
 }

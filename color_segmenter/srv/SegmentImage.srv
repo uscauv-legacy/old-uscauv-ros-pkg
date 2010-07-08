@@ -1,4 +1,3 @@
-color_segmenter/ColorHSV DesiredColor
-float32 BlobMassThreshold
-----
+string DesiredColor
+---
 color_segmenter/ColorBlobArray BlobArray

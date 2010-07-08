@@ -1,0 +1,5 @@
+string DesiredColor
+---
+float32 RelativeHeading
+float32 RelativeDepth
+float32 Distance

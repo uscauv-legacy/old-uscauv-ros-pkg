@@ -7,7 +7,7 @@
 #include <seabee3_driver/SetDesiredDepth.h>
 #include <seabee3_driver/SetDesiredRPY.h>
 #include <seabee3_driver_base/KillSwitch.h>
-#include <buoy_finder/ColorBlobArray.h>
+#include <buoy_finder/BuoyPos.h>
 
 /* SeaBee3 Mission States */
 #define STATE_INIT          0
@@ -19,7 +19,7 @@
 // max speed sub can go
 #define MAX_SPEED              75.0
 
-#define BUOY_HIT_AREA 10000.0
+#define BUOY_HIT_DISTANCE 1.0
 
 // minimum diff needed between current pose and last pose
 // in order for beestem  message to be sent out
@@ -123,15 +123,16 @@ bool itsSpeedEnabled;
 ros::Time itsLastDecayTime;
 
 // Order of buoys to hit
-int itsFirstBuoy;
+std::string itsFirstBuoyColor;
 float itsFirstBuoyArea;
-int itsSecondBuoy;
+std::string itsSecondBuoyColor;
 float itsSecondBuoyArea;
 
 // Publishers / Subscribers / Clients
 ros::Subscriber kill_switch_sub;
 ros::ServiceClient driver_depth;
 ros::ServiceClient driver_rpy;
+ros::ServiceClient buoy_finder_srv;
 //ros::ServiceClient driver_calibrate;
 ros::Publisher driver_speed;
 
@@ -254,40 +255,6 @@ void killSwitchCallback(const seabee3_driver_base::KillSwitchConstPtr & msg)
   itsKillSwitchState = msg->Value;
 }
 
-void buoyFinderCallback(const buoy_finder::ColorBlobArrayConstPtr & msg)
-{
-  for(int i = 0; i < msg->ColorBlobs.size(); i++)
-    {
-      buoy_finder::ColorBlob blob = msg->ColorBlobs[i];
-
-      if(blob.Color == itsFirstBuoy)
-	{
-	  itsFirstBuoyArea = blob.Area;
-
-	  itsSensorVotes[FIRST_BUOY].heading.val = blob.X * itsHeadingCorrScale;
-	  itsSensorVotes[FIRST_BUOY].depth.val = blob.Y * itsDepthCorrScale;
-
-	  if(itsCurrentState == STATE_FIRST_BUOY)
-	    {
-	      itsSensorVotes[FIRST_BUOY].heading.weight = 1.0;
-	      itsSensorVotes[FIRST_BUOY].depth.weight = 1.0;
-	    }
-	}
-      else if(blob.Color == itsSecondBuoy)
-	{
-	  itsSecondBuoyArea = blob.Area;
-
-	  itsSensorVotes[SECOND_BUOY].heading.val = blob.X * itsHeadingCorrScale;
-	  itsSensorVotes[SECOND_BUOY].depth.val = blob.Y * itsDepthCorrScale;
-
-	  if(itsCurrentState == STATE_SECOND_BUOY)
-	    {
-	      itsSensorVotes[SECOND_BUOY].heading.weight = 1.0;
-	      itsSensorVotes[SECOND_BUOY].depth.weight = 1.0;
-	    }
-	}
-    }
-}
 
 // ######################################################################
 void state_init()
@@ -367,19 +334,11 @@ void state_do_gate()
   itsCurrentState = STATE_FIRST_BUOY;
 }
 
-
 // ######################################################################
 void state_first_buoy()
 {
   ROS_INFO("Hitting First Buoy...");
 
-  // Enable speed based on heading and depth error
-  if(!itsSpeedEnabled)
-    itsSpeedEnabled = true;
-
-  // Decay the weight we place on PATH SensorVote's heading
-  itsSensorVotes[FIRST_BUOY].heading.decay = 0.005;
-  itsSensorVotes[FIRST_BUOY].depth.decay = 0.005;
 
   ROS_INFO("heading val: %f, weight: %f",
 	   itsSensorVotes[FIRST_BUOY].heading.val,
@@ -387,26 +346,49 @@ void state_first_buoy()
 
   ROS_INFO("depth val: %f, weight: %f",
 	   itsSensorVotes[FIRST_BUOY].depth.val,
-	   itsSensorVotes[FIRST_BUOY].depth.weight);
+	   itsSensorVotes[FIRST_BUOY].depth.weight);  
 
-  //check for state transition: i.e. buoy is large enough to be
-  // considered a "hit" and update to next state
-  if(itsFirstBuoyArea >= BUOY_HIT_AREA)
+  // Enable speed based on heading and depth error
+  if(!itsSpeedEnabled)
+    itsSpeedEnabled = true;
+ 
+  // Request a buoy position update
+  buoy_finder::BuoyPos buoy_pos;
+  buoy_pos.request.DesiredColor = itsFirstBuoyColor;
+
+  // if a buoy is found
+  if(buoy_finder_srv.call(buoy_pos))
     {
-      itsSensorVotes[FIRST_BUOY].heading.weight = 0.0;
-      itsSensorVotes[FIRST_BUOY].depth.weight = 0.0;
-      itsCurrentState = STATE_SECOND_BUOY;
-    }         
+      // update position of buoy
+      itsSensorVotes[FIRST_BUOY].heading.val = buoy_pos.response.RelativeHeading;
+      itsSensorVotes[FIRST_BUOY].depth.val = buoy_pos.response.RelativeDepth;
+
+      // reset decayed buoy weights
+      itsSensorVotes[FIRST_BUOY].heading.weight = 1.0;
+      itsSensorVotes[FIRST_BUOY].depth.weight = 1.0;
+
+      //check for state transition: i.e. buoy is close enough to be
+      // considered a "hit" and update to next state
+      if(buoy_pos.response.Distance <= BUOY_HIT_DISTANCE)
+	{
+	  itsSensorVotes[FIRST_BUOY].heading.weight = 0.0;
+	  itsSensorVotes[FIRST_BUOY].depth.weight = 0.0;
+	  itsCurrentState = STATE_SECOND_BUOY;
+	} 
+    }
+  else
+    {
+      // Decay the weight we place on FIRST_BUOY SensorVote's pose
+      itsSensorVotes[FIRST_BUOY].heading.decay = 0.1;
+      itsSensorVotes[FIRST_BUOY].depth.decay = 0.1;
+    }      
 }
 
 // ######################################################################
 void state_second_buoy()
 {
-  ROS_INFO("Hitting Second Buoy");
+  ROS_INFO("Hitting Second Buoy...");
 
-  // Decay the weight we place on PATH SensorVote's heading
-  itsSensorVotes[SECOND_BUOY].heading.decay = 0.005;
-  itsSensorVotes[SECOND_BUOY].depth.decay = 0.005;
 
   ROS_INFO("heading val: %f, weight: %f",
 	   itsSensorVotes[SECOND_BUOY].heading.val,
@@ -414,18 +396,50 @@ void state_second_buoy()
 
   ROS_INFO("depth val: %f, weight: %f",
 	   itsSensorVotes[SECOND_BUOY].depth.val,
-	   itsSensorVotes[SECOND_BUOY].depth.weight);
-  
-  //check for state transition: i.e. buoy is large enough to be
-  // considered a "hit" and update to next state
-  if(itsSecondBuoyArea >= BUOY_HIT_AREA)
+	   itsSensorVotes[SECOND_BUOY].depth.weight);  
+
+  // Enable speed based on heading and depth error
+  if(!itsSpeedEnabled)
+    itsSpeedEnabled = true;
+ 
+  // Request a buoy position update
+  buoy_finder::BuoyPos buoy_pos;
+  buoy_pos.request.DesiredColor = itsSecondBuoyColor;
+
+  // if a buoy is found
+  if(buoy_finder_srv.call(buoy_pos))
     {
-      itsSensorVotes[SECOND_BUOY].heading.weight = 0.0;
-      itsSensorVotes[SECOND_BUOY].depth.weight = 0.0;
-      itsCurrentState = STATE_HEDGE;
+      // update position of buoy
+      itsSensorVotes[SECOND_BUOY].heading.val = buoy_pos.response.RelativeHeading;
+      itsSensorVotes[SECOND_BUOY].depth.val = buoy_pos.response.RelativeDepth;
+
+      // reset decayed buoy weights
+      itsSensorVotes[SECOND_BUOY].heading.weight = 1.0;
+      itsSensorVotes[SECOND_BUOY].depth.weight = 1.0;
+
+      //check for state transition: i.e. buoy is close enough to be
+      // considered a "hit" and update to next state
+      if(buoy_pos.response.Distance <= BUOY_HIT_DISTANCE)
+	{
+	  itsSensorVotes[SECOND_BUOY].heading.weight = 0.0;
+	  itsSensorVotes[SECOND_BUOY].depth.weight = 0.0;
+	  itsCurrentState = STATE_HEDGE;
+	} 
+    }
+  else
+    {
+      // Decay the weight we place on SECOND_BUOY SensorVote's pose
+      itsSensorVotes[SECOND_BUOY].heading.decay = 0.1;
+      itsSensorVotes[SECOND_BUOY].depth.decay = 0.1;
     }   
 }
+// ######################################################################
+void state_hedge()
+{
+  ROS_INFO("Maneuvering Hedge...");
 
+}
+// ######################################################################
 
 int main(int argc, char** argv)
 {
@@ -455,17 +469,18 @@ int main(int argc, char** argv)
   n.param("heading_corr_scale", itsHeadingCorrScale, 125.0);
   n.param("depth_corr_scale", itsDepthCorrScale, 50.0);
   n.param("speed_corr_scale", itsSpeedCorrScale, 1.0);
-  n.param("first_buoy", itsFirstBuoy, buoy_finder::ColorBlob::RED);
-  n.param("second_buoy", itsSecondBuoy, buoy_finder::ColorBlob::YELLOW);
+  n.param("first_buoy_color", itsFirstBuoyColor, std::string("red"));
+  n.param("second_buoy_color", itsSecondBuoyColor, std::string("yellow"));
 
   kill_switch_sub = n.subscribe("seabee3/KillSwitch", 100, killSwitchCallback);
 	
   //driver_calibrate = n.serviceClient<xsens_node::CalibrateRPYOri>("xsens/CalibrateRPYOri");
   driver_depth = n.serviceClient<seabee3_driver::SetDesiredDepth>("seabee3/setDesiredDepth");
   driver_rpy = n.serviceClient<seabee3_driver::SetDesiredRPY>("seabee3/setDesiredRPY");
+  buoy_finder_srv = n.serviceClient<buoy_finder::BuoyPos>("buoy_finder/buoy_pos");
   driver_speed = n.advertise<geometry_msgs::Twist>("seabee3/cmd_vel", 1);
 
-  ros::Subscriber buoy_finder_sub = n.subscribe("perception/buoy_pos", 100, buoyFinderCallback);
+  //  ros::Subscriber buoy_finder_sub = n.subscribe("perception/buoy_pos", 100, buoyFinderCallback);
 
   while(ros::ok())
     {	  
@@ -488,6 +503,9 @@ int main(int argc, char** argv)
 	      break;
 	    case STATE_SECOND_BUOY:
 	      state_second_buoy();
+	      break;
+	    case STATE_HEDGE:
+	      state_hedge();
 	      break;
 	    }
 

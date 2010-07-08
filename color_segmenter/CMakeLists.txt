@@ -22,10 +22,20 @@ rosbuild_genmsg()
 rosbuild_gensrv()
 
 #common commands for building c++ executables and libraries
-rosbuild_add_library(color_segmenter src/cvutility.cpp)
+rosbuild_add_library(color_segmenter src/cvutility.cpp
+  src/cvBlob/Blob.cpp
+  src/cvBlob/BlobExtraction.cpp
+  src/cvBlob/BlobResult.cpp)
+
+#common commands for building c++ executables and libraries
 #target_link_libraries(${PROJECT_NAME} another_library)
 #rosbuild_add_boost_directories()
 #rosbuild_link_boost(${PROJECT_NAME} thread)
 #target_link_libraries(example ${PROJECT_NAME})
 
-#rosbuild_add_executable(color_segmenter src/color_segmenter.cpp)
+# add dynamic reconfigure api
+rosbuild_find_ros_package(dynamic_reconfigure)
+include(~/ros/stacks/driver_common/dynamic_reconfigure/cmake/cfgbuild.cmake)
+gencfg()
+
+rosbuild_add_executable(color_segmenter src/color_segmenter.cpp)
