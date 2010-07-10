@@ -4,7 +4,7 @@
 
 #include <ros/ros.h>
 #include <geometry_msgs/Twist.h>
-#include <seabee3_driver/SetDesiredDepth.h>
+#include <seabee3_driver/SetDesiredXYZ.h>
 #include <seabee3_driver/SetDesiredRPY.h>
 #include <seabee3_driver_base/KillSwitch.h>
 #include <landmark_finder/FindLandmarks.h>
@@ -190,19 +190,19 @@ void decayWeights()
 // ######################################################################
 void set_depth(int depth)
 {
-  seabee3_driver::SetDesiredDepth depth_srv;
-  depth_srv.request.Mode = 1;
-  depth_srv.request.Mask = 1;
-  depth_srv.request.DesiredDepth = depth;
+  seabee3_driver::SetDesiredXYZ xyz_srv;
+  xyz_srv.request.Mode.z = 1;
+  xyz_srv.request.Mask.z = 1;
+  xyz_srv.request.DesiredXYZ.z = depth;
 
-  if (driver_depth.call(depth_srv))
+  if (driver_depth.call(xyz_srv))
     {
       //ROS_INFO("Set Desired Depth: %d", depth_srv.response.CurrentDesiredDepth);
-      itsDepthError = depth_srv.response.ErrorInDepth;
+      itsDepthError = xyz_srv.response.ErrorInXYZ.z;
     }
   else
     {
-      ROS_ERROR("Failed to call service setDesiredDepth");
+      ROS_ERROR("Failed to call service setDesiredXYZ");
     }
 }
 
@@ -478,7 +478,7 @@ int main(int argc, char** argv)
   kill_switch_sub = n.subscribe("seabee3/KillSwitch", 100, killSwitchCallback);
 	
   //driver_calibrate = n.serviceClient<xsens_node::CalibrateRPYOri>("xsens/CalibrateRPYOri");
-  driver_depth = n.serviceClient<seabee3_driver::SetDesiredDepth>("seabee3/setDesiredDepth");
+  driver_depth = n.serviceClient<seabee3_driver::SetDesiredXYZ>("seabee3/setDesiredXYZ");
   driver_rpy = n.serviceClient<seabee3_driver::SetDesiredRPY>("seabee3/setDesiredRPY");
   landmark_finder_srv = n.serviceClient<landmark_finder::FindLandmarks>("landmark_finder/FindBuoys");
   driver_speed = n.advertise<geometry_msgs::Twist>("seabee3/cmd_vel", 1);
