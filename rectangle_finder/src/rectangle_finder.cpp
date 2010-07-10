@@ -1,3 +1,38 @@
+/*******************************************************************************
+ *
+ *      rectangle_finder
+ * 
+ *      Copyright (c) 2010, Michael Wei, Edward T. Kaszubski (ekaszubski@gmail.com)
+ *      All rights reserved.
+ *
+ *      Redistribution and use in source and binary forms, with or without
+ *      modification, are permitted provided that the following conditions are
+ *      met:
+ *      
+ *      * Redistributions of source code must retain the above copyright
+ *        notice, this list of conditions and the following disclaimer.
+ *      * Redistributions in binary form must reproduce the above
+ *        copyright notice, this list of conditions and the following disclaimer
+ *        in the documentation and/or other materials provided with the
+ *        distribution.
+ *      * Neither the name of the USC Underwater Robotics Team nor the names of its
+ *        contributors may be used to endorse or promote products derived from
+ *        this software without specific prior written permission.
+ *      
+ *      THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+ *      "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+ *      LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+ *      A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+ *      OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+ *      SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+ *      LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+ *      DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+ *      THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ *      (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+ *      OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ *
+ *******************************************************************************/
+
 #include <ros/ros.h>
 #include <sensor_msgs/Image.h>
 #include <geometry_msgs/Point.h>
@@ -9,7 +44,8 @@
 #include <utility>
 #include <cmath>
 
-#include <rectangle_finder/RectangleMsg.h>
+#include <rectangle_finder/RectangleArrayMsg.h>
+#include <rectangle_finder/FindRectangles.h>
 
 #define MIN_CENTER_DIST		15
 #define MIN_AREA		150
@@ -20,8 +56,13 @@ double angle_thresh = 0.4;
 uint itsWidth = 320;
 uint itsHeight = 240;
 
-ros::Publisher rectanglePub;
-image_transport::Publisher rectangleImagePub;
+sensor_msgs::ImageConstPtr itsCurrentImage;
+//boost::mutex image_mutex;
+
+image_transport::Publisher * rectangleImagePub;
+sensor_msgs::CvBridge bridge;
+
+int debug_mode;
 
 class Point2D
 {
@@ -245,12 +286,13 @@ CvSeq* findSquares4(IplImage* img, CvMemStorage* storage)
 	return squares;
 }
 
-
-void findRectangle(const sensor_msgs::ImageConstPtr &img)
+//void findRectangle(const sensor_msgs::ImageConstPtr &img)
+rectangle_finder::RectangleArrayMsg findRectangles()
 {
-	sensor_msgs::CvBridge bridge;
-	CvMemStorage* storage = cvCreateMemStorage(0);
-	IplImage* img0 = bridge.imgMsgToCv(img);
+	rectangle_finder::RectangleArrayMsg rectangles;
+	CvMemStorage* storage = cvCreateMemStorage(0); 
+	//IplImage* img0 = bridge.imgMsgToCv(img);
+	IplImage * img0 = bridge.imgMsgToCv(itsCurrentImage);
 	CvSeq *cvsquares = findSquares4( img0, storage );
 
 	// Release the image later after we have drawn on it
@@ -392,16 +434,19 @@ void findRectangle(const sensor_msgs::ImageConstPtr &img)
 				quad.ratio = ratio;
 				quad.angle = angle;
 				quadVect.push_back(quad);
-
-				// draw the quad on the image
-				cvLine(img0, cv::Point(quad.tr.i, quad.tr.j),
-					cv::Point(quad.br.i, quad.br.j), cvScalar(0, 255, 0), 2);
-				cvLine(img0, cv::Point(quad.br.i, quad.br.j),
-					cv::Point(quad.bl.i, quad.bl.j), cvScalar(0, 255, 0), 2);
-				cvLine(img0, cv::Point(quad.bl.i, quad.bl.j),
-					cv::Point(quad.tl.i, quad.tl.j), cvScalar(0, 255, 0), 2);
-				cvLine(img0, cv::Point(quad.tl.i, quad.tl.j),
-					cv::Point(quad.tr.i, quad.tr.j), cvScalar(0, 255, 0), 2);
+				
+				if(debug_mode == 1)
+				{
+					// draw the quad on the image
+					cvLine(img0, cv::Point(quad.tr.i, quad.tr.j),
+						cv::Point(quad.br.i, quad.br.j), cvScalar(0, 255, 0), 2);
+					cvLine(img0, cv::Point(quad.br.i, quad.br.j),
+						cv::Point(quad.bl.i, quad.bl.j), cvScalar(0, 255, 0), 2);
+					cvLine(img0, cv::Point(quad.bl.i, quad.bl.j),
+						cv::Point(quad.tl.i, quad.tl.j), cvScalar(0, 255, 0), 2);
+					cvLine(img0, cv::Point(quad.tl.i, quad.tl.j),
+						cv::Point(quad.tr.i, quad.tr.j), cvScalar(0, 255, 0), 2);
+				}
 			}
 
 			// re-initialize for next quad
@@ -430,32 +475,55 @@ void findRectangle(const sensor_msgs::ImageConstPtr &img)
 			
 			msg.Ori = 0.0;
 			
-			rectanglePub.publish(msg);
+			rectangles.RectangleArray.push_back(msg);
 		}
-		rectangleImagePub.publish(bridge.cvToImgMsg(img0));
-		
+		if(debug_mode == 1)
+		{
+			rectangleImagePub->publish(bridge.cvToImgMsg(img0));
+		}
 	}
 
 	cvReleaseMemStorage(&storage);
 	//cvReleaseImage(&img0);
+	return rectangles;
 }
 
+void imageCallback(const sensor_msgs::ImageConstPtr& msg)
+{
+	//boost::mutex::scoped_lock lock(image_mutex); 
+	itsCurrentImage = msg; //bridge.imgMsgToCv(msg);
+  
+	if(debug_mode == 1)
+		findRectangles();  
+}
 
+bool FindRectanglesCallback(rectangle_finder::FindRectangles::Request & req, rectangle_finder::FindRectangles::Response & resp)
+{
+	resp.Rectangles = findRectangles();
+	
+	if(resp.Rectangles.RectangleArray.size() > 0)
+	{
+		return true;
+	}
+	return false;
+}
 
 int main(int argc, char** argv)
 {
 	ros::init(argc, argv, "rectangle_finder");
-	ros::NodeHandle nh("~");
-	image_transport::ImageTransport it(nh);
-
+	ros::NodeHandle n("~");
+	image_transport::ImageTransport it(n);
+	
+	n.param("debug_mode", debug_mode, 0);
+	
 	// Register publisher for the center of the bin position in an image
-	rectanglePub = nh.advertise<rectangle_finder::RectangleMsg>("rectangle_data", 1);
+	ros::ServiceServer rectangle_srv = n.advertiseService("FindRectangles", FindRectanglesCallback);
 
 	// Register publisher for image with bins highlighted
-	rectangleImagePub = it.advertise("rectangle_image", 1);
+	rectangleImagePub = new image_transport::Publisher(it.advertise("debug/image_color", 1));
 
 	// Subscribe to an image topic
-	image_transport::Subscriber sub = it.subscribe("image", 1, findRectangle);
+	image_transport::Subscriber sub = it.subscribe("image", 1, imageCallback);
 
 	ros::spin();
 }

@@ -11,7 +11,7 @@
 
 #include <color_segmenter/ColorSegmenterConfig.h>
 #include <color_segmenter/ColorBlobArray.h>
-#include <color_segmenter/SegmentImage.h>
+#include <color_segmenter/FindBlobs.h>
 #include <vector>
 #include <ctype.h>
 
@@ -49,7 +49,7 @@
 using namespace cv;
 using namespace color_segmenter;
 
-ros::ServiceServer * SegmentImage_srv;
+ros::ServiceServer * FindBlobs_srv;
 image_transport::Publisher *dbg_img_pub; 
 sensor_msgs::CvBridge bridge;
 
@@ -65,7 +65,8 @@ int show_dbg_code;
 
 std::string show_dbg_color;
 
-Mat itsCurrentImage;
+//Mat itsCurrentImage;
+sensor_msgs::ImageConstPtr itsCurrentImage;
 boost::mutex image_mutex;
 
 struct BlobColorDefs
@@ -138,14 +139,15 @@ void reconfigureCallback(color_segmenter::ColorSegmenterConfig &config, uint32_t
 color_segmenter::ColorBlobArray filterColor(int color)
 {
 	ROS_INFO("filtering image for color: %d", color);
-  IplImage img = itsCurrentImage;
+  //IplImage img = itsCurrentImage;
+  IplImage* img = bridge.imgMsgToCv(itsCurrentImage);
 	
   int h_min = colors[color].h_min;
   int h_max = colors[color].h_max;
   int s_min = colors[color].s_min;
   int s_max = colors[color].s_max;
 
-  Mat filterImg = cvFilterHS(&img,h_min,h_max,s_min,s_max,0);
+  Mat filterImg = cvFilterHS(img,h_min,h_max,s_min,s_max,0);
   
   dilate(filterImg, filterImg, Mat(), Point(-1,-1), 5);
   erode(filterImg, filterImg, Mat(), Point(-1,-1), 3);
@@ -220,13 +222,14 @@ color_segmenter::ColorBlobArray filterColor(int color)
 void imageCallback(const sensor_msgs::ImageConstPtr& msg)
 {
   boost::mutex::scoped_lock lock(image_mutex); 
-  itsCurrentImage = bridge.imgMsgToCv(msg);
+  //itsCurrentImage = bridge.imgMsgToCv(msg);
+  itsCurrentImage = msg;
   
   if(show_dbg_img)
     filterColor(show_dbg_code);  
 }
 
-bool segmentImageCallback(color_segmenter::SegmentImage::Request & req, color_segmenter::SegmentImage::Response & resp)
+bool FindBlobsCallback(color_segmenter::FindBlobs::Request & req, color_segmenter::FindBlobs::Response & resp)
 {
 	ROS_INFO("got a request to segment an image for color: %d", req.DesiredColor);
   boost::mutex::scoped_lock lock(image_mutex); 
@@ -292,8 +295,8 @@ int main (int argc, char** argv)
   image_transport::ImageTransport it(n);
 
   //Register the show debug image parameter
-  n.param("show_dbg_img", show_dbg_img, 1);
-  n.param("show_dbg_color", show_dbg_color, std::string("red"));
+  n.param("show_debug_img", show_dbg_img, 1);
+  n.param("debug_color", show_dbg_color, std::string("red"));
 
   show_dbg_code = getColorId(show_dbg_color);
   if(show_dbg_code < 0)
@@ -304,10 +307,10 @@ int main (int argc, char** argv)
 
   initColorRanges();
 
-  ros::ServiceServer segmentImage_srv = n.advertiseService("segmentImage", segmentImageCallback);
+  ros::ServiceServer FindBlobs_srv = n.advertiseService("FindBlobs", FindBlobsCallback);
 
   //Register a publisher for a debug image
-  dbg_img_pub = new image_transport::Publisher(it.advertise("perception/color_seg_dbg", 1));
+  dbg_img_pub = new image_transport::Publisher(it.advertise("debug/image_color", 1));
 
   //Register a subscriber to an input image
   image_transport::Subscriber sub = it.subscribe("image", 1, imageCallback);
