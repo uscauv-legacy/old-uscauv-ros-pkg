@@ -42,13 +42,23 @@
 #include <math.h>
 #include <string>
 
-std::string map_topic;
+#include <landmark_map/LandmarkMap.h>
+
+std::string map_frame;
+
+void MapCallback(const localization_defs::LandmarkMapMsgConstPtr & map)
+{
+	
+}
 
 int main( int argc, char* argv[] )
 {
 	ros::init(argc, argv, "flsl");
 	ros::NodeHandle n("~");
-	n.param("map_topic", map_topic, std::string("/landmark_map") );
+	
+	n.param("map_frame", map_frame, std::string("map") );
+	
+	ros::Subscriber map_sub = n.subscribe("map", 1, MapCallback);
 	
 	
 }
