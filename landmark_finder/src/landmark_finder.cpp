@@ -38,7 +38,7 @@
 #include <landmark_map/Landmark.h>
 #include <localization_defs/LandmarkMsg.h>
 #include <visualization_msgs/Marker.h>
-#include <color_segmenter/SegmentImage.h>
+#include <color_segmenter/FindBlobs.h>
 #include <color_segmenter/ColorBlobArray.h>
 #include <image_transport/image_transport.h>
 #include <tf/transform_listener.h>
@@ -47,8 +47,8 @@
 
 #include <landmark_finder/FindLandmarks.h>
 
-ros::ServiceClient seg_img_srv;
-color_segmenter::SegmentImage seg_img;
+ros::ServiceClient blob_finder_srv;
+color_segmenter::FindBlobs blob_finder;
 double heading_corr_scale, depth_corr_scale, distance_scale;
 int runBuoyDemo;
 
@@ -95,22 +95,22 @@ BlobParams mWindowBlobParams;
 bool findBiggestBlob(const int & desiredColor, color_segmenter::ColorBlob & resp, const BlobParams & blobParams = BlobParams())
 {
 	ROS_INFO("calling color_segmenter to find all blobs with color %d", desiredColor);
-	seg_img.request.DesiredColor = desiredColor;
-	if(seg_img_srv.call(seg_img))
+	blob_finder.request.DesiredColor = desiredColor;
+	if(blob_finder_srv.call(blob_finder))
 	{
-		ROS_INFO("found %d blobs; using the largest one", (int)seg_img.response.BlobArray.ColorBlobs.size());
+		ROS_INFO("found %d blobs; using the largest one", (int)blob_finder.response.BlobArray.ColorBlobs.size());
 		color_segmenter::ColorBlob biggestBlob;
 		
 		//if the biggest blob is less than the min size threshold or if the smallest blob is greater than the max size threshold, no blobs will match; return false
-		if(seg_img.response.BlobArray.ColorBlobs[0].Area < blobParams.minBlobSize || seg_img.response.BlobArray.ColorBlobs[seg_img.response.BlobArray.ColorBlobs.size() - 1].Area > blobParams.maxBlobSize)
+		if(blob_finder.response.BlobArray.ColorBlobs[0].Area < blobParams.minBlobSize || blob_finder.response.BlobArray.ColorBlobs[blob_finder.response.BlobArray.ColorBlobs.size() - 1].Area > blobParams.maxBlobSize)
 			return false;
 		
 		//at this point we know at least one blob will match
-		for(unsigned int i = 0; i < seg_img.response.BlobArray.ColorBlobs.size(); i ++ )
+		for(unsigned int i = 0; i < blob_finder.response.BlobArray.ColorBlobs.size(); i ++ )
 		{
-			if(seg_img.response.BlobArray.ColorBlobs[i].Area >= blobParams.minBlobSize && seg_img.response.BlobArray.ColorBlobs[i].Area <= blobParams.maxBlobSize)
+			if(blob_finder.response.BlobArray.ColorBlobs[i].Area >= blobParams.minBlobSize && blob_finder.response.BlobArray.ColorBlobs[i].Area <= blobParams.maxBlobSize)
 			{
-				biggestBlob = seg_img.response.BlobArray.ColorBlobs[0];
+				biggestBlob = blob_finder.response.BlobArray.ColorBlobs[0];
 			}
 		}
 		
@@ -126,19 +126,19 @@ bool findBiggestBlob(const int & desiredColor, color_segmenter::ColorBlob & resp
 
 bool findBlobs(const int & desiredColor, color_segmenter::ColorBlobArray & resp, const BlobParams & blobParams = BlobParams())
 {
-	seg_img.request.DesiredColor = desiredColor;
-	if(seg_img_srv.call(seg_img))
+	blob_finder.request.DesiredColor = desiredColor;
+	if(blob_finder_srv.call(blob_finder))
 	{
 		//if the biggest blob is less than the min size threshold or if the smallest blob is greater than the max size threshold, no blobs will match; return false
-		if(seg_img.response.BlobArray.ColorBlobs[0].Area < blobParams.minBlobSize || seg_img.response.BlobArray.ColorBlobs[seg_img.response.BlobArray.ColorBlobs.size() - 1].Area > blobParams.maxBlobSize)
+		if(blob_finder.response.BlobArray.ColorBlobs[0].Area < blobParams.minBlobSize || blob_finder.response.BlobArray.ColorBlobs[blob_finder.response.BlobArray.ColorBlobs.size() - 1].Area > blobParams.maxBlobSize)
 			return false;
 		
 		//at this point we know at least one blob will match
-		for(unsigned int i = 0; i < seg_img.response.BlobArray.ColorBlobs.size(); i ++ )
+		for(unsigned int i = 0; i < blob_finder.response.BlobArray.ColorBlobs.size(); i ++ )
 		{
-			if(seg_img.response.BlobArray.ColorBlobs[i].Area >= blobParams.minBlobSize && seg_img.response.BlobArray.ColorBlobs[i].Area <= blobParams.maxBlobSize)
+			if(blob_finder.response.BlobArray.ColorBlobs[i].Area >= blobParams.minBlobSize && blob_finder.response.BlobArray.ColorBlobs[i].Area <= blobParams.maxBlobSize)
 			{
-				color_segmenter::ColorBlob theBlob = seg_img.response.BlobArray.ColorBlobs[i];
+				color_segmenter::ColorBlob theBlob = blob_finder.response.BlobArray.ColorBlobs[i];
 				theBlob.X *= blobParams.heading_corr_scale;
 				theBlob.Y *= blobParams.depth_corr_scale;
 				theBlob.Area = blobParams.distance_scale / theBlob.Area;
@@ -253,7 +253,7 @@ int main(int argc, char* argv[])
 	ros::ServiceServer pinger_finder_srv = n.advertiseService("FindPingers", FindPingersCallback);
 	ros::ServiceServer window_finder_srv = n.advertiseService("FindWindows", FindWindowsCallback);
 
-	seg_img_srv = n.serviceClient<color_segmenter::SegmentImage>("/color_segmenter/segmentImage");
+	blob_finder_srv = n.serviceClient<color_segmenter::FindBlobs>("/color_segmenter/FindBlobs");
 	
 	ros::Publisher marker_pub = n.advertise<visualization_msgs::Marker>("landmarks", 1);
 	

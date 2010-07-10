@@ -13,6 +13,9 @@
   <depend package="opencv2"/>
   <depend package="flsl"/>
   <depend package="localization_defs"/>
+  <depend package="seabee3_driver" />
+  <depend package="geometry_msgs" />
+  <depend package="color_segmenter" />
 
 </package>
 

@@ -142,12 +142,12 @@ void runRPYDriftCalibration(int n = 10)
 bool SetRPYOffsetCallback (xsens_node::SetRPYOffset::Request &req, xsens_node::SetRPYOffset::Response &res)
 {
 	//Mode = 1 : set change in rpy offset; else set absolute rpy offset
-	if(req.Mask.x != 0.0)
-		ori_offset->setX( req.Offset.x + ( req.Mode.x == 1.0 ? ori_offset->x() : 0.0 ) );
-	if(req.Mask.y != 0.0)
-		ori_offset->setY( req.Offset.y + ( req.Mode.y == 1.0 ? ori_offset->y() : 0.0 ) );
-	if(req.Mask.z != 0.0)
-		ori_offset->setZ( req.Offset.z + ( req.Mode.z == 1.0 ? ori_offset->z() : 0.0 ) );
+	if(req.Offset.Mask.x != 0.0)
+		ori_offset->setX( req.Offset.Values.x + ( req.Offset.Mode.x == 1.0 ? ori_offset->x() : 0.0 ) );
+	if(req.Offset.Mask.y != 0.0)
+		ori_offset->setY( req.Offset.Values.y + ( req.Offset.Mode.y == 1.0 ? ori_offset->y() : 0.0 ) );
+	if(req.Offset.Mask.z != 0.0)
+		ori_offset->setZ( req.Offset.Values.z + ( req.Offset.Mode.z == 1.0 ? ori_offset->z() : 0.0 ) );
 	
 	*ori_offset >> res.Result;
 	

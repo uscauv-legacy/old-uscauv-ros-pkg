@@ -38,26 +38,30 @@
 #include <control_toolbox/pid.h>
 
 #include <xsens_node/IMUData.h>
-#include <seabee3_driver/SetDesiredDepth.h>
+#include <seabee3_driver/SetDesiredXYZ.h>
 #include <seabee3_driver/SetDesiredRPY.h>
 #include <seabee3_driver_base/MotorCntl.h>
 #include <seabee3_driver_base/Pressure.h>
 #include <geometry_msgs/Twist.h>
 #include <geometry_msgs/Vector3.h>
+#include <xsens_node/SetRPYOffset.h>
 
 #include <seabee3_beestem/BeeStem3.h>
 
 #include <localization_tools/Util.h>
+
+#include <seabee3_driver/ResetPose.h>
 
 xsens_node::IMUData * IMUDataCache;
 geometry_msgs::Twist * TwistCache;
 //ros::Time * velocity_sample_start;
 seabee3_driver_base::MotorCntl * motorCntlMsg;
 seabee3_driver_base::Pressure * extlPressureCache;
-geometry_msgs::Vector3 * desiredRPY, * errorInRPY, * desiredChangeInRPYPerSec;
-double maxRollError, maxPitchError, maxHeadingError, maxDepthError, desiredSpeed, desiredStrafe, desiredDepth, errorInDepth, desiredChangeInDepthPerSec;
+geometry_msgs::Vector3 * desiredRPY, * errorInRPY, * desiredChangeInRPYPerSec, * desiredXYZ, * errorInXYZ, * desiredChangeInXYZPerSec;
+double maxRollError, maxPitchError, maxHeadingError, maxDepthError, desiredSpeed, desiredStrafe;
 ros::Time * lastUpdateTime;
 ros::Time * lastPidUpdateTime;
+tf::Vector3 mImuOriOffset;
 
 double 	speed_m1_dir, speed_m2_dir,
 		strafe_m1_dir, strafe_m2_dir,
@@ -70,6 +74,8 @@ double speed_axis_dir, strafe_axis_dir, depth_axis_dir, roll_axis_dir, pitch_axi
 bool depthInitialized;
 
 control_toolbox::Pid * pid_D, * pid_R, * pid_P, * pid_Y;
+
+tf::Transform estimatedPose;
 
 //tf::Vector3 * vel_est_lin;
 //tf::Vector3 * vel_est_ang;
@@ -84,6 +90,13 @@ control_toolbox::Pid * pid_D, * pid_R, * pid_P, * pid_Y;
 #define axis_depth_rel 6
 #define axis_strafe_rel 7
 #define axis_heading_rel 8
+
+struct PIDConfig
+{
+	double p;
+	double i;
+	double d;
+};
 
 void updateMotorCntlMsg(seabee3_driver_base::MotorCntl & msg, int axis, int p_value)
 {
@@ -182,7 +195,10 @@ void updateMotorCntlFromTwist(const geometry_msgs::TwistConstPtr & twist)
 	{
 		//ros::Duration dt = ros::Time::now() - *lastHeadingUpdateTime;
 		
-		desiredChangeInDepthPerSec = 100.0 * twist->linear.z;
+		//desiredChangeInXYZPerSec->x = 100.0 * twist->linear.x;
+		//desiredChangeInXYZPerSec->y = 100.0 * twist->linear.y;
+		desiredChangeInXYZPerSec->z = 100.0 * twist->linear.z;
+		
 		desiredChangeInRPYPerSec->x = 100.0 * twist->angular.x;
 		desiredChangeInRPYPerSec->y = 100.0 * twist->angular.y;
 		desiredChangeInRPYPerSec->z = 100.0 * twist->angular.z;
@@ -212,7 +228,9 @@ void headingPidStep()
 		desiredRPY->y -= desiredChangeInRPYPerSec->y * dt.toSec();
 		desiredRPY->z -= desiredChangeInRPYPerSec->z * dt.toSec();
 		
-		desiredDepth -= desiredChangeInDepthPerSec * dt.toSec();
+		//desiredXYZ->x -= desiredChangeInXYZPerSec->x * dt.toSec();
+		//desiredXYZ->y -= desiredChangeInXYZPerSec->y * dt.toSec();
+		desiredXYZ->z -= desiredChangeInXYZPerSec->z * dt.toSec();
 
 		LocalizationUtil::normalizeAngle(desiredRPY->x);
 		LocalizationUtil::normalizeAngle(desiredRPY->y);
@@ -222,12 +240,18 @@ void headingPidStep()
 		//desired -> actual; 40 -> 0 = 40 cw = -40
 		//double headingError = LocalizationUtil::angleDistRel(desiredRPY->z, IMUDataCache->ori.z);
 		
-		errorInDepth = desiredDepth - extlPressureCache->Value;
+		//errorInXYZ->x = desiredXYZ->y - <some sensor value>;
+		//errorInXYZ->y = desiredXYZ->x - <some sensor value>;
+		errorInXYZ->z = desiredXYZ->z - extlPressureCache->Value;
+		
 		errorInRPY->x = LocalizationUtil::angleDistRel(desiredRPY->x, IMUDataCache->ori.x);
 		errorInRPY->y = LocalizationUtil::angleDistRel(desiredRPY->y, IMUDataCache->ori.y);
 		errorInRPY->z = LocalizationUtil::angleDistRel(desiredRPY->z, IMUDataCache->ori.z);
 		
-		LocalizationUtil::capValue(errorInDepth, maxDepthError);
+		//LocalizationUtil::capValue(errorInDepth->x, maxXError);
+		//LocalizationUtil::capValue(errorInDepth->y, maxYError);
+		LocalizationUtil::capValue(errorInXYZ->z, maxDepthError);
+		
 		LocalizationUtil::capValue(errorInRPY->x, maxRollError);
 		LocalizationUtil::capValue(errorInRPY->y, maxPitchError);
 		LocalizationUtil::capValue(errorInRPY->z, maxHeadingError);
@@ -236,7 +260,7 @@ void headingPidStep()
 		
 		double speedMotorVal = 1.0 * desiredSpeed;
 		double strafeMotorVal = 1.0 * desiredStrafe;
-		double depthMotorVal = -1.0 * pid_D->updatePid(errorInDepth, dt);
+		double depthMotorVal = -1.0 * pid_D->updatePid(errorInXYZ->z, dt);
 		double rollMotorVal = -1.0 * pid_R->updatePid(errorInRPY->x, dt);
 		double pitchMotorVal = -1.0 * pid_P->updatePid(errorInRPY->y, dt);
 		double headingMotorVal = -1.0 * pid_Y->updatePid(errorInRPY->z, dt);
@@ -270,10 +294,17 @@ void IMUDataCallback(const xsens_node::IMUDataConstPtr & data)
 {
 	//ROS_INFO("IMUDataCallback()");
 	*IMUDataCache = *data;
+	
+	IMUDataCache->ori.x += mImuOriOffset.x();
+	IMUDataCache->ori.y += mImuOriOffset.y();
+	IMUDataCache->ori.z += mImuOriOffset.z();
+	
 	while(IMUDataCache->ori.z > 360)
 		IMUDataCache->ori.z -= 360;
 	while(IMUDataCache->ori.z < 0)
 		IMUDataCache->ori.z += 360;
+	
+	estimatedPose.setRotation( tf::Quaternion( IMUDataCache->ori.z, IMUDataCache->ori.y, IMUDataCache->ori.x ) );
 	//ROS_INFO("x %f y %f z %f", IMUDataCache->ori.x, IMUDataCache->ori.y, IMUDataCache->ori.z);
 	//while(IMUDataCache->size() > 5)
 	//{
@@ -293,13 +324,19 @@ void CmdVelCallback(const geometry_msgs::TwistConstPtr & twist)
 	updateMotorCntlFromTwist(twist);
 }
 
-bool setDesiredDepthCallback(seabee3_driver::SetDesiredDepth::Request & req, seabee3_driver::SetDesiredDepth::Response & resp)
+bool setDesiredXYZCallback(seabee3_driver::SetDesiredXYZ::Request & req, seabee3_driver::SetDesiredXYZ::Response & resp)
 {
-	if(req.Mask > 0)
-		desiredDepth = req.DesiredDepth + (req.Mode == 1 ? extlPressureCache->Value : 0);
+	//if(req.Mask.x > 0.0f)
+	//	desiredXYZ->x = req.DesiredXYZ.x + (req.Mode.x == 1.0f ? IMUDataCache->ori.x : 0);
+			
+	//if(req.Mask.y > 0.0f)
+	//	desiredXYZ->y = req.DesiredXYZ.y + (req.Mode.y == 1.0f ? IMUDataCache->ori.y : 0);
+			
+	if(req.Mask.z > 0.0f)
+		desiredXYZ->z = req.DesiredXYZ.z + (req.Mode.z == 1.0f ? extlPressureCache->Value : 0);
 		
-	resp.CurrentDesiredDepth = desiredDepth;
-	resp.ErrorInDepth = errorInDepth;
+	resp.CurrentDesiredXYZ = *desiredXYZ;
+	resp.ErrorInXYZ = *errorInXYZ;
 	return true;
 }
 
@@ -324,9 +361,36 @@ void ExtlPressureCallback(const seabee3_driver_base::PressureConstPtr & extlPres
 	*extlPressureCache = *extlPressure;
 	if(!depthInitialized)
 	{
-		desiredDepth = extlPressureCache->Value;
+		desiredXYZ->z = extlPressureCache->Value;
 		depthInitialized = true;
 	}
+}
+
+void OdomPrimCallback(const geometry_msgs::Vector3ConstPtr & odomPrim)
+{
+	tf::Vector3 currentPose = estimatedPose.getOrigin();
+	//odom points from where we were before we started moving to our current position
+	estimatedPose.setOrigin( tf::Vector3( currentPose.x() + odomPrim->x, currentPose.y() + odomPrim->y, currentPose.z() + odomPrim->z ) );
+}
+
+bool ResetPoseCallback(seabee3_driver::ResetPose::Request & req, seabee3_driver::ResetPose::Response & resp)
+{
+	tf::Vector3 thePose = estimatedPose.getOrigin();
+	if(req.Pos.Mask.x == 1.0)
+		thePose.setX(req.Pos.Values.x);
+	if(req.Pos.Mask.y == 1.0)
+		thePose.setY(req.Pos.Values.y);
+	if(req.Pos.Mask.z == 1.0)
+		thePose.setZ(req.Pos.Values.z);
+	
+	if(req.Ori.Mask.x == 1.0)
+		mImuOriOffset.setX(req.Ori.Values.x - mImuOriOffset.x() );
+	if(req.Ori.Mask.y == 1.0)
+		mImuOriOffset.setY(req.Ori.Values.y - mImuOriOffset.y() );
+	if(req.Ori.Mask.z == 1.0)
+		mImuOriOffset.setZ(req.Ori.Values.z - mImuOriOffset.z() );
+	
+	return true;
 }
 
 int main(int argc, char** argv)
@@ -342,12 +406,17 @@ int main(int argc, char** argv)
 	TwistCache = new geometry_msgs::Twist;
 	
 	ros::Subscriber imu_sub = n.subscribe("imu_data", 1, IMUDataCallback); //likely necessary to remap this to something real ie. /xsens/data_calibrated
+	ros::Subscriber odom_prim_sub = n.subscribe("odom_prim", 1, OdomPrimCallback);
 	ros::Subscriber cmd_vel_sub = n.subscribe("/seabee3/cmd_vel", 1, CmdVelCallback);
 	ros::Subscriber extl_depth_sub = n.subscribe("/seabee3/extl_pressure", 1, ExtlPressureCallback);
 	
 	desiredRPY = new geometry_msgs::Vector3; desiredRPY->x = 0; desiredRPY->y = 0; desiredRPY->z = 0;
 	errorInRPY = new geometry_msgs::Vector3; errorInRPY->x = 0; errorInRPY->y = 0; errorInRPY->z = 0;
 	desiredChangeInRPYPerSec = new geometry_msgs::Vector3; desiredChangeInRPYPerSec->x = 0; desiredChangeInRPYPerSec->y = 0; desiredChangeInRPYPerSec->z = 0;
+	
+	desiredXYZ = new geometry_msgs::Vector3; desiredXYZ->x = 0; desiredXYZ->y = 0; desiredXYZ->z = 0;
+	errorInXYZ = new geometry_msgs::Vector3; errorInXYZ->x = 0; errorInXYZ->y = 0; errorInXYZ->z = 0;
+	desiredChangeInXYZPerSec = new geometry_msgs::Vector3; desiredChangeInXYZPerSec->x = 0; desiredChangeInXYZPerSec->y = 0; desiredChangeInXYZPerSec->z = 0;
 	
 	lastUpdateTime = new ros::Time(ros::Time(-1));
 	lastPidUpdateTime = new ros::Time(ros::Time(-1));
@@ -360,35 +429,33 @@ int main(int argc, char** argv)
 	pid_P = new control_toolbox::Pid;
 	pid_Y = new control_toolbox::Pid;
 	
+	PIDConfig pid_D_cfg, pid_R_cfg, pid_P_cfg, pid_Y_cfg;
+	
 	double pid_i_min, pid_i_max;
-	double pid_D_p, pid_D_i, pid_D_d;
-	double pid_R_p, pid_R_i, pid_R_d;
-	double pid_P_p, pid_P_i, pid_P_d;
-	double pid_Y_p, pid_Y_i, pid_Y_d;
 	
 	n.param("depth_err_cap", maxDepthError, 25.0);
 	n.param("roll_err_cap", maxRollError, 25.0);
 	n.param("pitch_err_cap", maxPitchError, 25.0);
 	n.param("heading_err_cap", maxHeadingError, 25.0);
 	
-	n.param("pid_D_p", pid_D_p, 2.5);
-	n.param("pid_D_i", pid_D_i, 0.05);
-	n.param("pid_D_d", pid_D_d, 0.2);
+	n.param("pid/D/p", pid_D_cfg.p, 2.5);
+	n.param("pid/D/i", pid_D_cfg.i, 0.05);
+	n.param("pid/D/d", pid_D_cfg.d, 0.2);
 	
-	n.param("pid_R_p", pid_R_p, 2.5);
-	n.param("pid_R_i", pid_R_i, 0.05);
-	n.param("pid_R_d", pid_R_d, 0.2);
+	n.param("pid/R/p", pid_R_cfg.p, 2.5);
+	n.param("pid/R/i", pid_R_cfg.i, 0.05);
+	n.param("pid/R/d", pid_R_cfg.d, 0.2);
 	
-	n.param("pid_P_p", pid_P_p, 2.5);
-	n.param("pid_P_i", pid_P_i, 0.05);
-	n.param("pid_P_d", pid_P_d, 0.2);
+	n.param("pid/P/p", pid_P_cfg.p, 2.5);
+	n.param("pid/P/i", pid_P_cfg.i, 0.05);
+	n.param("pid/P/d", pid_P_cfg.d, 0.2);
 	
-	n.param("pid_Y_p", pid_Y_p, 2.5);
-	n.param("pid_Y_i", pid_Y_i, 0.05);
-	n.param("pid_Y_d", pid_Y_d, 0.2);
+	n.param("pid/Y/p", pid_Y_cfg.p, 2.5);
+	n.param("pid/Y/i", pid_Y_cfg.i, 0.05);
+	n.param("pid/Y/d", pid_Y_cfg.d, 0.2);
 	
-	n.param("pid_i_max", pid_i_max, 1.0);
-	n.param("pid_i_min", pid_i_min, -1.0);
+	n.param("pid/i_max", pid_i_max, 1.0);
+	n.param("pid/i_min", pid_i_min, -1.0);
 	
 	n.param("speed_m1_dir", speed_m1_dir, 1.0);
 	n.param("speed_m2_dir", speed_m2_dir, 1.0);
@@ -412,13 +479,13 @@ int main(int argc, char** argv)
 	n.param("pitch_axis_dir", pitch_axis_dir, -1.0);
 	n.param("heading_axis_dir", heading_axis_dir, -1.0);
 	
-	pid_D->initPid(pid_D_p, pid_D_i, pid_D_d, pid_i_max, pid_i_min);
+	pid_D->initPid(pid_D_cfg.p, pid_D_cfg.i, pid_D_cfg.d, pid_i_max, pid_i_min);
 	pid_D->reset();
-	pid_R->initPid(pid_R_p, pid_R_i, pid_R_d, pid_i_max, pid_i_min);
+	pid_R->initPid(pid_R_cfg.p, pid_R_cfg.i, pid_R_cfg.d, pid_i_max, pid_i_min);
 	pid_R->reset();
-	pid_P->initPid(pid_P_p, pid_P_i, pid_P_d, pid_i_max, pid_i_min);
+	pid_P->initPid(pid_P_cfg.p, pid_P_cfg.i, pid_P_cfg.d, pid_i_max, pid_i_min);
 	pid_P->reset();
-	pid_Y->initPid(pid_Y_p, pid_Y_i, pid_Y_d, pid_i_max, pid_i_min);
+	pid_Y->initPid(pid_Y_cfg.p, pid_Y_cfg.i, pid_Y_cfg.d, pid_i_max, pid_i_min);
 	pid_Y->reset();
 	
 	motorCntlMsg = new seabee3_driver_base::MotorCntl;
@@ -430,16 +497,22 @@ int main(int argc, char** argv)
 	}
 	
 	ros::Publisher motor_cntl_pub = n.advertise<seabee3_driver_base::MotorCntl>("/seabee3/motor_cntl", 1);
-	ros::ServiceServer setDesiredDepth_srv = n.advertiseService("/seabee3/setDesiredDepth", setDesiredDepthCallback);
+	ros::ServiceServer setDesiredXYZ_srv = n.advertiseService("/seabee3/setDesiredXYZ", setDesiredXYZCallback);
 	ros::ServiceServer setDesiredRPY_srv = n.advertiseService("/seabee3/setDesiredRPY", setDesiredRPYCallback);
+	ros::ServiceServer ResetPose_srv = n.advertiseService("/seabee3/ResetPose", ResetPoseCallback);
 	
+	tf::TransformBroadcaster tb;
 	
 	while(ros::ok())
 	{
-	  headingPidStep();
-	  motor_cntl_pub.publish(*motorCntlMsg);
-	  ros::spinOnce();
-	  ros::Rate(20).sleep();
+		headingPidStep();
+		
+		motor_cntl_pub.publish(*motorCntlMsg);
+		
+		tb.sendTransform(tf::StampedTransform(estimatedPose, ros::Time::now(), "/odom", "/seabee3/base_link") );
+		
+		ros::spinOnce();
+		ros::Rate(20).sleep();
 	}
 	
 	ros::spin();

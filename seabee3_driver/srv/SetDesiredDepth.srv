@@ -1,6 +1,0 @@
-int8 Mode
-int32 Mask
-int32 DesiredDepth
----
-int32 CurrentDesiredDepth
-int32 ErrorInDepth
