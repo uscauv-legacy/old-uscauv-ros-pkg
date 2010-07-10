@@ -382,6 +382,7 @@ bool ResetPoseCallback(seabee3_driver::ResetPose::Request & req, seabee3_driver:
 		thePose.setY(req.Pos.Values.y);
 	if(req.Pos.Mask.z == 1.0)
 		thePose.setZ(req.Pos.Values.z);
+	estimatedPose.setOrigin(thePose);
 	
 	if(req.Ori.Mask.x == 1.0)
 		mImuOriOffset.setX(req.Ori.Values.x - mImuOriOffset.x() );

@@ -15,7 +15,10 @@
   <depend package="localization_defs"/>
   <depend package="seabee3_driver" />
   <depend package="geometry_msgs" />
-  <depend package="color_segmenter" />
+  <depend package="xsens_node" />
+  <export>
+    <cpp cflags="-I${prefix}/include -I${prefix}/msg/cpp -I${prefix}/srv/cpp" lflags="-L/{prefix}/lib"/>
+  </export>
 
 </package>
 
