@@ -48,6 +48,14 @@
 #define DEPTH_I 0
 #define DEPTH_D 0
 
+#define DROPPER1_TRIGGER_TIME 50
+#define DROPPER2_TRIGGER_TIME 50
+#define SHOOTER_TRIGGER_TIME 50
+
+#define DROPPER1_TRIGGER_VALUE 40
+#define DROPPER2_TRIGGER_VALUE 40
+#define SHOOTER_TRIGGER_VALUE 40
+
 namespace Actions
 {
 	const static int NONE = -1;
