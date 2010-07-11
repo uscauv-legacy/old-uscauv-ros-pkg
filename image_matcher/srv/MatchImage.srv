@@ -1,0 +1,4 @@
+sensor_msgs/Image object
+sensor_msgs/Image image
+----
+float64 probability
