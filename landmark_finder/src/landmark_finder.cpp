@@ -45,7 +45,7 @@
 #include <opencv/cv.h>
 #include <queue>
 
-#include <landmark_finder/FindLandmarks.h>
+#include <landmark_finder/FindLandmarks.h> 
 
 ros::ServiceClient blob_finder_srv;
 color_segmenter::FindBlobs blob_finder;
