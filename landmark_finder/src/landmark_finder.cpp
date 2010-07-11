@@ -40,27 +40,26 @@
 #include <visualization_msgs/Marker.h>
 #include <color_segmenter/FindBlobs.h>
 #include <color_segmenter/ColorBlobArray.h>
+#include <rectangle_finder/FindRectangles.h>
+#include <rectangle_finder/RectangleSpecs.h>
+#include <rectangle_finder/RectangleArrayMsg.h>
 #include <image_transport/image_transport.h>
 #include <tf/transform_listener.h>
 #include <opencv/cv.h>
 #include <queue>
 
-#include <landmark_finder/FindLandmarks.h> 
+#include <landmark_finder/FindLandmarks.h>
 
 ros::ServiceClient blob_finder_srv;
+ros::ServiceClient rect_finder_srv;
 color_segmenter::FindBlobs blob_finder;
+rectangle_finder::FindRectangles rect_finder;
 double heading_corr_scale, depth_corr_scale, distance_scale;
 int runBuoyDemo;
 
 //std::queue<localization_defs::LandmarkMsg> messageQueue;
 std::queue<visualization_msgs::Marker> markerQueue;
 tf::TransformListener * tl;
-
-struct RectangleParams
-{
-	double rectangleParam1;
-	double rectangleParam2;
-};
 
 namespace Demo
 {
@@ -90,6 +89,10 @@ BlobParams mPipeBlobParams;
 BlobParams mBinBlobParams;
 //PingerParams mPingerParams;
 BlobParams mWindowBlobParams;
+
+rectangle_finder::RectangleSpecs mPipeRectSpecs;
+rectangle_finder::RectangleSpecs mBinRectSpecs;
+rectangle_finder::RectangleSpecs mWindowRectSpecs;
 
 //find the biggest blob within the defined limits or return false if there are none that meet the requirements
 bool findBiggestBlob(const int & desiredColor, color_segmenter::ColorBlob & resp, const BlobParams & blobParams = BlobParams())
@@ -200,8 +203,108 @@ bool FindBuoysCallback(landmark_finder::FindLandmarks::Request & req, landmark_f
 	return atLeastOneBuoyFound;
 }
 
+bool findRectangles(rectangle_finder::RectangleSpecs & specs, rectangle_finder::RectangleArrayMsg & resp)
+{
+	//ignore specs for now
+	rect_finder.request.Specs = specs;
+	if(rect_finder_srv.call(rect_finder))
+	{
+		if(rect_finder.response.Rectangles.RectangleArray.size() > 0)
+		{
+			rectangle_finder::RectangleMsg temp;
+			//sort the rectangles from smallest to largest
+			for(unsigned int i = 0; i < rect_finder.response.Rectangles.RectangleArray.size(); i ++)
+			{
+				//find the largest rectangle in the subset
+				double nextLargestArea = rect_finder.response.Rectangles.RectangleArray[i].Dim.x * rect_finder.response.Rectangles.RectangleArray[i].Dim.y;
+				double theIndex = i;
+				for(unsigned int n = i + 1; n < rect_finder.response.Rectangles.RectangleArray.size(); n ++)
+				{
+					double theArea = rect_finder.response.Rectangles.RectangleArray[n].Dim.x * rect_finder.response.Rectangles.RectangleArray[n].Dim.y;
+					if(nextLargestArea < theArea)
+					{
+						nextLargestArea = theArea;
+						theIndex = n;
+					}
+				}
+				
+				temp = rect_finder.response.Rectangles.RectangleArray[i];
+				rect_finder.response.Rectangles.RectangleArray[i] = rect_finder.response.Rectangles.RectangleArray[theIndex];
+				rect_finder.response.Rectangles.RectangleArray[theIndex] = temp;
+			}
+			
+			resp.RectangleArray = rect_finder.response.Rectangles.RectangleArray;
+			
+			return true;
+		}
+	}
+	return false;
+}
+
+bool findBiggestRectangle(rectangle_finder::RectangleSpecs & specs, rectangle_finder::RectangleMsg & resp)
+{
+	//ignore specs for now
+	rect_finder.request.Specs = specs;
+	if(rect_finder_srv.call(rect_finder))
+	{
+		if(rect_finder.response.Rectangles.RectangleArray.size() > 0)
+		{
+			double nextLargestArea = rect_finder.response.Rectangles.RectangleArray[0].Dim.x * rect_finder.response.Rectangles.RectangleArray[0].Dim.y;
+			double theIndex = 0;
+			for(unsigned int i = 1; i < rect_finder.response.Rectangles.RectangleArray.size(); i ++)
+			{
+				double theArea = rect_finder.response.Rectangles.RectangleArray[i].Dim.x * rect_finder.response.Rectangles.RectangleArray[i].Dim.y;
+				if(nextLargestArea < theArea)
+				{
+					nextLargestArea = theArea;
+					theIndex = i;
+				}
+			}
+			
+			rectangle_finder::RectangleMsg largestRectangle = rect_finder.response.Rectangles.RectangleArray[theIndex];
+			
+			resp.Center = largestRectangle.Center;
+			resp.Dim = largestRectangle.Dim;
+			resp.Ori = largestRectangle.Ori;
+			
+			return true;
+		}
+	}
+	return false;
+}
+
 bool FindPipesCallback(landmark_finder::FindLandmarks::Request & req, landmark_finder::FindLandmarks::Response & resp)
 {
+	color_segmenter::ColorBlob blob;
+	rectangle_finder::RectangleMsg rectangle;
+	
+	//simple solution to finding an orange rectangle; let's make this more robust later on
+	if( findBiggestBlob(color_segmenter::ColorBlob::ORANGE, blob, mPipeBlobParams) && findBiggestRectangle(mPipeRectSpecs, rectangle) && fabs(blob.Area - rectangle.Dim.x * rectangle.Dim.y) < 100.0 )
+	{
+		tf::StampedTransform mapOffset;
+		
+		try
+		{
+			tl->waitForTransform("/landmark_map", "/seabee3/down_lt_camera", ros::Time(0), ros::Duration(5.0));
+			tl->lookupTransform("/landmark_map", "/seabee3/down_lt_camera", ros::Time(0), mapOffset);
+		}   
+		catch( tf::TransformException &ex )
+		{
+			ROS_WARN( "unable to do transformation: [%s]", ex.what());
+		}
+		
+		LandmarkTypes::Pipe thePipe ( cv::Point3d( rectangle.Center.x, rectangle.Center.y, 0.0 ), rectangle.Ori );
+		
+		resp.Landmarks.push_back( thePipe.createMsg() );
+			
+		thePipe.mCenter.x += mapOffset.getOrigin().x();
+		thePipe.mCenter.y += mapOffset.getOrigin().y();
+		//theBuoy.mCenter.z += mapOffset.getOrigin().z();
+
+		markerQueue.push(thePipe.createMarker( "/landmark_map", 0.0, "_finder" ) );
+		
+		return true;
+	}
 	return false;
 }
 
@@ -231,13 +334,27 @@ int main(int argc, char* argv[])
 	n.param("buoy_finder/blob_params/depth_corr_scale", mBuoyBlobParams.depth_corr_scale, 1.0);
 	n.param("buoy_finder/blob_params/distance_scale", mBuoyBlobParams.distance_scale, 7000.0);
 
-	n.param("pipe_finder/blob_params/heading_corr_scale", mPipeBlobParams.heading_corr_scale, 125.0);
-	n.param("pipe_finder/blob_params/depth_corr_scale", mPipeBlobParams.depth_corr_scale, 50.0);
-	n.param("pipe_finder/blob_params/distance_scale", mPipeBlobParams.distance_scale, 7000.0);
+	n.param("pipe_finder/blob_params/heading_corr_scale", mPipeBlobParams.heading_corr_scale, 1.0);
+	n.param("pipe_finder/blob_params/depth_corr_scale", mPipeBlobParams.depth_corr_scale, 1.0);
+	n.param("pipe_finder/blob_params/distance_scale", mPipeBlobParams.distance_scale, 1.0);
+	
+	n.param("pipe_finder/rect_specs/aspect_range/min", mPipeRectSpecs.AspectRange.x, 1.0);
+	n.param("pipe_finder/rect_specs/aspect_range/max", mPipeRectSpecs.AspectRange.y, 1.0);
+	n.param("pipe_finder/rect_specs/dim_x_range/min", mPipeRectSpecs.DimXRange.x, 1.0);
+	n.param("pipe_finder/rect_specs/dim_x_range/max", mPipeRectSpecs.DimXRange.y, 1.0);
+	n.param("pipe_finder/rect_specs/dim_y_range/min", mPipeRectSpecs.DimYRange.x, 1.0);
+	n.param("pipe_finder/rect_specs/dim_y_range/max", mPipeRectSpecs.DimYRange.y, 1.0);
 
 	n.param("bin_finder/blob_params/heading_corr_scale", mBinBlobParams.heading_corr_scale, 125.0);
 	n.param("bin_finder/blob_params/depth_corr_scale", mBinBlobParams.depth_corr_scale, 50.0);
 	n.param("bin_finder/blob_params/distance_scale", mBinBlobParams.distance_scale, 7000.0);
+	
+	n.param("bin_finder/rect_specs/aspect_range/min", mBinRectSpecs.AspectRange.x, 1.0);
+	n.param("bin_finder/rect_specs/aspect_range/max", mBinRectSpecs.AspectRange.y, 1.0);
+	n.param("bin_finder/rect_specs/dim_x_range/min", mBinRectSpecs.DimXRange.x, 1.0);
+	n.param("bin_finder/rect_specs/dim_x_range/max", mBinRectSpecs.DimXRange.y, 1.0);
+	n.param("bin_finder/rect_specs/dim_y_range/min", mBinRectSpecs.DimYRange.x, 1.0);
+	n.param("bin_finder/rect_specs/dim_y_range/max", mBinRectSpecs.DimYRange.y, 1.0);
   
 	//n.param("pinger_finder/heading_corr_scale", mPingerParams.heading_corr_scale, 125.0);
 	//n.param("pinger_finder/depth_corr_scale", mPingerParams.depth_corr_scale, 50.0);
@@ -246,6 +363,13 @@ int main(int argc, char* argv[])
 	n.param("window_finder/blob_params/heading_corr_scale", mWindowBlobParams.heading_corr_scale, 125.0);
 	n.param("window_finder/blob_params/depth_corr_scale", mWindowBlobParams.depth_corr_scale, 50.0);
 	n.param("window_finder/blob_params/distance_scale", mWindowBlobParams.distance_scale, 7000.0);
+	
+	n.param("window_finder/rect_specs/aspect_range/min", mWindowRectSpecs.AspectRange.x, 1.0);
+	n.param("window_finder/rect_specs/aspect_range/max", mWindowRectSpecs.AspectRange.y, 1.0);
+	n.param("window_finder/rect_specs/dim_x_range/min", mWindowRectSpecs.DimXRange.x, 1.0);
+	n.param("window_finder/rect_specs/dim_x_range/max", mWindowRectSpecs.DimXRange.y, 1.0);
+	n.param("window_finder/rect_specs/dim_y_range/min", mWindowRectSpecs.DimYRange.x, 1.0);
+	n.param("window_finder/rect_specs/dim_y_range/max", mWindowRectSpecs.DimYRange.y, 1.0);
 
 	ros::ServiceServer buoy_finder_srv = n.advertiseService("FindBuoys", FindBuoysCallback);
 	ros::ServiceServer pipe_finder_srv = n.advertiseService("FindPipes", FindPipesCallback);
