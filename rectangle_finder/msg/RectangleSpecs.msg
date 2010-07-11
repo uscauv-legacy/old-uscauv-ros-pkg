@@ -1,2 +1,3 @@
-geometry_msgs/Point DimMin
-geometry_msgs/Point DimMax
+geometry_msgs/Point AspectRange
+geometry_msgs/Point DimXRange
+geometry_msgs/Point DimYRange
