@@ -68,15 +68,17 @@ int main( int argc, char* argv[] )
 	long handle;
 	if (JrConnect(0x009B0101, "jr_config.xml", &handle) != Ok)
     {
-        printf("Failed to connect to Junior.  Need more debug here...\n");
+        cout << "\nFailed to connect to Junior.\n\n";
         return 0;
     }
-    else printf("Successfully connected to Junior...\n");
+    else 
+		cout << "\nSuccessfully connected to Junior...\n\n";
 
     // Create the message and check it's size.  We want to make
     // sure the compiler didn't mess with the structure.
     REPORT_LOCAL_POSE_MSG msg;
-    if (sizeof(msg) != 12) printf("Packing error!\n");
+    if (sizeof(msg) != 12) 
+		cout << "\nPacking error!\n\n";
 
     // Populate the message.  The message id is fixed, but the
     // X and Y data are bogus.  The PV is set to indicate that
@@ -89,10 +91,12 @@ int main( int argc, char* argv[] )
     // Now we send the message to the COP using Junior.  Recall
     // that the COP subsystem id is decimal 90 (0x005A hex)
     if (JrSend(handle, 0x005A0101, sizeof(msg), (char*)&msg) != Ok)
-        printf("Unable to send message.  Need more debug here...\n");
-    else printf("Sent message to the COP\n");
+        cout << "\nUnable to send message.\n\n";
+    else 
+		cout << "\nSent message to the COP\n\n";
 
     // Clean-up
+	cout << "\nDisconnecting\n\n";
     JrDisconnect(handle);
 
 	// TASK 2 - CAPABILITIES DISCOVERY
