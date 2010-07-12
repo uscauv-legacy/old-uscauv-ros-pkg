@@ -51,10 +51,10 @@ int main( int argc, char* argv[] )
 								+ ":" + stringify(self.component);
 
 	// print out id information for COP and SeaBee
-	cout << "\n----------- JAUS IDs ---------------
+	cout << "\n----------- JAUS IDs ---------------";
 	cout << "\nSeaBee ID: \t" << self.jaus_id;
 	cout << "\nCOP ID: \t" << cop.jaus_id;
-	cout << "\n------------------------------------"
+	cout << "\n------------------------------------\n\n";
 
 	// CONNECT
 	long handle;
