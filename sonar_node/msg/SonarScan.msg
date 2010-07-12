@@ -1,3 +1,4 @@
-int8 Id
-float64 Heading
-float64 Distance
+float64 F1_magnitude
+float64 F1_heading
+float64 F2_magnitude
+float64 F2_heading
