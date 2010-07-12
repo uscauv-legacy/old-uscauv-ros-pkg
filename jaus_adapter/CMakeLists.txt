@@ -23,5 +23,6 @@ set(LIBRARY_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/lib)
 
 #common commands for building c++ executables and libraries
 link_directories("${PROJECT_SOURCE_DIR}/lib")
+link_directories("${PROJECT_SOURCE_DIR}/include")
 rosbuild_add_executable(jaus_adapter src/jaus_adapter.cpp)
 target_link_libraries(jaus_adapter Junior)
