@@ -409,7 +409,7 @@ int main(int argc, char** argv)
 	IMUDataCache = new xsens_node::IMUData;
 	TwistCache = new geometry_msgs::Twist;
 	
-	ros::Subscriber imu_sub = n.subscribe("imu_data", 1, IMUDataCallback); //likely necessary to remap this to something real ie. /xsens/data_calibrated
+	ros::Subscriber imu_sub = n.subscribe("/xsens/data_calibrated", 1, IMUDataCallback); //likely necessary to remap this to something real ie. /xsens/data_calibrated
 	//ros::Subscriber odom_prim_sub = n.subscribe("/seabee3/odom_prim", 1, OdomPrimCallback);
 	ros::Subscriber cmd_vel_sub = n.subscribe("/seabee3/cmd_vel", 1, CmdVelCallback);
 	ros::Subscriber extl_depth_sub = n.subscribe("/seabee3/extl_pressure", 1, ExtlPressureCallback);
