@@ -179,12 +179,12 @@ bool CalibrateRPYDriftCallback (xsens_node::CalibrateRPY::Request &req, xsens_no
 int main(int argc, char** argv)
 {
 	ros::init(argc, argv, "xsens_node");
-	ros::NodeHandle n("~");
-	ros::Publisher imu_pub_calib = n.advertise<xsens_node::IMUData>("/data_calibrated", 1);
-	ros::Publisher imu_pub_raw = n.advertise<xsens_node::IMUData>("/data_raw", 1);
-	ros::ServiceServer CalibrateRPYDrift_srv = n.advertiseService("/CalibrateRPYDrift", CalibrateRPYDriftCallback);
-	ros::ServiceServer CalibrateRPYOri_srv = n.advertiseService("/CalibrateRPYOri", CalibrateRPYOriCallback);
-	ros::ServiceServer SetRPYOffset_srv = n.advertiseService("/SetRPYOffset", SetRPYOffsetCallback);
+	ros::NodeHandle n;
+	ros::Publisher imu_pub_calib = n.advertise<xsens_node::IMUData>("data_calibrated", 1);
+	ros::Publisher imu_pub_raw = n.advertise<xsens_node::IMUData>("data_raw", 1);
+	ros::ServiceServer CalibrateRPYDrift_srv = n.advertiseService("CalibrateRPYDrift", CalibrateRPYDriftCallback);
+	ros::ServiceServer CalibrateRPYOri_srv = n.advertiseService("CalibrateRPYOri", CalibrateRPYOriCallback);
+	ros::ServiceServer SetRPYOffset_srv = n.advertiseService("SetRPYOffset", SetRPYOffsetCallback);
 	
 	sampleTime = new double(1.0);
 	ori_comp = new tf::Vector3(0, 0, 0);

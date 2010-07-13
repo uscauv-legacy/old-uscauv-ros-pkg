@@ -292,7 +292,7 @@ void headingPidStep()
 
 void IMUDataCallback(const xsens_node::IMUDataConstPtr & data)
 {
-	//ROS_INFO("IMUDataCallback()");
+//	ROS_INFO("IMUDataCallback()");
 	*IMUDataCache = *data;
 	
 	IMUDataCache->ori.x += mImuOriOffset.x();
