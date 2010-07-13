@@ -45,6 +45,8 @@ double speed_s, strafe_s, surface_s, dive_s, heading_s, roll_s;
 
 ros::ServiceClient shooter_srv, dropper1_srv, dropper2_srv;
 seabee3_driver_base::FiringDeviceAction device_action;
+bool buttonActionBusy = false;
+int buttonActionId = -1;
 
 double applyDeadZone (double value)
 {
@@ -85,14 +87,36 @@ void updateFiringDevices(int action = -1)
 		break;
 	}
 	
-	currentDevice = currentDevice > BeeStem3Driver::FiringDeviceID::DropperStage2 ? 0 : currentDevice;
+	currentDevice = currentDevice > BeeStem3Driver::FiringDeviceID::DropperStage2 ? 0 : currentDevice < 0 ? BeeStem3Driver::FiringDeviceID::DropperStage2 : currentDevice;
+	
+	ROS_INFO("current device %d", currentDevice);
+	
 	if(fire)
+	{
 		fireCurrentDevice();
+	}
 }
 
 void joyCallback(const joy::Joy::ConstPtr& joy)
 {
-	updateFiringDevices(joy->buttons[f_dev_inc] == 1 ? 0 : joy->buttons[f_dev_dec] == 1 ? 1 : joy->buttons[fire_dev] == 1 ? 2 : -1);
+	if(buttonActionBusy)
+	{
+		if(joy->buttons[buttonActionId] == 0)
+		{
+			buttonActionBusy = false;
+		}
+	}
+	else
+	{
+		buttonActionBusy = joy->buttons[f_dev_inc] == 1 || joy->buttons[f_dev_dec] == 1 || joy->buttons[fire_dev] == 1;
+		buttonActionId = joy->buttons[f_dev_inc] == 1 ? f_dev_inc : buttonActionId;
+		buttonActionId = joy->buttons[f_dev_dec] == 1 ? f_dev_dec : buttonActionId;
+		buttonActionId = joy->buttons[fire_dev] == 1 ? fire_dev : buttonActionId;
+		if(buttonActionBusy)
+		{
+			updateFiringDevices(joy->buttons[f_dev_inc] == 1 ? 0 : joy->buttons[f_dev_dec] == 1 ? 1 : joy->buttons[fire_dev] == 1 ? 2 : -1);
+		}
+	}
 	
 	geometry_msgs::Twist cmd_vel;
 	
@@ -136,7 +160,7 @@ int main(int argc, char** argv)
 	n.param("heading_scale", heading_s, 1.0);
 	n.param("roll_scale", roll_s, 1.0);
 	
-	ros::Subscriber joy_sub = n.subscribe("joy", 1, joyCallback);
+	ros::Subscriber joy_sub = n.subscribe("/joy", 1, joyCallback);
 	
 	shooter_srv = n.serviceClient<seabee3_driver_base::FiringDeviceAction>("/seabee3/ShooterAction");
 	dropper1_srv = n.serviceClient<seabee3_driver_base::FiringDeviceAction>("/seabee3/Dropper1Action");
