@@ -2,7 +2,7 @@
 
 	<group ns="camera_down_r">
 		<node name="camera" pkg="camera1394" type="camera1394_node">
-			<param name="frame_id" type="string" value="camera_down_l" />
+			<param name="frame_id" type="string" value="camera_down_r" />
 			<param name="bayer_pattern" type="string" value="rggb"/>
 			<param name="guid" type="string" value="00b09d010090f9d6"/>
 			
