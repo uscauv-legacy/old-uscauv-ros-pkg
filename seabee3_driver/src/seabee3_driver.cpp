@@ -371,6 +371,7 @@ void ExtlPressureCallback(const seabee3_driver_base::PressureConstPtr & extlPres
 	tf::Vector3 currentPose = estimatedPose.getOrigin();
 	//odom points from where we were before we started moving to our current position
 	estimatedPose.setOrigin( tf::Vector3( currentPose.x() + odomPrim->x, currentPose.y() + odomPrim->y, currentPose.z() + odomPrim->z ) );
+	estimatedPose.setRotation( estimatedPose.getRotation().normalize() );
 }*/
 
 bool ResetPoseCallback(seabee3_driver::ResetPose::Request & req, seabee3_driver::ResetPose::Response & resp)
@@ -390,6 +391,8 @@ bool ResetPoseCallback(seabee3_driver::ResetPose::Request & req, seabee3_driver:
 		mImuOriOffset.setY(req.Ori.Values.y - mImuOriOffset.y() );
 	if(req.Ori.Mask.z == 1.0)
 		mImuOriOffset.setZ(req.Ori.Values.z - mImuOriOffset.z() );
+		
+	estimatedPose.setRotation( estimatedPose.getRotation().normalize() );
 	
 	return true;
 }
@@ -503,6 +506,7 @@ int main(int argc, char** argv)
 	ros::ServiceServer ResetPose_srv = n.advertiseService("/seabee3/ResetPose", ResetPoseCallback);
 	
 	tf::TransformBroadcaster tb;
+	estimatedPose.setRotation( estimatedPose.getRotation().normalize() );
 	
 	while(ros::ok())
 	{
