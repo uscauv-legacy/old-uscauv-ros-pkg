@@ -41,8 +41,17 @@ double unscaleFromUInt32(unsigned int val, double low, double high)
 
 int main( int argc, char* argv[] )
 {
+
 	ros::init(argc, argv, "jaus_adapter");
 	ros::NodeHandle n("~");
+
+	char cwdBuffer[256];
+	std::string cwd(getcwd(cwdBuffer, 256));
+	std::cout << cwd << std::endl;
+	if(cwd.substr(cwd.size()-3, cwd.size()) != "bin") 
+	{
+		ROS_FATAL("The jaus_adapter node _must_ be run from within it's own bin directory.");
+	}
 
 	cout << "\n----------- BEGINNING CONNECTION ---------------";
 	cout << "\n------------------------------------------------\n\n";
@@ -56,10 +65,11 @@ int main( int argc, char* argv[] )
     // and node id 1, component id 1.
 	long int handle;
 	int addr = 0x00000101;
-	addr |= 197 << 4;
+	addr |= 144 << 4;
 	addr &= 0x01111111;
 
-    if (JrConnect(addr, "bin/jr_config.xml", &handle) != Ok)
+//0x00850101
+    if (JrConnect(addr, "jr_config.xml", &handle) != Ok)
     {
         cout << "\nFailed to connect to Junior.\n\n";
         return 0;
@@ -67,6 +77,8 @@ int main( int argc, char* argv[] )
     else 
 		cout << "\nSuccessfully connected to Junior...\n\n";
 
+	//while(ros::ok())
+	{
     // Create the message and check it's size.  We want to make
     // sure the compiler didn't mess with the structure.
     REPORT_LOCAL_POSE_MSG msg;
@@ -78,19 +90,24 @@ int main( int argc, char* argv[] )
     // the first 2 optional fields are present.
     msg.msg_id = 0x4403;
     msg.pv = 3;
-    msg.X = scaleToUInt32(5.5, -100000, 100000);
-    msg.Y = scaleToUInt32(-10.1, -100000, 100000);
+    msg.X = scaleToUInt32(999.555555, -100000, 100000);
+    msg.Y = scaleToUInt32(-888.3, -100000, 100000);
 
-    // Now we send the message to the COP using Junior.  Recall
-    // that the COP subsystem id is decimal 90 (0x005A hex)
-    if (JrSend(handle, 0x005A0101, sizeof(msg), (char*)&msg) != Ok)
-        cout << "\nUnable to send message.\n\n";
-    else 
-		cout << "\nSent message to the COP\n\n";
+		// Now we send the message to the COP using Junior.  Recall
+		// that the COP subsystem id is decimal 90 (0x005A hex)
+		if (JrSend(handle, 0x005A0101, sizeof(msg), (char*)&msg) != Ok)
+			cout << "\nUnable to send message.\n\n";
+		else 
+			cout << "\nSent message to the COP\n\n";
 
-    // Clean-up
-	//cout << "\nDisconnecting\n\n";
-    //JrDisconnect(handle);
+		ros::spinOnce();
+		ros::Rate(1).sleep();
+	}
+
+  // Clean-up
+	cout << "\n\n------------------Disconnecting--------------\n\n";
+	JrDisconnect(handle);
+	cout << "\n\n\n\n\n\n\n------------------Disconnected!--------------\n\n\n\n\n";
 
 	// TASK 2 - CAPABILITIES DISCOVERY
 	// COP sends: Query Services, return: Report Services 

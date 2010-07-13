@@ -145,7 +145,7 @@
         
         UseOPC2.75_Header = "0"
         UDP_Port        = "3794"
-        MulticastTTL    = "16"
+        MulticastTTL    = "160"
         MulticastAddr   = "239.255.0.1"
         MaxBufferSize   = "70000"
     />
