@@ -366,12 +366,12 @@ void ExtlPressureCallback(const seabee3_driver_base::PressureConstPtr & extlPres
 	}
 }
 
-void OdomPrimCallback(const geometry_msgs::Vector3ConstPtr & odomPrim)
+/*void OdomPrimCallback(const geometry_msgs::Vector3ConstPtr & odomPrim)
 {
 	tf::Vector3 currentPose = estimatedPose.getOrigin();
 	//odom points from where we were before we started moving to our current position
 	estimatedPose.setOrigin( tf::Vector3( currentPose.x() + odomPrim->x, currentPose.y() + odomPrim->y, currentPose.z() + odomPrim->z ) );
-}
+}*/
 
 bool ResetPoseCallback(seabee3_driver::ResetPose::Request & req, seabee3_driver::ResetPose::Response & resp)
 {
@@ -407,7 +407,7 @@ int main(int argc, char** argv)
 	TwistCache = new geometry_msgs::Twist;
 	
 	ros::Subscriber imu_sub = n.subscribe("imu_data", 1, IMUDataCallback); //likely necessary to remap this to something real ie. /xsens/data_calibrated
-	ros::Subscriber odom_prim_sub = n.subscribe("odom_prim", 1, OdomPrimCallback);
+	//ros::Subscriber odom_prim_sub = n.subscribe("/seabee3/odom_prim", 1, OdomPrimCallback);
 	ros::Subscriber cmd_vel_sub = n.subscribe("/seabee3/cmd_vel", 1, CmdVelCallback);
 	ros::Subscriber extl_depth_sub = n.subscribe("/seabee3/extl_pressure", 1, ExtlPressureCallback);
 	
@@ -510,7 +510,7 @@ int main(int argc, char** argv)
 		
 		motor_cntl_pub.publish(*motorCntlMsg);
 		
-		tb.sendTransform(tf::StampedTransform(estimatedPose, ros::Time::now(), "/odom", "/seabee3/base_link") );
+		tb.sendTransform(tf::StampedTransform(estimatedPose, ros::Time::now(), "/seabee3/odom", "/seabee3/base_link") );
 		
 		ros::spinOnce();
 		ros::Rate(20).sleep();
