@@ -36,18 +36,64 @@
 #include <ros/ros.h>
 #include <geometry_msgs/Twist.h>
 #include <joy/Joy.h>
+#include <seabee3_beestem/BeeStem3_driver.h>
+#include <seabee3_driver_base/FiringDeviceAction.h>
 
 ros::Publisher * cmd_vel_pub;
-int speed, strafe, surface, dive, heading, roll;
+int speed, strafe, surface, dive, heading, roll, f_dev_inc, f_dev_dec, fire_dev, currentDevice = 0;
 double speed_s, strafe_s, surface_s, dive_s, heading_s, roll_s;
+
+ros::ServiceClient shooter_srv, dropper1_srv, dropper2_srv;
+seabee3_driver_base::FiringDeviceAction device_action;
 
 double applyDeadZone (double value)
 {
 	return fabs(value) < 0.15 ? 0.0 : value;
 }
 
+void fireCurrentDevice (bool reset = false)
+{
+	int mode = reset ? 1 : 0;
+	device_action.request.Req = mode;
+	switch(currentDevice)
+	{
+	case BeeStem3Driver::FiringDeviceID::Shooter:
+		shooter_srv.call(device_action);
+		break;
+	case BeeStem3Driver::FiringDeviceID::DropperStage1:
+		dropper1_srv.call(device_action);
+		break;
+	case BeeStem3Driver::FiringDeviceID::DropperStage2:
+		dropper2_srv.call(device_action);
+		break;
+	}
+}
+
+void updateFiringDevices(int action = -1)
+{
+	bool fire = false;
+	switch(action)
+	{
+	case 0:
+		currentDevice ++;
+		break;
+	case 1:
+		currentDevice --;
+		break;
+	case 2:
+		fire = true;
+		break;
+	}
+	
+	currentDevice = currentDevice > BeeStem3Driver::FiringDeviceID::DropperStage2 ? 0 : currentDevice;
+	if(fire)
+		fireCurrentDevice();
+}
+
 void joyCallback(const joy::Joy::ConstPtr& joy)
 {
+	updateFiringDevices(joy->buttons[f_dev_inc] == 1 ? 0 : joy->buttons[f_dev_dec] == 1 ? 1 : joy->buttons[fire_dev] == 1 ? 2 : -1);
+	
 	geometry_msgs::Twist cmd_vel;
 	
 	double joy_speed = 		applyDeadZone( (double)(joy->axes[speed]) );
@@ -79,6 +125,9 @@ int main(int argc, char** argv)
 	n.param("dive", dive, 5);
 	n.param("heading", heading, 4);
 	n.param("roll", roll, 3);
+	n.param("next_firing_device", f_dev_inc, 0);
+	n.param("prev_firing_device", f_dev_dec, 1);
+	n.param("fire_defice", fire_dev, 5);
 	
 	n.param("speed_scale", speed_s, 1.0);
 	n.param("strafe_scale", strafe_s, 1.0);
@@ -88,6 +137,10 @@ int main(int argc, char** argv)
 	n.param("roll_scale", roll_s, 1.0);
 	
 	ros::Subscriber joy_sub = n.subscribe("joy", 1, joyCallback);
+	
+	shooter_srv = n.serviceClient<seabee3_driver_base::FiringDeviceAction>("/seabee3/ShooterAction");
+	dropper1_srv = n.serviceClient<seabee3_driver_base::FiringDeviceAction>("/seabee3/Dropper1Action");
+	dropper2_srv = n.serviceClient<seabee3_driver_base::FiringDeviceAction>("/seabee3/Dropper2Action");
 	
 	cmd_vel_pub = new ros::Publisher;
 	*cmd_vel_pub = n.advertise<geometry_msgs::Twist>("/seabee3/cmd_vel", 1);
