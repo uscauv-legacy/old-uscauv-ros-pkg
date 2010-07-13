@@ -1,4 +1,3 @@
 <launch>
-	<param name="usbIndex" type="int" value="1" />
 	<node pkg="xsens_node" type="xsens_node" name="xsens_node" output="screen" />
 </launch>
