@@ -75,7 +75,7 @@
     -->
     <Log_Configuration
         LogFileName = ""
-        LogMsgLevel = "3"    
+        LogMsgLevel = "5"    
     />
     
     <!-- 

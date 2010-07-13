@@ -44,18 +44,7 @@ int main( int argc, char* argv[] )
 	ros::init(argc, argv, "jaus_adapter");
 	ros::NodeHandle n("~");
 
-	// all jaus traffic is on port 3794
-	int jaus_port;
-	jaus_port = 3794;
-	
-	// they gave us this as the IP for the COP
-	string cop_ip;
-	cop_ip = "192.16.1.42";
-
 	cout << "\n----------- BEGINNING CONNECTION ---------------";
-	cout << "\nSubsystem ID: \t0x009B (155)";
-	cout << "\nNode ID: \t01";
-	cout << "\nComponent ID: \t01";
 	cout << "\n------------------------------------------------\n\n";
 
 	// CONNECT
@@ -65,8 +54,12 @@ int main( int argc, char* argv[] )
     // get a handle back that's used for subsequent calls.
     // I'm using a subsystem ID of 155 decimal (0x009B hex) 
     // and node id 1, component id 1.
-	long handle;
-	if (JrConnect(0x009B0101, "jr_config.xml", &handle) != Ok)
+	long int handle;
+	int addr = 0x00000101;
+	addr |= 197 << 4;
+	addr &= 0x01111111;
+
+    if (JrConnect(addr, "bin/jr_config.xml", &handle) != Ok)
     {
         cout << "\nFailed to connect to Junior.\n\n";
         return 0;
@@ -96,8 +89,8 @@ int main( int argc, char* argv[] )
 		cout << "\nSent message to the COP\n\n";
 
     // Clean-up
-	cout << "\nDisconnecting\n\n";
-    JrDisconnect(handle);
+	//cout << "\nDisconnecting\n\n";
+    //JrDisconnect(handle);
 
 	// TASK 2 - CAPABILITIES DISCOVERY
 	// COP sends: Query Services, return: Report Services 
