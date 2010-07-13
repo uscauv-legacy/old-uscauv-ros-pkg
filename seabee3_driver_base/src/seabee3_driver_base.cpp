@@ -102,6 +102,15 @@ int main (int argc, char** argv)
 	ROS_INFO("constructing new driver instance");
 	mDriver = new BeeStem3Driver(usbIndex);
 	
+	n.param("shooter/trigger_time", mDriver->mShooterParams.trigger_time, 50);
+	n.param("shooter/trigger_value", mDriver->mShooterParams.trigger_value, 80);
+	
+	n.param("dropper1/trigger_time", mDriver->mDropper1Params.trigger_time, 50);
+	n.param("dropper1/trigger_value", mDriver->mDropper1Params.trigger_value, 40);
+	
+	n.param("dropper2/trigger_time", mDriver->mDropper2Params.trigger_time, 50);
+	n.param("dropper2/trigger_value", mDriver->mDropper2Params.trigger_value, 40);
+	
 	ROS_INFO("subscribing to MotorCntl");
 	ros::Subscriber motor_cntl_sub = n.subscribe("/seabee3/motor_cntl", 1, motorCntlCallback);
 	

@@ -48,14 +48,6 @@
 #define DEPTH_I 0
 #define DEPTH_D 0
 
-#define DROPPER1_TRIGGER_TIME 50
-#define DROPPER2_TRIGGER_TIME 50
-#define SHOOTER_TRIGGER_TIME 50
-
-#define DROPPER1_TRIGGER_VALUE 40
-#define DROPPER2_TRIGGER_VALUE 40
-#define SHOOTER_TRIGGER_VALUE 40
-
 namespace Actions
 {
 	const static int NONE = -1;
@@ -78,6 +70,12 @@ public:
 		const static int Shooter = 0;
 		const static int DropperStage1 = 1;
 		const static int DropperStage2 = 2;
+	};
+	
+	struct FiringDeviceParams
+	{
+		int trigger_time;
+		int trigger_value;
 	};
 
 	struct BeeStemFlags
@@ -108,6 +106,8 @@ public:
 	bool dropper1_ready;
 	bool dropper2_ready;
 	bool shooter_ready;
+	
+	FiringDeviceParams mShooterParams, mDropper1Params, mDropper2Params;
 
 private:
 
