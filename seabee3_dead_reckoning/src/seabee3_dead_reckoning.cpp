@@ -23,7 +23,15 @@ Code taken from: http://www.ros.org/wiki/navigation/Tutorials/RobotSetup/Odom
 #define DROPPER_STAGE2 	       8
 
 
-//######################################################################
+///######################################################################
+/// SpeedInterpolator
+///   A class which contains a few stored mappings from motor speeds to
+///   the times it took the sub to traverse some distance at those speeds
+///
+///   To make this work, you need to edit:
+///     * itsTimedDistance in the constructor's initializer list
+///     * itsTimingMap in the constructor body
+///######################################################################
 class SpeedInterpolator
 {
 	public:
@@ -54,11 +62,11 @@ class SpeedInterpolator
 			if(pwr == 0)
 				return 0.0;
 
+			//Find the interpolated time it would take the seabee to traverse
+			//"itsTimedDistance" at "pwr" speed.
 			timingMap_t::iterator lower_it = itsTimingMap.lower_bound(pwr);
 			timingMap_t::iterator upper_it = itsTimingMap.upper_bound(pwr);
-
 			float interp_time;
-
 			if(lower_it->first == pwr)
 			{
 				//If our lower iterator is an entry for the current power, then 
@@ -106,7 +114,7 @@ class SpeedInterpolator
 SpeedInterpolator theSpeedInterpolator;
 
 //######################################################################
-tf::TransformBroadcaster odom_broadcaster;
+
 ros::Publisher odom_pub;
 
 //TODO: Get this from the pressure sensor
@@ -123,14 +131,15 @@ void imuCallback(const xsens_node::IMUDataConstPtr & msg)
 void motorCntlCallback(const seabee3_driver_base::MotorCntlConstPtr & msg)
 {
 	//Create some persistent variables for this callback
-	static double x          = 0.0;
-	static double y          = 0.0;
-	static double z          = 0.0;
-	static double th         = 0.0;
-	static double last_depth = 0.0;
-	static double last_th    = 0.0;
-	static ros::Time last_time = ros::Time::now();
-	ros::Time current_time     = ros::Time::now();
+	static tf::TransformBroadcaster odom_broadcaster;
+	static double x            =  0.0;
+	static double y            =  0.0;
+	static double z            =  0.0;
+	static double th           =  0.0;
+	static double last_depth   =  0.0;
+	static double last_th      =  0.0;
+	static ros::Time last_time =  ros::Time::now();
+	ros::Time current_time     =  ros::Time::now();
 
 	//Get the orientation from the imu 
 	th = ori.z * M_PI/180.0;
@@ -138,9 +147,7 @@ void motorCntlCallback(const seabee3_driver_base::MotorCntlConstPtr & msg)
 	//Get the average forward speed
 	int right_thrust_speed = msg->motors[FWD_RIGHT_THRUSTER];
 	int left_thrust_speed = msg->motors[FWD_LEFT_THRUSTER];
-	float avg_fwd_pwr = (right_thrust_speed + left_thrust_speed)/2.0;
-	double trans_speed = theSpeedInterpolator.getSpeed(avg_fwd_pwr);
-	trans_speed = trans_speed;
+	double trans_speed = theSpeedInterpolator.getSpeed( (right_thrust_speed + left_thrust_speed)/2.0 );
 
 	//Find the amount of elapsed time
 	double dt = (current_time - last_time).toSec();
@@ -148,11 +155,12 @@ void motorCntlCallback(const seabee3_driver_base::MotorCntlConstPtr & msg)
 	//Compute our predicted velocity from the motor commands
 	double vx  = sin(th) * trans_speed;
 	double vy  = cos(th) * trans_speed;
-	double vth = (th - last_th) / dt;;
+	double vth = (th - last_th) / dt;
+	double vz  = (depth - last_depth)/dt;
 
-	//compute odometry in a typical way given the velocities of the robot
-	double delta_x = (vx * cos(th) - vy * sin(th)) * dt;
-	double delta_y = (vx * sin(th) + vy * cos(th)) * dt;
+	//compute the change in planar position from the speed and the elapsed time
+	double delta_x = vx * dt;
+	double delta_y = vy * dt;
 
 	//Integrate!
 	x  += delta_x;
@@ -160,11 +168,14 @@ void motorCntlCallback(const seabee3_driver_base::MotorCntlConstPtr & msg)
 	z  = depth;
 
 	//First, publish the transform over tf
-	geometry_msgs::Quaternion odom_quat = tf::createQuaternionMsgFromYaw(th);
+	//geometry_msgs::Quaternion odom_quat = tf::Quaternion(ori.z, ori.y, ori.x);
+	tf::Quaternion quat(ori.z, ori.y, ori.x);
+	geometry_msgs::Quaternion odom_quat;
+	tf::quaternionTFToMsg(quat, odom_quat);
 	geometry_msgs::TransformStamped odom_trans;
 	odom_trans.header.stamp = current_time;
-	odom_trans.header.frame_id = "odom";
-	odom_trans.child_frame_id = "seabee_link";
+	odom_trans.header.frame_id = "odom";//<----------- Not sure what this is
+	odom_trans.child_frame_id = "seabee_link"; //<---- Not sure what this is
 	odom_trans.transform.translation.x = x;
 	odom_trans.transform.translation.y = y;
 	odom_trans.transform.translation.z = z;
@@ -174,18 +185,19 @@ void motorCntlCallback(const seabee3_driver_base::MotorCntlConstPtr & msg)
 	//Next, publish the odometry message over ROS
 	nav_msgs::Odometry odom;
 	odom.header.stamp = current_time;
-	odom.header.frame_id = "odom";
+	odom.header.frame_id = "odom";//<----------- Not sure what this is
 	odom.pose.pose.position.x  = x;
 	odom.pose.pose.position.y  = y;
 	odom.pose.pose.position.z  = z;
 	odom.pose.pose.orientation = odom_quat;
-	odom.child_frame_id = "seabee_link";
+	odom.child_frame_id = "seabee_link";//<----- Not sure what this is
 	odom.twist.twist.linear.x  = vx;
 	odom.twist.twist.linear.y  = vy;
 	odom.twist.twist.linear.z  = vz;
 	odom.twist.twist.angular.z = vth;
 	odom_pub.publish(odom);
 
+	//Update our last_* variables
 	last_time  = current_time;
 	last_depth = depth;
 	last_th = th;
@@ -193,8 +205,6 @@ void motorCntlCallback(const seabee3_driver_base::MotorCntlConstPtr & msg)
 
 int main(int argc, char** argv)
 {
-
-	
 	ros::init(argc, argv, "seabee3_dead_reckoning");
 	ros::NodeHandle n("n");
 
