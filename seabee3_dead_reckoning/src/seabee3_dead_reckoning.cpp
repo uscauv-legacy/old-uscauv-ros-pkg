@@ -45,6 +45,8 @@ class SpeedInterpolator
 			//
 			//  * The value (after the =) should be the number of seconds it took the sub to move
 			//    itsTimedDistance meters
+			//  
+			//  Make sure that you have values for both -100 and +100 in the map
 			//
 			itsTimingMap[-100] = 12.4;
 			itsTimingMap[-50]  = 30.9;
