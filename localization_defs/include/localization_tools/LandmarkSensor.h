@@ -36,7 +36,8 @@
 #include <vector>
 #include <localization_tools/LocalizationParticle.h>
 #include <landmark_map/LandmarkMap.h>
-#include <sonar_node/SonarScanArray.h>
+//#include <sonar_node/SonarScanArray.h>
+#include <localization_defs/LandmarkArrayMsg.h>
 #include <localization_tools/Util.h> //includes <math.h>
 
 //used to convert sensor data into particle weights
@@ -99,7 +100,7 @@ public:
 namespace LandmarkSensorTypes
 {
 
-	class SonarSensor : public LandmarkSensor<sonar_node::SonarScanArray>
+/*	class SonarSensor : public LandmarkSensor<sonar_node::SonarScanArray>
 	{
 	public:
 		SonarSensor(double scale) : 
@@ -119,10 +120,10 @@ namespace LandmarkSensorTypes
 			double error = 0.0;
 			for(unsigned int i = 0; i < mRealMsg.ScanArray.size(); i ++)
 			{
-				error += fabs( mRealMsg.ScanArray[i].Distance - mVirtualMsg.ScanArray[i].Distance ) * fabs( LocalizationUtil::angleDistRel(mRealMsg.ScanArray[i].Heading, mVirtualMsg.ScanArray[i].Heading) );
+				error += fabs( mRealMsg.ScanArray[i].Distance - mVirtualMsg.ScanArray[i].Distance ) + fabs( LocalizationUtil::angleDistRel(mRealMsg.ScanArray[i].Heading, mVirtualMsg.ScanArray[i].Heading) );
 			}
 			
-			mVote = error > 0.0 ? 1.0 / error : 1.0; //simple scaling of sensor vote with respect to error
+			mVote = 1.0 / (error + 1.0); //simple scaling of sensor vote with respect to error
 			
 			mScaledVote = mVote * mScale;
 			return mScaledVote;
@@ -142,6 +143,58 @@ namespace LandmarkSensorTypes
 				theScan.Heading = theVector.y;
 				
 				result.ScanArray.push_back( theScan );
+			}
+			return result;
+		}
+	};*/
+	
+	class BuoyFinder : public LandmarkSensor<localization_defs::LandmarkArrayMsg>
+	{
+	public:
+		BuoyFinder(double scale) : 
+		LandmarkSensor<localization_defs::LandmarkArrayMsg>(scale)
+		{
+			mSensorType = SensorType::buoy_finder;
+		}
+		
+		virtual void calculateInitialOffset()
+		{
+			//
+		}
+		
+		virtual double getScaledVote()
+		{
+			mVote = 0;
+			double error = 0.0;
+			
+			//loop through the "real" buoys and see how they line up with the "virtual" buoys
+			/*
+			if(mRealMsg.Color != mVirtualMsg.Color)
+				error = 1.0;
+			else
+				error = fabs( mRealMsg.Center.x - mVirtualMsg.Center.x ) + fabs( mRealMsg.Center.y - mVirtualMsg.Center.y ) + fabs( mRealMsg.Center.z - mVirtualMsg.Center.z ) + fabs( LocalizationUtil::angleDistRel(mRealMsg.Ori, mVirtualMsg.Ori) );
+						
+			mVote = 1.0 / (error + 1.0); //simple scaling of sensor vote with respect to error
+			*/
+			mScaledVote = mVote * mScale;
+			return mScaledVote;
+		}
+		
+		static localization_defs::LandmarkArrayMsg generateVirtualSensorMessage ( const LocalizationParticle & part, const LandmarkMap & map )
+		{
+			localization_defs::LandmarkArrayMsg result;
+			std::vector<Landmark> landmarks = map.fetchLandmarksByType(Landmark::LandmarkType::Buoy);
+			for(unsigned int i = 0; i < landmarks.size(); i ++)
+			{
+				//cv::Point2d theVector = LocalizationUtil::vectorTo(part.mState.mCenter, landmarks[i].mCenter);
+				//localization_defs::LandmarkMsg theLandmark = landmarks[i].createMsg()
+				//sonar_node::SonarScan theScan;
+				//theScan.Id = static_cast<LandmarkTypes::Buoy*>( &( landmarks[i] ) )->mId;
+				
+				//theScan.Distance = theVector.x;
+				//theScan.Heading = theVector.y;
+				
+				//result.ScanArray.push_back( theScan );
 			}
 			return result;
 		}

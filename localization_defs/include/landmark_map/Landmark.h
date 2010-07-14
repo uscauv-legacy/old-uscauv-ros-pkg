@@ -102,8 +102,9 @@ public:
 		}
 	};
 
-	Landmark();
-	Landmark(cv::Point3d center, double orientation, cv::Point3d dim, int shapeType);
+	Landmark(cv::Point3d center = cv::Point3d(0.0, 0.0, 0.0), double orientation = 0.0, cv::Point3d dim = cv::Point3d(1.0, 1.0, 1.0), int shapeType = visualization_msgs::Marker::ARROW);
+	
+	static Landmark parseMessage( const localization_defs::LandmarkMsg & msg );
 	
 	visualization_msgs::Marker createMarker(const std::string & frame, const int id, const std::string & ns_ext = "") const;
 	localization_defs::LandmarkMsg createMsg() const;

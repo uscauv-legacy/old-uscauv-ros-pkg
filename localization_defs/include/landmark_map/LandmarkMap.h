@@ -42,6 +42,8 @@ class LandmarkMap
 {
 public:
 	LandmarkMap( cv::Point2d dim = cv::Point2d(0.0, 0.0) );
+	LandmarkMap( std::vector<Landmark> landmarks, cv::Point2d dim );
+	LandmarkMap( const localization_defs::LandmarkMapMsg & msg );
 	LandmarkMap(Landmark l);
 	LandmarkMap(std::vector<Landmark> l);
 

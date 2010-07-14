@@ -40,6 +40,25 @@ LandmarkMap::LandmarkMap( cv::Point2d dim )
 	mDim = dim;
 }
 
+LandmarkMap::LandmarkMap( std::vector<Landmark> landmarks, cv::Point2d dim )
+{
+	mLandmarks = landmarks;
+	mDim = dim;
+}
+
+LandmarkMap::LandmarkMap( const localization_defs::LandmarkMapMsg & msg )
+{
+	mDim.x = msg.Dim.x;
+	mDim.y = msg.Dim.y;
+	
+	mLandmarks.resize( msg.Map.LandmarkArray.size() );
+	
+	for(int i = 0; i < mLandmarks.size(); i ++)
+	{
+		mLandmarks[i] = Landmark::parseMessage( msg.Map.LandmarkArray[i] );
+	}
+}
+
 LandmarkMap::LandmarkMap(Landmark l)
 {
 	addLandmark(l);
@@ -93,7 +112,7 @@ localization_defs::LandmarkMapMsg LandmarkMap::createMsg() const
 	localization_defs::LandmarkMapMsg msg;
 	for(int i = 0; i < mLandmarks.size(); i ++)
 	{
-		msg.Landmarks.push_back( mLandmarks[i].createMsg() );
+		msg.Map.LandmarkArray.push_back( mLandmarks[i].createMsg() );
 	}
 	
 	return msg;

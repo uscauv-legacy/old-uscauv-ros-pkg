@@ -38,12 +38,7 @@
 #include <sstream>
 #include <localization_tools/Util.h>
 
-Landmark::Landmark()
-{
-	mLandmarkType = Landmark::LandmarkType::None;
-}
-
-Landmark::Landmark(cv::Point3d center = cv::Point3d(0.0, 0.0, 0.0), double orientation = 0.0, cv::Point3d dim = cv::Point3d(1.0, 1.0, 1.0), int shapeType = visualization_msgs::Marker::ARROW)
+Landmark::Landmark(cv::Point3d center, double orientation, cv::Point3d dim, int shapeType)
 {
 	mLandmarkType = Landmark::LandmarkType::None;
 	mCenter = center;
@@ -122,6 +117,23 @@ localization_defs::LandmarkMsg Landmark::createMsg() const
 	msg.Id = mId;
 	
 	return msg;
+}
+
+Landmark Landmark::parseMessage( const localization_defs::LandmarkMsg & msg )
+{
+	if(msg.Type == Landmark::LandmarkType::Buoy)
+	{
+		return LandmarkTypes::Buoy( cv::Point3d( msg.Center.x, msg.Center.y, msg.Center.z ), msg.Ori, msg.Color );
+	}
+	else if(msg.Type == Landmark::LandmarkType::Pinger)
+	{
+		return LandmarkTypes::Pinger( cv::Point3d( msg.Center.x, msg.Center.y, msg.Center.z), msg.Ori, msg.Id );
+	}
+	else if(msg.Type == Landmark::LandmarkType::Pipe)
+	{
+		return LandmarkTypes::Pipe( cv::Point3d( msg.Center.x, msg.Center.y, msg.Center.z), msg.Ori );
+	}
+	return Landmark();
 }
 
 LandmarkTypes::Buoy::Buoy(cv::Point3d center, double orientation, int color) : 
