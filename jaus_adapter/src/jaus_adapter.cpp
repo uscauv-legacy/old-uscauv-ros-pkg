@@ -1,3 +1,6 @@
+// TODO
+// Does each msg_id need to be unique? 
+
 #include "JuniorAPI.h"
 
 #include <ros/ros.h>
@@ -8,9 +11,12 @@
 #include <sstream>
 #include <math.h>
 #include <stdio.h>
-#include "convert.h" // shoddy int to string conversion
 
-unsigned int id = 			0x008E0101; // hex 142 
+#include "convert.h" // shoddy int to string conversion
+#include <sys/time.h>
+#include <time.h>
+
+unsigned int id = 			0x00800101; // hex 128, my ID 
 unsigned int destination = 	0x005A0101; // COP: subsystem ID is 90 - 0x005A hex
 
 using namespace std;
@@ -20,21 +26,68 @@ using namespace std;
 // make sure it doesn't insert padding that would
 // be non-compliant to AS6009.
 #pragma pack(1)
+
+//----------------------------------------------------------------
+// DEFINE MESSAGES TO BE PASSED
+//----------------------------------------------------------------
+
+// Services
 typedef struct {
-	unsigned short msg_id;
-	unsigned short pv;
-	unsigned int   yaw;
-	unsigned int   time_stamp;
+	unsigned short 	msg_id;
+	unsigned int 	node_id;
+	unsigned int 	component_id;
+	unsigned int	instance_id;
+	unsigned int	uri;
+	unsigned int	version_mjr;
+	unsigned int	version_mnr;
+} REPORT_SERVICES_MSG;
+
+// Velocity
+typedef struct {
+	unsigned short 	msg_id;
+	unsigned short 	pv;
+	unsigned int   	vel_x;
+	unsigned short  yaw_rate;
+	unsigned int   	time_stamp;
+} REPORT_VELOCITY_STATE_MSG;
+
+// Pose
+typedef struct {
+	unsigned short 	msg_id;
+	unsigned short 	pv;
+	unsigned short  yaw;
+	unsigned int   	time_stamp;
 } REPORT_LOCAL_POSE_MSG;
 
-// Define some helper functions to convert to/from
-// scaled integers.
+//----------------------------------------------------------------
+// Define some helper functions
+//----------------------------------------------------------------
+
+// create 16 bit scale int
+unsigned short scaleToUInt16(double val, double low, double high)
+{
+	double int_range = pow(2, 16) - 1;
+	double scale_factor = (high-low)/int_range;
+	return (unsigned short)((val-low)/scale_factor);
+}
+
+// unscale 16 bit scaled int
+short unscaleFromUInt16(unsigned int val, double low, double high)
+{
+	double int_range = pow(2, 16) - 1;
+	double scale_factor = (high-low)/int_range;
+	return scale_factor * ((double) val) + low;
+}
+
+// create 32 bit scaled int
 unsigned int scaleToUInt32(double val, double low, double high)
 {
 	double int_range = pow(2, 32) - 1;
 	double scale_factor = (high-low)/int_range;
 	return (unsigned int)((val-low)/scale_factor);
 }
+
+// unscale 32 bit scaled int
 double unscaleFromUInt32(unsigned int val, double low, double high)
 {
 	double int_range = pow(2, 32) - 1;
@@ -42,6 +95,49 @@ double unscaleFromUInt32(unsigned int val, double low, double high)
 	return scale_factor * ((double) val) + low;
 }
 
+unsigned int GetTimeOfDay()
+{
+	struct timeval tv;
+	struct tm *timeinfo;
+	time_t rawtime;
+	unsigned int tstamp = 0;
+	
+	gettimeofday(&tv, NULL);
+	time(&rawtime);
+	timeinfo = gmtime ( &rawtime );
+	
+	unsigned int mMilliseconds = (unsigned int)(tv.tv_usec/1000.0);
+	int mDay = timeinfo->tm_mday;
+	int mHour = timeinfo->tm_hour;
+	int mMinute = timeinfo->tm_min;
+	int mSecond = timeinfo->tm_sec;
+	
+	tstamp |= (unsigned int)(mDay)    << 27;
+	tstamp |= (unsigned int)(mHour)   << 22;
+	tstamp |= (unsigned int)(mMinute) << 16;
+	tstamp |= (unsigned int)(mSecond) << 10;
+	tstamp |= mMilliseconds;
+	//cout << "Time Stamp: " << mDay << ":" << mHour << ":" << mMinute;
+    //cout << ":" << mSecond << ":" << mMilliseconds << endl;
+	return tstamp ;
+}
+
+//----------------------------------------------------------------
+// Global Variables because I suck at programming
+//----------------------------------------------------------------
+
+// bogus constant I will use in place of timestamp because I'm lazy
+//unsigned int TIME = scaleToUInt32(0x11111111, -100000, 100000);
+
+// variables for receiving messages
+char buffer[1000];          	// Allocate the space for a received message
+unsigned int size = 1000;      	// Initialize size
+unsigned int source;            // This value is returned as an ID from the
+								// sender of the message
+	
+//----------------------------------------------------------------
+// Begin Main
+//----------------------------------------------------------------
 int main( int argc, char* argv[] )
 {
 	ros::init(argc, argv, "jaus_adapter");
@@ -53,7 +149,7 @@ int main( int argc, char* argv[] )
 	std::cout << cwd << std::endl;
 	if(cwd.substr(cwd.size()-3, cwd.size()) != "bin") 
 	{
-		ROS_FATAL("STOP!!! The jaus_adapter node _must_ be run from within it's own bin directory!!!");
+		ROS_FATAL("The jaus_adapter node must be run from it's own bin directory!!!");
 	}
 
 	//----------------------------------------------------------------
@@ -104,12 +200,8 @@ int main( int argc, char* argv[] )
 
 	// First we will wait for the Query Services message. We will keep looping
 	// until we find it.
-
-	char buffer[1000];          	// Allocate the space
-	unsigned int size = 1000;      	// Initialize size
-	unsigned int source;            // This value is returned as an ID from the
-									// source that sent the message
-
+	// as5710 Page 50
+								// source that sent the message
 /*
 	// check for Query Services message received
 	bool query_services_received = false; 
@@ -129,12 +221,23 @@ int main( int argc, char* argv[] )
 /*
 	// Now that the Query Services message has been received, we will send
 	// back the "Report Services" message.
+	// as5710 Page 56
+
+	REPORT_SERVICES_MSG msg_serv;
+	msg_serv.msg_id = 
+	msg_serv.node_id =
+	msg_serv.component_id =
+	msg_serv.instance_id =
+	msg_serv.uri =
+	msg_serv.version_mjr =
+	msg_serv.version_mnr =
+
 	bool report_services_sent = false;
 	while ( report_services_sent == false)
 	{
-		if (JrSend( handle, destination, "jr_config.xml", &handle) != Ok)
+		if (JrSend( handle, destination, sizeof(msg_serv), (char*)&msg_serv) != Ok)
 		{
-			cout << "\nFailing to send report Services Message...\n\n";
+			cout << "\nFailing to send Report Services Message...\n\n";
 		}
 		else 
 		{
@@ -144,13 +247,6 @@ int main( int argc, char* argv[] )
 		ros::Duration(1).sleep();
 	}
 */
-
-
-
-
-
-
-
 
 	//----------------------------------------------------------------
 	// TASK 3 - SYSTEM MANAGEMENT
@@ -162,11 +258,71 @@ int main( int argc, char* argv[] )
 	// COP sends: Standby
 	// COP sends: Shutdown
 
+	// Receive Query Control
+
+	// Send Report Control
+
+	// Recieve Request Control
+
+	// Send Confirm Control
+	
+	// Receive Query Status
+
+	// Send Report Status
+
+	// State machine for resume standbuy shutdown stuff 
+	
 	//----------------------------------------------------------------
 	// TASK 4 - VELOCITY STATE REPORT
 	//----------------------------------------------------------------
 	// COP sends: Query Velocity State, return: Report Velocity State
 	//     Velocity X, Raw Rate, & Time Stamp [320 Decimal, 0104h]
+	// Units are meters per second
+/*
+	// Receive Query Velocity
+	// Page 66 in as6009
+	bool query_velocity_received = false; 
+	while ( query_velocity_received == false)
+	{
+		if (JrReceive( handle, &source, &size, buffer) == NoMessages)
+			cout << "\nNo QUERY VELOCITY Message Received Yet...\n\n";
+		else 
+		{
+			cout << "\nReceived " << size << " bytes of data from " << source << "\n\n";
+			cout << "\n***Received Message***\n" << buffer << "\n\n\n";
+			query_velocity_received = true;
+		}
+		ros::Duration(1).sleep();
+	}
+*/
+	// Now send Report Velocity State
+	// Page 72 in as6009
+	REPORT_VELOCITY_STATE_MSG msg_vel;
+
+	double velocity;
+	for(int i = 0; i < 5; i++)
+	{
+		velocity = scaleToUInt16(1 * i, -100000, 100000);
+	
+		msg_vel.msg_id = 0x4403;
+		msg_vel.pv = 320; // 8th and 10th positions = 101000000 = 320
+		msg_vel.vel_x = velocity;
+		msg_vel.yaw_rate = velocity;
+		msg_vel.time_stamp = GetTimeOfDay(); 
+
+		// Now we send the message to the COP using Junior.  Recall
+		// that the COP subsystem id is decimal 90 (0x005A hex)
+		if (JrSend(handle, destination, sizeof(msg_vel), (char*)&msg_vel) != Ok)
+			cout << "\n\t *** Unable to Send Message *** \n\n";
+		else 
+			cout << "\n *** Successfully Sent REPORT VELOCITY STATE Message  ***\n";
+			cout << "Velocity X = " << msg_vel.vel_x 
+				 << "\nRaw Rate = " << msg_vel.yaw_rate
+				 << "\nTimestamp = " << msg_vel.time_stamp << "\n\n";
+		
+		ros::Duration(1).sleep();
+	}
+
 
 	//----------------------------------------------------------------
 	// TASK 5 - POSITION AND ORIENTATION REPORT
@@ -174,23 +330,33 @@ int main( int argc, char* argv[] )
 	// COP sends: Query Local Pose, return: Report Local Pose
 	//     Yaw & Time Stamp [320 Decimal, 0140h]
 
-	REPORT_LOCAL_POSE_MSG msg; // create message for sending yaw
+	// Receive Query Local Pose
 
-	// Populate the message.  The message id is fixed, but the
-	// X and Y data are bogus.  The PV is set to indicate that
-	// the first 2 optional fields are present.
-	msg.msg_id = 0x4403;
-	msg.pv = 320;
-	msg.yaw = scaleToUInt32(10, -100000, 100000);
-	msg.time_stamp = scaleToUInt32(0xFFFF0000, -100000, 100000); 
 
-	// Now we send the message to the COP using Junior.  Recall
-	// that the COP subsystem id is decimal 90 (0x005A hex)
-	// page 53 in as6009
-	if (JrSend(handle, destination, sizeof(msg), (char*)&msg) != Ok)
-		cout << "\n\t *** Unable to Send Message *** \n\n";
-	else 
-		cout << "\n *** Successfully Sent Yaw and Timestamp to COP ***\n\n";
+	// Now Send Report Local Pose
+	// Page 53 in as6009 
+	REPORT_LOCAL_POSE_MSG msg_pose; // create message for sending yaw
+
+	double yaw_num;
+	for(int i = 0; i < 5; i++)
+	{
+		// Populate the message.  The message id is fixed, but the
+		// X and Y data are bogus.  The PV is set to indicate that
+		// the first 2 optional fields are present.
+		msg_pose.msg_id = 0x4403;
+		msg_pose.pv = 320; // 8th and 10th positions = 101000000 = 320
+		msg_pose.yaw = scaleToUInt16(1 * i); 
+		msg_pose.time_stamp = GetTimeOfDay(); 
+
+		// Now we send the message to the COP using Junior.  Recall
+		// that the COP subsystem id is decimal 90 (0x005A hex)
+		if (JrSend(handle, destination, sizeof(msg_pose), (char*)&msg_pose) != Ok)
+			cout << "\n\t *** Unable to Send Message *** \n\n";
+		else 
+			cout << "\n *** Successfully Sent REPORT LOCAL POSE Message  ***\n";
+			cout << "Yaw = " << msg_pose.yaw << "\nTimestamp = " << msg_pose.time_stamp << "\n\n";
+		ros::Duration(1).sleep();
+	}
 
 	//----------------------------------------------------------------
 	// Clean-up
