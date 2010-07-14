@@ -36,7 +36,7 @@
 #include <ros/ros.h>
 #include <tf/tf.h>
 #include <landmark_map/Landmark.h>
-#include <localization_defs/LandmarkMsg.h>
+#include <localization_defs/LandmarkArrayMsg.h>
 #include <visualization_msgs/Marker.h>
 #include <color_segmenter/FindBlobs.h>
 #include <color_segmenter/ColorBlobArray.h>
@@ -188,7 +188,7 @@ bool FindBuoysCallback(landmark_finder::FindLandmarks::Request & req, landmark_f
 			LandmarkTypes::Buoy theBuoy ( cv::Point3d( blob.Area, -blob.X, -blob.Y ), 0.0, req.Ids[i] );
 			//LandmarkTypes::Buoy theBuoyAbs ( cv::Point3d( blob.Area + mapOffset.getOrigin().x(), blob.X + mapOffset.getOrigin().y(), blob.Y + mapOffset.getOrigin().z() ), 0.0, req.Ids[i] );
 			
-			resp.Landmarks.push_back( theBuoy.createMsg() ); //for the fuckin' win; I knew those localization_defs would come in handy
+			resp.Landmarks.LandmarkArray.push_back( theBuoy.createMsg() ); //for the fuckin' win; I knew those localization_defs would come in handy
 			
 			theBuoy.mCenter.x += mapOffset.getOrigin().x();
 			theBuoy.mCenter.y += mapOffset.getOrigin().y();
@@ -295,7 +295,7 @@ bool FindPipesCallback(landmark_finder::FindLandmarks::Request & req, landmark_f
 		
 		LandmarkTypes::Pipe thePipe ( cv::Point3d( rectangle.Center.x, rectangle.Center.y, 0.0 ), rectangle.Ori );
 		
-		resp.Landmarks.push_back( thePipe.createMsg() );
+		resp.Landmarks.LandmarkArray.push_back( thePipe.createMsg() );
 			
 		thePipe.mCenter.x += mapOffset.getOrigin().x();
 		thePipe.mCenter.y += mapOffset.getOrigin().y();
@@ -378,6 +378,7 @@ int main(int argc, char* argv[])
 	ros::ServiceServer window_finder_srv = n.advertiseService("FindWindows", FindWindowsCallback);
 
 	blob_finder_srv = n.serviceClient<color_segmenter::FindBlobs>("/color_segmenter/FindBlobs");
+	rect_finder_srv = n.serviceClient<rectangle_finder::FindRectangles>("/rectangle_finder/FindRectangles");
 	
 	ros::Publisher marker_pub = n.advertise<visualization_msgs::Marker>("landmarks", 1);
 	
