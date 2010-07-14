@@ -64,19 +64,19 @@ typedef struct {
 //----------------------------------------------------------------
 
 // create 16 bit scale int
-unsigned short scaleToUInt16(double val, double low, double high)
-{
-	double int_range = pow(2, 16) - 1;
-	double scale_factor = (high-low)/int_range;
+unsigned short scaleToUInt16(float val, float low, float high)
+{/*
+	float int_range = pow(2, 16) - 1;
+	float scale_factor = (high-low)/int_range;
 	return (unsigned short)((val-low)/scale_factor);
-}
+*/}
 
 // unscale 16 bit scaled int
-short unscaleFromUInt16(unsigned int val, double low, double high)
+float unscaleFromUInt16(unsigned short val, float low, float high)
 {
-	double int_range = pow(2, 16) - 1;
-	double scale_factor = (high-low)/int_range;
-	return scale_factor * ((double) val) + low;
+	float int_range = pow(2, 16) - 1;
+	float scale_factor = (high-low)/int_range;
+	return scale_factor * ((float) val) + low;
 }
 
 // create 32 bit scaled int
@@ -302,7 +302,7 @@ int main( int argc, char* argv[] )
 	double velocity;
 	for(int i = 0; i < 5; i++)
 	{
-		velocity = scaleToUInt16(1 * i, -100000, 100000);
+		velocity = scaleToUInt16(1 * i, -3.14, 3.14);
 	
 		msg_vel.msg_id = 0x4403;
 		msg_vel.pv = 320; // 8th and 10th positions = 101000000 = 320
@@ -337,7 +337,6 @@ int main( int argc, char* argv[] )
 	// Page 53 in as6009 
 	REPORT_LOCAL_POSE_MSG msg_pose; // create message for sending yaw
 
-	double yaw_num;
 	for(int i = 0; i < 5; i++)
 	{
 		// Populate the message.  The message id is fixed, but the
@@ -345,7 +344,7 @@ int main( int argc, char* argv[] )
 		// the first 2 optional fields are present.
 		msg_pose.msg_id = 0x4403;
 		msg_pose.pv = 320; // 8th and 10th positions = 101000000 = 320
-		msg_pose.yaw = scaleToUInt16(1 * i); 
+		msg_pose.yaw = scaleToUInt16(1 * i, -3.14, 3.14); 
 		msg_pose.time_stamp = GetTimeOfDay(); 
 
 		// Now we send the message to the COP using Junior.  Recall
