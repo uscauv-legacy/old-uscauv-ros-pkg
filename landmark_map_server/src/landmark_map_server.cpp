@@ -43,10 +43,12 @@
 #include <landmark_map/LandmarkMap.h>
 #include <localization_defs/LandmarkMapMsg.h>
 #include <visualization_msgs/MarkerArray.h>
+#include <landmark_map_server/FetchLandmarkMap.h>
 
 std::string map_uri;
 const std::string map_frame = "/landmark_map";
 std::vector<Landmark> mLandmarks;
+localization_defs::LandmarkMapMsg mapMsg;
 
 void operator >> (const YAML::Node & node, cv::Point3d & p)
 {
@@ -109,6 +111,12 @@ void operator >> (const YAML::Node & node, Landmark & l)
 #define USAGE "Usage: \n" \
               "  landmark_map_saver [-f <mapname>] [ROS remapping args]"
 
+bool FetchLandmarkMapCallback(landmark_map_server::FetchLandmarkMap::Request & req, landmark_map_server::FetchLandmarkMap::Response & resp)
+{
+	resp.Map = mapMsg;
+	return true;
+}
+
 int main( int argc, char* argv[] )
 {
 	ros::init(argc, argv, "landmark_map_server");
@@ -128,7 +136,7 @@ int main( int argc, char* argv[] )
 	}
 	
 	ros::Publisher marker_pub = n.advertise<visualization_msgs::Marker>("landmarks", 1);
-	ros::Publisher map_pub = n.advertise<localization_defs::LandmarkMapMsg>("landmark_map", 1);
+	ros::ServiceServer map_server = n.advertiseService("fetchLandmarkMap", FetchLandmarkMapCallback);
 	
 	YAML::Parser parser(fin);
 	YAML::Node doc;
@@ -158,7 +166,7 @@ int main( int argc, char* argv[] )
 	ROS_INFO("populated list of landmarks");
 	
 	std::vector<visualization_msgs::Marker> markers = mMap.createMarkerArray( map_frame );
-	localization_defs::LandmarkMapMsg mapMsg = mMap.createMsg();
+	mapMsg = mMap.createMsg();
 	
 	while(ros::ok())
 	{
@@ -169,7 +177,7 @@ int main( int argc, char* argv[] )
 			marker_pub.publish(markers[i]);
 		}
 		
-		map_pub.publish(mapMsg);
+		//map_pub.publish(mapMsg);
 	
 		ros::spinOnce();
 		ros::Rate(2).sleep();
