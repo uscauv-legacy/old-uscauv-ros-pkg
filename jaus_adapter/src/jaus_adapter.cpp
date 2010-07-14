@@ -8,7 +8,10 @@
 #include <sstream>
 #include <math.h>
 #include <stdio.h>
-#include "convert.h" // int to string conversion i threw together
+#include "convert.h" // shoddy int to string conversion
+
+unsigned int id = 			0x008E0101; // hex 142 
+unsigned int destination = 	0x005A0101; // COP: subsystem ID is 90 - 0x005A hex
 
 using namespace std;
 
@@ -20,8 +23,8 @@ using namespace std;
 typedef struct {
 	unsigned short msg_id;
 	unsigned short pv;
-	unsigned int   X;
-	unsigned int   Y;
+	unsigned int   yaw;
+	unsigned int   time_stamp;
 } REPORT_LOCAL_POSE_MSG;
 
 // Define some helper functions to convert to/from
@@ -41,7 +44,6 @@ double unscaleFromUInt32(unsigned int val, double low, double high)
 
 int main( int argc, char* argv[] )
 {
-
 	ros::init(argc, argv, "jaus_adapter");
 	ros::NodeHandle n("~");
 
@@ -51,12 +53,13 @@ int main( int argc, char* argv[] )
 	std::cout << cwd << std::endl;
 	if(cwd.substr(cwd.size()-3, cwd.size()) != "bin") 
 	{
-		ROS_FATAL("The jaus_adapter node _must_ be run from within it's own bin directory.");
+		ROS_FATAL("STOP!!! The jaus_adapter node _must_ be run from within it's own bin directory!!!");
 	}
 
 	//----------------------------------------------------------------
-	// CONNECT
+	// TASK 1 - CONNECT
 	//----------------------------------------------------------------
+
 	// We have to call JrConnect before we send any messages.
 	// JrConnect requires us to pass in the JAUS ID for our
 	// component as well as the configuration file.  We 
@@ -64,26 +67,26 @@ int main( int argc, char* argv[] )
 	// I'm using a subsystem ID (in hex), 
 	// and node id 1, component id 1.
 
-	cout << "\n----------- BEGINNING CONNECTION ---------------";
+	cout << "\n\n------------------------------------------------";
+	cout << "\n\tBEGINNING CONNECTION";
 	cout << "\n------------------------------------------------\n\n";
 
 	long int handle;
-	int addr = 0x00000101;
-	addr |= 144 << 4;
-	addr &= 0x01111111;
 
 	bool connection_established = false;
 	while( connection_established == false)
 	{
-		if (JrConnect(/*addr*/0x00900101, "jr_config.xml", &handle) != Ok)
+		if (JrConnect( id, "jr_config.xml", &handle) != Ok)
 		{
 			cout << "\nFailed to connect to Junior.\n\n";
 			return 0;
 		}
 		else 
 		{
-			cout << "\nSuccessfully connected to Junior\n";
-			cout << "Handle: " << handle << "\n\n";
+			cout << "\n\n------------------------------------------------";
+			cout << "\n\tSuccessfully Connected\n";
+			cout << "\tHandle: " << handle << "\n";
+			cout << "------------------------------------------------\n\n";
 			connection_established = true;
 		}
 		ros::Duration(5).sleep();
@@ -94,12 +97,20 @@ int main( int argc, char* argv[] )
 	//----------------------------------------------------------------
 	// TASK 2 - CAPABILITIES DISCOVERY
 	//----------------------------------------------------------------
-	// COP sends: Query Services, return: Report Services 
 
-	char buffer[1000];                                   	// Allocate the space
-	unsigned int size = 1000;                           	// Initialize size
-	unsigned int source;
-		
+	// This task has two parts. First, the COP will send a "Query Services"
+	// message. After we receive that, we will respond with a "Report Services"
+	// message.
+
+	// First we will wait for the Query Services message. We will keep looping
+	// until we find it.
+
+	char buffer[1000];          	// Allocate the space
+	unsigned int size = 1000;      	// Initialize size
+	unsigned int source;            // This value is returned as an ID from the
+									// source that sent the message
+
+/*
 	// check for Query Services message received
 	bool query_services_received = false; 
 	while ( query_services_received == false)
@@ -114,6 +125,32 @@ int main( int argc, char* argv[] )
 		}
 		ros::Duration(1).sleep();
 	}
+*/
+/*
+	// Now that the Query Services message has been received, we will send
+	// back the "Report Services" message.
+	bool report_services_sent = false;
+	while ( report_services_sent == false)
+	{
+		if (JrSend( handle, destination, "jr_config.xml", &handle) != Ok)
+		{
+			cout << "\nFailing to send report Services Message...\n\n";
+		}
+		else 
+		{
+			cout << "\nSuccessfully Sent Report Services Message\n\n";
+			report_services_sent = true;
+		}
+		ros::Duration(1).sleep();
+	}
+*/
+
+
+
+
+
+
+
 
 	//----------------------------------------------------------------
 	// TASK 3 - SYSTEM MANAGEMENT
@@ -134,40 +171,35 @@ int main( int argc, char* argv[] )
 	//----------------------------------------------------------------
 	// TASK 5 - POSITION AND ORIENTATION REPORT
 	//----------------------------------------------------------------
-	// COP sends: Set Local Pose
-	//     X, Y, & Yaw [67 Decimal, 0043h]
 	// COP sends: Query Local Pose, return: Report Local Pose
 	//     Yaw & Time Stamp [320 Decimal, 0140h]
-	
 
-	// Create the message and check it's size.  We want to make
-	// sure the compiler didn't mess with the structure.
-	REPORT_LOCAL_POSE_MSG msg;
-	if (sizeof(msg) != 12) 
-		cout << "\nPacking error!\n\n";
+	REPORT_LOCAL_POSE_MSG msg; // create message for sending yaw
 
 	// Populate the message.  The message id is fixed, but the
 	// X and Y data are bogus.  The PV is set to indicate that
 	// the first 2 optional fields are present.
 	msg.msg_id = 0x4403;
-	msg.pv = 3;
-	msg.X = scaleToUInt32(55.55, -100000, 100000);
-	msg.Y = scaleToUInt32(66.66, -100000, 100000);
+	msg.pv = 320;
+	msg.yaw = scaleToUInt32(10, -100000, 100000);
+	msg.time_stamp = scaleToUInt32(0xFFFF0000, -100000, 100000); 
 
 	// Now we send the message to the COP using Junior.  Recall
 	// that the COP subsystem id is decimal 90 (0x005A hex)
-	if (JrSend(handle, 0x005A0101, sizeof(msg), (char*)&msg) != Ok)
-		cout << "\nUnable to send message.\n\n";
+	// page 53 in as6009
+	if (JrSend(handle, destination, sizeof(msg), (char*)&msg) != Ok)
+		cout << "\n\t *** Unable to Send Message *** \n\n";
 	else 
-		cout << "\nSent message to the COP\n\n";
+		cout << "\n *** Successfully Sent Yaw and Timestamp to COP ***\n\n";
 
 	//----------------------------------------------------------------
 	// Clean-up
 	//----------------------------------------------------------------
-	cout << "\n\n------------------Disconnecting--------------\n\n";
 	JrDisconnect(handle);
-	cout << "\n\n\n\n\n\n\n------------------Disconnected!--------------\n\n\n\n\n";
+	cout << "\n\n------------------------------------------------";
+	cout << "\n\tDisconnected\n";
+	cout << "------------------------------------------------\n\n";
 
-	ros::spin();
-	return 1;
+	ros::spinOnce();
+	return 0;
 }
