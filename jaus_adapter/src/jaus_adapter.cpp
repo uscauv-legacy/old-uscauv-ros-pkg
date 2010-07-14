@@ -31,7 +31,7 @@ using namespace std;
 // DEFINE MESSAGES TO BE PASSED
 //----------------------------------------------------------------
 
-// Services
+// Report Services
 typedef struct {
 	unsigned short 	msg_id;
 	unsigned int 	node_id;
@@ -42,20 +42,33 @@ typedef struct {
 	unsigned int	version_mnr;
 } REPORT_SERVICES_MSG;
 
-// Velocity
+// Report Velocity
 typedef struct {
 	unsigned short 	msg_id;
 	unsigned short 	pv;
 	unsigned int   	vel_x;
+	unsigned int   	vel_y;
+	unsigned int   	vel_z;
+	unsigned int   	vel_rms;
+	unsigned short  roll_rate;
+	unsigned short  pitch_rate;
+	unsigned short  rate_rms;
 	unsigned short  yaw_rate;
 	unsigned int   	time_stamp;
 } REPORT_VELOCITY_STATE_MSG;
 
-// Pose
+// Report Pose
 typedef struct {
 	unsigned short 	msg_id;
 	unsigned short 	pv;
-	unsigned short  yaw;
+	unsigned int   	pos_x;
+	unsigned int   	pos_y;
+	unsigned int   	pos_z;
+	unsigned int   	pos_rms;
+	unsigned short 	roll;
+	unsigned short 	pitch;
+	unsigned short 	yaw;
+	unsigned short  altitude_rms;
 	unsigned int   	time_stamp;
 } REPORT_LOCAL_POSE_MSG;
 
@@ -65,11 +78,11 @@ typedef struct {
 
 // create 16 bit scale int
 unsigned short scaleToUInt16(float val, float low, float high)
-{/*
+{
 	float int_range = pow(2, 16) - 1;
 	float scale_factor = (high-low)/int_range;
 	return (unsigned short)((val-low)/scale_factor);
-*/}
+}
 
 // unscale 16 bit scaled int
 float unscaleFromUInt16(unsigned short val, float low, float high)
@@ -331,6 +344,7 @@ int main( int argc, char* argv[] )
 	//     Yaw & Time Stamp [320 Decimal, 0140h]
 
 	// Receive Query Local Pose
+	// Page 66 in as6009
 
 
 	// Now Send Report Local Pose
