@@ -16,7 +16,7 @@
 #include <sys/time.h>
 #include <time.h>
 
-unsigned int id = 			0x00800101; // hex 128, my ID 
+unsigned int id = 			0x007E0101; // hex 128, my ID 
 unsigned int destination = 	0x005A0101; // COP: subsystem ID is 90 - 0x005A hex
 
 using namespace std;
@@ -185,18 +185,18 @@ int main( int argc, char* argv[] )
 	bool connection_established = false;
 	while( connection_established == false)
 	{
-		if (JrConnect( id, "jr_config.xml", &handle) != Ok)
-		{
-			cout << "\nFailed to connect to Junior.\n\n";
-			return 0;
-		}
-		else 
+		if (JrConnect( id, "jr_config.xml", &handle) == Ok)
 		{
 			cout << "\n\n------------------------------------------------";
 			cout << "\n\tSuccessfully Connected\n";
 			cout << "\tHandle: " << handle << "\n";
 			cout << "------------------------------------------------\n\n";
 			connection_established = true;
+		}
+		else 
+		{	
+			cout << "\nFailed to connect to Junior.\n\n";
+			return 0;
 		}
 		ros::Duration(5).sleep();
 	}
@@ -312,29 +312,29 @@ int main( int argc, char* argv[] )
 	// Page 72 in as6009
 	REPORT_VELOCITY_STATE_MSG msg_vel;
 
-	double velocity;
-	for(int i = 0; i < 5; i++)
-	{
-		velocity = scaleToUInt16(1 * i, -3.14, 3.14);
-	
-		msg_vel.msg_id = 0x4403;
-		msg_vel.pv = 320; // 8th and 10th positions = 101000000 = 320
-		msg_vel.vel_x = velocity;
-		msg_vel.yaw_rate = velocity;
-		msg_vel.time_stamp = GetTimeOfDay(); 
+	msg_vel.msg_id 		= 0x4403;
+	msg_vel.pv 			= 1; 
+	msg_vel.vel_x 		= 10; //scaleToUInt32(200, -327.68, 327.67);
+	msg_vel.msg_id  	= 0;
+	msg_vel.pv 			= 0;
+	msg_vel.vel_x 		= 0;
+	msg_vel.vel_y 		= 0;
+	msg_vel.vel_z 		= 0;
+	msg_vel.vel_rms 	= 0;
+	msg_vel.roll_rate 	= 0;
+	msg_vel.pitch_rate 	= 0;
+	msg_vel.rate_rms 	= 0;
+	msg_vel.yaw_rate 	= 0;
+	msg_vel.time_stamp 	= 0;
 
-		// Now we send the message to the COP using Junior.  Recall
-		// that the COP subsystem id is decimal 90 (0x005A hex)
-		if (JrSend(handle, destination, sizeof(msg_vel), (char*)&msg_vel) != Ok)
-			cout << "\n\t *** Unable to Send Message *** \n\n";
-		else 
-			cout << "\n *** Successfully Sent REPORT VELOCITY STATE Message  ***\n";
-			cout << "Velocity X = " << msg_vel.vel_x 
-				 << "\nRaw Rate = " << msg_vel.yaw_rate
-				 << "\nTimestamp = " << msg_vel.time_stamp << "\n\n";
-		
-		ros::Duration(1).sleep();
-	}
+	// Now we send the message to the COP using Junior.  Recall
+	// that the COP subsystem id is decimal 90 (0x005A hex)
+	if (JrSend(handle, destination, sizeof(msg_vel), (char*)&msg_vel) != Ok)
+		cout << "\n\t *** Unable to Send Message *** \n\n";
+	else 
+		cout << "\n *** Successfully Sent REPORT VELOCITY STATE Message  ***\n";
+	cout << "Velocity X = " << msg_vel.vel_x << "\n\n";
+	ros::Duration(1).sleep();
 
 
 	//----------------------------------------------------------------
@@ -346,30 +346,32 @@ int main( int argc, char* argv[] )
 	// Receive Query Local Pose
 	// Page 66 in as6009
 
-
 	// Now Send Report Local Pose
 	// Page 53 in as6009 
 	REPORT_LOCAL_POSE_MSG msg_pose; // create message for sending yaw
 
-	for(int i = 0; i < 5; i++)
-	{
-		// Populate the message.  The message id is fixed, but the
-		// X and Y data are bogus.  The PV is set to indicate that
-		// the first 2 optional fields are present.
-		msg_pose.msg_id = 0x4403;
-		msg_pose.pv = 320; // 8th and 10th positions = 101000000 = 320
-		msg_pose.yaw = scaleToUInt16(1 * i, -3.14, 3.14); 
-		msg_pose.time_stamp = GetTimeOfDay(); 
+	// Populate the message.  The message id is fixed, but the
+	// X and Y data are bogus.  The PV is set to indicate that
+	// the first 2 optional fields are present.
+	msg_pose.msg_id 		= 0x4403;
+	msg_pose.pv 			= 320; // 8th and 10th positions = 101000000 = 320
+	msg_pose.pos_x 			= 0;
+	msg_pose.pos_y 			= 0;
+	msg_pose.pos_z 			= 0;
+	msg_pose.pos_rms 		= 0;
+	msg_pose.roll 			= 0;
+	msg_pose.pitch 			= 0;
+	msg_pose.yaw 			= scaleToUInt16(2.0, -3.14, 3.14); 
+	msg_pose.altitude_rms 	= 0;
+	msg_pose.time_stamp 	= 0; 
 
-		// Now we send the message to the COP using Junior.  Recall
-		// that the COP subsystem id is decimal 90 (0x005A hex)
-		if (JrSend(handle, destination, sizeof(msg_pose), (char*)&msg_pose) != Ok)
-			cout << "\n\t *** Unable to Send Message *** \n\n";
-		else 
-			cout << "\n *** Successfully Sent REPORT LOCAL POSE Message  ***\n";
-			cout << "Yaw = " << msg_pose.yaw << "\nTimestamp = " << msg_pose.time_stamp << "\n\n";
-		ros::Duration(1).sleep();
-	}
+	// Now we send the message to the COP using Junior.  Recall
+	// that the COP subsystem id is decimal 90 (0x005A hex)
+	if (JrSend(handle, destination, sizeof(msg_pose), (char*)&msg_pose) != Ok)
+		cout << "\n\t *** Unable to Send Message *** \n\n";
+	else 
+		cout << "\n *** Successfully Sent REPORT LOCAL POSE Message  ***\n";
+	cout << "Yaw = " << msg_pose.yaw << "\nTimestamp = " << msg_pose.time_stamp << "\n\n";
 
 	//----------------------------------------------------------------
 	// Clean-up
