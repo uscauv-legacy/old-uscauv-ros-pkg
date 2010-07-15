@@ -42,6 +42,7 @@
 #include <seabee3_driver/SetDesiredRPY.h>
 #include <seabee3_driver_base/MotorCntl.h>
 #include <seabee3_driver_base/Pressure.h>
+#include <seabee3_driver_base/KillSwitch.h>
 #include <geometry_msgs/Twist.h>
 #include <geometry_msgs/Vector3.h>
 #include <xsens_node/SetRPYOffset.h>
@@ -57,6 +58,7 @@ geometry_msgs::Twist * TwistCache;
 //ros::Time * velocity_sample_start;
 seabee3_driver_base::MotorCntl * motorCntlMsg;
 seabee3_driver_base::Pressure * extlPressureCache;
+seabee3_driver_base::KillSwitch * killSwitchCache;
 geometry_msgs::Vector3 * desiredRPY, * errorInRPY, * desiredChangeInRPYPerSec, * desiredXYZ, * errorInXYZ, * desiredChangeInXYZPerSec;
 double maxRollError, maxPitchError, maxHeadingError, maxDepthError, desiredSpeed, desiredStrafe;
 ros::Time * lastUpdateTime;
@@ -388,16 +390,41 @@ bool ResetPoseCallback(seabee3_driver::ResetPose::Request & req, seabee3_driver:
 		thePose.setZ(req.Pos.Values.z);
 	estimatedPose.setOrigin(thePose);
 	
-	if(req.Ori.Mask.x == 1.0)
+	seabee3_driver::SetDesiredRPY setRPY;
+	setRPY.request.Mode = req.Ori.Mode;
+	setRPY.request.Mask = req.Ori.Mask;
+	setRPY.request.DesiredRPY = req.Ori.Values;
+	
+	setDesiredRPYCallback(setRPY.request, setRPY.response);
+	
+	/*if(req.Ori.Mask.x == 1.0)
 		mImuOriOffset.setX(req.Ori.Values.x - mImuOriOffset.x() );
 	if(req.Ori.Mask.y == 1.0)
 		mImuOriOffset.setY(req.Ori.Values.y - mImuOriOffset.y() );
 	if(req.Ori.Mask.z == 1.0)
 		mImuOriOffset.setZ(req.Ori.Values.z - mImuOriOffset.z() );
 		
-	estimatedPose.setRotation( estimatedPose.getRotation().normalize() );
+	estimatedPose.setRotation( estimatedPose.getRotation().normalize() );*/
 	
 	return true;
+}
+
+void ResetPose()
+{
+	seabee3_driver::ResetPose resetPose;
+	resetPose.request.Ori.Mask.x = resetPose.request.Ori.Mask.y = resetPose.request.Ori.Mask.z = 1;
+	resetPose.request.Ori.Mode.x = resetPose.request.Ori.Mode.y = resetPose.request.Ori.Mode.z = 1;
+	ResetPoseCallback(resetPose.request, resetPose.response);
+}
+
+void KillSwitchCallback(const seabee3_driver_base::KillSwitchConstPtr & killSwitch)
+{
+	if(killSwitch->Value == 0 && killSwitchCache->Value == 1)
+	{
+		//set desired pose to our current pose so we don't move yet
+		ResetPose();
+	}
+	*killSwitchCache = *killSwitch;
 }
 
 int main(int argc, char** argv)
@@ -416,6 +443,7 @@ int main(int argc, char** argv)
 	//ros::Subscriber odom_prim_sub = n.subscribe("/seabee3/odom_prim", 1, OdomPrimCallback);
 	ros::Subscriber cmd_vel_sub = n.subscribe("/seabee3/cmd_vel", 1, CmdVelCallback);
 	ros::Subscriber extl_depth_sub = n.subscribe("/seabee3/extl_pressure", 1, ExtlPressureCallback);
+	ros::Subscriber kill_switch_sub = n.subscribe("/seabee3/kill_switch", 1, KillSwitchCallback);
 	
 	desiredRPY = new geometry_msgs::Vector3; desiredRPY->x = 0; desiredRPY->y = 0; desiredRPY->z = 0;
 	errorInRPY = new geometry_msgs::Vector3; errorInRPY->x = 0; errorInRPY->y = 0; errorInRPY->z = 0;
@@ -428,6 +456,7 @@ int main(int argc, char** argv)
 	lastUpdateTime = new ros::Time(ros::Time(-1));
 	lastPidUpdateTime = new ros::Time(ros::Time(-1));
 	extlPressureCache = new seabee3_driver_base::Pressure;
+	killSwitchCache = new seabee3_driver_base::KillSwitch;
 	
 	depthInitialized = false;
 	
@@ -510,6 +539,8 @@ int main(int argc, char** argv)
 	
 	tf::TransformBroadcaster tb;
 	estimatedPose.setRotation( estimatedPose.getRotation().normalize() );
+	
+	ResetPose(); //set current xyz to 0, desired RPY to current RPY
 	
 	while(ros::ok())
 	{
