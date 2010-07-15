@@ -114,8 +114,9 @@ void updateMotorCntlMsg(seabee3_driver_base::MotorCntl & msg, int axis, int p_va
 			motor2_scale = speed_m2_dir;
 			break;
 		case axis_strafe: //absolute; relative to the world
-			updateMotorCntlMsg(msg, axis_strafe_rel, value * cos( LocalizationUtil::degToRad( IMUDataCache->ori.x ) ) );
-			updateMotorCntlMsg(msg, axis_depth_rel, value * -sin( LocalizationUtil::degToRad( IMUDataCache->ori.x ) ) );
+			updateMotorCntlMsg(msg, axis_strafe_rel, value );
+			//updateMotorCntlMsg(msg, axis_strafe_rel, value * cos( LocalizationUtil::degToRad( IMUDataCache->ori.x ) ) );
+			//updateMotorCntlMsg(msg, axis_depth_rel, value * -sin( LocalizationUtil::degToRad( IMUDataCache->ori.x ) ) );
 			return;
 		case axis_strafe_rel: //relative to the robot
 			motor1 = BeeStem3::MotorControllerIDs::STRAFE_FRONT_THRUSTER;
@@ -124,8 +125,9 @@ void updateMotorCntlMsg(seabee3_driver_base::MotorCntl & msg, int axis, int p_va
 			motor2_scale = strafe_m2_dir;
 			break;
 		case axis_depth: //absolute; relative to the world
-			updateMotorCntlMsg(msg, axis_depth_rel, value * -cos( LocalizationUtil::degToRad( IMUDataCache->ori.x ) ) );
-			updateMotorCntlMsg(msg, axis_strafe_rel, value * -sin( LocalizationUtil::degToRad( IMUDataCache->ori.x ) ) );
+			updateMotorCntlMsg(msg, axis_depth_rel, value * -1.0 );
+			//updateMotorCntlMsg(msg, axis_depth_rel, value * -cos( LocalizationUtil::degToRad( IMUDataCache->ori.x ) ) );
+			//updateMotorCntlMsg(msg, axis_strafe_rel, value * -sin( LocalizationUtil::degToRad( IMUDataCache->ori.x ) ) );
 			return;
 		case axis_depth_rel: //relative to the robot
 			motor1 = BeeStem3::MotorControllerIDs::DEPTH_RIGHT_THRUSTER;
@@ -143,7 +145,8 @@ void updateMotorCntlMsg(seabee3_driver_base::MotorCntl & msg, int axis, int p_va
 			updateMotorCntlMsg(msg, axis_heading_rel, value * -sin( LocalizationUtil::degToRad( IMUDataCache->ori.x ) ) );
 			return;
 		case axis_heading: //absolute; relative to the world
-			updateMotorCntlMsg(msg, axis_heading_rel, value * cos( LocalizationUtil::degToRad( IMUDataCache->ori.x ) ) );
+			//updateMotorCntlMsg(msg, axis_heading_rel, value * cos( LocalizationUtil::degToRad( IMUDataCache->ori.x ) ) );
+			updateMotorCntlMsg(msg, axis_heading_rel, value );
 			return;
 		case axis_heading_rel: //relative to the robot
 			motor1 = BeeStem3::MotorControllerIDs::STRAFE_FRONT_THRUSTER;
@@ -199,8 +202,8 @@ void updateMotorCntlFromTwist(const geometry_msgs::TwistConstPtr & twist)
 		//desiredChangeInXYZPerSec->y = 100.0 * twist->linear.y;
 		desiredChangeInXYZPerSec->z = 100.0 * twist->linear.z;
 		
-		desiredChangeInRPYPerSec->x = 100.0 * twist->angular.x;
-		desiredChangeInRPYPerSec->y = 100.0 * twist->angular.y;
+		//desiredChangeInRPYPerSec->x = 100.0 * twist->angular.x;
+		//desiredChangeInRPYPerSec->y = 100.0 * twist->angular.y;
 		desiredChangeInRPYPerSec->z = 100.0 * twist->angular.z;
 
 		//ROS_INFO("heading: %f desired heading: %f dt: %f", IMUDataCache->ori.z, *desiredRPY.z, dt.toSec());
@@ -224,16 +227,16 @@ void headingPidStep()
 		
 		ros::Duration dt = ros::Time::now() - *lastPidUpdateTime;
 		
-		desiredRPY->x -= desiredChangeInRPYPerSec->x * dt.toSec();
-		desiredRPY->y -= desiredChangeInRPYPerSec->y * dt.toSec();
+		//desiredRPY->x -= desiredChangeInRPYPerSec->x * dt.toSec();
+		//desiredRPY->y -= desiredChangeInRPYPerSec->y * dt.toSec();
 		desiredRPY->z -= desiredChangeInRPYPerSec->z * dt.toSec();
 		
 		//desiredXYZ->x -= desiredChangeInXYZPerSec->x * dt.toSec();
 		//desiredXYZ->y -= desiredChangeInXYZPerSec->y * dt.toSec();
 		desiredXYZ->z -= desiredChangeInXYZPerSec->z * dt.toSec();
 
-		LocalizationUtil::normalizeAngle(desiredRPY->x);
-		LocalizationUtil::normalizeAngle(desiredRPY->y);
+		//LocalizationUtil::normalizeAngle(desiredRPY->x);
+		//LocalizationUtil::normalizeAngle(desiredRPY->y);
 		LocalizationUtil::normalizeAngle(desiredRPY->z);
 
 		//actual - desired; 0 - 40 = -40;
@@ -244,26 +247,26 @@ void headingPidStep()
 		//errorInXYZ->y = desiredXYZ->x - <some sensor value>;
 		errorInXYZ->z = desiredXYZ->z - extlPressureCache->Value;
 		
-		errorInRPY->x = LocalizationUtil::angleDistRel(desiredRPY->x, IMUDataCache->ori.x);
-		errorInRPY->y = LocalizationUtil::angleDistRel(desiredRPY->y, IMUDataCache->ori.y);
+		//errorInRPY->x = LocalizationUtil::angleDistRel(desiredRPY->x, IMUDataCache->ori.x);
+		//errorInRPY->y = LocalizationUtil::angleDistRel(desiredRPY->y, IMUDataCache->ori.y);
 		errorInRPY->z = LocalizationUtil::angleDistRel(desiredRPY->z, IMUDataCache->ori.z);
 		
 		//LocalizationUtil::capValue(errorInDepth->x, maxXError);
 		//LocalizationUtil::capValue(errorInDepth->y, maxYError);
 		LocalizationUtil::capValue(errorInXYZ->z, maxDepthError);
 		
-		LocalizationUtil::capValue(errorInRPY->x, maxRollError);
-		LocalizationUtil::capValue(errorInRPY->y, maxPitchError);
+		//LocalizationUtil::capValue(errorInRPY->x, maxRollError);
+		//LocalizationUtil::capValue(errorInRPY->y, maxPitchError);
 		LocalizationUtil::capValue(errorInRPY->z, maxHeadingError);
 		
 		//headingError = abs(headingError) > *maxHeadingError ? *maxHeadingError * headingError / abs(headingError) : headingError;
 		
-		double speedMotorVal = 1.0 * desiredSpeed;
-		double strafeMotorVal = 1.0 * desiredStrafe;
-		double depthMotorVal = -1.0 * pid_D->updatePid(errorInXYZ->z, dt);
-		double rollMotorVal = -1.0 * pid_R->updatePid(errorInRPY->x, dt);
-		double pitchMotorVal = -1.0 * pid_P->updatePid(errorInRPY->y, dt);
-		double headingMotorVal = -1.0 * pid_Y->updatePid(errorInRPY->z, dt);
+		double speedMotorVal = speed_axis_dir * desiredSpeed;
+		double strafeMotorVal = strafe_axis_dir * desiredStrafe;
+		double depthMotorVal = depth_axis_dir * pid_D->updatePid(errorInXYZ->z, dt);
+		//double rollMotorVal = roll_axis_dir * pid_R->updatePid(errorInRPY->x, dt);
+		//double pitchMotorVal = pitch_axis_dir * pid_P->updatePid(errorInRPY->y, dt);
+		double headingMotorVal = heading_axis_dir * pid_Y->updatePid(errorInRPY->z, dt);
 
 		//ROS_INFO("initial motor val: %f", motorVal);
 		
@@ -281,8 +284,8 @@ void headingPidStep()
 		updateMotorCntlMsg(*motorCntlMsg, axis_speed, speedMotorVal);
 		updateMotorCntlMsg(*motorCntlMsg, axis_strafe, strafeMotorVal);
 		updateMotorCntlMsg(*motorCntlMsg, axis_depth, depthMotorVal);
-		updateMotorCntlMsg(*motorCntlMsg, axis_roll, rollMotorVal);
-		updateMotorCntlMsg(*motorCntlMsg, axis_pitch, pitchMotorVal);
+		//updateMotorCntlMsg(*motorCntlMsg, axis_roll, rollMotorVal);
+		//updateMotorCntlMsg(*motorCntlMsg, axis_pitch, pitchMotorVal);
 		updateMotorCntlMsg(*motorCntlMsg, axis_heading, headingMotorVal);
 
 		//ROS_INFO("heading error: %f motorVal: %f", headingError, motorVal);
@@ -478,7 +481,7 @@ int main(int argc, char** argv)
 	
 	n.param("speed_axis_dir", speed_axis_dir, 1.0);
 	n.param("strafe_axis_dir", strafe_axis_dir, 1.0);
-	n.param("depth_axis_dir", depth_axis_dir, -1.0);
+	n.param("depth_axis_dir", depth_axis_dir, 1.0);
 	n.param("roll_axis_dir", roll_axis_dir, -1.0);
 	n.param("pitch_axis_dir", pitch_axis_dir, -1.0);
 	n.param("heading_axis_dir", heading_axis_dir, -1.0);
