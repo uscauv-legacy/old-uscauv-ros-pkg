@@ -13,5 +13,7 @@
   <depend package="seabee3_driver_base" />
   <depend package="geometry_msgs" />
   <depend package="landmark_finder" />
+  <depend package="landmark_map_server" />
   <depend package="localization_defs" />
+  <depend package="waypoint_controller" />
 </package>

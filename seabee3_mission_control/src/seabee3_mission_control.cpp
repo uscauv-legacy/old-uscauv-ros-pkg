@@ -4,11 +4,14 @@
 
 #include <ros/ros.h>
 #include <geometry_msgs/Twist.h>
+#include <landmark_finder/FindLandmarks.h>
+#include <landmark_map_server/FetchLandmarkMap.h>
+#include <landmark_map/LandmarkMap.h>
 #include <seabee3_driver/SetDesiredXYZ.h>
 #include <seabee3_driver/SetDesiredRPY.h>
 #include <seabee3_driver_base/KillSwitch.h>
-#include <landmark_finder/FindLandmarks.h>
-#include <landmark_map/Landmark.h>
+#include <seabee3_driver_base/FiringDeviceAction.h>
+#include <waypoint_controller/SetDesiredPose.h>
 
 /* SeaBee3 Mission States */
 #define STATE_INIT          0
@@ -16,19 +19,22 @@
 #define STATE_FIRST_BUOY    2
 #define STATE_SECOND_BUOY   3
 #define STATE_HEDGE         4
+#define STATE_FIRST_BIN     5
+#define STATE_SECOND_BIN    6
+#define STATE_WINDOW        7
+#define STATE_PINGER        8
+
 
 // max speed sub can go
 #define MAX_SPEED              75.0
 
-#define BUOY_HIT_DISTANCE 1.0
-
-// minimum diff needed between current pose and last pose
-// in order for beestem  message to be sent out
-#define MIN_POSE_DIFF         3.0
+#define BUOY_HIT_DISTANCE     1.0
+#define BIN_CENTER_THRESHOLD  0.3
+#define WINDOW_CENTER_THRESHOLD  0.3
 
 // ######################################################################
 // The various types of SensorVotes
-enum SensorType { PATH, FIRST_BUOY, SECOND_BUOY, LOCALIZATION, SENSOR_TYPE_SIZE = 4};
+enum SensorType { PATH, FIRST_BUOY, SECOND_BUOY, BIN, SENSOR_TYPE_SIZE = 4};
 
 // A vote for what the pose of the sub should be according to
 // one of our sensors (i.e. salient point or path found in bottom cam)
@@ -44,6 +50,7 @@ struct SensorVote
   };
   enum SensorType type; // sensor type
   SensorPose heading; // sensor's vote for absolute heading
+  SensorPose strafe; // sensor's vote for relative strafe
   SensorPose depth; // sensor's vote for relative depth
   bool init; // whether or not the SensorVote has a value set
 
@@ -53,6 +60,9 @@ struct SensorVote
     heading.val = 0.0;
     heading.weight = 0.0;
     heading.decay = 0.0;
+    strafe.val = 0.0;
+    strafe.weight = 0.0;
+    strafe.decay = 0.0;
     depth.val = 0.0;
     depth.weight = 0.0;
     depth.decay = 0.0;
@@ -65,6 +75,9 @@ struct SensorVote
     heading.val = 0.0;
     heading.weight = 0.0;
     heading.decay = 0.0;
+    strafe.val = 0.0;
+    strafe.weight = 0.0;
+    strafe.decay = 0.0;
     depth.val = 0.0;
     depth.weight = 0.0;
     depth.decay = 0.0;
@@ -74,102 +87,94 @@ struct SensorVote
 // ######################################################################
 
 // Stores the sub's current mission state
-unsigned int itsCurrentState;
+unsigned int mCurrentState;
 
 // Command-line parameters
-double itsGateTime;
-double itsGateDepth;
-double itsHeadingCorrScale;
-double itsDepthCorrScale;
-double itsSpeedCorrScale;
-
-// Variables to store the sub's current pose according to messages
-// received from the BeeStemI
-int its_current_heading;
-int its_current_ex_pressure;
-int its_current_int_pressure;
-
+double mGateTime;
+double mGateDepth;
+double mHeadingCorrScale;
+double mDepthCorrScale;
+double mSpeedCorrScale;
 
 // Stores the current state of the kill switch according to BeeStemI
-char itsKillSwitchState;
+char mKillSwitchState;
 
 // Vector that stores all of the sub's SensorVotes
-std::vector<SensorVote> itsSensorVotes;
+std::vector<SensorVote> mSensorVotes;
 
 // The combined error of our current heading and depth from our desired heading and depth
-float itsPoseError;
-
-// Stores the last values we set for our heading, depth, and speed.
-// These are used to limit the number of messages sent to the BeeStemI
-// by ensuring that we only send a message if the current pose differs
-// from the last pose by MIN_POSE_DIFF amount
-//float itsLastCompositeHeading, itsLastCompositeDepth, itsLastSpeed;
+float mPoseError;
 
 // Stores our currently desired dive value. Used to store intermediate dive values when
 // as we dive in 4 stages in the beginning.
-int itsDepthVal;
-int itsDepthError;
+int mDepthVal;
+int mDepthError;
 
 // The current dive state we are on (1-4)
-char itsDiveCount;
+char mDiveCount;
 
 // Used to store the heading we want to use to go through the gate at the beginning of the mission.
-int itsHeadingVal;
-int itsHeadingError;
+int mHeadingVal;
+int mHeadingError;
 
 // Whether or not we should set a new speed in the control loop
-bool itsSpeedEnabled;
+bool mSpeedEnabled;
 
 // The last time weights were decayed
-ros::Time itsLastDecayTime;
+ros::Time mLastDecayTime;
 
-// Order of buoys to hit
-int itsFirstBuoyColor;
-float itsFirstBuoyArea;
-int itsSecondBuoyColor;
-float itsSecondBuoyArea;
+// Map Landmarks
+int mFirstBuoyColor;
+Landmark mFirstBuoy;
+int mSecondBuoyColor;
+Landmark mSecondBuoy;
+Landmark mFirstBin;
+int mFirstBinImage;
+Landmark mSecondBin;
+int mSecondBinImage;
+int mWindowColor;
+Landmark mWindow;
+Landmark mPinger;
+
+
+// Landmark Map
+LandmarkMap mLandmarkMap;
 
 // Publishers / Subscribers / Clients
 ros::Subscriber kill_switch_sub;
 ros::ServiceClient driver_depth;
 ros::ServiceClient driver_rpy;
+ros::ServiceClient dropper_one_srv;
+ros::ServiceClient dropper_two_srv;
+ros::ServiceClient shooter_srv;
 ros::ServiceClient landmark_finder_srv;
-//ros::ServiceClient driver_calibrate;
+ros::ServiceClient landmark_map_srv;
+ros::ServiceClient waypoint_controller_srv;
 ros::Publisher driver_speed;
-
-void initSensorVotes()
-{
-  itsSensorVotes = std::vector<SensorVote>();
-  itsSensorVotes.reserve(SENSOR_TYPE_SIZE);
-  itsSensorVotes[PATH] = SensorVote(PATH);
-  itsSensorVotes[FIRST_BUOY] = SensorVote(FIRST_BUOY);
-  itsSensorVotes[SECOND_BUOY] = SensorVote(SECOND_BUOY);
-  itsSensorVotes[LOCALIZATION] = SensorVote(LOCALIZATION);
-}
 
 void resetWeights()
 {
-  for(unsigned int i = 0; i < itsSensorVotes.size(); i++)
+  for(unsigned int i = 0; i < mSensorVotes.size(); i++)
     {
-      itsSensorVotes[i].heading.weight = 0.0;
-      itsSensorVotes[i].depth.weight = 0.0;
+      mSensorVotes[i].heading.weight = 0.0;
+      mSensorVotes[i].depth.weight = 0.0;
     }
 }
 
 void resetSensorVoteValues()
 {
-  for(unsigned int i = 0; i < itsSensorVotes.size(); i++)
+  for(unsigned int i = 0; i < mSensorVotes.size(); i++)
     {
-      itsSensorVotes[i].heading.val = 0.0;
-      itsSensorVotes[i].depth.val = 0.0;
+      mSensorVotes[i].heading.val = 0.0;
+      mSensorVotes[i].depth.val = 0.0;
     }
 }
 
 void decayWeights()
 {
-  for(unsigned int i = 0; i < itsSensorVotes.size(); i++)
+  for(unsigned int i = 0; i < mSensorVotes.size(); i++)
     {
-      SensorVote sv = itsSensorVotes[i];
+      SensorVote sv = mSensorVotes[i];
 
       if(sv.heading.weight > 0.0)
 	{
@@ -183,7 +188,7 @@ void decayWeights()
 	    sv.depth.weight *= 1.0 - sv.depth.decay;
 	}
 
-      itsSensorVotes[i] = sv;
+      mSensorVotes[i] = sv;
     }
 }
 
@@ -198,7 +203,7 @@ void set_depth(int depth)
   if (driver_depth.call(xyz_srv))
     {
       //ROS_INFO("Set Desired Depth: %d", depth_srv.response.CurrentDesiredDepth);
-      itsDepthError = xyz_srv.response.ErrorInXYZ.z;
+      mDepthError = xyz_srv.response.ErrorInXYZ.z;
     }
   else
     {
@@ -209,7 +214,7 @@ void set_depth(int depth)
 void set_speed(int speed)
 {
   geometry_msgs::Twist cmd_vel;
-  cmd_vel.linear.x = speed; //speed
+  cmd_vel.linear.x = speed;
   cmd_vel.linear.y = 0;
   cmd_vel.linear.z = 0;
   
@@ -217,6 +222,20 @@ void set_speed(int speed)
   cmd_vel.angular.y = 0;
   cmd_vel.angular.z = 0;
 
+  driver_speed.publish(cmd_vel);
+}
+
+void set_strafe(int strafe)
+{
+  geometry_msgs::Twist cmd_vel;
+  cmd_vel.linear.x = 0;
+  cmd_vel.linear.y = strafe;
+  cmd_vel.linear.z = 0;
+  
+  cmd_vel.angular.x = 0;
+  cmd_vel.angular.y = 0;
+  cmd_vel.angular.z = 0;
+  
   driver_speed.publish(cmd_vel);
 }
 
@@ -236,7 +255,7 @@ void set_heading(int heading)
   if (driver_rpy.call(rpy_srv))
     {
       //      ROS_INFO("Set Desired RPY: %f", rpy_srv.response.CurrentDesiredRPY.z);
-      itsHeadingError = rpy_srv.response.ErrorInRPY.z;
+      mHeadingError = rpy_srv.response.ErrorInRPY.z;
     }
   else
     {
@@ -253,69 +272,116 @@ void resetPID()
 
 void killSwitchCallback(const seabee3_driver_base::KillSwitchConstPtr & msg)
 {
-  itsKillSwitchState = msg->Value;
+  mKillSwitchState = msg->Value;
 }
 
+void initLandmarkMap()
+{
+  landmark_map_server::FetchLandmarkMap fetch_map;
+  fetch_map.request.Req = 1;
+
+  landmark_map_srv.call(fetch_map);
+
+  mLandmarkMap = LandmarkMap(fetch_map.response.Map);
+
+  std::vector<Landmark> buoys = mLandmarkMap.fetchLandmarksByType(Landmark::LandmarkType::Buoy);
+
+  for(unsigned int i = 0; i < buoys.size(); i++)
+    {
+      if(buoys[i].mColor == mFirstBuoyColor)
+	mFirstBuoy = buoys[i];
+      else if(buoys[i].mColor == mSecondBuoyColor)
+	mSecondBuoy = buoys[i];
+    }
+
+  std::vector<Landmark> bins = mLandmarkMap.fetchLandmarksByType(Landmark::LandmarkType::Bin);
+
+  for(unsigned int i = 0; i < bins.size(); i++)
+    {
+      if(bins[i].mColor == mFirstBinImage)
+	mFirstBin = bins[i];
+      else if(bins[i].mColor == mSecondBinImage)
+	mSecondBin = bins[i];
+    }
+
+ std::vector<Landmark> windows = mLandmarkMap.fetchLandmarksByType(Landmark::LandmarkType::Window);
+
+  for(unsigned int i = 0; i < windows.size(); i++)
+    {
+      if(windows[i].mColor == mWindowColor)
+	mWindow = windows[i];
+    }
+
+  mPinger = (mLandmarkMap.fetchLandmarksByType(Landmark::LandmarkType::Pinger))[0];
+}
+
+void setWaypoint(geometry_msgs::Vector3 point)
+{
+  waypoint_controller::SetDesiredPose set_pose;
+  set_pose.request.Pos.Mode.x = 1;
+  set_pose.request.Pos.Mode.y = 1;
+  set_pose.request.Pos.Mode.z = 1;
+  
+  set_pose.request.Pos.Mask.x = 1;
+  set_pose.request.Pos.Mask.y = 1;
+  set_pose.request.Pos.Mask.z = 1;
+  
+  set_pose.request.Pos.Values.x = point.x;
+  set_pose.request.Pos.Values.y = point.y;
+  set_pose.request.Pos.Values.z = point.z;
+
+  set_pose.request.Ori.Mode.x = 0;
+  set_pose.request.Ori.Mode.y = 0;
+  set_pose.request.Ori.Mode.z = 0;
+  
+  set_pose.request.Ori.Mask.x = 0;
+  set_pose.request.Ori.Mask.y = 0;
+  set_pose.request.Ori.Mask.z = 0;
+  
+  set_pose.request.Ori.Values.x = 0;
+  set_pose.request.Ori.Values.y = 0;
+  set_pose.request.Ori.Values.z = 0;
+
+  waypoint_controller_srv.call(set_pose);  
+}
+
+void setWaypoint(cv::Point3d point)
+{
+  waypoint_controller::SetDesiredPose set_pose;
+  set_pose.request.Pos.Mode.x = 1;
+  set_pose.request.Pos.Mode.y = 1;
+  set_pose.request.Pos.Mode.z = 1;
+  
+  set_pose.request.Pos.Mask.x = 1;
+  set_pose.request.Pos.Mask.y = 1;
+  set_pose.request.Pos.Mask.z = 1;
+  
+  set_pose.request.Pos.Values.x = point.x;
+  set_pose.request.Pos.Values.y = point.y;
+  set_pose.request.Pos.Values.z = point.z;
+
+  set_pose.request.Ori.Mode.x = 0;
+  set_pose.request.Ori.Mode.y = 0;
+  set_pose.request.Ori.Mode.z = 0;
+  
+  set_pose.request.Ori.Mask.x = 0;
+  set_pose.request.Ori.Mask.y = 0;
+  set_pose.request.Ori.Mask.z = 0;
+  
+  set_pose.request.Ori.Values.x = 0;
+  set_pose.request.Ori.Values.y = 0;
+  set_pose.request.Ori.Values.z = 0;
+
+  waypoint_controller_srv.call(set_pose);  
+}
 
 // ######################################################################
 void state_init()
 {
-
-  // First stage of dive, should only happen once
-  if(itsDepthVal == -1 && itsDiveCount < 4)
-    {
-      ROS_INFO("Doing initial dive");
-
-      // Give diver 5 seconds to point sub at gate
-      sleep(5);
-      
-      // Make sure other SensorVotes do not have weights
-      // before going through gate
-      resetWeights();
-
-      // Set our desired heading to our current heading
-      // and set a heading weight
-      itsSensorVotes[PATH].heading.val = 0;
-      itsSensorVotes[PATH].heading.weight = 1.0;
-
-
-      // Set our desired depth to a fourth of itsGateDepth.
-      // This is done because we are diving in 4 stages.
-      // Also set a depth weight.
-      itsDepthVal = itsGateDepth / 4;
-      itsSensorVotes[PATH].depth.val = itsDepthVal;
-      itsSensorVotes[PATH].depth.weight = 1.0;
-
-      // Increment the dive stage we are on
-      itsDiveCount++;
-
-      // Indicate that PATH SensorVote vals have been set
-      itsSensorVotes[PATH].init = true;
-    }
-  // Dive States 2 through 4
-  else if(itsDepthVal != -1 &&
-          abs(itsDepthError) <= 4 && itsDiveCount < 4)
-    {
-      // Add an additional fourth of itsGateDepth to our desired depth
-      itsDepthVal = itsGateDepth / 4;
-      itsSensorVotes[PATH].depth.val = itsDepthVal;
-      itsSensorVotes[PATH].depth.weight = 1.0;
-
-      // increment the dive state
-      itsDiveCount++;
-
-      //ROS_INFO("Diving stage %d", itsDiveCount);
-
-      //ROS_INFO("itsDepthVal: %d, itsErr: %d", itsDepthVal, abs(itsDepthVal - its_current_ex_pressure));
-    }
-  // After going through all 4 stages of diving, go forward through the gate
-  else if(itsDepthVal != -1 &&
-          abs(itsDepthError) <= 4 && itsDiveCount >= 4)
-    {
-      itsCurrentState = STATE_DO_GATE;
-
-      ROS_INFO("State Init -> State Do Gate");
-    }
+  ROS_INFO("Doing initial dive");
+  
+  // Give diver 5 seconds to point sub at gate
+  sleep(5);
 }
 
 
@@ -326,13 +392,13 @@ void state_do_gate()
 
   // Set speed to MAX_SPEED
   set_speed(MAX_SPEED);
-  // Sleep for itsGateFwdTime
-  sleep(itsGateTime);
+  // Sleep for mGateFwdTime
+  sleep(mGateTime);
 
   ROS_INFO("Finished going through gate...");
 
   // Start following saliency to go towards flare
-  itsCurrentState = STATE_FIRST_BUOY;
+  mCurrentState = STATE_FIRST_BUOY;
 }
 
 // ######################################################################
@@ -340,49 +406,28 @@ void state_first_buoy()
 {
   ROS_INFO("Hitting First Buoy...");
 
-
-  ROS_INFO("heading val: %f, weight: %f",
-	   itsSensorVotes[FIRST_BUOY].heading.val,
-	   itsSensorVotes[FIRST_BUOY].heading.weight);
-
-  ROS_INFO("depth val: %f, weight: %f",
-	   itsSensorVotes[FIRST_BUOY].depth.val,
-	   itsSensorVotes[FIRST_BUOY].depth.weight);  
-
-  // Enable speed based on heading and depth error
-  if(!itsSpeedEnabled)
-    itsSpeedEnabled = true;
- 
   // Request a buoy position update
   landmark_finder::FindLandmarks find_buoy;
   find_buoy.request.Type = Landmark::LandmarkType::Buoy;
-  find_buoy.request.Ids.push_back(itsFirstBuoyColor);
+  find_buoy.request.Ids.push_back(mFirstBuoyColor);
 
   // if a buoy is found
   if(landmark_finder_srv.call(find_buoy))
-    {
-      // update position of buoy
-      itsSensorVotes[FIRST_BUOY].heading.val = find_buoy.response.Landmarks[0].Center.y;
-      itsSensorVotes[FIRST_BUOY].depth.val = find_buoy.response.Landmarks[0].Center.z;
-
-      // reset decayed buoy weights
-      itsSensorVotes[FIRST_BUOY].heading.weight = 1.0;
-      itsSensorVotes[FIRST_BUOY].depth.weight = 1.0;
-
-      //check for state transition: i.e. buoy is close enough to be
+    {      
+      // check for state transition: i.e. buoy is close enough to be
       // considered a "hit" and update to next state
-      if(find_buoy.response.Landmarks[0].Center.x <= BUOY_HIT_DISTANCE)
+      if(find_buoy.response.Landmarks.LandmarkArray[0].Center.x <= BUOY_HIT_DISTANCE)
 	{
-	  itsSensorVotes[FIRST_BUOY].heading.weight = 0.0;
-	  itsSensorVotes[FIRST_BUOY].depth.weight = 0.0;
-	  itsCurrentState = STATE_SECOND_BUOY;
-	} 
+	  mCurrentState = STATE_SECOND_BUOY;
+	}
+      // otherwise manuever towards visible buoy 
+      else
+	setWaypoint(find_buoy.response.Landmarks.LandmarkArray[0].Center);
     }
+  // otherwise move towards estimated buoy waypoint on map
   else
     {
-      // Decay the weight we place on FIRST_BUOY SensorVote's pose
-      itsSensorVotes[FIRST_BUOY].heading.decay = 0.1;
-      itsSensorVotes[FIRST_BUOY].depth.decay = 0.1;
+      setWaypoint(mFirstBuoy.mCenter);
     }      
 }
 
@@ -391,109 +436,227 @@ void state_second_buoy()
 {
   ROS_INFO("Hitting Second Buoy...");
 
-
-  ROS_INFO("heading val: %f, weight: %f",
-	   itsSensorVotes[SECOND_BUOY].heading.val,
-	   itsSensorVotes[SECOND_BUOY].heading.weight);
-
-  ROS_INFO("depth val: %f, weight: %f",
-	   itsSensorVotes[SECOND_BUOY].depth.val,
-	   itsSensorVotes[SECOND_BUOY].depth.weight);  
-
-  // Enable speed based on heading and depth error
-  if(!itsSpeedEnabled)
-    itsSpeedEnabled = true;
- 
   // Request a buoy position update
   landmark_finder::FindLandmarks find_buoy;
   find_buoy.request.Type = Landmark::LandmarkType::Buoy;
-  find_buoy.request.Ids.push_back(itsSecondBuoyColor);
+  find_buoy.request.Ids.push_back(mSecondBuoyColor);
 
   // if a buoy is found
   if(landmark_finder_srv.call(find_buoy))
     {
-      // update position of buoy
-      itsSensorVotes[SECOND_BUOY].heading.val = find_buoy.response.Landmarks[0].Center.y;
-      itsSensorVotes[SECOND_BUOY].depth.val = find_buoy.response.Landmarks[0].Center.z;
-
-      // reset decayed buoy weights
-      itsSensorVotes[SECOND_BUOY].heading.weight = 1.0;
-      itsSensorVotes[SECOND_BUOY].depth.weight = 1.0;
-
-      //check for state transition: i.e. buoy is close enough to be
+      // check for state transition: i.e. buoy is close enough to be
       // considered a "hit" and update to next state
-      if(find_buoy.response.Landmarks[0].Center.x <= BUOY_HIT_DISTANCE)
+      if(find_buoy.response.Landmarks.LandmarkArray[0].Center.x <= BUOY_HIT_DISTANCE)
 	{
-	  itsSensorVotes[SECOND_BUOY].heading.weight = 0.0;
-	  itsSensorVotes[SECOND_BUOY].depth.weight = 0.0;
-	  itsCurrentState = STATE_HEDGE;
-	} 
+	  mCurrentState = STATE_HEDGE;
+	}
+      // otherwise move towards visible buoy
+      else
+	setWaypoint(find_buoy.response.Landmarks.LandmarkArray[0].Center);
     }
+  // otherwise move towards estimated buoy waypoint on map
   else
     {
-      // Decay the weight we place on SECOND_BUOY SensorVote's pose
-      itsSensorVotes[SECOND_BUOY].heading.decay = 0.1;
-      itsSensorVotes[SECOND_BUOY].depth.decay = 0.1;
+      setWaypoint(mSecondBuoy.mCenter);
     }   
 }
 // ######################################################################
 void state_hedge()
 {
   ROS_INFO("Maneuvering Hedge...");
+  
+  // Request a bin position update
+  landmark_finder::FindLandmarks find_bin;
+  find_bin.request.Type = Landmark::LandmarkType::Bin;
+  find_bin.request.Ids.push_back(mFirstBinImage);
+ 
+  // if a bin is found
+  if(landmark_finder_srv.call(find_bin))
+    {
+      // if we are centered on bin, drop markers and move to next state
+      if(find_bin.response.Landmarks.LandmarkArray[0].Center.x <= BIN_CENTER_THRESHOLD &&
+	 find_bin.response.Landmarks.LandmarkArray[0].Center.y <= BIN_CENTER_THRESHOLD)
+	{
+	  // drop marker
+	  seabee3_driver_base::FiringDeviceAction fire_dropper;
+	  fire_dropper.request.Req = 1;
+	  dropper_one_srv.call(fire_dropper);
+
+	  // go to next state
+	  mCurrentState = STATE_FIRST_BIN;
+	} 
+      // maneuver towards visible bin
+      else
+	setWaypoint(find_bin.response.Landmarks.LandmarkArray[0].Center);
+    }
+  else
+    {
+      setWaypoint(mFirstBin.mCenter);
+    }
+}
+
+
+// ######################################################################
+void state_first_bin()
+{
+  ROS_INFO("Dropping Markers into First Bin...");
+
+  // Request a bin position update
+  landmark_finder::FindLandmarks find_bin;
+  find_bin.request.Type = Landmark::LandmarkType::Bin;
+  find_bin.request.Ids.push_back(mFirstBinImage);
+ 
+  // if a bin is found
+  if(landmark_finder_srv.call(find_bin))
+    {
+      // if we are centered on bin, drop markers and move to next state
+      if(find_bin.response.Landmarks.LandmarkArray[0].Center.x <= BIN_CENTER_THRESHOLD &&
+	 find_bin.response.Landmarks.LandmarkArray[0].Center.y <= BIN_CENTER_THRESHOLD)
+	{
+	  // drop marker
+	  seabee3_driver_base::FiringDeviceAction fire_dropper;
+	  fire_dropper.request.Req = 1;
+	  dropper_one_srv.call(fire_dropper);
+
+	  // go to next state
+	  mCurrentState = STATE_SECOND_BIN;
+	} 
+      // maneuver towards visible bin
+      else
+	setWaypoint(find_bin.response.Landmarks.LandmarkArray[0].Center);
+    }
+  else
+    {
+      setWaypoint(mFirstBin.mCenter);
+    }
+}
+
+// ######################################################################
+void state_second_bin()
+{
+  ROS_INFO("Dropping Markers into Second Bin...");
+
+  // Request a bin position update
+  landmark_finder::FindLandmarks find_bin;
+  find_bin.request.Type = Landmark::LandmarkType::Bin;
+  find_bin.request.Ids.push_back(mSecondBinImage);
+
+  // if a bin is found
+  if(landmark_finder_srv.call(find_bin))
+    {
+      // if we are centered on bin, drop markers and move to next state
+      if(find_bin.response.Landmarks.LandmarkArray[0].Center.x <= BIN_CENTER_THRESHOLD &&
+	 find_bin.response.Landmarks.LandmarkArray[0].Center.y <= BIN_CENTER_THRESHOLD)
+	{
+	  // drop marker
+	  seabee3_driver_base::FiringDeviceAction fire_dropper;
+	  fire_dropper.request.Req = 1;
+	  dropper_two_srv.call(fire_dropper);
+
+	  // go to next state
+	  mCurrentState = STATE_WINDOW;
+	} 
+      // maneuver towards visible bin
+      else
+	setWaypoint(find_bin.response.Landmarks.LandmarkArray[0].Center);
+    }
+  else
+    {
+      setWaypoint(mSecondBin.mCenter);
+    }
+}
+
+// ######################################################################
+void state_window()
+{
+  ROS_INFO("Shooting torpedo through marker...");
+
+  // Request a buoy position update
+  landmark_finder::FindLandmarks find_window;
+  find_window.request.Type = Landmark::LandmarkType::Window;
+
+  // if a bin is found
+  if(landmark_finder_srv.call(find_window))
+    {
+      // manuever towards window
+      setWaypoint(find_window.response.Landmarks.LandmarkArray[0].Center);
+
+      // if we are centered on window, shoot torpedo and move to next state
+      if(find_window.response.Landmarks.LandmarkArray[0].Center.x <= WINDOW_CENTER_THRESHOLD &&
+	 find_window.response.Landmarks.LandmarkArray[0].Center.z <= WINDOW_CENTER_THRESHOLD)
+	{
+	  // shoot torpedo
+	  seabee3_driver_base::FiringDeviceAction fire_shooter;
+	  fire_shooter.request.Req = 1;
+	  shooter_srv.call(fire_shooter);
+
+	  // move to next state
+	  mCurrentState = STATE_PINGER;
+	} 
+    }
+  else
+    {
+      setWaypoint(mSecondBuoy.mCenter);
+    }
+
+}
+
+// ######################################################################
+void state_pinger()
+{
+  ROS_INFO("Going to pinger...");
 
 }
 // ######################################################################
 
 int main(int argc, char** argv)
 {
-  itsCurrentState = STATE_INIT;
-  itsKillSwitchState = 1;
-  itsPoseError = -1.0;
-  //itsLastCompositeHeading = 0.0;
-  //itsLastCompositeDepth = 0.0;
-  //  itsLastSpeed = 0.0;
-  itsDepthVal = -1;
-  itsDepthError = 0;
-  itsDiveCount = 0;
-  itsHeadingVal = -1;
-  itsHeadingError = 0;
-  itsSpeedEnabled = false;
-  itsLastDecayTime = ros::Time(-1);
-  // initialize SensorVotes
-  initSensorVotes();
+  mCurrentState = STATE_INIT;
+  mKillSwitchState = 1;
+  mPoseError = -1.0;
+  mDepthVal = -1;
+  mDepthError = 0;
+  mDiveCount = 0;
+  mHeadingVal = -1;
+  mHeadingError = 0;
+  mSpeedEnabled = false;
   resetPID();
 
   ros::init(argc, argv, "seabee3_mission_control");
   ros::NodeHandle n("~");
 
   // initialize command-line parameters
-  n.param("gate_time", itsGateTime, 40.0);
-  n.param("gate_depth", itsGateDepth, 85.0);
-  n.param("heading_corr_scale", itsHeadingCorrScale, 125.0);
-  n.param("depth_corr_scale", itsDepthCorrScale, 50.0);
-  n.param("speed_corr_scale", itsSpeedCorrScale, 1.0);
-  n.param("first_buoy_color", itsFirstBuoyColor, 0);
-  n.param("second_buoy_color", itsSecondBuoyColor, 2);
+  n.param("gate_time", mGateTime, 40.0);
+  n.param("gate_depth", mGateDepth, 85.0);
+  n.param("heading_corr_scale", mHeadingCorrScale, 125.0);
+  n.param("depth_corr_scale", mDepthCorrScale, 50.0);
+  n.param("speed_corr_scale", mSpeedCorrScale, 1.0);
+  n.param("first_buoy_color", mFirstBuoyColor, 0);
+  n.param("second_buoy_color", mSecondBuoyColor, 2);
+  n.param("first_bin_image", mFirstBinImage, 0);
+  n.param("second_bin_image", mSecondBinImage, 1);
+  n.param("window_color", mWindowColor, 0);
 
   kill_switch_sub = n.subscribe("seabee3/KillSwitch", 100, killSwitchCallback);
 	
-  //driver_calibrate = n.serviceClient<xsens_node::CalibrateRPYOri>("xsens/CalibrateRPYOri");
   driver_depth = n.serviceClient<seabee3_driver::SetDesiredXYZ>("seabee3/setDesiredXYZ");
   driver_rpy = n.serviceClient<seabee3_driver::SetDesiredRPY>("seabee3/setDesiredRPY");
-  landmark_finder_srv = n.serviceClient<landmark_finder::FindLandmarks>("landmark_finder/FindBuoys");
   driver_speed = n.advertise<geometry_msgs::Twist>("seabee3/cmd_vel", 1);
-
-  //  ros::Subscriber buoy_finder_sub = n.subscribe("perception/buoy_pos", 100, buoyFinderCallback);
+  dropper_one_srv = n.serviceClient<seabee3_driver_base::FiringDeviceAction>("seabee3/Dropper1Action");
+  dropper_two_srv = n.serviceClient<seabee3_driver_base::FiringDeviceAction>("seabee3/Dropper2Action");
+  shooter_srv = n.serviceClient<seabee3_driver_base::FiringDeviceAction>("seabee3/ShooterAction");
+  landmark_finder_srv = n.serviceClient<landmark_finder::FindLandmarks>("landmark_finder/FindBuoys");
+  landmark_map_srv = n.serviceClient<landmark_map_server::FetchLandmarkMap>("landmark_map_server/fetchLandmarkMap");
+  waypoint_controller_srv = n.serviceClient<waypoint_controller::SetDesiredPose>("waypoint_controller/setDesiredPose");
+  
+  initLandmarkMap();
 
   while(ros::ok())
     {	  
-      resetSensorVoteValues();
-
-      // If the kill switch is active, act based on the sub's 
-      // current state.
-      if(itsKillSwitchState == 0)
+      // If the kill switch is active, act based on the sub's current state.
+      if(mKillSwitchState == 0)
 	{
-	  switch(itsCurrentState)
+	  switch(mCurrentState)
 	    {
 	    case STATE_INIT:
 	      state_init();
@@ -510,86 +673,30 @@ int main(int argc, char** argv)
 	    case STATE_HEDGE:
 	      state_hedge();
 	      break;
+	    case STATE_FIRST_BIN:
+	      state_first_bin();
+	      break;
+	    case STATE_SECOND_BIN:
+	      state_second_bin();
+	      break;
+	    case STATE_WINDOW:
+	      state_window();
+	      break;
+	    case STATE_PINGER:
+	      state_pinger();
+	      break;
 	    }
-
-	  // only decay the weights every 1 second
-	  if(itsLastDecayTime == ros::Time(-1) ||
-	     (ros::Time::now() - itsLastDecayTime) >= ros::Duration(1))
-	    {	      
-	      itsLastDecayTime = ros::Time::now();
-	      decayWeights();
-	    }
-	      
-	  // Calculate the composite heading and depth based on the SensorPose
-	  // values and weights of the SensorVotes
-	  float compositeHeading = 0.0;
-	  int totalHeadingWeight = 0;
-	      
-	  float compositeDepth = 0.0;
-	  float totalDepthWeight = 0.0;
-	      
-	  for(unsigned int i = 0; i < itsSensorVotes.size(); i++)
-	    {
-	      SensorVote sv = itsSensorVotes[i];
-		  
-	      compositeHeading += sv.heading.val * sv.heading.weight;
-	      totalHeadingWeight += sv.heading.weight;
-		  
-	      compositeDepth += sv.depth.val * sv.depth.weight;
-	      totalDepthWeight += sv.depth.weight;
-	    }
-	      
-	  // If at lease one heading weight is set,
-	  // calculate final heading and send it
-	  if(totalHeadingWeight != 0.0)
-	    {
-		  
-	      compositeHeading /= totalHeadingWeight;
-		  
-	      // make sure current heading differs from last heading by MIN_POSE_DIFF
-	      //if(abs(itsLastCompositeHeading - compositeHeading) > MIN_POSE_DIFF)
-	      set_heading(compositeHeading);
-	    }
-	      
-	  // If at lease one depth weight is set,
-	  // calculate final depth and send it
-	  if(totalDepthWeight != 0.0)
-	    {
-	      compositeDepth /= totalDepthWeight;
-		  
-	      // make sure current depth differs from last depth by MIN_POSE_DIFF
-	      //if(abs(itsLastCompositeDepth - compositeDepth) > MIN_POSE_DIFF)
-	      set_depth(compositeDepth);
-	    }
-	      
-	      
-	  // Calculate the speed we should be going based on heading and depth error
-	  itsPoseError = sqrt((float)(itsHeadingError*itsHeadingError + itsDepthError*itsDepthError));
-	      
-	  float speedCorr = itsPoseError * itsSpeedCorrScale;
-	      
-	  // Make sure correction doesn't go above max speed
-	  if(speedCorr > MAX_SPEED)
-	    speedCorr = MAX_SPEED;
-	      
-	  // If setting speed is enabled, send corrected speed to BeeStemI
-	  if(itsSpeedEnabled)
-	    set_speed(MAX_SPEED - speedCorr);
-	      
-// 	  itsLastCompositeHeading = compositeHeading;
-// 	  itsLastCompositeDepth = compositeDepth;
-// 	  itsLastSpeed = MAX_SPEED - speedCorr;
 	}
       else
 	{
 	  ROS_INFO("Waiting for kill switch...\n");
 	  resetPID();
 	  
-	  itsDepthVal = -1;
-	  itsDepthError = 0;
-	  itsHeadingVal = -1;
-	  itsHeadingError = 0; 
-	  itsCurrentState = STATE_INIT;
+	  mDepthVal = -1;
+	  mDepthError = 0;
+	  mHeadingVal = -1;
+	  mHeadingError = 0; 
+	  mCurrentState = STATE_INIT;
 	}
 
       ros::Rate(20).sleep();
