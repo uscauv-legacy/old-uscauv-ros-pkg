@@ -54,7 +54,7 @@
 #include <sys/time.h>
 #include <time.h>
 
-unsigned int id = 			0x007E0101; // hex 128, my ID 
+unsigned int id = 			0x007F0101; // hex 128, my ID 
 unsigned int destination = 	0x005A0101; // COP: subsystem ID is 90 - 0x005A hex
 
 using namespace std;
@@ -337,18 +337,15 @@ int main( int argc, char* argv[] )
 
 	msg_vel.msg_id 		= 0x4403;
 	msg_vel.pv 			= 1; 
-	msg_vel.vel_x 		= 100; //scaleToUInt32(200, -327.68, 327.67);
-	msg_vel.msg_id  	= 0;
-	msg_vel.pv 			= 0;
-	msg_vel.vel_x 		= 0;
-	msg_vel.vel_y 		= 0;
-	msg_vel.vel_z 		= 0;
-	msg_vel.vel_rms 	= 0;
-	msg_vel.roll_rate 	= 0;
-	msg_vel.pitch_rate 	= 0;
-	msg_vel.rate_rms 	= 0;
-	msg_vel.yaw_rate 	= 0;
-	msg_vel.time_stamp 	= 0;
+	msg_vel.vel_x 		= scaleToUInt32(200, -327.68, 327.67);
+	msg_vel.vel_y 		= scaleToUInt32(0, -327.68, 327.67);
+	msg_vel.vel_z 		= scaleToUInt32(0, -327.68, 327.67);
+	msg_vel.vel_rms 	= scaleToUInt32(0, 0, 100);
+	msg_vel.roll_rate 	= scaleToUInt16(0, -32.768, 32.767);
+	msg_vel.pitch_rate 	= scaleToUInt16(0, -32.768, 32.767);
+	msg_vel.yaw_rate 	= scaleToUInt16(0, -32.768, 32.767);
+	msg_vel.rate_rms 	= scaleToUInt16(0, 0, 3.14);
+	msg_vel.time_stamp 	= scaleToUInt32(0);
 
 	// Now we send the message to the COP using Junior.  Recall
 	// that the COP subsystem id is decimal 90 (0x005A hex)
