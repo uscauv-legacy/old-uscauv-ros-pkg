@@ -54,8 +54,21 @@
 #include <sys/time.h>
 #include <time.h>
 
+//----------------------------------------------------------------
+// Global Variables because I suck at programming
+//----------------------------------------------------------------
+
+// variables for receiving messages
+char buffer[1000];          	// Allocate the space for a received message
+unsigned int size = 1000;      	// Initialize size
+unsigned int source;            // This value is returned as an ID from the
+								// sender of the message
+long int handle;				// unique identifier for transaction
 unsigned int id = 			0x00870101; // 0x87 = 135, my ID 
 unsigned int destination = 	0x005A0101; // COP: subsystem ID is 90 - 0x005A hex
+int *priority; 
+int *flags; 
+unsigned short *msg_id; 
 
 using namespace std;
 
@@ -137,16 +150,6 @@ double unscaleFromUInt32(unsigned int val, double low, double high)
 }
 
 //----------------------------------------------------------------
-// Global Variables because I suck at programming
-//----------------------------------------------------------------
-
-// variables for receiving messages
-char buffer[1000];          	// Allocate the space for a received message
-unsigned int size = 1000;      	// Initialize size
-unsigned int source;            // This value is returned as an ID from the
-								// sender of the message
-	
-//----------------------------------------------------------------
 // Begin Main
 //----------------------------------------------------------------
 int main( int argc, char* argv[] )
@@ -178,8 +181,6 @@ int main( int argc, char* argv[] )
 	cout << "\n\tBEGINNING CONNECTION";
 	cout << "\n------------------------------------------------\n\n";
 
-	long int handle;
-
 	bool connection_established = false;
 	while( connection_established == false)
 	{
@@ -209,17 +210,18 @@ int main( int argc, char* argv[] )
 	// First we will wait for the Query Services message. We will keep looping
 	// until we find it.
 	// as5710 Page 50
-/*
+
 	// check for Query Services message received
 	bool query_services_received = false; 
 	while ( query_services_received == false)
 	{
-		if (JrReceive( handle, &source, &size, buffer) == NoMessages)
+		if (JrReceive( handle, &source, &size, buffer, priority, flags, msg_id) == NoMessages)
 			cout << "\nNo Message Received Yet...\n\n";
 		else 
 		{
-			cout << "\nReceived " << size << " bytes from " << source << "\n\n";
-			cout << "\n***Received Message***\n" << buffer << "\n\n\n";
+			cout << "\n\nMSG_ID = " << msg_id;
+			cout << "\nReceived " << size << " bytes from " << source << "\n";
+			//cout << "\n***Received Message***\n" << buffer << "\n\n\n";
 			query_services_received = true;
 		}
 		ros::Duration(1).sleep();
@@ -228,7 +230,7 @@ int main( int argc, char* argv[] )
 	// Now that the Query Services message has been received, we will send
 	// back the "Report Services" message.
 	// as5710 Page 56
-
+/*
 	REPORT_SERVICES_MSG msg_serv;
 	msg_serv.msg_id = 
 	msg_serv.node_id =
