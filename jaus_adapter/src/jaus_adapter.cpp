@@ -45,6 +45,7 @@
 #include <geometry_msgs/Twist.h>
 #include <geometry_msgs/Vector3.h>
 
+#include <vector>
 #include <string>
 #include <sstream>
 #include <math.h>
@@ -54,13 +55,17 @@
 #include <sys/time.h>
 #include <time.h>
 
+using namespace std;
+
+#define MAX_BUFFER_SIZE 1000
+
 //----------------------------------------------------------------
 // Global Variables because I suck at programming
 //----------------------------------------------------------------
 
 // variables for receiving messages
-char buffer[1000];          	// Allocate the space for a received message
-unsigned int size = 1000;      	// Initialize size
+char buffer[MAX_BUFFER_SIZE];          	// Allocate the space for a received message
+unsigned int size = MAX_BUFFER_SIZE;   	// Initialize size
 unsigned int source;            // This value is returned as an ID from the
 								// sender of the message
 long int handle;				// unique identifier for transaction
@@ -149,6 +154,22 @@ double unscaleFromUInt32(unsigned int val, double low, double high)
 	return scale_factor * ((double) val) + low;
 }
 
+
+// Helper function to extract the number of nodes/components in the
+// capability request
+void extractServiceQuery(char* buffer)
+{
+	int numSequences = (int)buffer[0];
+	vector<int> nodes;
+	//TODO:  Extract all the nodes and components for each node
+	for (int i = 0; i < numSequences; i++)
+	{
+		//nodes.push_back((int)buffer[i]);
+	}
+}
+
+
+
 //----------------------------------------------------------------
 // Begin Main
 //----------------------------------------------------------------
@@ -227,6 +248,8 @@ int main( int argc, char* argv[] )
 		ros::Duration(1).sleep();
 	}
 
+	extractServiceQuery(buffer);
+
 	// Now that the Query Services message has been received, we will send
 	// back the "Report Services" message.
 	// as5710 Page 56
@@ -292,7 +315,7 @@ int main( int argc, char* argv[] )
 	// COP sends: Query Velocity State, return: Report Velocity State
 	//     Velocity X, Raw Rate, & Time Stamp [320 Decimal, 0104h]
 	// Units are meters per second
-/*
+
 	// Receive Query Velocity
 	// Page 66 in as6009
 	bool query_velocity_received = false; 
@@ -308,7 +331,7 @@ int main( int argc, char* argv[] )
 		}
 		ros::Duration(1).sleep();
 	}
-*/
+
 
 	// Now send Report Velocity State
 	// pv = 1 for competition
@@ -316,7 +339,7 @@ int main( int argc, char* argv[] )
 	REPORT_VELOCITY_STATE_MSG msg_vel;
 
 	msg_vel.msg_id 		= 0x4402;
-	msg_vel.pv 			= 1; 
+	msg_vel.pv 		= 1; // Should be (unsigned short*)&buffer
 	msg_vel.vel_x 		= scaleToUInt32(200, -327.68, 327.67);
 //	msg_vel.vel_y 		= scaleToUInt32(0, -327.68, 327.67);
 //	msg_vel.vel_z 		= scaleToUInt32(0, -327.68, 327.67);
