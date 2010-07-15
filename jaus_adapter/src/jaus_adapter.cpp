@@ -1,5 +1,43 @@
+/*******************************************************************************
+ *
+ *      jaus_adapter 
+ * 
+ *      Copyright (c) 2010, Johnny 'Pimp Masta' O'Hollaren, more@cow.bell
+ *      All rights reserved.
+ *
+ *      Redistribution and use in source and binary forms, with or without
+ *      modification, are permitted provided that the following conditions are
+ *      met:
+ *      
+ *      * Redistributions of source code must retain the above copyright
+ *        notice, this list of conditions and the following disclaimer.
+ *      * Redistributions in binary form must reproduce the above
+ *        copyright notice, this list of conditions and the following disclaimer
+ *        in the documentation and/or other materials provided with the
+ *        distribution.
+ *      * Neither the name of the USC Robotics Team nor the names of its
+ *        contributors may be used to endorse or promote products derived from
+ *        this software without specific prior written permission.
+ *      
+ *      THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+ *      "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+ *      LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+ *      A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+ *      OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+ *      SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+ *      LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+ *      DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+ *      THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ *      (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+ *      OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ *
+ *******************************************************************************/
+
+
+
 // TODO
 // Does each msg_id need to be unique? 
+// try with both full and not full msg structs
 
 #include "JuniorAPI.h"
 
@@ -31,16 +69,6 @@ using namespace std;
 // DEFINE MESSAGES TO BE PASSED
 //----------------------------------------------------------------
 
-// Report Services
-typedef struct {
-	unsigned short 	msg_id;
-	unsigned int 	node_id;
-	unsigned int 	component_id;
-	unsigned int	instance_id;
-	unsigned int	uri;
-	unsigned int	version_mjr;
-	unsigned int	version_mnr;
-} REPORT_SERVICES_MSG;
 
 // Report Velocity
 typedef struct {
@@ -139,9 +167,6 @@ unsigned int GetTimeOfDay()
 // Global Variables because I suck at programming
 //----------------------------------------------------------------
 
-// bogus constant I will use in place of timestamp because I'm lazy
-//unsigned int TIME = scaleToUInt32(0x11111111, -100000, 100000);
-
 // variables for receiving messages
 char buffer[1000];          	// Allocate the space for a received message
 unsigned int size = 1000;      	// Initialize size
@@ -201,8 +226,6 @@ int main( int argc, char* argv[] )
 		ros::Duration(5).sleep();
 	}
 
-	ros::spinOnce();
-
 	//----------------------------------------------------------------
 	// TASK 2 - CAPABILITIES DISCOVERY
 	//----------------------------------------------------------------
@@ -214,7 +237,6 @@ int main( int argc, char* argv[] )
 	// First we will wait for the Query Services message. We will keep looping
 	// until we find it.
 	// as5710 Page 50
-								// source that sent the message
 /*
 	// check for Query Services message received
 	bool query_services_received = false; 
@@ -224,14 +246,13 @@ int main( int argc, char* argv[] )
 			cout << "\nNo Message Received Yet...\n\n";
 		else 
 		{
-			cout << "\nReceived " << size << " bytes of data from " << source << "\n\n";
+			cout << "\nReceived " << size << " bytes from " << source << "\n\n";
 			cout << "\n***Received Message***\n" << buffer << "\n\n\n";
 			query_services_received = true;
 		}
 		ros::Duration(1).sleep();
 	}
-*/
-/*
+
 	// Now that the Query Services message has been received, we will send
 	// back the "Report Services" message.
 	// as5710 Page 56
@@ -308,13 +329,15 @@ int main( int argc, char* argv[] )
 		ros::Duration(1).sleep();
 	}
 */
+
 	// Now send Report Velocity State
+	// pv = 1 for competition
 	// Page 72 in as6009
 	REPORT_VELOCITY_STATE_MSG msg_vel;
 
 	msg_vel.msg_id 		= 0x4403;
 	msg_vel.pv 			= 1; 
-	msg_vel.vel_x 		= 10; //scaleToUInt32(200, -327.68, 327.67);
+	msg_vel.vel_x 		= 100; //scaleToUInt32(200, -327.68, 327.67);
 	msg_vel.msg_id  	= 0;
 	msg_vel.pv 			= 0;
 	msg_vel.vel_x 		= 0;
@@ -332,10 +355,11 @@ int main( int argc, char* argv[] )
 	if (JrSend(handle, destination, sizeof(msg_vel), (char*)&msg_vel) != Ok)
 		cout << "\n\t *** Unable to Send Message *** \n\n";
 	else 
+	{
 		cout << "\n *** Successfully Sent REPORT VELOCITY STATE Message  ***\n";
-	cout << "Velocity X = " << msg_vel.vel_x << "\n\n";
-	ros::Duration(1).sleep();
-
+		cout << "Velocity X = " << msg_vel.vel_x << "\n\n";
+		ros::Duration(1).sleep();
+	}
 
 	//----------------------------------------------------------------
 	// TASK 5 - POSITION AND ORIENTATION REPORT
@@ -350,11 +374,8 @@ int main( int argc, char* argv[] )
 	// Page 53 in as6009 
 	REPORT_LOCAL_POSE_MSG msg_pose; // create message for sending yaw
 
-	// Populate the message.  The message id is fixed, but the
-	// X and Y data are bogus.  The PV is set to indicate that
-	// the first 2 optional fields are present.
 	msg_pose.msg_id 		= 0x4403;
-	msg_pose.pv 			= 320; // 8th and 10th positions = 101000000 = 320
+	msg_pose.pv 			= 128; 
 	msg_pose.pos_x 			= 0;
 	msg_pose.pos_y 			= 0;
 	msg_pose.pos_z 			= 0;
@@ -370,8 +391,10 @@ int main( int argc, char* argv[] )
 	if (JrSend(handle, destination, sizeof(msg_pose), (char*)&msg_pose) != Ok)
 		cout << "\n\t *** Unable to Send Message *** \n\n";
 	else 
+	{
 		cout << "\n *** Successfully Sent REPORT LOCAL POSE Message  ***\n";
-	cout << "Yaw = " << msg_pose.yaw << "\nTimestamp = " << msg_pose.time_stamp << "\n\n";
+		cout << "Yaw = " << msg_pose.yaw << "\nTimestamp = " << msg_pose.time_stamp << "\n\n";
+	}
 
 	//----------------------------------------------------------------
 	// Clean-up
