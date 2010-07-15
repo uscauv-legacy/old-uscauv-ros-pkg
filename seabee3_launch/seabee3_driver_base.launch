@@ -5,7 +5,7 @@
 		<param name="shooter/trigger_value" type="int" value="80" />
 		
 		<param name="dropper1/trigger_time" type="int" value="50" />
-		<param name="dropper1/trigger_value" type="int" value="40" />
+		<param name="dropper1/trigger_value" type="int" value="70" />
 		
 		<param name="dropper2/trigger_time" type="int" value="50" />
 		<param name="dropper2/trigger_value" type="int" value="40" />
