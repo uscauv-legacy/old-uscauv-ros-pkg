@@ -54,7 +54,7 @@
 #include <sys/time.h>
 #include <time.h>
 
-unsigned int id = 			0x007F0101; // hex 128, my ID 
+unsigned int id = 			0x00870101; // 0x87 = 135, my ID 
 unsigned int destination = 	0x005A0101; // COP: subsystem ID is 90 - 0x005A hex
 
 using namespace std;
@@ -75,14 +75,14 @@ typedef struct {
 	unsigned short 	msg_id;
 	unsigned short 	pv;
 	unsigned int   	vel_x;
-	unsigned int   	vel_y;
-	unsigned int   	vel_z;
-	unsigned int   	vel_rms;
-	unsigned short  roll_rate;
-	unsigned short  pitch_rate;
-	unsigned short  rate_rms;
-	unsigned short  yaw_rate;
-	unsigned int   	time_stamp;
+//	unsigned int   	vel_y;
+//	unsigned int   	vel_z;
+//	unsigned int   	vel_rms;
+//	unsigned short  roll_rate;
+//	unsigned short  pitch_rate;
+//	unsigned short  rate_rms;
+//	unsigned short  yaw_rate;
+//	unsigned int   	time_stamp;
 } REPORT_VELOCITY_STATE_MSG;
 
 // Report Pose
@@ -90,14 +90,14 @@ typedef struct {
 	unsigned short 	msg_id;
 	unsigned short 	pv;
 	unsigned int   	pos_x;
-	unsigned int   	pos_y;
-	unsigned int   	pos_z;
-	unsigned int   	pos_rms;
-	unsigned short 	roll;
-	unsigned short 	pitch;
+//	unsigned int   	pos_y;
+//	unsigned int   	pos_z;
+//	unsigned int   	pos_rms;
+//	unsigned short 	roll;
+//	unsigned short 	pitch;
 	unsigned short 	yaw;
-	unsigned short  altitude_rms;
-	unsigned int   	time_stamp;
+//	unsigned short  altitude_rms;
+//	unsigned int   	time_stamp;*/
 } REPORT_LOCAL_POSE_MSG;
 
 //----------------------------------------------------------------
@@ -134,33 +134,6 @@ double unscaleFromUInt32(unsigned int val, double low, double high)
 	double int_range = pow(2, 32) - 1;
 	double scale_factor = (high-low)/int_range;
 	return scale_factor * ((double) val) + low;
-}
-
-unsigned int GetTimeOfDay()
-{
-	struct timeval tv;
-	struct tm *timeinfo;
-	time_t rawtime;
-	unsigned int tstamp = 0;
-	
-	gettimeofday(&tv, NULL);
-	time(&rawtime);
-	timeinfo = gmtime ( &rawtime );
-	
-	unsigned int mMilliseconds = (unsigned int)(tv.tv_usec/1000.0);
-	int mDay = timeinfo->tm_mday;
-	int mHour = timeinfo->tm_hour;
-	int mMinute = timeinfo->tm_min;
-	int mSecond = timeinfo->tm_sec;
-	
-	tstamp |= (unsigned int)(mDay)    << 27;
-	tstamp |= (unsigned int)(mHour)   << 22;
-	tstamp |= (unsigned int)(mMinute) << 16;
-	tstamp |= (unsigned int)(mSecond) << 10;
-	tstamp |= mMilliseconds;
-	//cout << "Time Stamp: " << mDay << ":" << mHour << ":" << mMinute;
-    //cout << ":" << mSecond << ":" << mMilliseconds << endl;
-	return tstamp ;
 }
 
 //----------------------------------------------------------------
@@ -210,18 +183,17 @@ int main( int argc, char* argv[] )
 	bool connection_established = false;
 	while( connection_established == false)
 	{
-		if (JrConnect( id, "jr_config.xml", &handle) == Ok)
-		{
+		if (JrConnect( id, "jr_config.xml", &handle) != Ok)
+		{	
+			cout << "\nFailed to connect to Junior.\n\n";
+		}
+		else 
+		{	
 			cout << "\n\n------------------------------------------------";
 			cout << "\n\tSuccessfully Connected\n";
 			cout << "\tHandle: " << handle << "\n";
 			cout << "------------------------------------------------\n\n";
 			connection_established = true;
-		}
-		else 
-		{	
-			cout << "\nFailed to connect to Junior.\n\n";
-			return 0;
 		}
 		ros::Duration(5).sleep();
 	}
@@ -293,16 +265,22 @@ int main( int argc, char* argv[] )
 	// COP sends: Shutdown
 
 	// Receive Query Control
+	// as5710 page 47
 
 	// Send Report Control
+	// as5710 Page 52
 
 	// Recieve Request Control
+	// as5710 Page 41
 
 	// Send Confirm Control
+	// as5710 Page 41
 	
 	// Receive Query Status
+	// as5710 Page 46
 
 	// Send Report Status
+	// as5710 Page 51
 
 	// State machine for resume standbuy shutdown stuff 
 	
@@ -332,20 +310,20 @@ int main( int argc, char* argv[] )
 
 	// Now send Report Velocity State
 	// pv = 1 for competition
-	// Page 72 in as6009
+	// Page 72 in as6009, ID 4402
 	REPORT_VELOCITY_STATE_MSG msg_vel;
 
-	msg_vel.msg_id 		= 0x4403;
+	msg_vel.msg_id 		= 0x4402;
 	msg_vel.pv 			= 1; 
 	msg_vel.vel_x 		= scaleToUInt32(200, -327.68, 327.67);
-	msg_vel.vel_y 		= scaleToUInt32(0, -327.68, 327.67);
-	msg_vel.vel_z 		= scaleToUInt32(0, -327.68, 327.67);
-	msg_vel.vel_rms 	= scaleToUInt32(0, 0, 100);
-	msg_vel.roll_rate 	= scaleToUInt16(0, -32.768, 32.767);
-	msg_vel.pitch_rate 	= scaleToUInt16(0, -32.768, 32.767);
-	msg_vel.yaw_rate 	= scaleToUInt16(0, -32.768, 32.767);
-	msg_vel.rate_rms 	= scaleToUInt16(0, 0, 3.14);
-	msg_vel.time_stamp 	= scaleToUInt32(0);
+//	msg_vel.vel_y 		= scaleToUInt32(0, -327.68, 327.67);
+//	msg_vel.vel_z 		= scaleToUInt32(0, -327.68, 327.67);
+//	msg_vel.vel_rms 	= scaleToUInt32(0, 0, 100);
+//	msg_vel.roll_rate 	= scaleToUInt16(0, -32.768, 32.767);
+//	msg_vel.pitch_rate 	= scaleToUInt16(0, -32.768, 32.767);
+//	msg_vel.yaw_rate 	= scaleToUInt16(0, -32.768, 32.767);
+//	msg_vel.rate_rms 	= scaleToUInt16(0, 0, 3.14);
+//	msg_vel.time_stamp 	= scaleToUInt32(0);
 
 	// Now we send the message to the COP using Junior.  Recall
 	// that the COP subsystem id is decimal 90 (0x005A hex)
@@ -355,8 +333,8 @@ int main( int argc, char* argv[] )
 	{
 		cout << "\n *** Successfully Sent REPORT VELOCITY STATE Message  ***\n";
 		cout << "Velocity X = " << msg_vel.vel_x << "\n\n";
-		ros::Duration(1).sleep();
 	}
+	ros::Duration(3).sleep();
 
 	//----------------------------------------------------------------
 	// TASK 5 - POSITION AND ORIENTATION REPORT
@@ -372,16 +350,16 @@ int main( int argc, char* argv[] )
 	REPORT_LOCAL_POSE_MSG msg_pose; // create message for sending yaw
 
 	msg_pose.msg_id 		= 0x4403;
-	msg_pose.pv 			= 128; 
-	msg_pose.pos_x 			= 0;
-	msg_pose.pos_y 			= 0;
-	msg_pose.pos_z 			= 0;
-	msg_pose.pos_rms 		= 0;
-	msg_pose.roll 			= 0;
-	msg_pose.pitch 			= 0;
+	msg_pose.pv 			= 65; 
+	msg_pose.pos_x 			= scaleToUInt32(4.0, -100000, 100000);
+//	msg_pose.pos_y 			= 0;
+//	msg_pose.pos_z 			= 0;
+//	msg_pose.pos_rms 		= 0;
+//	msg_pose.roll 			= 0;
+//	msg_pose.pitch 			= 0;
 	msg_pose.yaw 			= scaleToUInt16(2.0, -3.14, 3.14); 
-	msg_pose.altitude_rms 	= 0;
-	msg_pose.time_stamp 	= 0; 
+//	msg_pose.altitude_rms 	= 0;
+//	msg_pose.time_stamp 	= 0;  
 
 	// Now we send the message to the COP using Junior.  Recall
 	// that the COP subsystem id is decimal 90 (0x005A hex)
@@ -390,8 +368,9 @@ int main( int argc, char* argv[] )
 	else 
 	{
 		cout << "\n *** Successfully Sent REPORT LOCAL POSE Message  ***\n";
-		cout << "Yaw = " << msg_pose.yaw << "\nTimestamp = " << msg_pose.time_stamp << "\n\n";
+		cout << "Yaw = " << msg_pose.yaw << "\n\n";
 	}
+	ros::Duration(3).sleep();
 
 	//----------------------------------------------------------------
 	// Clean-up
@@ -404,3 +383,33 @@ int main( int argc, char* argv[] )
 	ros::spinOnce();
 	return 0;
 }
+
+
+/*
+unsigned int GetTimeOfDay()
+{
+	struct timeval tv;
+	struct tm *timeinfo;
+	time_t rawtime;
+	unsigned int tstamp = 0;
+	
+	gettimeofday(&tv, NULL);
+	time(&rawtime);
+	timeinfo = gmtime ( &rawtime );
+	
+	unsigned int mMilliseconds = (unsigned int)(tv.tv_usec/1000.0);
+	int mDay = timeinfo->tm_mday;
+	int mHour = timeinfo->tm_hour;
+	int mMinute = timeinfo->tm_min;
+	int mSecond = timeinfo->tm_sec;
+	
+	tstamp |= (unsigned int)(mDay)    << 27;
+	tstamp |= (unsigned int)(mHour)   << 22;
+	tstamp |= (unsigned int)(mMinute) << 16;
+	tstamp |= (unsigned int)(mSecond) << 10;
+	tstamp |= mMilliseconds;
+	//cout << "Time Stamp: " << mDay << ":" << mHour << ":" << mMinute;
+    //cout << ":" << mSecond << ":" << mMilliseconds << endl;
+	return tstamp ;
+}
+*/
