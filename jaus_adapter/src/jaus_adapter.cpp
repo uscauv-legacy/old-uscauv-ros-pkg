@@ -165,6 +165,22 @@ typedef struct {
 } REPORT_ID_MSG;
 REPORT_ID_MSG msg_report_id;
 
+// Report Services
+// Serialize all these inherited messages together
+typedef struct {
+	unsigned short	msg_id;
+	unsigned char		node_list;
+	unsigned char		node_id;
+	unsigned char		component_list;
+	unsigned char		component_id;
+	unsigned char		instance_id;
+	unsigned char		service_list;
+	string					uri;
+	unsigned char		version_major;
+	unsigned char		version_minor;
+} REPORT_SERVICES_MSG;
+REPORT_SERVICES_MSG msg_service;
+
 //################################################################
 // Define some helper functions
 //################################################################
@@ -419,7 +435,22 @@ int main( int argc, char* argv[] )
 				case 0x2B03: // msg_id for Query Services [as5710, 50]
 					{
 						// send Report Services, 0x4B03 [as5710, 56]
-						continue;
+						// serialize all these inherited messages together
+						msg_service.msg_id          = 0x4B03;
+						msg_service.node_list				= 1;
+						msg_service.node_id					= 1;
+						msg_service.component_list	= 1;
+						msg_service.component_id		= 1;
+						msg_service.instance_id			= 0;
+						msg_service.service_list		= 1;
+						msg_service.uri							= "REPORT_YAW";
+						msg_service.version_major		= 4;
+						msg_service.version_minor		= 2;
+
+						if (JrSend(handle, destination, sizeof(msg_service), (char*)&msg_service) != Ok)
+							cout << "\n\t *** Unable to Send Message *** \n\n";
+						else 
+							cout << "\n *** REPORT SERVICES MESSAGE sent ***\n";
 					}
 
 					ros::Duration(1).sleep();
