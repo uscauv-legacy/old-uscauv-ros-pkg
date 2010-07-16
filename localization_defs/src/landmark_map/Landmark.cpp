@@ -169,8 +169,26 @@ Landmark(center, orientation, cv::Point3d(0.0762, 0.0762, 0.1524), visualization
 	return theMarker;
 }*/
 
+LandmarkTypes::Bin::Bin(cv::Point3d center, double orientation, int id) : 
+Landmark(center, orientation, cv::Point3d(0.6096, 0.9144, 0.0254), visualization_msgs::Marker::CUBE)
+{
+  mId = id;
+  mColor = Landmark::ColorIds::black;
+  mLandmarkType = Landmark::LandmarkType::Bin;
+}
+
+/*visualization_msgs::Marker LandmarkTypes::Bin::createMarker(std::string ns, std::string frame)
+{
+	const visualization_msgs::Marker & theMarker = Landmark::createMarker(ns, frame);
+	
+	theMarker.type = visualization_msgs::Marker::CUBE;
+	
+	return theMarker;
+}*/
+
+
 LandmarkTypes::Pipe::Pipe(cv::Point3d center, double orientation) : 
-Landmark(center, orientation, cv::Point3d(1.2192, 0.6096, 0.0254), visualization_msgs::Marker::CUBE)
+Landmark(center, orientation, cv::Point3d(1.2192, 0.6096, 0.1524), visualization_msgs::Marker::CUBE)
 {
 	mColor = Landmark::ColorIds::orange;
 	mLandmarkType = Landmark::LandmarkType::Pipe;

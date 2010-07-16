@@ -54,6 +54,14 @@ public:
 		const static int Window = 	4;
 	};
 	
+	struct ImageIds
+	{
+		const static int axe		= 0 ;
+		const static int clippers	= 1 ;
+		const static int hammer		= 2 ;
+		const static int machete	= 3 ;
+	};
+
 	struct ColorIds
 	{
 		const static int red		= 0 ;
@@ -132,6 +140,13 @@ namespace LandmarkTypes
 	{
 	public:
 		Pinger(cv::Point3d center, double orientation, int id);
+//		visualization_msgs::Marker createMarker(std::string ns, std::string frame);
+	};
+
+	class Bin : public Landmark
+	{
+	public:
+		Bin(cv::Point3d center, double orientation, int id);
 //		visualization_msgs::Marker createMarker(std::string ns, std::string frame);
 	};
 
