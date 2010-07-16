@@ -13,6 +13,7 @@
   <depend package="seabee3_driver_base" />
   <depend package="tf" />
   <depend package="xsens_node" />
+  <depend package="geometry_msgs" />
 
 </package>
 

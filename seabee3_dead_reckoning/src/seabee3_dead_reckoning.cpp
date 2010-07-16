@@ -9,7 +9,7 @@ Code taken from: http://www.ros.org/wiki/navigation/Tutorials/RobotSetup/Odom
 #include <seabee3_driver_base/Pressure.h>
 #include <tf/transform_broadcaster.h>
 #include <xsens_node/IMUData.h>
-
+#include <seabee3_dead_reckoning/ResetOdom.h>
 
 //This is terrible, and needs to be put somewhere more logical and global
 #define FWD_RIGHT_THRUSTER 	   3
@@ -147,6 +147,10 @@ ros::Publisher odom_pub;
 //TODO: Get this from the pressure sensor
 double depth = 0.0;
 
+double x            =  0.0;
+double y            =  0.0;
+double z            =  0.0;
+
 //######################################################################
 geometry_msgs::Vector3 ori;
 geometry_msgs::Vector3 linear;
@@ -171,11 +175,9 @@ void cmdVelocityCallback(const geometry_msgs::TwistConstPtr & msg)
 //######################################################################
 void motorCntlCallback(const seabee3_driver_base::MotorCntlConstPtr & msg)
 {
+	ROS_INFO("motorCntlCallback");
 	//Create some persistent variables for this callback
 	static tf::TransformBroadcaster odom_broadcaster;
-	static double x            =  0.0;
-	static double y            =  0.0;
-	static double z            =  0.0;
 	static double th           =  0.0;
 	static double last_depth   =  0.0;
 	static double last_th      =  0.0;
@@ -195,8 +197,8 @@ void motorCntlCallback(const seabee3_driver_base::MotorCntlConstPtr & msg)
 	double dt = (current_time - last_time).toSec();
 
 	//Compute our predicted velocity from the motor commands
-	double vx  = sin(th) * trans_speed;
-	double vy  = cos(th) * trans_speed;
+	double vx  = cos(th) * trans_speed;
+	double vy  = sin(th) * trans_speed;
 
 	// if we are strafing, add that component to our velocities
 	if(linear.y != 0.0)
@@ -206,8 +208,8 @@ void motorCntlCallback(const seabee3_driver_base::MotorCntlConstPtr & msg)
 
 	  double strafe_speed = theSpeedInterpolator.getSpeed( (front_strafe_speed*-1 + back_strafe_speed)/2.0, 0);
 
-	  vx += sin(th+(M_PI/4)) * strafe_speed;
-	  vy += cos(th+(M_PI/4)) * strafe_speed;
+	  vx += cos(th+(M_PI/2)) * strafe_speed;
+	  vy += sin(th+(M_PI/2)) * strafe_speed;
 	}
 
 	double vth = (th - last_th) / dt;
@@ -229,8 +231,8 @@ void motorCntlCallback(const seabee3_driver_base::MotorCntlConstPtr & msg)
 	tf::quaternionTFToMsg(quat, odom_quat);
 	geometry_msgs::TransformStamped odom_trans;
 	odom_trans.header.stamp = current_time;
-	odom_trans.header.frame_id = "odom";//<----------- Not sure what this is
-	odom_trans.child_frame_id = "seabee_link"; //<---- Not sure what this is
+	odom_trans.header.frame_id = "/seabee3/odom";//<----------- Not sure what this is
+	odom_trans.child_frame_id = "/seabee3/base_link"; //<---- Not sure what this is
 	odom_trans.transform.translation.x = x;
 	odom_trans.transform.translation.y = y;
 	odom_trans.transform.translation.z = z;
@@ -240,12 +242,12 @@ void motorCntlCallback(const seabee3_driver_base::MotorCntlConstPtr & msg)
 	//Next, publish the odometry message over ROS
 	nav_msgs::Odometry odom;
 	odom.header.stamp = current_time;
-	odom.header.frame_id = "odom";//<----------- Not sure what this is
+	odom.header.frame_id = "/seabee3/odom";//<----------- Not sure what this is
 	odom.pose.pose.position.x  = x;
 	odom.pose.pose.position.y  = y;
 	odom.pose.pose.position.z  = z;
 	odom.pose.pose.orientation = odom_quat;
-	odom.child_frame_id = "seabee_link";//<----- Not sure what this is
+	odom.child_frame_id = "/seabee3/base_link";//<----- Not sure what this is
 	odom.twist.twist.linear.x  = vx;
 	odom.twist.twist.linear.y  = vy;
 	odom.twist.twist.linear.z  = vz;
@@ -258,10 +260,18 @@ void motorCntlCallback(const seabee3_driver_base::MotorCntlConstPtr & msg)
 	last_th = th;
 }
 
+bool ResetOdomCallback( seabee3_dead_reckoning::ResetOdom::Request & req, seabee3_dead_reckoning::ResetOdom::Response & resp)
+{
+	x = req.Pos.x;
+	y = req.Pos.y;
+	z = req.Pos.z; //this is just depth
+	return true;
+}
+
 int main(int argc, char** argv)
 {
 	ros::init(argc, argv, "seabee3_dead_reckoning");
-	ros::NodeHandle n("n");
+	ros::NodeHandle n("~");
 
 	ros::Subscriber motor_cntl_sub = n.subscribe
 		("/seabee3/motor_cntl", 1, motorCntlCallback);
@@ -269,7 +279,7 @@ int main(int argc, char** argv)
 	
 
 	ros::Subscriber imu_sub = n.subscribe
-		("/seabee3/data_raw", 1, imuCallback);
+		("/xsens/data_calibrated", 1, imuCallback);
 	imu_sub = imu_sub;
 
 	ros::Subscriber extl_pressure_sub = n.subscribe
@@ -280,8 +290,9 @@ int main(int argc, char** argv)
 		("/seabee3/cmd_vel", 1, cmdVelocityCallback);
 	cmd_vel_sub = cmd_vel_sub;
 
+	ros::ServiceServer reset_odom = n.advertiseService ("/seabee3/resetOdom", ResetOdomCallback);
 
-	odom_pub = n.advertise<nav_msgs::Odometry>("/seabee3/odom_prim", 50); 
+	odom_pub = n.advertise<nav_msgs::Odometry>("/seabee3/odom_prim", 5); 
 
 	ros::spin();
 

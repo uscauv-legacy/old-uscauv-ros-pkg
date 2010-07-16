@@ -45,27 +45,34 @@
 #include <string>
 
 #include <landmark_map/LandmarkMap.h>
-#include <localization_tools/LandmarkSensor.h>
+#include <landmark_map_server/FetchLandmarkMap.h>
+//#include <localization_tools/LandmarkSensor.h>
 
 std::string map_frame;
-std::vector <LocalizationParticle> mParticles;
-cv::Point3d mEstimatedPosition;
+//std::vector <LocalizationParticle> mParticles;
+//cv::Point3d mEstimatedPosition;
 tf::Transform mOdomCorrection;
+tf::TransformBroadcaster * tb;
 
+ros::ServiceClient fetch_landmark_map_srv;
+landmark_map_server::FetchLandmarkMap fetchLandmarkMap;
 
-
-void MapCallback(const localization_defs::LandmarkMapMsgConstPtr & map)
+void updateLocation()
 {
-	
+	fetch_landmark_map_srv.call(fetchLandmarkMap);
+	//mach up shit on map, update odom correction
+	mOdomCorrection.setOrigin( tf::Vector3( 0.0, 0.0, 0.0 ) );
+	mOdomCorrection.setRotation( tf::Quaternion( 0.0, 0.0, 0.0 ) );
+	tb->sendTransform( tf::StampedTransform( mOdomCorrection, ros::Time::now(), "/landmark_map", "/seabee3/odom" ) );
 }
 
-void calculatePosition( std::vector & particles, cv::Point3d & mEstimatedPosition)
+/*void calculatePosition( std::vector & particles, cv::Point3d & mEstimatedPosition)
 {
 	for(int i = 0; i < particles.size(); i ++)
 	{
 		particles
 	}
-}
+}*/
 
 int main( int argc, char* argv[] )
 {
@@ -74,7 +81,15 @@ int main( int argc, char* argv[] )
 	
 	n.param("map_frame", map_frame, std::string("map") );
 	
-	ros::Subscriber map_sub = n.subscribe("map", 1, MapCallback);
+	fetch_landmark_map_srv = n.serviceClient<landmark_map_server::FetchLandmarkMap>("/landmark_map_server/fetchLandmarkMap");
 	
+	tb = new tf::TransformBroadcaster;
 	
+	while( ros::ok() )
+	{
+		updateLocation();
+		ros::spinOnce();
+		ros::Rate(2).sleep();
+	}
+	return 1;
 }
