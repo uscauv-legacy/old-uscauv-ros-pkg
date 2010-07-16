@@ -69,7 +69,7 @@ unsigned short *msg_id;
 // unique identifier for transaction between sender and receiver
 long int handle;						
 
-using namespace std;
+using namespace std;	
 
 // Define the message structure.  We have to tell
 // the compiler to pack on 1-byte boundaries to
@@ -207,7 +207,7 @@ int main( int argc, char* argv[] )
 			cout << "\nReceived " << size << " bytes from " << source << "\n";
 
 			// then do something depending on what the message ID was
-			switch(msg_id)
+			switch( (int) msg_id )
 			{
 				//--------------------------------------------------------------
 				// REPORT LOCAL POSE
@@ -252,9 +252,11 @@ int main( int argc, char* argv[] )
 					//--------------------------------------------------------------
 				case 0x200D: // msg_id for Query Control [as5710, 47] 
 					// send Report Control, 0x400D [as5710, 52]
+					continue;
 
 				case 0x000D: // msg_id for Request Control [as5710, 41]
 					// send Confirm Control, 0x000F [as5710, 41] 
+					continue;
 
 				case 0x2002: // msg_id for Query Status [as5710, 46]
 					// send Report Status, 0x4002 [as5710, 51]
@@ -264,12 +266,15 @@ int main( int argc, char* argv[] )
 					// 3 SHUTDOWN
 					// 4 FAILURE
 					// 5 EMERGENCY
+					continue;
 
 					//--------------------------------------------------------------
 					// CAPABILITIES 
 					//--------------------------------------------------------------
 				case 0x2B03: // msg_id for Query Services [as5710, 50]
 					// send Report Services, 0x4B03 [as5710, 56]
+					continue;
+
 
 			}
 		}
