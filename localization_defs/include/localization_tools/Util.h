@@ -108,12 +108,12 @@ public:
 		return rad * 180.0 / M_PI;
 	}
 	
-	static cv::Point2d vectorTo(const cv::Point3d & p1, const cv::Point3d & p2)
+	/*static cv::Point2d vectorTo(const cv::Point3d & p1, const cv::Point3d & p2)
 	{
 		const cv::Point2d p1_cpy (p1.x, p1.y);
 		const cv::Point2d p2_cpy (p2.x, p2.y);
 		return vectorTo(p1_cpy, p2_cpy);
-	}
+	}*/
 	
 	static cv::Point2d vectorTo(const cv::Point2d & p1, const cv::Point2d & p2)
 	{

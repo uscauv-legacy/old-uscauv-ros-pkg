@@ -49,6 +49,7 @@ public:
 
 	void addLandmark(const Landmark l);
 	std::vector<Landmark> fetchLandmarksByType(const int type) const;
+	std::vector<Landmark> fetchWaypointsByType(const int type) const;
 	std::vector<visualization_msgs::Marker> createMarkerArray(const std::string & frame) const;
 	localization_defs::LandmarkMapMsg createMsg() const;
 

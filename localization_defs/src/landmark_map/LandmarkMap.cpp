@@ -53,7 +53,7 @@ LandmarkMap::LandmarkMap( const localization_defs::LandmarkMapMsg & msg )
 	
 	mLandmarks.resize( msg.Map.LandmarkArray.size() );
 	
-	for(int i = 0; i < mLandmarks.size(); i ++)
+	for(unsigned int i = 0; i < mLandmarks.size(); i ++)
 	{
 		mLandmarks[i] = Landmark::parseMessage( msg.Map.LandmarkArray[i] );
 	}
@@ -90,6 +90,21 @@ std::vector<Landmark> LandmarkMap::fetchLandmarksByType(const int type) const
 	return landmarks;
 }
 
+std::vector<Landmark> LandmarkMap::fetchWaypointsByType(const int type) const
+{
+	std::vector<Landmark> waypoints = fetchLandmarksByType(Landmark::LandmarkType::Waypoint);
+	std::vector<Landmark> filteredWaypoints;
+	
+	for(unsigned int i = 0; i < waypoints.size(); i ++)
+	{
+		if(waypoints[i].mId == type)
+		{
+			filteredWaypoints.push_back(waypoints[i]);
+		}
+	}
+	return filteredWaypoints;
+}
+
 std::vector<visualization_msgs::Marker> LandmarkMap::createMarkerArray(const std::string & frame) const
 {
 	std::vector<visualization_msgs::Marker> markers;
@@ -110,7 +125,7 @@ std::vector<visualization_msgs::Marker> LandmarkMap::createMarkerArray(const std
 localization_defs::LandmarkMapMsg LandmarkMap::createMsg() const
 {
 	localization_defs::LandmarkMapMsg msg;
-	for(int i = 0; i < mLandmarks.size(); i ++)
+	for(unsigned int i = 0; i < mLandmarks.size(); i ++)
 	{
 		msg.Map.LandmarkArray.push_back( mLandmarks[i].createMsg() );
 	}

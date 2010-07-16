@@ -61,6 +61,7 @@ visualization_msgs::Marker Landmark::createMarker(const std::string & frame, con
 	switch (mLandmarkType)
 	{
 		case LandmarkType::None: ss << "landmark"; break;
+		case LandmarkType::Waypoint: ss << "waypoint"; break;
 		case LandmarkType::Buoy: ss << "buoy"; break;
 		case LandmarkType::Pinger: ss << "pinger"; break;
 		case LandmarkType::Pipe: ss << "pipe"; break;
@@ -202,3 +203,11 @@ Landmark(center, orientation, cv::Point3d(1.2192, 0.6096, 0.1524), visualization
 	
 	return theMarker;
 }*/
+
+LandmarkTypes::Waypoint::Waypoint(cv::Point3d center, double orientation, int id) : 
+Landmark(center, orientation, cv::Point3d(1.0, 1.0, 1.0), visualization_msgs::Marker::ARROW)
+{
+	mId = id;
+	mColor = Landmark::ColorIds::green;
+	mLandmarkType = Landmark::LandmarkType::Waypoint;
+}

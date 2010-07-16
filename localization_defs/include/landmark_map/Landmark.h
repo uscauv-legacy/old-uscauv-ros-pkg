@@ -52,6 +52,7 @@ public:
 		const static int Pipe = 	2;
 		const static int Bin = 		3;
 		const static int Window = 	4;
+		const static int Waypoint = 5;
 	};
 	
 	struct ImageIds
@@ -155,5 +156,11 @@ namespace LandmarkTypes
 	public:
 		Pipe(cv::Point3d center, double orientation);
 //		visualization_msgs::Marker createMarker(std::string ns, std::string frame);
+	};
+	
+	class Waypoint : public Landmark
+	{
+	public:
+		Waypoint(cv::Point3d center, double orientation, int id);
 	};
 }
