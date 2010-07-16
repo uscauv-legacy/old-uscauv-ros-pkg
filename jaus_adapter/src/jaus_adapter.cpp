@@ -49,27 +49,16 @@
 using namespace std;
 
 //################################################################
+// CHANGE THESE VARIABLES
 //################################################################
 
 unsigned int id = 					0x00870101; // 0x87 = 135, my ID 
-unsigned int destination = 	0x005A0101; // COP: subsystem ID is 90 - 0x005A hex
-#define MAX_BUFFER_SIZE 1000
+unsigned int destination = 	0x005A0101; // COP ID is 90 - 0x005A hex
+#define MAX_BUFFER_SIZE 		1000				// size of data sent back 
 
 //################################################################
+// LEAVE THESE ALONE
 //################################################################
-
-// variables for receiving messages
-char buffer[MAX_BUFFER_SIZE];          	// Allocate the space for a received message
-unsigned int size = MAX_BUFFER_SIZE;   	// Initialize size
-unsigned int source;            				// This value is returned as an ID from the
-int *priority; 
-int *flags; 
-unsigned short *msg_id; 
-
-// unique identifier for transaction between sender and receiver
-long int handle;						
-
-using namespace std;	
 
 // Define the message structure.  We have to tell
 // the compiler to pack on 1-byte boundaries to
@@ -77,9 +66,20 @@ using namespace std;
 // be non-compliant to AS6009.
 #pragma pack(1)
 
-//----------------------------------------------------------------
+// variables for receiving messages
+char buffer[MAX_BUFFER_SIZE];          	// Allocate space for message
+unsigned int size = MAX_BUFFER_SIZE;   	// Initialize size
+unsigned int source;            				// Returned ID value 
+int *priority; 
+int *flags; 
+unsigned short *msg_id; 
+
+// unique identifier for transaction between sender and receiver
+long int handle;						
+
+//################################################################
 // DEFINE MESSAGES TO BE PASSED
-//----------------------------------------------------------------
+//################################################################
 
 // Report Velocity
 typedef struct {
@@ -97,9 +97,34 @@ typedef struct {
 } REPORT_LOCAL_POSE_MSG;
 REPORT_LOCAL_POSE_MSG msg_pose; 
 
-//----------------------------------------------------------------
+// Report Control
+typedef struct {
+	unsigned short	msg_id;			 	
+	unsigned short  ss_id;				// value_range (0, 65535)
+	unsigned int		node_id;			// value_range (0, 254)
+	unsigned int		component_id; // value_range (0, 254) 
+	unsigned int		auth_code;    // value_range (0, 254)
+} REPORT_CONTROL_MSG;
+REPORT_CONTROL_MSG msg_ctrl;
+
+// Confirm Control
+typedef struct {
+	unsigned short 	msg_id;
+	unsigned int   	response_code; // value_enum = 0,1,2
+} CONFIRM_CONTROL_MSG;
+CONFIRM_CONTROL_MSG msg_cfrm;
+
+// Report Status
+typedef struct {
+	unsigned short 	msg_id;
+	unsigned int 	 	status;
+	unsigned int		reserved;
+}	REPORT_STATUS_MSG;
+REPORT_STATUS_MSG msg_status;
+
+//################################################################
 // Define some helper functions
-//----------------------------------------------------------------
+//################################################################
 
 // create 16 bit scale int
 unsigned short scaleToUInt16(float val, float low, float high)
@@ -133,9 +158,9 @@ double unscaleFromUInt32(unsigned int val, double low, double high)
 	return scale_factor * ((double) val) + low;
 }
 
-//----------------------------------------------------------------
+//################################################################
 // Begin Main
-//----------------------------------------------------------------
+//################################################################
 int main( int argc, char* argv[] )
 {
 	ros::init(argc, argv, "jaus_adapter");
@@ -147,7 +172,7 @@ int main( int argc, char* argv[] )
 	std::cout << cwd << std::endl;
 	if(cwd.substr(cwd.size()-3, cwd.size()) != "bin") 
 	{
-		ROS_FATAL("The jaus_adapter node must be run from it's own bin directory!!!");
+		ROS_FATAL("Jaus_adapter must be run from it's own bin directory!!!");
 	}
 
 	// We have to call JrConnect before we send any messages.
@@ -157,9 +182,9 @@ int main( int argc, char* argv[] )
 	// I'm using a subsystem ID (in hex), 
 	// and node id 1, component id 1.
 
-	//------------------------------------------------------------------
+	//################################################################
 	// INITIATE HANDSHAKE
-	//------------------------------------------------------------------
+	//################################################################
 	cout << "\n\n------------------------------------------------";
 	cout << "\n\tBEGINNING CONNECTION";
 	cout << "\n------------------------------------------------\n\n";
@@ -182,16 +207,16 @@ int main( int argc, char* argv[] )
 		ros::Duration(5).sleep();
 	}
 
-	//------------------------------------------------------------------
+	//################################################################
 	// START INTERACTION
-	//------------------------------------------------------------------
+	//################################################################
 
 	// For the rest of the tasks, the COP initatives everything
 	while(ros::ok())
 	{
-		//------------------------------------------------------------------
+		//################################################################
 		// LOOP AND RECEIVE MESSAGES
-		//------------------------------------------------------------------
+		//################################################################
 		if (JrReceive( handle, &source, &size, buffer, 
 					priority, flags, msg_id) == NoMessages)
 		{   
@@ -199,7 +224,7 @@ int main( int argc, char* argv[] )
 			ros::Duration(1).sleep();
 		}
 
-		// if we get a message, then do something depending on what message it was
+		// if we get a message, then do something 
 		else 
 		{
 			// print info about the message
@@ -209,79 +234,111 @@ int main( int argc, char* argv[] )
 			// then do something depending on what the message ID was
 			switch( (int) msg_id )
 			{
-				//--------------------------------------------------------------
+				//################################################################
 				// REPORT LOCAL POSE
-				//--------------------------------------------------------------
+				//################################################################
 				case 0x2403: // msg_id for Query Local Pose, [as6009, 66]
-					// send Report Local Pose, 0x4403 [as6009, 72]
-					msg_pose.msg_id 	= 0x4403;
-					msg_pose.pv 			= 65; 
-					msg_pose.yaw 			= scaleToUInt16(2.0, -3.14, 3.14); 
-
-					// Now we send the message to the COP using Junior.  Recall
-					// that the COP subsystem id is decimal 90 (0x005A hex)
-					if (JrSend(handle, destination, sizeof(msg_pose), (char*)&msg_pose) != Ok)
-						cout << "\n\t *** Unable to Send Message *** \n\n";
-					else 
 					{
-						cout << "\n *** REPORT LOCAL POSE sent ***\n";
-						cout << "Yaw = " << msg_pose.yaw << "\n\n";
+						// send Report Local Pose, 0x4403 [as6009, 72]
+						msg_pose.msg_id 	= 0x4403;
+						msg_pose.pv 			= 65; 
+						msg_pose.yaw 			= scaleToUInt16(2.0, -3.14, 3.14); 
+
+						// Now we send the message to the COP using Junior.  Recall
+						// that the COP subsystem id is decimal 90 (0x005A hex)
+						if (JrSend(handle, destination, sizeof(msg_pose), (char*)&msg_pose) != Ok)
+							cout << "\n\t *** Unable to Send Message *** \n\n";
+						else 
+							cout << "\n *** REPORT LOCAL POSE sent ***\n";
 					}
 
-					//--------------------------------------------------------------
+					//################################################################
 					// REPORT VELOCITY STATE
-					//--------------------------------------------------------------
+					//################################################################
 				case 0x2404: // msg_id for Query Velocity State
-					// Now send Report Velocity State, 0x4402 [as6009, 72]
-					msg_vel.msg_id 		= 0x4402;
-					msg_vel.pv 				= 1; // 1 for competition 
-					msg_vel.vel_x 		= scaleToUInt32(200, -327.68, 327.67);
-
-					// Now we send the message to the COP using Junior.  Recall
-					// that the COP subsystem id is decimal 90 (0x005A hex)
-					if (JrSend(handle, destination, sizeof(msg_vel), (char*)&msg_vel) != Ok)
-						cout << "\n\t *** Unable to Send Message *** \n\n";
-					else 
 					{
-						cout << "\n *** REPORT VELOCITY STATE sent ***\n";
-						cout << "Velocity X = " << msg_vel.vel_x << "\n\n";
+						// Now send Report Velocity State, 0x4402 [as6009, 72]
+						msg_vel.msg_id 		= 0x4402;
+						msg_vel.pv 				= 1; // 1 for competition 
+						msg_vel.vel_x 		= scaleToUInt32(200, -327.68, 327.67);
+
+						if (JrSend(handle, destination, sizeof(msg_vel), (char*)&msg_vel) != Ok)
+							cout << "\n\t *** Unable to Send Message *** \n\n";
+						else 
+							cout << "\n *** REPORT VELOCITY STATE sent ***\n";
 					}
 
-					//--------------------------------------------------------------
+					//################################################################
 					// SYSTEM MANAGEMENT (next few case statements)
-					//--------------------------------------------------------------
+					//################################################################
 				case 0x200D: // msg_id for Query Control [as5710, 47] 
-					// send Report Control, 0x400D [as5710, 52]
-					continue;
+					{
+						// send Report Control, 0x400D [as5710, 52]
+						msg_ctrl.msg_id				= 0x400D;		 	
+						msg_ctrl.ss_id				= 130;
+						msg_ctrl.node_id			= 1;	
+						msg_ctrl.component_id	= 1; 
+						msg_ctrl.auth_code		= 1; 
+
+						if (JrSend(handle, destination, sizeof(msg_ctrl), (char*)&msg_ctrl) != Ok)
+							cout << "\n\t *** Unable to Send Message *** \n\n";
+						else 
+							cout << "\n *** REPORT CONTROL MESSAGE sent ***\n";
+					}
 
 				case 0x000D: // msg_id for Request Control [as5710, 41]
-					// send Confirm Control, 0x000F [as5710, 41] 
-					continue;
+					{
+						// send Confirm Control, 0x000F [as5710, 42] 
+						msg_cfrm.msg_id					= 0x000F;
+						msg_cfrm.response_code	= 0; 
+						// Response Code:
+						// 0 CONTROL ACCEPTED
+						// 1 NOT AVAILABLE
+						// 2 INSUFFICIENT AUTHORITY
+
+						if (JrSend(handle, destination, sizeof(msg_cfrm), (char*)&msg_cfrm) != Ok)
+							cout << "\n\t *** Unable to Send Message *** \n\n";
+						else 
+							cout << "\n *** CONFIRM CONTROL MESSAGE sent ***\n";
+					}
 
 				case 0x2002: // msg_id for Query Status [as5710, 46]
-					// send Report Status, 0x4002 [as5710, 51]
-					// 0 INIT
-					// 1 READY
-					// 2 STANDBY
-					// 3 SHUTDOWN
-					// 4 FAILURE
-					// 5 EMERGENCY
-					continue;
+					{
+						// send Report Status, 0x4002 [as5710, 51]
+						unsigned int state = 1;
 
-					//--------------------------------------------------------------
+						msg_status.msg_id		=	0x4002;
+						msg_status.status		= state;
+						msg_status.reserved = 0;
+						// Status:
+						// 0 INIT
+						// 1 READY
+						// 2 STANDBY
+						// 3 SHUTDOWN
+						// 4 FAILURE
+						// 5 EMERGENCY
+						if (JrSend(handle, destination, sizeof(msg_status), (char*)&msg_status) != Ok)
+							cout << "\n\t *** Unable to Send Message *** \n\n";
+						else 
+							cout << "\n *** REPORT STATUS MESSAGE sent ***\n";
+					}
+
+					//################################################################
 					// CAPABILITIES 
-					//--------------------------------------------------------------
+					//################################################################
 				case 0x2B03: // msg_id for Query Services [as5710, 50]
-					// send Report Services, 0x4B03 [as5710, 56]
-					continue;
-
+					{
+						// send Report Services, 0x4B03 [as5710, 56]
+						continue;
+					}
 
 			}
 		}
 	}
-	//----------------------------------------------------------------
+
+	//################################################################
 	// Clean-up
-	//----------------------------------------------------------------
+	//################################################################
 	JrDisconnect(handle);
 	cout << "\n\n------------------------------------------------";
 	cout << "\n\tDisconnected\n";
@@ -293,30 +350,30 @@ int main( int argc, char* argv[] )
 
 
 /*
-		 unsigned int GetTimeOfDay()
-		 {
-		 struct timeval tv;
-		 struct tm *timeinfo;
-		 time_t rawtime;
-		 unsigned int tstamp = 0;
+	 unsigned int GetTimeOfDay()
+	 {
+	 struct timeval tv;
+	 struct tm *timeinfo;
+	 time_t rawtime;
+	 unsigned int tstamp = 0;
 
-		 gettimeofday(&tv, NULL);
-		 time(&rawtime);
-		 timeinfo = gmtime ( &rawtime );
+	 gettimeofday(&tv, NULL);
+	 time(&rawtime);
+	 timeinfo = gmtime ( &rawtime );
 
-		 unsigned int mMilliseconds = (unsigned int)(tv.tv_usec/1000.0);
-		 int mDay = timeinfo->tm_mday;
-		 int mHour = timeinfo->tm_hour;
-		 int mMinute = timeinfo->tm_min;
-		 int mSecond = timeinfo->tm_sec;
+	 unsigned int mMilliseconds = (unsigned int)(tv.tv_usec/1000.0);
+	 int mDay = timeinfo->tm_mday;
+	 int mHour = timeinfo->tm_hour;
+	 int mMinute = timeinfo->tm_min;
+	 int mSecond = timeinfo->tm_sec;
 
-		 tstamp |= (unsigned int)(mDay)    << 27;
-		 tstamp |= (unsigned int)(mHour)   << 22;
-		 tstamp |= (unsigned int)(mMinute) << 16;
-		 tstamp |= (unsigned int)(mSecond) << 10;
-		 tstamp |= mMilliseconds;
-	//cout << "Time Stamp: " << mDay << ":" << mHour << ":" << mMinute;
-	//cout << ":" << mSecond << ":" << mMilliseconds << endl;
-	return tstamp ;
-	}
-*/
+	 tstamp |= (unsigned int)(mDay)    << 27;
+	 tstamp |= (unsigned int)(mHour)   << 22;
+	 tstamp |= (unsigned int)(mMinute) << 16;
+	 tstamp |= (unsigned int)(mSecond) << 10;
+	 tstamp |= mMilliseconds;
+//cout << "Time Stamp: " << mDay << ":" << mHour << ":" << mMinute;
+//cout << ":" << mSecond << ":" << mMilliseconds << endl;
+return tstamp ;
+}
+ */
