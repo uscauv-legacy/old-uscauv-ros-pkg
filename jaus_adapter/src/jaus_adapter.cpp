@@ -86,12 +86,17 @@ unsigned int destination = 	0x005A0101; // COP_ID 90 = 0x005A
 char buffer[MAX_BUFFER_SIZE];          	// Allocate space for message
 unsigned int size = MAX_BUFFER_SIZE;   	// Initialize size
 unsigned int source;            				// Returned ID value 
-int priority; 
-int flags; 
-unsigned short msg_id; 
+int *priority; 
+int *flags; 
+unsigned short *msg_id; 
 
 // unique identifier for transaction between sender and receiver
 long int handle;						
+
+// Jr Outputs
+int jr_send_rtn;
+int jr_receive_rtn;
+int jr_connect_rtn;
 
 //################################################################
 // DEFINE MESSAGES TO BE PASSED
@@ -137,6 +142,13 @@ typedef struct {
 	unsigned int		reserved;
 }	REPORT_STATUS_MSG;
 REPORT_STATUS_MSG msg_status;
+
+// Query Identification
+typedef struct {
+	unsigned short 	msg_id;
+	unsigned int		query_type;
+} QUERY_ID_MSG;
+QUERY_ID_MSG msg_id_init;
 
 //################################################################
 // Define some helper functions
@@ -199,30 +211,47 @@ int main( int argc, char* argv[] )
 	// and node id 1, component id 1.
 
 	//################################################################
-	// INITIATE HANDSHAKE
+	// CONNECT TO JUNIOR 
 	//################################################################
 	cout << "\n\n------------------------------------------------";
 	cout << "\n\tBEGINNING CONNECTION";
 	cout << "\n------------------------------------------------\n\n";
 
+	// connect to JAUS
+	jr_connect_rtn = JrConnect (id, "jr_config.xml", &handle);
+	cout << "\nJrConnect Return Value: " << jr_connect_rtn << "\n\n";
+	if(jr_connect_rtn == 0)
+	{
+		cout << "------------------------------------------------\n\n";
+		cout << "\n\tSuccessfully Connected To Junior\n";
+		cout << "\tHandle: " << handle << "\n";
+		cout << "------------------------------------------------\n\n";
+	}
+	else 
+		cout << "\nFailed to connect to Junior.\n\n";
+
+	ros::Duration(1).sleep();
+
+	//################################################################
+	// SEND QUERY ID
+	//################################################################
+	// Send Query ID 0x2B00 [as5710, 49]
 	bool connection_established = false;
-	int jr_connect_rtn;
 	while( connection_established == false)
 	{
-		jr_connect_rtn = JrConnect (id, "jr_config.xml", &handle);
-		cout << "\nJrConnect Return Value: " << jr_connect_rtn << "\n\n";
-		if(jr_connect_rtn == 0)
+		ros::Duration(5).sleep();
+
+		msg_id_init.msg_id 		= 0x4402;
+		msg_id_init.query_type = 3;  // 0 res, 1 sys, 2 subsys, 
+		// 3 node, 4 comp, 5 reserved
+
+		if (JrSend(handle, destination, sizeof(msg_id_init), (char*)&msg_id_init) != Ok)
+			cout << "\n\t *** Unable to Send Message *** \n\n";
+		else 
 		{
-			cout << "\n\n------------------------------------------------";
-			cout << "\n\tSuccessfully Connected\n";
-			cout << "\tHandle: " << handle << "\n";
-			cout << "------------------------------------------------\n\n";
+			cout << "\n *** QUERY IDENTIFICATION sent ***\n";
 			connection_established = true;
 		}
-		else 
-			cout << "\nFailed to connect to Junior.\n\n";
-
-		ros::Duration(5).sleep();
 	}
 
 	//################################################################
@@ -234,10 +263,10 @@ int main( int argc, char* argv[] )
 		//################################################################
 		// LOOP AND RECEIVE MESSAGES
 		//################################################################
-		int jr_receive_rtn = JrReceive(handle, &source, &size, buffer
-													&priority, &flags, &msg_id);
+		jr_receive_rtn = JrReceive(handle, &source, &size, buffer,
+													priority, flags, msg_id);
 		ros::spinOnce();
-		ros::Duration(0.1).sleep();
+		ros::Duration(1).sleep();
 		cout << "\nJrReceive Return Value: " << jr_receive_rtn << "\n\n";
 		if (jr_receive_rtn == 0)
 		{
@@ -280,6 +309,14 @@ int main( int argc, char* argv[] )
 							cout << "\n\t *** Unable to Send Message *** \n\n";
 						else 
 							cout << "\n *** REPORT VELOCITY STATE sent ***\n";
+					}
+
+					//################################################################
+					// IF RECEIVE "REPORT IDENTIFICATION" 
+					//################################################################
+				case 0x4B00: // msg_id for Query Control [as5710, 54] 
+					{
+						cout << "\n\nReceieved Report Identification\n\n";
 					}
 
 					//################################################################
