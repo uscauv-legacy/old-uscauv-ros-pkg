@@ -158,10 +158,10 @@ QUERY_ID_MSG msg_id_init;
 
 // Report Identification
 typedef struct {
-	unsigned short  msg_id;
-	unsigned char   query_type;
-	unsigned short  type;
-	string					identification;					
+	unsigned short  	msg_id;
+	unsigned char   	query_type;
+	unsigned short  	type;
+	string						identification;					
 } REPORT_ID_MSG;
 REPORT_ID_MSG msg_report_id;
 
@@ -257,7 +257,7 @@ int main( int argc, char* argv[] )
 		ros::Duration(5).sleep();
 
 		msg_id_init.msg_id 		= 0x2B00;
-		msg_id_init.query_type = 3;  // 0 res, 1 sys, 2 subsys, 
+		msg_id_init.query_type = 2;  // 0 res, 1 sys, 2 subsys, 
 		// 3 node, 4 comp, 5 reserved
 
 		if (JrSend(handle, destination, sizeof(msg_id_init), (char*)&msg_id_init) != Ok)
@@ -269,15 +269,16 @@ int main( int argc, char* argv[] )
 		}
 	}
 
-	ros::Duration(2).sleep();
+	ros::Duration(1).sleep();
 
 	//################################################################
 	// SEND REPORT ID
 	//################################################################
 	// msg_id for Report ID [as5710, 54] 
-	msg_report_id.msg_id 		= 0x4B00;
-	
-
+	msg_report_id.msg_id 					= 0x4B00;
+	msg_report_id.query_type			= 2;
+	msg_report_id.type						= 10001;
+	msg_report_id.identification 	= "SeaBee"; 
 
 	if (JrSend(handle, destination, sizeof(msg_report_id), (char*)&msg_report_id) != Ok)
 		cout << "\n\t *** Unable to Send Message *** \n\n";
