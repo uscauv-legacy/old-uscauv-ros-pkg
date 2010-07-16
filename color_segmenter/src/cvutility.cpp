@@ -4,7 +4,7 @@ IplImage* cvFilterHS(IplImage* src,int Hmin,int Hmax, int Smin, int Smax, int mo
 {
   IplImage* timg = cvCreateImage( cvGetSize(src), 8, 3 );
   IplImage* timg2 = cvCreateImage( cvGetSize(src), 8, 3 );
-  cvCvtColor( src, timg2, CV_RGB2HSV );
+  cvCvtColor( src, timg2, CV_BGR2HSV );
   timg->widthStep=src->widthStep;
   cvResize( timg2,timg, CV_INTER_LINEAR );
 
@@ -21,28 +21,28 @@ IplImage* cvFilterHS(IplImage* src,int Hmin,int Hmax, int Smin, int Smax, int mo
   {
      for(int j = 0; j < timg->height; j++)
      {
-        temp = &((uchar*)(timg->imageData + timg->widthStep*j))[i*3];
-        if(mode)
-          temp2= &((uchar*)(mask->imageData + mask->widthStep*j))[i*3];
-        if(temp[0] >= Hmin && temp[0] <= Hmax && temp[1] >= Smin && temp[1]<= Smax ){
-
-             if(!mode)
-               ((uchar*)(mask->imageData + mask->widthStep*j))[i] = 255;
-        }
-        else{
-
-             if(mode){
-               temp2[0] = 0;
-               temp2[1] = 0;
-               temp2[2] = 0;
-             }
-             else
-               ((uchar*)(mask->imageData + mask->widthStep*j))[i] = 0;
-
-        }
+       temp = &((uchar*)(timg->imageData + timg->widthStep*j))[i*3];
+       if(mode)
+	 temp2= &((uchar*)(mask->imageData + mask->widthStep*j))[i*3];
+       if(temp[0] >= Hmin && temp[0] <= Hmax && temp[1] >= Smin && temp[1]<= Smax ){
+	 
+	 if(!mode)
+	   ((uchar*)(mask->imageData + mask->widthStep*j))[i] = 255;
+       }
+       else{
+	 
+	 if(mode){
+	   temp2[0] = 0;
+	   temp2[1] = 0;
+	   temp2[2] = 0;
+	 }
+	 else
+	   ((uchar*)(mask->imageData + mask->widthStep*j))[i] = 0;
+	 
+       }
      }
   }
-
+  
   cvReleaseImage(&timg);
   cvReleaseImage(&timg2);
   return mask;

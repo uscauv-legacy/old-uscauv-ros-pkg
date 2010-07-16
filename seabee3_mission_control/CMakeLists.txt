@@ -24,8 +24,9 @@ set(LIBRARY_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/lib)
 #common commands for building c++ executables and libraries
 #rosbuild_add_library(${PROJECT_NAME} src/example.cpp)
 #target_link_libraries(${PROJECT_NAME} another_library)
-#rosbuild_add_boost_directories()
-#rosbuild_link_boost(${PROJECT_NAME} thread)
 link_directories("${PROJECT_SOURCE_DIR}/../localization_defs/lib")
 rosbuild_add_executable(seabee3_mission_control src/seabee3_mission_control.cpp)
 target_link_libraries(seabee3_mission_control localization_defs)
+
+rosbuild_add_boost_directories()
+rosbuild_link_boost(seabee3_mission_control thread)

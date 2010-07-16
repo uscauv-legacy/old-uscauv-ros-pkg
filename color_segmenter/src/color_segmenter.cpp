@@ -19,8 +19,8 @@
 #include "cvBlob/Blob.h"
 #include "cvBlob/BlobResult.h"
 
-#define RED_H_MIN 0
-#define RED_H_MAX 95
+#define RED_H_MIN 75
+#define RED_H_MAX 100
 #define RED_S_MIN 0
 #define RED_S_MAX 255
 
@@ -300,7 +300,7 @@ int main (int argc, char** argv)
   //Register the show debug image parameter
   n.param("show_debug_img", show_dbg_img, 1);
   n.param("debug_color", show_dbg_color, std::string("red"));
-  n.param("image_transport", transport, std::string("compressed"));
+  n.param("image_transport", transport, std::string("raw"));
 
   ROS_INFO("show_dbg_img: %d",show_dbg_img);
   ROS_INFO("show_dbg_color: %s",show_dbg_color.c_str());

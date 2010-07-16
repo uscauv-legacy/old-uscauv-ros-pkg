@@ -12,6 +12,11 @@
 #include <seabee3_driver_base/KillSwitch.h>
 #include <seabee3_driver_base/FiringDeviceAction.h>
 #include <waypoint_controller/SetDesiredPose.h>
+#include <waypoint_controller/FineTunePose.h>
+#include <waypoint_controller/CurrentState.h>
+
+#include <boost/thread/thread.hpp> 
+#include <boost/thread/mutex.hpp>
 
 /* SeaBee3 Mission States */
 #define STATE_INIT          0
@@ -33,58 +38,6 @@
 #define WINDOW_CENTER_THRESHOLD  0.3
 
 // ######################################################################
-// The various types of SensorVotes
-enum SensorType { PATH, FIRST_BUOY, SECOND_BUOY, BIN, SENSOR_TYPE_SIZE = 4};
-
-// A vote for what the pose of the sub should be according to
-// one of our sensors (i.e. salient point or path found in bottom cam)
-struct SensorVote
-{
-  //public:
-  // Represents a pose that a SensorVote can set
-  struct SensorPose
-  {
-    float val; // value of pose
-    float weight; // weight of pose
-    float decay; // how fast the weight should decay (0 = none)
-  };
-  enum SensorType type; // sensor type
-  SensorPose heading; // sensor's vote for absolute heading
-  SensorPose strafe; // sensor's vote for relative strafe
-  SensorPose depth; // sensor's vote for relative depth
-  bool init; // whether or not the SensorVote has a value set
-
-  SensorVote()
-  {
-    type = PATH;
-    heading.val = 0.0;
-    heading.weight = 0.0;
-    heading.decay = 0.0;
-    strafe.val = 0.0;
-    strafe.weight = 0.0;
-    strafe.decay = 0.0;
-    depth.val = 0.0;
-    depth.weight = 0.0;
-    depth.decay = 0.0;
-    init = false;
-  }
-
-  SensorVote(SensorType t)
-  {
-    type = t;
-    heading.val = 0.0;
-    heading.weight = 0.0;
-    heading.decay = 0.0;
-    strafe.val = 0.0;
-    strafe.weight = 0.0;
-    strafe.decay = 0.0;
-    depth.val = 0.0;
-    depth.weight = 0.0;
-    depth.decay = 0.0;
-    init = false;
-  }
-};
-// ######################################################################
 
 // Stores the sub's current mission state
 unsigned int mCurrentState;
@@ -98,9 +51,6 @@ double mSpeedCorrScale;
 
 // Stores the current state of the kill switch according to BeeStemI
 char mKillSwitchState;
-
-// Vector that stores all of the sub's SensorVotes
-std::vector<SensorVote> mSensorVotes;
 
 // The combined error of our current heading and depth from our desired heading and depth
 float mPoseError;
@@ -123,18 +73,24 @@ bool mSpeedEnabled;
 // The last time weights were decayed
 ros::Time mLastDecayTime;
 
+bool mSetWaypoint = false;
+bool mWaypointComplete = false;
+
 // Map Landmarks
+Landmark mGateWaypoint; // need to get this
+
+Landmark mBuoyWaypoint;
 int mFirstBuoyColor;
-Landmark mFirstBuoy;
 int mSecondBuoyColor;
-Landmark mSecondBuoy;
-Landmark mFirstBin;
+
+Landmark mBinWaypoint;
 int mFirstBinImage;
-Landmark mSecondBin;
 int mSecondBinImage;
+
+Landmark mWindowWaypoint;
 int mWindowColor;
-Landmark mWindow;
-Landmark mPinger;
+
+Landmark mPingerWaypoint;
 
 
 // Landmark Map
@@ -142,6 +98,7 @@ LandmarkMap mLandmarkMap;
 
 // Publishers / Subscribers / Clients
 ros::Subscriber kill_switch_sub;
+ros::Subscriber waypoint_state_sub;
 ros::ServiceClient driver_depth;
 ros::ServiceClient driver_rpy;
 ros::ServiceClient dropper_one_srv;
@@ -150,47 +107,12 @@ ros::ServiceClient shooter_srv;
 ros::ServiceClient landmark_finder_srv;
 ros::ServiceClient landmark_map_srv;
 ros::ServiceClient waypoint_controller_srv;
+ros::ServiceClient ft_waypoint_controller_srv;
 ros::Publisher driver_speed;
 
-void resetWeights()
-{
-  for(unsigned int i = 0; i < mSensorVotes.size(); i++)
-    {
-      mSensorVotes[i].heading.weight = 0.0;
-      mSensorVotes[i].depth.weight = 0.0;
-    }
-}
-
-void resetSensorVoteValues()
-{
-  for(unsigned int i = 0; i < mSensorVotes.size(); i++)
-    {
-      mSensorVotes[i].heading.val = 0.0;
-      mSensorVotes[i].depth.val = 0.0;
-    }
-}
-
-void decayWeights()
-{
-  for(unsigned int i = 0; i < mSensorVotes.size(); i++)
-    {
-      SensorVote sv = mSensorVotes[i];
-
-      if(sv.heading.weight > 0.0)
-	{
-	  if(sv.heading.decay >= 0.0 && sv.heading.decay <= 1.0)
-	    sv.heading.weight *= 1.0 - sv.heading.decay;
-	}
-
-      if(sv.depth.weight > 0.0)
-	{
-	  if(sv.depth.decay >= 0.0 && sv.depth.decay <= 1.0)
-	    sv.depth.weight *= 1.0 - sv.depth.decay;
-	}
-
-      mSensorVotes[i] = sv;
-    }
-}
+// Callback mutexes
+boost::mutex killswitch_mutex;
+boost::mutex waypoint_mutex;
 
 // ######################################################################
 void set_depth(int depth)
@@ -272,7 +194,16 @@ void resetPID()
 
 void killSwitchCallback(const seabee3_driver_base::KillSwitchConstPtr & msg)
 {
+  boost::lock_guard<boost::mutex> lock(killswitch_mutex); 
+  
   mKillSwitchState = msg->Value;
+}
+
+void waypointStateCallback(const waypoint_controller::CurrentStateConstPtr & msg)
+{
+  boost::lock_guard<boost::mutex> lock(waypoint_mutex); 
+
+  mWaypointComplete = (msg->State == 6) ? 1 : 0;
 }
 
 void initLandmarkMap()
@@ -284,104 +215,54 @@ void initLandmarkMap()
 
   mLandmarkMap = LandmarkMap(fetch_map.response.Map);
 
-  std::vector<Landmark> buoys = mLandmarkMap.fetchLandmarksByType(Landmark::LandmarkType::Buoy);
+  mBuoyWaypoint = (mLandmarkMap.fetchWaypointsByType(Landmark::LandmarkType::Buoy))[0];
 
-  for(unsigned int i = 0; i < buoys.size(); i++)
-    {
-      if(buoys[i].mColor == mFirstBuoyColor)
-	mFirstBuoy = buoys[i];
-      else if(buoys[i].mColor == mSecondBuoyColor)
-	mSecondBuoy = buoys[i];
-    }
+  mBinWaypoint = (mLandmarkMap.fetchWaypointsByType(Landmark::LandmarkType::Bin))[0];
 
-  std::vector<Landmark> bins = mLandmarkMap.fetchLandmarksByType(Landmark::LandmarkType::Bin);
+  mWindowWaypoint = (mLandmarkMap.fetchWaypointsByType(Landmark::LandmarkType::Window))[0];
 
-  for(unsigned int i = 0; i < bins.size(); i++)
-    {
-      if(bins[i].mColor == mFirstBinImage)
-	mFirstBin = bins[i];
-      else if(bins[i].mColor == mSecondBinImage)
-	mSecondBin = bins[i];
-    }
-
- std::vector<Landmark> windows = mLandmarkMap.fetchLandmarksByType(Landmark::LandmarkType::Window);
-
-  for(unsigned int i = 0; i < windows.size(); i++)
-    {
-      if(windows[i].mColor == mWindowColor)
-	mWindow = windows[i];
-    }
-
-  mPinger = (mLandmarkMap.fetchLandmarksByType(Landmark::LandmarkType::Pinger))[0];
-}
-
-void setWaypoint(geometry_msgs::Vector3 point)
-{
-  waypoint_controller::SetDesiredPose set_pose;
-  set_pose.request.Pos.Mode.x = 1;
-  set_pose.request.Pos.Mode.y = 1;
-  set_pose.request.Pos.Mode.z = 1;
-  
-  set_pose.request.Pos.Mask.x = 1;
-  set_pose.request.Pos.Mask.y = 1;
-  set_pose.request.Pos.Mask.z = 1;
-  
-  set_pose.request.Pos.Values.x = point.x;
-  set_pose.request.Pos.Values.y = point.y;
-  set_pose.request.Pos.Values.z = point.z;
-
-  set_pose.request.Ori.Mode.x = 0;
-  set_pose.request.Ori.Mode.y = 0;
-  set_pose.request.Ori.Mode.z = 0;
-  
-  set_pose.request.Ori.Mask.x = 0;
-  set_pose.request.Ori.Mask.y = 0;
-  set_pose.request.Ori.Mask.z = 0;
-  
-  set_pose.request.Ori.Values.x = 0;
-  set_pose.request.Ori.Values.y = 0;
-  set_pose.request.Ori.Values.z = 0;
-
-  waypoint_controller_srv.call(set_pose);  
+  mPingerWaypoint = (mLandmarkMap.fetchWaypointsByType(Landmark::LandmarkType::Pinger))[0];
 }
 
 void setWaypoint(cv::Point3d point)
 {
   waypoint_controller::SetDesiredPose set_pose;
-  set_pose.request.Pos.Mode.x = 1;
-  set_pose.request.Pos.Mode.y = 1;
-  set_pose.request.Pos.Mode.z = 1;
   
-  set_pose.request.Pos.Mask.x = 1;
-  set_pose.request.Pos.Mask.y = 1;
-  set_pose.request.Pos.Mask.z = 1;
-  
-  set_pose.request.Pos.Values.x = point.x;
-  set_pose.request.Pos.Values.y = point.y;
-  set_pose.request.Pos.Values.z = point.z;
-
-  set_pose.request.Ori.Mode.x = 0;
-  set_pose.request.Ori.Mode.y = 0;
-  set_pose.request.Ori.Mode.z = 0;
-  
-  set_pose.request.Ori.Mask.x = 0;
-  set_pose.request.Ori.Mask.y = 0;
-  set_pose.request.Ori.Mask.z = 0;
-  
-  set_pose.request.Ori.Values.x = 0;
-  set_pose.request.Ori.Values.y = 0;
-  set_pose.request.Ori.Values.z = 0;
+  set_pose.request.Pos.x = point.x;
+  set_pose.request.Pos.y = point.y;
+  set_pose.request.Pos.z = point.z;
 
   waypoint_controller_srv.call(set_pose);  
+}
+
+void fineTuneWaypoint(geometry_msgs::Vector3 point)
+{
+  waypoint_controller::SetDesiredPose set_pose;
+  set_pose.request.Pos = point;
+
+  ft_waypoint_controller_srv.call(set_pose);  
 }
 
 // ######################################################################
 void state_init()
 {
   ROS_INFO("Doing initial dive");
-  
-  // Give diver 5 seconds to point sub at gate
-  sleep(5);
+
+  if(!mSetWaypoint)
+    {
+      // Give diver 5 seconds to point sub at gate
+      sleep(5);
+
+      cv::Point3d divePoint(0.0,0.0,mGateDepth);
+
+      setWaypoint(divePoint);
+      mSetWaypoint = true;
+    }
+  else if(mWaypointComplete)
+    {
+      mSetWaypoint = false;
+      mCurrentState = STATE_DO_GATE;
+    }  
 }
 
 
@@ -389,16 +270,19 @@ void state_init()
 void state_do_gate()
 {
   ROS_INFO("Moving towards gate...");
-
-  // Set speed to MAX_SPEED
-  set_speed(MAX_SPEED);
-  // Sleep for mGateFwdTime
-  sleep(mGateTime);
-
-  ROS_INFO("Finished going through gate...");
-
-  // Start following saliency to go towards flare
-  mCurrentState = STATE_FIRST_BUOY;
+ 
+  if(!mSetWaypoint)
+    {
+      setWaypoint(mGateWaypoint.mCenter);
+      mSetWaypoint = true;
+    }
+  else if(mWaypointComplete)
+    {
+       ROS_INFO("Finished going through gate...");
+       
+       mSetWaypoint = false;
+       mCurrentState = STATE_FIRST_BUOY;
+    }
 }
 
 // ######################################################################
@@ -418,17 +302,20 @@ void state_first_buoy()
       // considered a "hit" and update to next state
       if(find_buoy.response.Landmarks.LandmarkArray[0].Center.x <= BUOY_HIT_DISTANCE)
 	{
+	  mSetWaypoint = false;
+
 	  mCurrentState = STATE_SECOND_BUOY;
 	}
       // otherwise manuever towards visible buoy 
       else
-	setWaypoint(find_buoy.response.Landmarks.LandmarkArray[0].Center);
+	fineTuneWaypoint(find_buoy.response.Landmarks.LandmarkArray[0].Center);
     }
   // otherwise move towards estimated buoy waypoint on map
-  else
+  else if(!mSetWaypoint)
     {
-      setWaypoint(mFirstBuoy.mCenter);
-    }      
+      setWaypoint(mBuoyWaypoint.mCenter);
+      mSetWaypoint = true;
+    }
 }
 
 // ######################################################################
@@ -448,16 +335,19 @@ void state_second_buoy()
       // considered a "hit" and update to next state
       if(find_buoy.response.Landmarks.LandmarkArray[0].Center.x <= BUOY_HIT_DISTANCE)
 	{
+	  mSetWaypoint = false;
+
 	  mCurrentState = STATE_HEDGE;
 	}
       // otherwise move towards visible buoy
       else
-	setWaypoint(find_buoy.response.Landmarks.LandmarkArray[0].Center);
+	fineTuneWaypoint(find_buoy.response.Landmarks.LandmarkArray[0].Center);
     }
   // otherwise move towards estimated buoy waypoint on map
-  else
+  else if(!mSetWaypoint)
     {
-      setWaypoint(mSecondBuoy.mCenter);
+      mSetWaypoint = true;
+      setWaypoint(mBuoyWaypoint.mCenter);
     }   
 }
 // ######################################################################
@@ -482,16 +372,19 @@ void state_hedge()
 	  fire_dropper.request.Req = 1;
 	  dropper_one_srv.call(fire_dropper);
 
+	  mSetWaypoint = false;
+
 	  // go to next state
 	  mCurrentState = STATE_FIRST_BIN;
 	} 
       // maneuver towards visible bin
       else
-	setWaypoint(find_bin.response.Landmarks.LandmarkArray[0].Center);
+	fineTuneWaypoint(find_bin.response.Landmarks.LandmarkArray[0].Center);
     }
-  else
+  else if(!mSetWaypoint)
     {
-      setWaypoint(mFirstBin.mCenter);
+      mSetWaypoint = true;
+      setWaypoint(mBinWaypoint.mCenter);
     }
 }
 
@@ -518,16 +411,19 @@ void state_first_bin()
 	  fire_dropper.request.Req = 1;
 	  dropper_one_srv.call(fire_dropper);
 
+	  mSetWaypoint = false;
+
 	  // go to next state
 	  mCurrentState = STATE_SECOND_BIN;
 	} 
       // maneuver towards visible bin
       else
-	setWaypoint(find_bin.response.Landmarks.LandmarkArray[0].Center);
+	fineTuneWaypoint(find_bin.response.Landmarks.LandmarkArray[0].Center);
     }
-  else
+  else if(!mSetWaypoint)
     {
-      setWaypoint(mFirstBin.mCenter);
+      mSetWaypoint = true;
+      setWaypoint(mBinWaypoint.mCenter);
     }
 }
 
@@ -552,17 +448,20 @@ void state_second_bin()
 	  seabee3_driver_base::FiringDeviceAction fire_dropper;
 	  fire_dropper.request.Req = 1;
 	  dropper_two_srv.call(fire_dropper);
+	  
+	  mSetWaypoint = false;
 
 	  // go to next state
 	  mCurrentState = STATE_WINDOW;
 	} 
       // maneuver towards visible bin
       else
-	setWaypoint(find_bin.response.Landmarks.LandmarkArray[0].Center);
+	fineTuneWaypoint(find_bin.response.Landmarks.LandmarkArray[0].Center);
     }
-  else
+  else if(!mSetWaypoint)
     {
-      setWaypoint(mSecondBin.mCenter);
+      mSetWaypoint = true;
+      setWaypoint(mBinWaypoint.mCenter);
     }
 }
 
@@ -578,9 +477,6 @@ void state_window()
   // if a bin is found
   if(landmark_finder_srv.call(find_window))
     {
-      // manuever towards window
-      setWaypoint(find_window.response.Landmarks.LandmarkArray[0].Center);
-
       // if we are centered on window, shoot torpedo and move to next state
       if(find_window.response.Landmarks.LandmarkArray[0].Center.x <= WINDOW_CENTER_THRESHOLD &&
 	 find_window.response.Landmarks.LandmarkArray[0].Center.z <= WINDOW_CENTER_THRESHOLD)
@@ -589,14 +485,21 @@ void state_window()
 	  seabee3_driver_base::FiringDeviceAction fire_shooter;
 	  fire_shooter.request.Req = 1;
 	  shooter_srv.call(fire_shooter);
+	  
+	  mSetWaypoint = false;
 
 	  // move to next state
 	  mCurrentState = STATE_PINGER;
 	} 
+      else
+	// manuever towards window
+	fineTuneWaypoint(find_window.response.Landmarks.LandmarkArray[0].Center);
+
     }
-  else
+  else if(!mSetWaypoint)
     {
-      setWaypoint(mSecondBuoy.mCenter);
+      mSetWaypoint = true;
+      setWaypoint(mWindowWaypoint.mCenter);
     }
 
 }
@@ -627,7 +530,7 @@ int main(int argc, char** argv)
 
   // initialize command-line parameters
   n.param("gate_time", mGateTime, 40.0);
-  n.param("gate_depth", mGateDepth, 85.0);
+  n.param("gate_depth", mGateDepth, 3.0);
   n.param("heading_corr_scale", mHeadingCorrScale, 125.0);
   n.param("depth_corr_scale", mDepthCorrScale, 50.0);
   n.param("speed_corr_scale", mSpeedCorrScale, 1.0);
@@ -638,7 +541,8 @@ int main(int argc, char** argv)
   n.param("window_color", mWindowColor, 0);
 
   kill_switch_sub = n.subscribe("seabee3/KillSwitch", 100, killSwitchCallback);
-	
+  waypoint_state_sub = n.subscribe("waypoint_controller/current_state", 100, waypointStateCallback);
+	  
   driver_depth = n.serviceClient<seabee3_driver::SetDesiredXYZ>("seabee3/setDesiredXYZ");
   driver_rpy = n.serviceClient<seabee3_driver::SetDesiredRPY>("seabee3/setDesiredRPY");
   driver_speed = n.advertise<geometry_msgs::Twist>("seabee3/cmd_vel", 1);
@@ -648,11 +552,15 @@ int main(int argc, char** argv)
   landmark_finder_srv = n.serviceClient<landmark_finder::FindLandmarks>("landmark_finder/FindBuoys");
   landmark_map_srv = n.serviceClient<landmark_map_server::FetchLandmarkMap>("landmark_map_server/fetchLandmarkMap");
   waypoint_controller_srv = n.serviceClient<waypoint_controller::SetDesiredPose>("waypoint_controller/setDesiredPose");
+  ft_waypoint_controller_srv = n.serviceClient<waypoint_controller::SetDesiredPose>("waypoint_controller/fineTunePose");
   
   initLandmarkMap();
 
   while(ros::ok())
     {	  
+      boost::lock_guard<boost::mutex> killswitch_lock(killswitch_mutex); 
+      boost::lock_guard<boost::mutex> waypoint_lock(waypoint_mutex); 
+  
       // If the kill switch is active, act based on the sub's current state.
       if(mKillSwitchState == 0)
 	{
