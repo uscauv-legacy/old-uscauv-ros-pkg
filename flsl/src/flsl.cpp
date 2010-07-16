@@ -34,21 +34,37 @@
  *******************************************************************************/
 
 #include <ros/ros.h>
-#include <tf/tf.h>
+#include <tf/transform_listener.h>
+#include <tf/transform_broadcaster.h>
 #include <geometry_msgs/Twist.h>
 #include <geometry_msgs/Vector3.h>
+#include <opencv/cv.h>
 
 #include <vector>
 #include <math.h>
 #include <string>
 
 #include <landmark_map/LandmarkMap.h>
+#include <localization_tools/LandmarkSensor.h>
 
 std::string map_frame;
+std::vector <LocalizationParticle> mParticles;
+cv::Point3d mEstimatedPosition;
+tf::Transform mOdomCorrection;
+
+
 
 void MapCallback(const localization_defs::LandmarkMapMsgConstPtr & map)
 {
 	
+}
+
+void calculatePosition( std::vector & particles, cv::Point3d & mEstimatedPosition)
+{
+	for(int i = 0; i < particles.size(); i ++)
+	{
+		particles
+	}
 }
 
 int main( int argc, char* argv[] )

@@ -1,4 +1,4 @@
-xsens_node/Vector3Masked Pos
-xsens_node/Vector3Masked Ori
+geometry_msgs/Vector3 Pos
+geometry_msgs/Vector3 Ori
 ---
 int8 Resp
