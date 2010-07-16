@@ -65,7 +65,7 @@ using namespace std;
 // CHANGE THESE VARIABLES
 //################################################################
 
-unsigned int id = 					0x00870101; // 0x87 = 135, my ID 
+unsigned int id = 					0x00BD0101; // 0xBD = 189, my ID 
 unsigned int destination = 	0x005A0101; // COP_ID 90 = 0x005A
 																				// COP_ID 42 = 0x002A
 #define MAX_BUFFER_SIZE 		1000				// size of data sent back 
@@ -86,9 +86,9 @@ unsigned int destination = 	0x005A0101; // COP_ID 90 = 0x005A
 char buffer[MAX_BUFFER_SIZE];          	// Allocate space for message
 unsigned int size = MAX_BUFFER_SIZE;   	// Initialize size
 unsigned int source;            				// Returned ID value 
-int *priority; 
-int *flags; 
-unsigned short *msg_id; 
+int priority; 
+int flags; 
+unsigned short msg_id; 
 
 // unique identifier for transaction between sender and receiver
 long int handle;						
@@ -206,20 +206,22 @@ int main( int argc, char* argv[] )
 	cout << "\n------------------------------------------------\n\n";
 
 	bool connection_established = false;
+	int jr_connect_rtn;
 	while( connection_established == false)
 	{
-		if (JrConnect( id, "jr_config.xml", &handle) != Ok)
-		{	
-			cout << "\nFailed to connect to Junior.\n\n";
-		}
-		else 
-		{	
+		jr_connect_rtn = JrConnect (id, "jr_config.xml", &handle);
+		cout << "\nJrConnect Return Value: " << jr_connect_rtn << "\n\n";
+		if(jr_connect_rtn == 0)
+		{
 			cout << "\n\n------------------------------------------------";
 			cout << "\n\tSuccessfully Connected\n";
 			cout << "\tHandle: " << handle << "\n";
 			cout << "------------------------------------------------\n\n";
 			connection_established = true;
 		}
+		else 
+			cout << "\nFailed to connect to Junior.\n\n";
+
 		ros::Duration(5).sleep();
 	}
 
@@ -232,15 +234,12 @@ int main( int argc, char* argv[] )
 		//################################################################
 		// LOOP AND RECEIVE MESSAGES
 		//################################################################
-		if (JrReceive( handle, &source, &size, buffer, 
-					priority, flags, msg_id) == NoMessages)
-		{   
-			cout << "\nNo Message Received Yet...\n\n";
-			ros::Duration(1).sleep();
-		}
-
-		// if we get a message, then do something 
-		else 
+		int jr_receive_rtn = JrReceive(handle, &source, &size, buffer
+													&priority, &flags, &msg_id);
+		ros::spinOnce();
+		ros::Duration(0.1).sleep();
+		cout << "\nJrReceive Return Value: " << jr_receive_rtn << "\n\n";
+		if (jr_receive_rtn == 0)
 		{
 			// print info about the message
 			cout << "\n\nMSG_ID = " << msg_id;
@@ -256,7 +255,7 @@ int main( int argc, char* argv[] )
 					{
 						// send Report Local Pose, 0x4403 [as6009, 72]
 						msg_pose.msg_id 	= 0x4403;
-						msg_pose.pv 			= 65; 
+						msg_pose.pv 			= 64; 
 						msg_pose.yaw 			= scaleToUInt16(2.0, -3.14, 3.14); 
 
 						// Now we send the message to the COP using Junior.  Recall
