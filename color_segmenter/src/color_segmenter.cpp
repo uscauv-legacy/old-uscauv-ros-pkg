@@ -221,7 +221,8 @@ color_segmenter::ColorBlobArray filterColor(int color)
 
 void imageCallback(const sensor_msgs::ImageConstPtr& msg)
 {
-  boost::mutex::scoped_lock lock(image_mutex); 
+  ROS_INFO("Got image update");
+  boost::lock_guard<boost::mutex> lock(image_mutex); 
   //itsCurrentImage = bridge.imgMsgToCv(msg);
   itsCurrentImage = msg;
   
@@ -231,8 +232,8 @@ void imageCallback(const sensor_msgs::ImageConstPtr& msg)
 
 bool FindBlobsCallback(color_segmenter::FindBlobs::Request & req, color_segmenter::FindBlobs::Response & resp)
 {
-	ROS_INFO("got a request to segment an image for color: %d", req.DesiredColor);
-  boost::mutex::scoped_lock lock(image_mutex); 
+  ROS_INFO("got a request to segment an image for color: %d", req.DesiredColor);
+  boost::lock_guard<boost::mutex> lock(image_mutex); 
   int colorId = req.DesiredColor; //getColorId(req.DesiredColor);
 
   if(colorId < 0)
@@ -294,9 +295,16 @@ int main (int argc, char** argv)
 
   image_transport::ImageTransport it(n);
 
+  std::string transport;
+
   //Register the show debug image parameter
   n.param("show_debug_img", show_dbg_img, 1);
   n.param("debug_color", show_dbg_color, std::string("red"));
+  n.param("image_transport", transport, std::string("compressed"));
+
+  ROS_INFO("show_dbg_img: %d",show_dbg_img);
+  ROS_INFO("show_dbg_color: %s",show_dbg_color.c_str());
+  ROS_INFO("image_transport: %s",transport.c_str());
 
   show_dbg_code = getColorId(show_dbg_color);
   if(show_dbg_code < 0)
@@ -313,7 +321,7 @@ int main (int argc, char** argv)
   dbg_img_pub = new image_transport::Publisher(it.advertise("debug/image_color", 1));
 
   //Register a subscriber to an input image
-  image_transport::Subscriber sub = it.subscribe("image", 1, imageCallback);
+  image_transport::Subscriber sub = it.subscribe(n.resolveName("image"), 1, &imageCallback, transport);
 
   dynamic_reconfigure::Server<color_segmenter::ColorSegmenterConfig> srv;
   dynamic_reconfigure::Server<color_segmenter::ColorSegmenterConfig>::CallbackType f = boost::bind(&reconfigureCallback, _1, _2);
