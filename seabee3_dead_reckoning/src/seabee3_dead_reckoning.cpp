@@ -37,7 +37,8 @@ class SpeedInterpolator
 	public:
 	  SpeedInterpolator() :
 			//Its timed distance should be the number of meters that the sub moved when you timed it.
-		  itsTimedDistance(4.0) 
+	    itsTranslateDistance(4.20),
+	    itsStrafeDistance(4.20)
 		{
 			//This map needs to be filled out with timing data.
 			//
@@ -48,21 +49,43 @@ class SpeedInterpolator
 			//  
 			//  Make sure that you have values for both -100 and +100 in the map
 			//
-			itsTimingMap[-100] = 12.4;
-			itsTimingMap[-50]  = 30.9;
-			itsTimingMap[-10]  = 60.8;
-			itsTimingMap[10]   = 45.9;
-			itsTimingMap[50]   = 20.4;
-			itsTimingMap[75]   = 10.4;
-			itsTimingMap[100]  = 6.1;
+			itsTranslateMap[-100] = 12.4;
+			itsTranslateMap[-50]  = 30.9;
+			itsTranslateMap[-10]  = 60.8;
+			itsTranslateMap[10]   = 45.9;
+			itsTranslateMap[50]   = 20.4;
+			itsTranslateMap[75]   = 10.4;
+			itsTranslateMap[100]  = 6.1;
+
+			itsStrafeMap[-100] = 12.4;
+			itsStrafeMap[-50]  = 30.9;
+			itsStrafeMap[-10]  = 60.8;
+			itsStrafeMap[10]   = 45.9;
+			itsStrafeMap[50]   = 20.4;
+			itsStrafeMap[75]   = 10.4;
+			itsStrafeMap[100]  = 6.1;
 		}
 
 		//Returns the translational speed for a given motor power (the average
 		//between the two forward thrusters)
-		float getSpeed(int pwr)
+  float getSpeed(int pwr, int translate)
 		{
 			if(pwr == 0)
 				return 0.0;
+
+			timingMap_t itsTimingMap;
+			double itsTimedDistance;
+
+			if(translate)
+			  {
+			    itsTimingMap = itsTranslateMap;
+			    itsTimedDistance = itsTranslateDistance;
+			  }
+			else
+			  {
+			    itsTimingMap = itsStrafeMap;
+			    itsTimedDistance = itsStrafeDistance;
+			  }
 
 			//Find the interpolated time it would take the seabee to traverse
 			//"itsTimedDistance" at "pwr" speed.
@@ -108,10 +131,12 @@ class SpeedInterpolator
 	private:
 		//A mapping from motor speeds to the time it takes to travel "itsTimedDistance" meters
 		typedef std::map<int, float> timingMap_t;
-		timingMap_t itsTimingMap;
+		timingMap_t itsTranslateMap;
+		timingMap_t itsStrafeMap;
 
 		//The number of meters the sub traveled during the timing runs
-		float itsTimedDistance;
+		float itsTranslateDistance;
+		float itsStrafeDistance;
 };
 SpeedInterpolator theSpeedInterpolator;
 
@@ -124,9 +149,23 @@ double depth = 0.0;
 
 //######################################################################
 geometry_msgs::Vector3 ori;
+geometry_msgs::Vector3 linear;
+
 void imuCallback(const xsens_node::IMUDataConstPtr & msg)
 {
 	ori = msg->ori;
+}
+
+//######################################################################
+void extlPressureCallback(const seabee3_driver_base::PressureConstPtr & msg)
+{
+  depth = msg->Value;
+}
+
+//######################################################################
+void cmdVelocityCallback(const geometry_msgs::TwistConstPtr & msg)
+{
+  linear = msg->linear;
 }
 
 //######################################################################
@@ -149,7 +188,8 @@ void motorCntlCallback(const seabee3_driver_base::MotorCntlConstPtr & msg)
 	//Get the average forward speed
 	int right_thrust_speed = msg->motors[FWD_RIGHT_THRUSTER];
 	int left_thrust_speed = msg->motors[FWD_LEFT_THRUSTER];
-	double trans_speed = theSpeedInterpolator.getSpeed( (right_thrust_speed + left_thrust_speed)/2.0 );
+
+	double trans_speed = theSpeedInterpolator.getSpeed( (right_thrust_speed + left_thrust_speed)/2.0, 1);
 
 	//Find the amount of elapsed time
 	double dt = (current_time - last_time).toSec();
@@ -157,6 +197,19 @@ void motorCntlCallback(const seabee3_driver_base::MotorCntlConstPtr & msg)
 	//Compute our predicted velocity from the motor commands
 	double vx  = sin(th) * trans_speed;
 	double vy  = cos(th) * trans_speed;
+
+	// if we are strafing, add that component to our velocities
+	if(linear.y != 0.0)
+	{
+	  int front_strafe_speed = msg->motors[STRAFE_FRONT_THRUSTER];
+	  int back_strafe_speed = msg->motors[STRAFE_BACK_THRUSTER];
+
+	  double strafe_speed = theSpeedInterpolator.getSpeed( (front_strafe_speed*-1 + back_strafe_speed)/2.0, 0);
+
+	  vx += sin(th+(M_PI/4)) * strafe_speed;
+	  vy += cos(th+(M_PI/4)) * strafe_speed;
+	}
+
 	double vth = (th - last_th) / dt;
 	double vz  = (depth - last_depth)/dt;
 
@@ -218,6 +271,15 @@ int main(int argc, char** argv)
 	ros::Subscriber imu_sub = n.subscribe
 		("/seabee3/data_raw", 1, imuCallback);
 	imu_sub = imu_sub;
+
+	ros::Subscriber extl_pressure_sub = n.subscribe
+		("/seabee3/extl_pressure", 1, extlPressureCallback);
+	extl_pressure_sub = extl_pressure_sub;
+
+	ros::Subscriber cmd_vel_sub = n.subscribe
+		("/seabee3/cmd_vel", 1, cmdVelocityCallback);
+	cmd_vel_sub = cmd_vel_sub;
+
 
 	odom_pub = n.advertise<nav_msgs::Odometry>("/seabee3/odom_prim", 50); 
 
