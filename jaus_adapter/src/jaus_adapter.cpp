@@ -33,47 +33,41 @@
  *
  **************************************************************************/
 
-
-
-// TODO
-// Does each msg_id need to be unique? 
-// try with both full and not full msg structs
-
 #include "JuniorAPI.h"
-
 #include <ros/ros.h>
 #include <geometry_msgs/Twist.h>
 #include <geometry_msgs/Vector3.h>
-
 #include <vector>
 #include <string>
 #include <sstream>
 #include <math.h>
 #include <stdio.h>
-
-#include "convert.h" // shoddy int to string conversion
+#include "convert.h" 
 #include <sys/time.h>
 #include <time.h>
 
 using namespace std;
 
+//################################################################
+//################################################################
+
+unsigned int id = 					0x00870101; // 0x87 = 135, my ID 
+unsigned int destination = 	0x005A0101; // COP: subsystem ID is 90 - 0x005A hex
 #define MAX_BUFFER_SIZE 1000
 
-//----------------------------------------------------------------
-// Global Variables because I suck at programming
-//----------------------------------------------------------------
+//################################################################
+//################################################################
 
 // variables for receiving messages
 char buffer[MAX_BUFFER_SIZE];          	// Allocate the space for a received message
 unsigned int size = MAX_BUFFER_SIZE;   	// Initialize size
-unsigned int source;            		// This value is returned as an ID from the
-// sender of the message
-long int handle;						// unique identifier for transaction
-unsigned int id = 					0x00870101; // 0x87 = 135, my ID 
-unsigned int destination = 	0x005A0101; // COP: subsystem ID is 90 - 0x005A hex
+unsigned int source;            				// This value is returned as an ID from the
 int *priority; 
 int *flags; 
 unsigned short *msg_id; 
+
+// unique identifier for transaction between sender and receiver
+long int handle;						
 
 using namespace std;
 
@@ -92,30 +86,16 @@ typedef struct {
 	unsigned short 	msg_id;
 	unsigned short 	pv;
 	unsigned int   	vel_x;
-	//	unsigned int   	vel_y;
-	//	unsigned int   	vel_z;
-	//	unsigned int   	vel_rms;
-	//	unsigned short  roll_rate;
-	//	unsigned short  pitch_rate;
-	//	unsigned short  rate_rms;
-	//	unsigned short  yaw_rate;
-	//	unsigned int   	time_stamp;
 } REPORT_VELOCITY_STATE_MSG;
+REPORT_VELOCITY_STATE_MSG msg_vel;
 
 // Report Pose
 typedef struct {
 	unsigned short 	msg_id;
 	unsigned short 	pv;
-	unsigned int   	pos_x;
-	//	unsigned int   	pos_y;
-	//	unsigned int   	pos_z;
-	//	unsigned int   	pos_rms;
-	//	unsigned short 	roll;
-	//	unsigned short 	pitch;
 	unsigned short 	yaw;
-	//	unsigned short  altitude_rms;
-	//	unsigned int   	time_stamp;*/
 } REPORT_LOCAL_POSE_MSG;
+REPORT_LOCAL_POSE_MSG msg_pose; 
 
 //----------------------------------------------------------------
 // Define some helper functions
@@ -153,21 +133,6 @@ double unscaleFromUInt32(unsigned int val, double low, double high)
 	return scale_factor * ((double) val) + low;
 }
 
-// Helper function to extract the number of nodes/components in the
-// capability request
-void extractServiceQuery(char* buffer)
-{
-	int numSequences = (int)buffer[0];
-	vector<int> nodes;
-	//TODO:  Extract all the nodes and components for each node
-	for (int i = 0; i < numSequences; i++)
-	{
-		//nodes.push_back((int)buffer[i]);
-	}
-}
-
-
-
 //----------------------------------------------------------------
 // Begin Main
 //----------------------------------------------------------------
@@ -192,6 +157,9 @@ int main( int argc, char* argv[] )
 	// I'm using a subsystem ID (in hex), 
 	// and node id 1, component id 1.
 
+	//------------------------------------------------------------------
+	// INITIATE HANDSHAKE
+	//------------------------------------------------------------------
 	cout << "\n\n------------------------------------------------";
 	cout << "\n\tBEGINNING CONNECTION";
 	cout << "\n------------------------------------------------\n\n";
@@ -214,12 +182,18 @@ int main( int argc, char* argv[] )
 		ros::Duration(5).sleep();
 	}
 
+	//------------------------------------------------------------------
+	// START INTERACTION
+	//------------------------------------------------------------------
+
 	// For the rest of the tasks, the COP initatives everything
-	// so I will use a big case statement
 	while(ros::ok())
 	{
-		// keep looping while we wait to see if we receive any message
-		if (JrReceive( handle, &source, &size, buffer, priority, flags, msg_id) == NoMessages)
+		//------------------------------------------------------------------
+		// LOOP AND RECEIVE MESSAGES
+		//------------------------------------------------------------------
+		if (JrReceive( handle, &source, &size, buffer, 
+					priority, flags, msg_id) == NoMessages)
 		{   
 			cout << "\nNo Message Received Yet...\n\n";
 			ros::Duration(1).sleep();
@@ -231,196 +205,89 @@ int main( int argc, char* argv[] )
 			// print info about the message
 			cout << "\n\nMSG_ID = " << msg_id;
 			cout << "\nReceived " << size << " bytes from " << source << "\n";
-			query_services_received = true;
 
 			// then do something depending on what the message ID was
 			switch(msg_id)
 			{
-				case 0x2403: // Query Local Pose 
+				//--------------------------------------------------------------
+				// REPORT LOCAL POSE
+				//--------------------------------------------------------------
+				case 0x2403: // msg_id for Query Local Pose, [as6009, 66]
+					// send Report Local Pose, 0x4403 [as6009, 72]
+					msg_pose.msg_id 	= 0x4403;
+					msg_pose.pv 			= 65; 
+					msg_pose.yaw 			= scaleToUInt16(2.0, -3.14, 3.14); 
 
-				case 0x2404: // Query Velocity State
+					// Now we send the message to the COP using Junior.  Recall
+					// that the COP subsystem id is decimal 90 (0x005A hex)
+					if (JrSend(handle, destination, sizeof(msg_pose), (char*)&msg_pose) != Ok)
+						cout << "\n\t *** Unable to Send Message *** \n\n";
+					else 
+					{
+						cout << "\n *** REPORT LOCAL POSE sent ***\n";
+						cout << "Yaw = " << msg_pose.yaw << "\n\n";
+					}
 
+					//--------------------------------------------------------------
+					// REPORT VELOCITY STATE
+					//--------------------------------------------------------------
+				case 0x2404: // msg_id for Query Velocity State
+					// Now send Report Velocity State, 0x4402 [as6009, 72]
+					msg_vel.msg_id 		= 0x4402;
+					msg_vel.pv 				= 1; // 1 for competition 
+					msg_vel.vel_x 		= scaleToUInt32(200, -327.68, 327.67);
 
+					// Now we send the message to the COP using Junior.  Recall
+					// that the COP subsystem id is decimal 90 (0x005A hex)
+					if (JrSend(handle, destination, sizeof(msg_vel), (char*)&msg_vel) != Ok)
+						cout << "\n\t *** Unable to Send Message *** \n\n";
+					else 
+					{
+						cout << "\n *** REPORT VELOCITY STATE sent ***\n";
+						cout << "Velocity X = " << msg_vel.vel_x << "\n\n";
+					}
+
+					//--------------------------------------------------------------
+					// SYSTEM MANAGEMENT (next few case statements)
+					//--------------------------------------------------------------
+				case 0x200D: // msg_id for Query Control [as5710, 47] 
+					// send Report Control, 0x400D [as5710, 52]
+
+				case 0x000D: // msg_id for Request Control [as5710, 41]
+					// send Confirm Control, 0x000F [as5710, 41] 
+
+				case 0x2002: // msg_id for Query Status [as5710, 46]
+					// send Report Status, 0x4002 [as5710, 51]
+					// 0 INIT
+					// 1 READY
+					// 2 STANDBY
+					// 3 SHUTDOWN
+					// 4 FAILURE
+					// 5 EMERGENCY
+
+					//--------------------------------------------------------------
+					// CAPABILITIES 
+					//--------------------------------------------------------------
+				case 0x2B03: // msg_id for Query Services [as5710, 50]
+					// send Report Services, 0x4B03 [as5710, 56]
 
 			}
-
-
-
-
-
-
-
 		}
-
-		//----------------------------------------------------------------
-		// TASK 2 - CAPABILITIES DISCOVERY
-		//----------------------------------------------------------------
-
-		// This task has two parts. First, the COP will send a "Query Services"
-		// message. After we receive that, we will respond with a "Report Services"
-		// message.
-
-		// First we will wait for the Query Services message. We will keep looping
-		// until we find it.
-		// as5710 Page 50
-
-		// check for Query Services message received
-		bool query_services_received = false; 
-		while ( query_services_received == false)
-		{
-			if (JrReceive( handle, &source, &size, buffer, priority, flags, msg_id) == NoMessages)
-				cout << "\nNo Message Received Yet...\n\n";
-			else 
-			{
-				cout << "\n\nMSG_ID = " << msg_id;
-				cout << "\nReceived " << size << " bytes from " << source << "\n";
-				//cout << "\n***Received Message***\n" << buffer << "\n\n\n";
-				query_services_received = true;
-			}
-			ros::Duration(1).sleep();
-		}
-
-		extractServiceQuery(buffer);
-
-		// Now that the Query Services message has been received, we will send
-		// back the "Report Services" message.
-		// as5710 Page 56
-		/*
-			 REPORT_SERVICES_MSG msg_serv;
-			 msg_serv.msg_id = 
-			 msg_serv.node_id =
-			 msg_serv.component_id =
-			 msg_serv.instance_id =
-			 msg_serv.uri =
-			 msg_serv.version_mjr =
-			 msg_serv.version_mnr =
-
-			 bool report_services_sent = false;
-			 while ( report_services_sent == false)
-			 {
-			 if (JrSend( handle, destination, sizeof(msg_serv), (char*)&msg_serv) != Ok)
-			 {
-			 cout << "\nFailing to send Report Services Message...\n\n";
-			 }
-			 else 
-			 {
-			 cout << "\nSuccessfully Sent Report Services Message\n\n";
-			 report_services_sent = true;
-			 }
-			 ros::Duration(1).sleep();
-			 }
-		 */
-
-		//----------------------------------------------------------------
-		// TASK 3 - SYSTEM MANAGEMENT
-		//----------------------------------------------------------------
-		// COP sends: Query Control, return: Report Control
-		// COP sends: Request Control, return: Confirm Control
-		// COP sends: Query Status, return: Report Status
-		// COP sends: Resume
-		// COP sends: Standby
-		// COP sends: Shutdown
-
-		// Receive Query Control
-		// as5710 page 47
-
-		// Send Report Control
-		// as5710 Page 52
-
-		// Recieve Request Control
-		// as5710 Page 41
-
-		// Send Confirm Control
-		// as5710 Page 41
-
-		// Receive Query Status
-		// as5710 Page 46
-
-		// Send Report Status
-		// as5710 Page 51
-
-		// State machine for resume standbuy shutdown stuff 
-
-		//----------------------------------------------------------------
-		// TASK 4 - VELOCITY STATE REPORT
-		//----------------------------------------------------------------
-		// COP sends: Query Velocity State, return: Report Velocity State
-		//     Velocity X, Raw Rate, & Time Stamp [320 Decimal, 0104h]
-		// Units are meters per second
-
-
-
-		// Now send Report Velocity State
-		// pv = 1 for competition
-		// Page 72 in as6009, ID 4402
-		REPORT_VELOCITY_STATE_MSG msg_vel;
-
-		msg_vel.msg_id 		= 0x4402;
-		msg_vel.pv 		= 1; // Should be (unsigned short*)&buffer
-		msg_vel.vel_x 		= scaleToUInt32(200, -327.68, 327.67);
-		//	msg_vel.vel_y 		= scaleToUInt32(0, -327.68, 327.67);
-		//	msg_vel.vel_z 		= scaleToUInt32(0, -327.68, 327.67);
-		//	msg_vel.vel_rms 	= scaleToUInt32(0, 0, 100);
-		//	msg_vel.roll_rate 	= scaleToUInt16(0, -32.768, 32.767);
-		//	msg_vel.pitch_rate 	= scaleToUInt16(0, -32.768, 32.767);
-		//	msg_vel.yaw_rate 	= scaleToUInt16(0, -32.768, 32.767);
-		//	msg_vel.rate_rms 	= scaleToUInt16(0, 0, 3.14);
-		//	msg_vel.time_stamp 	= scaleToUInt32(0);
-
-		// Now we send the message to the COP using Junior.  Recall
-		// that the COP subsystem id is decimal 90 (0x005A hex)
-		if (JrSend(handle, destination, sizeof(msg_vel), (char*)&msg_vel) != Ok)
-			cout << "\n\t *** Unable to Send Message *** \n\n";
-		else 
-		{
-			cout << "\n *** Successfully Sent REPORT VELOCITY STATE Message  ***\n";
-			cout << "Velocity X = " << msg_vel.vel_x << "\n\n";
-		}
-		ros::Duration(3).sleep();
-
-		//----------------------------------------------------------------
-		// TASK 5 - POSITION AND ORIENTATION REPORT
-		//----------------------------------------------------------------
-		// COP sends: Query Local Pose, return: Report Local Pose
-		//     Yaw & Time Stamp [320 Decimal, 0140h]
-
-		// Receive Query Local Pose
-		// Page 66 in as6009
-
-		// Now Send Report Local Pose
-		// Page 53 in as6009 
-		REPORT_LOCAL_POSE_MSG msg_pose; // create message for sending yaw
-
-		msg_pose.msg_id 	= 0x4403;
-		msg_pose.pv 			= 65; 
-		msg_pose.pos_x 		= scaleToUInt32(4.0, -100000, 100000);
-		msg_pose.yaw 			= scaleToUInt16(2.0, -3.14, 3.14); 
-
-		// Now we send the message to the COP using Junior.  Recall
-		// that the COP subsystem id is decimal 90 (0x005A hex)
-		if (JrSend(handle, destination, sizeof(msg_pose), (char*)&msg_pose) != Ok)
-			cout << "\n\t *** Unable to Send Message *** \n\n";
-		else 
-		{
-			cout << "\n *** Successfully Sent REPORT LOCAL POSE Message  ***\n";
-			cout << "Yaw = " << msg_pose.yaw << "\n\n";
-		}
-		ros::Duration(3).sleep();
-
-		//----------------------------------------------------------------
-		// Clean-up
-		//----------------------------------------------------------------
-		JrDisconnect(handle);
-		cout << "\n\n------------------------------------------------";
-		cout << "\n\tDisconnected\n";
-		cout << "------------------------------------------------\n\n";
-
-		ros::spinOnce();
-		return 0;
 	}
+	//----------------------------------------------------------------
+	// Clean-up
+	//----------------------------------------------------------------
+	JrDisconnect(handle);
+	cout << "\n\n------------------------------------------------";
+	cout << "\n\tDisconnected\n";
+	cout << "------------------------------------------------\n\n";
+
+	ros::spinOnce();
+	return 0;
+}
 
 
-	/*
+/*
 		 unsigned int GetTimeOfDay()
 		 {
 		 struct timeval tv;
@@ -447,4 +314,4 @@ int main( int argc, char* argv[] )
 	//cout << ":" << mSecond << ":" << mMilliseconds << endl;
 	return tstamp ;
 	}
-	 */
+*/
