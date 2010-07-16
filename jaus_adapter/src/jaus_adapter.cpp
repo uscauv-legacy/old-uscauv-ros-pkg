@@ -53,8 +53,11 @@ using namespace std;
 //################################################################
 
 unsigned int id = 					0x00870101; // 0x87 = 135, my ID 
-unsigned int destination = 	0x005A0101; // COP ID is 90 - 0x005A hex
+unsigned int destination = 	0x005A0101; // COP_ID 90 = 0x005A
+																				// COP_ID 42 = 0x002A
 #define MAX_BUFFER_SIZE 		1000				// size of data sent back 
+// COP IP: 192.168.1.42:3794
+// COP SSID: 42-1-1
 
 //################################################################
 // LEAVE THESE ALONE
@@ -210,7 +213,6 @@ int main( int argc, char* argv[] )
 	//################################################################
 	// START INTERACTION
 	//################################################################
-
 	// For the rest of the tasks, the COP initatives everything
 	while(ros::ok())
 	{
