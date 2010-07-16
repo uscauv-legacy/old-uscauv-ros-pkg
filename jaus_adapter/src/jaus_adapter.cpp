@@ -33,6 +33,19 @@
  *
  **************************************************************************/
 
+//################################################################
+//
+// INFORMATION
+// 
+// Wiki Link: http://code.google.com/p/seabee3-ros-pkg/wiki/JAUS_Interface
+// 
+// Dependencies (already configured):
+// 		JrMiddleWare
+//			1. jr_config.xml: XML config file in bin directory
+//			2. JuniorRTE: Executable in bin directory
+//
+//################################################################
+
 #include "JuniorAPI.h"
 #include <ros/ros.h>
 #include <geometry_msgs/Twist.h>
