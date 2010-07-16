@@ -77,7 +77,7 @@ bool mSetWaypoint = false;
 bool mWaypointComplete = false;
 
 // Map Landmarks
-Landmark mGateWaypoint; // need to get this
+Landmark mGateWaypoint;
 
 Landmark mBuoyWaypoint;
 int mFirstBuoyColor;
@@ -215,6 +215,8 @@ void initLandmarkMap()
 
   mLandmarkMap = LandmarkMap(fetch_map.response.Map);
 
+  mGateWaypoint = (mLandmarkMap.fetchWaypointsByType(Landmark::LandmarkType::Gate))[0];
+
   mBuoyWaypoint = (mLandmarkMap.fetchWaypointsByType(Landmark::LandmarkType::Buoy))[0];
 
   mBinWaypoint = (mLandmarkMap.fetchWaypointsByType(Landmark::LandmarkType::Bin))[0];
@@ -248,21 +250,11 @@ void state_init()
 {
   ROS_INFO("Doing initial dive");
 
-  if(!mSetWaypoint)
-    {
-      // Give diver 5 seconds to point sub at gate
-      sleep(5);
+  // Give diver 5 seconds to point sub at gate
+  sleep(5);
 
-      cv::Point3d divePoint(0.0,0.0,mGateDepth);
-
-      setWaypoint(divePoint);
-      mSetWaypoint = true;
-    }
-  else if(mWaypointComplete)
-    {
-      mSetWaypoint = false;
-      mCurrentState = STATE_DO_GATE;
-    }  
+  mCurrentState = STATE_DO_GATE;
+  ROS_INFO("Init -> Do Gate");
 }
 
 
@@ -282,6 +274,7 @@ void state_do_gate()
        
        mSetWaypoint = false;
        mCurrentState = STATE_FIRST_BUOY;
+       ROS_INFO("Do Gate -> First Buoy");
     }
 }
 
@@ -305,10 +298,19 @@ void state_first_buoy()
 	  mSetWaypoint = false;
 
 	  mCurrentState = STATE_SECOND_BUOY;
+
+	  ROS_INFO("First Buoy -> Second Buoy");
 	}
       // otherwise manuever towards visible buoy 
       else
-	fineTuneWaypoint(find_buoy.response.Landmarks.LandmarkArray[0].Center);
+	{
+	  ROS_INFO("Centering on Buoy; (%f,%f,%f)",
+		   find_buoy.response.Landmarks.LandmarkArray[0].Center.x,
+		   find_buoy.response.Landmarks.LandmarkArray[0].Center.y,
+		   find_buoy.response.Landmarks.LandmarkArray[0].Center.z);
+
+	  fineTuneWaypoint(find_buoy.response.Landmarks.LandmarkArray[0].Center);
+	}
     }
   // otherwise move towards estimated buoy waypoint on map
   else if(!mSetWaypoint)
@@ -338,10 +340,19 @@ void state_second_buoy()
 	  mSetWaypoint = false;
 
 	  mCurrentState = STATE_HEDGE;
+
+	  ROS_INFO("Second Buoy -> Hedge");
 	}
       // otherwise move towards visible buoy
       else
-	fineTuneWaypoint(find_buoy.response.Landmarks.LandmarkArray[0].Center);
+	{
+	  fineTuneWaypoint(find_buoy.response.Landmarks.LandmarkArray[0].Center);
+	  ROS_INFO("Centering on Buoy; (%f,%f,%f)",
+		   find_buoy.response.Landmarks.LandmarkArray[0].Center.x,
+		   find_buoy.response.Landmarks.LandmarkArray[0].Center.y,
+		   find_buoy.response.Landmarks.LandmarkArray[0].Center.z);
+	  
+	}
     }
   // otherwise move towards estimated buoy waypoint on map
   else if(!mSetWaypoint)
@@ -376,6 +387,7 @@ void state_hedge()
 
 	  // go to next state
 	  mCurrentState = STATE_FIRST_BIN;
+
 	} 
       // maneuver towards visible bin
       else
@@ -594,6 +606,7 @@ int main(int argc, char** argv)
 	      state_pinger();
 	      break;
 	    }
+
 	}
       else
 	{
