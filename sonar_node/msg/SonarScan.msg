@@ -1,4 +1,0 @@
-float64 F1_magnitude
-float64 F1_heading
-float64 F2_magnitude
-float64 F2_heading

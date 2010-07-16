@@ -27,9 +27,9 @@ rosbuild_gensrv()
 #rosbuild_add_boost_directories()
 #rosbuild_link_boost(${PROJECT_NAME} thread)
 link_directories(${PROJECT_SOURCE_DIR}/lib)
-rosbuild_add_library(${PROJECT_NAME} src/cheetah.c)
-rosbuild_add_library(${PROJECT_NAME} src/sonar_fft.cpp)
-rosbuild_add_library(${PROJECT_NAME} src/sonar_utils.cpp)
+rosbuild_add_library(${PROJECT_NAME} src/cheetah.c
+  src/sonar_fft.cpp
+  src/sonar_utils.cpp)
 rosbuild_add_executable(${PROJECT_NAME} src/sonar_node.cpp)
 target_link_libraries(${PROJECT_NAME} fftw3)
 
