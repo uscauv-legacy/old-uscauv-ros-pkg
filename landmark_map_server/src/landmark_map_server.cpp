@@ -98,6 +98,27 @@ void operator >> (const YAML::Node & node, Landmark & l)
 		LandmarkTypes::Pipe pipe (center, ori);
 		result = &pipe;
 	}
+	else if(landmarkType == Landmark::LandmarkType::Bin)
+	{
+		int id;
+		node["id"] >> id;
+		LandmarkTypes::Bin bin (center, ori, id);
+		result = &bin;
+	}
+	else if(landmarkType == Landmark::LandmarkType::Window)
+	{
+		int color;
+		node["color"] >> color;
+		LandmarkTypes::Window window (center, ori, color);
+		result = &window;
+	}
+	else if(landmarkType == Landmark::LandmarkType::Waypoint)
+	{
+		int id;
+		node["id"] >> id;
+		LandmarkTypes::Waypoint waypoint (center, ori, id);
+		result = &waypoint;
+	}
 	else
 	{
 		ROS_WARN("Landmark ID %d is not defined. Landmark not added to map.", landmarkType);
@@ -135,7 +156,7 @@ int main( int argc, char* argv[] )
 		return 1;
 	}
 	
-	ros::Publisher marker_pub = n.advertise<visualization_msgs::Marker>("landmarks", 1);
+	ros::Publisher marker_pub = n.advertise<visualization_msgs::Marker>("landmarks", 5);
 	ros::ServiceServer map_server = n.advertiseService("fetchLandmarkMap", FetchLandmarkMapCallback);
 	
 	YAML::Parser parser(fin);
