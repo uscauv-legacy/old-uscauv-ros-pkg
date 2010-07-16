@@ -78,6 +78,7 @@ bool updatePID(geometry_msgs::Twist & cmd_vel)
 		//errorInPos.setY(errorInPos.y);
 		
 		cmd_vel.linear.x = pid_X->updatePid(errorInPos.x, dt);
+		LocalizationUtil::capValue(cmd_vel.linear.x, 0.75);
 		cmd_vel.linear.y = pid_Y->updatePid(errorInPos.y, dt);
 		
 		setDesiredXYZ.request.Mask.z = 1;
