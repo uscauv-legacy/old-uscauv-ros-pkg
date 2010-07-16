@@ -1,3 +1,4 @@
+// name
 /**************************************************************************
  *
  * jaus_adapter 
@@ -90,6 +91,11 @@ int priority;
 int flags; 
 unsigned short msg_id; 
 
+// hold incoming data
+char next_byte;
+unsigned short next_2_bytes;
+unsigned int next_4_bytes;
+
 // unique identifier for transaction between sender and receiver
 long int handle;						
 
@@ -131,7 +137,7 @@ REPORT_CONTROL_MSG msg_ctrl;
 // Confirm Control
 typedef struct {
 	unsigned short 	msg_id;
-	unsigned int   	response_code; // value_enum = 0,1,2
+	unsigned char  	response_code; // value_enum = 0,1,2
 } CONFIRM_CONTROL_MSG;
 CONFIRM_CONTROL_MSG msg_cfrm;
 
@@ -149,6 +155,15 @@ typedef struct {
 	unsigned int		query_type;
 } QUERY_ID_MSG;
 QUERY_ID_MSG msg_id_init;
+
+// Report Identification
+typedef struct {
+	unsigned short  msg_id;
+	unsigned char   query_type;
+	unsigned short  type;
+	string					identification;					
+} REPORT_ID_MSG;
+REPORT_ID_MSG msg_report_id;
 
 //################################################################
 // Define some helper functions
@@ -254,6 +269,21 @@ int main( int argc, char* argv[] )
 		}
 	}
 
+	ros::Duration(2).sleep();
+
+	//################################################################
+	// SEND REPORT ID
+	//################################################################
+	// msg_id for Report ID [as5710, 54] 
+	msg_report_id.msg_id 		= 0x4B00;
+	
+
+
+	if (JrSend(handle, destination, sizeof(msg_report_id), (char*)&msg_report_id) != Ok)
+		cout << "\n\t *** Unable to Send Message *** \n\n";
+	else 
+		cout << "\n *** REPORT ID MESSAGE sent ***\n";
+
 	//################################################################
 	// START INTERACTION
 	//################################################################
@@ -302,9 +332,10 @@ int main( int argc, char* argv[] )
 					//################################################################
 				case 0x2404: // msg_id for Query Velocity State
 					{
-						// Now send Report Velocity State, 0x4402 [as6009, 72]
-						msg_vel.msg_id 		= 0x4402;
+						// Now send Report Velocity State, 0x4404 [as6009, 72]
+						msg_vel.msg_id 		= 0x4404;
 						msg_vel.pv 				= 1; // 1 for competition 
+						// rescale this
 						msg_vel.vel_x 		= scaleToUInt32(200, -327.68, 327.67);
 
 						if (JrSend(handle, destination, sizeof(msg_vel), (char*)&msg_vel) != Ok)
@@ -326,9 +357,10 @@ int main( int argc, char* argv[] )
 					//################################################################
 				case 0x200D: // msg_id for Query Control [as5710, 47] 
 					{
+						// same byte packing issue
 						// send Report Control, 0x400D [as5710, 52]
 						msg_ctrl.msg_id				= 0x400D;		 	
-						msg_ctrl.ss_id				= 130;
+						msg_ctrl.ss_id				= 42;
 						msg_ctrl.node_id			= 1;	
 						msg_ctrl.component_id	= 1; 
 						msg_ctrl.auth_code		= 1; 
@@ -341,9 +373,13 @@ int main( int argc, char* argv[] )
 
 				case 0x000D: // msg_id for Request Control [as5710, 41]
 					{
+						next_byte =  buffer[2];
+
+						cout << "\n\n" << next_byte << "\n\n";
+
 						// send Confirm Control, 0x000F [as5710, 42] 
 						msg_cfrm.msg_id					= 0x000F;
-						msg_cfrm.response_code	= 0; 
+						msg_cfrm.response_code	= next_byte; 
 						// Response Code:
 						// 0 CONTROL ACCEPTED
 						// 1 NOT AVAILABLE
@@ -385,6 +421,7 @@ int main( int argc, char* argv[] )
 						continue;
 					}
 
+					ros::Duration(1).sleep();
 			}
 		}
 	}
@@ -429,4 +466,10 @@ int main( int argc, char* argv[] )
 //cout << ":" << mSecond << ":" << mMilliseconds << endl;
 return tstamp ;
 }
- */
+
+next_4_bytes =  (buffer[2] << 24);
+next_4_bytes |= (buffer[3] << 16);
+next_4_bytes |= (buffer[4] << 8);
+next_4_bytes |= (buffer[5]);
+*/
+
