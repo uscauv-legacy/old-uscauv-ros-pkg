@@ -53,6 +53,7 @@ public:
 		const static int Bin = 		3;
 		const static int Window = 	4;
 		const static int Waypoint = 5;
+		cosnt static int Gate = 	6;
 	};
 	
 	struct ImageIds
@@ -156,6 +157,12 @@ namespace LandmarkTypes
 	public:
 		Pipe(cv::Point3d center, double orientation);
 //		visualization_msgs::Marker createMarker(std::string ns, std::string frame);
+	};
+	
+	class Window : public Landmark
+	{
+	public:
+		Window(cv::Point3d center, double orientation, int color);
 	};
 	
 	class Waypoint : public Landmark
