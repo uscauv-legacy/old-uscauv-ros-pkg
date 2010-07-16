@@ -136,7 +136,7 @@ geometry_msgs::Vector3 calculateChangeInPosition()
 	{
 		CvSURFPoint* r1 = (CvSURFPoint*)cvGetSeqElem( leftKeypoints, ptpairs[i] );
 		CvSURFPoint* r2 = (CvSURFPoint*)cvGetSeqElem( rightKeypoints, ptpairs[i+1] );
-		// TODO:  Fix the line below.  Don't think we can use pixel distances
+		// TODO:  Fix the line below.  Don't think we can use pixel distances without scaling it somehow
 		float disparity = fabs(r1->pt.x - r2->pt.x);
 		disparities.push_back(disparity);
 		distances.push_back(FOCAL_LENGTH * CAMERA_DISTANCE / disparity);
