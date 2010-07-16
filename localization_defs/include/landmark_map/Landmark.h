@@ -53,7 +53,7 @@ public:
 		const static int Bin = 		3;
 		const static int Window = 	4;
 		const static int Waypoint = 5;
-		cosnt static int Gate = 	6;
+		const static int Gate = 	6;
 	};
 	
 	struct ImageIds
