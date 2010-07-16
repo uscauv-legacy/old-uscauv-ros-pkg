@@ -66,7 +66,7 @@ using namespace std;
 //################################################################
 
 unsigned int id = 					0x00BD0101; // 0xBD = 189, my ID 
-unsigned int destination = 	0x005A0101; // COP_ID 90 = 0x005A
+unsigned int destination = 	0x002A0101; // COP_ID 90 = 0x005A
 																				// COP_ID 42 = 0x002A
 #define MAX_BUFFER_SIZE 		1000				// size of data sent back 
 // COP IP: 192.168.1.42:3794
@@ -86,9 +86,9 @@ unsigned int destination = 	0x005A0101; // COP_ID 90 = 0x005A
 char buffer[MAX_BUFFER_SIZE];          	// Allocate space for message
 unsigned int size = MAX_BUFFER_SIZE;   	// Initialize size
 unsigned int source;            				// Returned ID value 
-int *priority; 
-int *flags; 
-unsigned short *msg_id; 
+int priority; 
+int flags; 
+unsigned short msg_id; 
 
 // unique identifier for transaction between sender and receiver
 long int handle;						
@@ -241,7 +241,7 @@ int main( int argc, char* argv[] )
 	{
 		ros::Duration(5).sleep();
 
-		msg_id_init.msg_id 		= 0x4402;
+		msg_id_init.msg_id 		= 0x2B00;
 		msg_id_init.query_type = 3;  // 0 res, 1 sys, 2 subsys, 
 		// 3 node, 4 comp, 5 reserved
 
@@ -263,9 +263,10 @@ int main( int argc, char* argv[] )
 		//################################################################
 		// LOOP AND RECEIVE MESSAGES
 		//################################################################
-		jr_receive_rtn = JrReceive(handle, &source, &size, buffer,
-													priority, flags, msg_id);
-		ros::spinOnce();
+		size = MAX_BUFFER_SIZE;   	// Initialize size
+
+		jr_receive_rtn = JrReceive(handle, &source, &size, buffer);
+													//&priority, &flags, &msg_id);
 		ros::Duration(1).sleep();
 		cout << "\nJrReceive Return Value: " << jr_receive_rtn << "\n\n";
 		if (jr_receive_rtn == 0)
@@ -275,7 +276,8 @@ int main( int argc, char* argv[] )
 			cout << "\nReceived " << size << " bytes from " << source << "\n";
 
 			// then do something depending on what the message ID was
-			switch( (int) msg_id )
+			// 
+			switch( *((unsigned short*)buffer) )
 			{
 				//################################################################
 				// REPORT LOCAL POSE
