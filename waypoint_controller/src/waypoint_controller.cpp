@@ -67,9 +67,11 @@ void operator -= (geometry_msgs::Vector3 & v1, geometry_msgs::Vector3 & v2)
 
 bool updatePID(geometry_msgs::Twist & cmd_vel)
 {
+	ROS_INFO("update PID");
 	if(lastPidUpdateTime != ros::Time(-1))
 	{
 		ros::Duration dt = ros::Time::now() - lastPidUpdateTime;
+		ROS_INFO("dt %f", dt.toSec());
 		
 		LocalizationUtil::capValue(errorInPos.x, 20.0);
 		LocalizationUtil::capValue(errorInPos.y, 20.0);
@@ -84,9 +86,9 @@ bool updatePID(geometry_msgs::Twist & cmd_vel)
 		setDesiredXYZ.request.Mask.z = 1;
 		setDesiredXYZ.request.Mode.z = 1;
 		setDesiredXYZ.request.DesiredXYZ.z = errorInPos.z;
-		
-		lastPidUpdateTime = ros::Time::now();
 	}
+	
+	lastPidUpdateTime = ros::Time::now();
 	return true;
 }
 
@@ -97,15 +99,34 @@ bool updateCmdVel(geometry_msgs::Twist & cmd_vel)
 	if(mState == State::idle || mState == State::fine_tune)
 		return false;
 	
-	if(mState >= State::translate)
+	if(mState >= State::set_xyz)
 	{
-		tl->waitForTransform(map_frame.c_str(), robot_frame.c_str(), ros::Time(0), ros::Duration(5.0));
-		tl->lookupTransform(map_frame.c_str(), robot_frame.c_str(), ros::Time(0), currentPose);
+		try
+		{
+			tl->waitForTransform(map_frame.c_str(), robot_frame.c_str(), ros::Time(0), ros::Duration(5.0));
+			tl->lookupTransform(map_frame.c_str(), robot_frame.c_str(), ros::Time(0), currentPose);
+			//listener.lookupTransform("/turtle2", "/turtle1", ros::Time(0), transform);
+		}
+		catch (tf::TransformException ex)
+		{
+			ROS_ERROR("%s",ex.what());
+		}
+		
+		tf::Vector3 theTf = currentPose.getOrigin();
+		cv::Point3d theOri;
+		currentPose.getBasis().getEulerYPR(theOri.x, theOri.y, theOri.z);
+		
+		ROS_INFO("tf x %f y %f z %f r %f p %f y %f", theTf.x(), theTf.y(), theTf.z(), theOri.x, theOri.y, theOri.z);
+		
+		//tl->lookupTransform(map_frame.c_str(), robot_frame.c_str(), ros::Time(0), currentPose);
 		
 		errorInPos = waypointXYZ;
 		errorInPos.x -= currentPose.getOrigin().x();
 		errorInPos.y -= currentPose.getOrigin().y();
 		errorInPos.z -= currentPose.getOrigin().z();
+		
+		ROS_INFO("error in pos x %f y %f z %f", errorInPos.x, errorInPos.y, errorInPos.z);
+		
 		
 		errorInOri = waypointRPY;
 		geometry_msgs::Vector3 currentOri;
@@ -123,9 +144,11 @@ bool updateCmdVel(geometry_msgs::Twist & cmd_vel)
 		
 		if(mState == State::translate)
 		{
-			if(errorInPos.x + errorInPos.y < maxErrorInPos)
+			if(errorInPos.x + errorInPos.y + errorInPos.z < maxErrorInPos)
 			{
-				mState = mState == State::translate ? State::set_rpy : mState;
+				//mState = mState == State::translate ? State::set_rpy : mState;
+				mState = State::set_rpy;
+				return false;
 			}
 			else
 			{
@@ -163,13 +186,13 @@ bool updateCmdVel(geometry_msgs::Twist & cmd_vel)
 	}
 	else if(mState == State::move_xyz)
 	{
-		mState = errorInPos.z < maxErrorInPos ? State::translate : mState;
-		return mState == State::translate;
-	}
-	else if(mState == State::translate)
-	{
-		mState = errorInPos.z + errorInPos.y + errorInPos.x < maxErrorInPos ? State::set_rpy : mState;
-		return true;
+		//mState = errorInPos.z < maxErrorInPos ? State::translate : mState;
+		if(errorInPos.z < maxErrorInPos && errorInOri.z < maxErrorInOri )
+		{
+			mState = State::translate;
+		}
+		//return mState == State::translate;
+		return false;
 	}
 	else if(mState == State::set_rpy)
 	{
@@ -178,7 +201,11 @@ bool updateCmdVel(geometry_msgs::Twist & cmd_vel)
 	}
 	else if(mState == State::move_rpy)
 	{
-		mState = errorInOri.x + errorInOri.y + errorInOri.z <= maxErrorInOri ? State::holding : mState;
+		//mState = errorInOri.x + errorInOri.y + errorInOri.z <= maxErrorInOri ? State::holding : mState;
+		if(errorInOri.x + errorInOri.y + errorInOri.z <= maxErrorInOri)
+		{
+			mState = State::holding;
+		}
 	}
 	else if(mState == State::holding)
 	{
@@ -225,7 +252,7 @@ int main( int argc, char * argv[] )
 	n.param("robot_frame", robot_frame, std::string("/base_link") );
 	n.param("map_frame", map_frame, std::string("/landmark_map") );
 	
-	ros::Publisher cmd_vel_pub = n.advertise<geometry_msgs::Twist>("cmd_vel", 1);
+	ros::Publisher cmd_vel_pub = n.advertise<geometry_msgs::Twist>("/seabee3/cmd_vel", 1);
 	ros::Publisher state_pub = n.advertise<waypoint_controller::CurrentState>("current_state", 1);
 	
 	set_desired_rpy_srv = n.serviceClient<seabee3_driver::SetDesiredRPY>("setRPY");
@@ -268,6 +295,8 @@ int main( int argc, char * argv[] )
 	
 	geometry_msgs::Twist desiredVelocity;
 	waypoint_controller::CurrentState currentState;
+	
+	mState = State::idle;
 	
 	while( ros::ok() )
 	{

@@ -71,7 +71,7 @@ double 	speed_m1_dir, speed_m2_dir,
 		roll_m1_dir, roll_m2_dir,
 		heading_m1_dir, heading_m2_dir;
 
-double speed_axis_dir, strafe_axis_dir, depth_axis_dir, roll_axis_dir, pitch_axis_dir, heading_axis_dir;
+double speed_axis_dir, strafe_axis_dir, depth_axis_dir, roll_axis_dir, pitch_axis_dir, heading_axis_dir, cmdVelTimeout;
 
 bool depthInitialized;
 
@@ -326,7 +326,7 @@ void CmdVelCallback(const geometry_msgs::TwistConstPtr & twist)
 	//	TwistCache->pop();
 	//}
 	
-	updateMotorCntlFromTwist(twist);
+	lastUpdateTime = ros::Time::now();
 }
 
 bool setDesiredXYZCallback(seabee3_driver::SetDesiredXYZ::Request & req, seabee3_driver::SetDesiredXYZ::Response & resp)
@@ -470,6 +470,8 @@ int main(int argc, char** argv)
 	
 	double pid_i_min, pid_i_max;
 	
+	n.param("cmd_vel_timeout", cmdVelTimeout, 2.0);
+	
 	n.param("depth_err_cap", maxDepthError, 25.0);
 	n.param("roll_err_cap", maxRollError, 25.0);
 	n.param("pitch_err_cap", maxPitchError, 25.0);
@@ -546,6 +548,18 @@ int main(int argc, char** argv)
 	while(ros::ok())
 	{
 		headingPidStep();
+		
+		ros::Duration dt = ros::Time::now() - lastUpdateTime;
+		
+		if(dt.toSec() > cmdVelTimeout)
+		{
+			for(int i = 0; i < BeeStem3::NUM_MOTOR_CONTROLLERS; i ++)
+			{
+				motorCntlMsg->motors[i] = 0;
+				motorCntlMsg->mask[i] = 1;
+			}
+			lastUpdateTime = ros::Time::now();
+		}
 		
 		motor_cntl_pub.publish(*motorCntlMsg);
 		

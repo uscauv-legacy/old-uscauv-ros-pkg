@@ -155,6 +155,11 @@ double z            =  0.0;
 geometry_msgs::Vector3 ori;
 geometry_msgs::Vector3 linear;
 
+tf::Transform odom_trans;
+nav_msgs::Odometry odom;
+tf::TransformBroadcaster * odom_broadcaster;
+double motorCntlTimeout;
+
 void imuCallback(const xsens_node::IMUDataConstPtr & msg)
 {
 	ori = msg->ori;
@@ -177,12 +182,16 @@ void motorCntlCallback(const seabee3_driver_base::MotorCntlConstPtr & msg)
 {
 	ROS_INFO("motorCntlCallback");
 	//Create some persistent variables for this callback
-	static tf::TransformBroadcaster odom_broadcaster;
 	static double th           =  0.0;
 	static double last_depth   =  0.0;
 	static double last_th      =  0.0;
 	static ros::Time last_time =  ros::Time::now();
 	ros::Time current_time     =  ros::Time::now();
+
+	//Find the amount of elapsed time
+	double dt = (current_time - last_time).toSec();
+	if(dt > motorCntlTimeout)
+		return;
 
 	//Get the orientation from the imu 
 	th = ori.z * M_PI/180.0;
@@ -192,9 +201,6 @@ void motorCntlCallback(const seabee3_driver_base::MotorCntlConstPtr & msg)
 	int left_thrust_speed = msg->motors[FWD_LEFT_THRUSTER];
 
 	double trans_speed = theSpeedInterpolator.getSpeed( (right_thrust_speed + left_thrust_speed)/2.0, 1);
-
-	//Find the amount of elapsed time
-	double dt = (current_time - last_time).toSec();
 
 	//Compute our predicted velocity from the motor commands
 	double vx  = cos(th) * trans_speed;
@@ -229,18 +235,15 @@ void motorCntlCallback(const seabee3_driver_base::MotorCntlConstPtr & msg)
 	tf::Quaternion quat(ori.z, ori.y, ori.x);
 	geometry_msgs::Quaternion odom_quat;
 	tf::quaternionTFToMsg(quat, odom_quat);
-	geometry_msgs::TransformStamped odom_trans;
-	odom_trans.header.stamp = current_time;
+	/*odom_trans.header.stamp = current_time;
 	odom_trans.header.frame_id = "/seabee3/odom";//<----------- Not sure what this is
 	odom_trans.child_frame_id = "/seabee3/base_link"; //<---- Not sure what this is
 	odom_trans.transform.translation.x = x;
 	odom_trans.transform.translation.y = y;
 	odom_trans.transform.translation.z = z;
-	odom_trans.transform.rotation = odom_quat;
-	odom_broadcaster.sendTransform(odom_trans);
+	odom_trans.transform.rotation = odom_quat;*/
 
 	//Next, publish the odometry message over ROS
-	nav_msgs::Odometry odom;
 	odom.header.stamp = current_time;
 	odom.header.frame_id = "/seabee3/odom";//<----------- Not sure what this is
 	odom.pose.pose.position.x  = x;
@@ -252,7 +255,6 @@ void motorCntlCallback(const seabee3_driver_base::MotorCntlConstPtr & msg)
 	odom.twist.twist.linear.y  = vy;
 	odom.twist.twist.linear.z  = vz;
 	odom.twist.twist.angular.z = vth;
-	odom_pub.publish(odom);
 
 	//Update our last_* variables
 	last_time  = current_time;
@@ -272,6 +274,8 @@ int main(int argc, char** argv)
 {
 	ros::init(argc, argv, "seabee3_dead_reckoning");
 	ros::NodeHandle n("~");
+
+	n.param("motor_cntl_timeout", motorCntlTimeout, 2.0);
 
 	ros::Subscriber motor_cntl_sub = n.subscribe
 		("/seabee3/motor_cntl", 1, motorCntlCallback);
@@ -293,8 +297,31 @@ int main(int argc, char** argv)
 	ros::ServiceServer reset_odom = n.advertiseService ("/seabee3/resetOdom", ResetOdomCallback);
 
 	odom_pub = n.advertise<nav_msgs::Odometry>("/seabee3/odom_prim", 5); 
+	odom_broadcaster = new tf::TransformBroadcaster;
+	
+	/*odom_trans.header.stamp = ros::Time::now();
+	odom_trans.header.frame_id = "/seabee3/odom";
+	odom_trans.child_frame_id = "/seabee3/base_link";
+	
+	tf::Quaternion quat(ori.z, ori.y, ori.x);
+	geometry_msgs::Quaternion odom_quat;
+	tf::quaternionTFToMsg(quat, odom_quat);
+	odom_trans.transform.rotation = odom_quat;*/
+	
+	odom.header.stamp = ros::Time::now();
+	odom.header.frame_id = "/seabee3/odom";
+	odom.child_frame_id = "/seabee3/base_link";
+	
+	
 
-	ros::spin();
+	while( ros::ok() )
+	{
+		odom_trans = tf::Transform( tf::Quaternion( ori.z, ori.y, ori.x), tf::Vector3( x, y, z) );
+		odom_broadcaster->sendTransform( tf::StampedTransform( odom_trans, ros::Time::now(), "/seabee3/odom", "/seabee3/base_link" ) );
+		odom_pub.publish(odom);
+		ros::spinOnce();
+		ros::Rate(20).sleep();
+	}
 
 	return 0;
 }
