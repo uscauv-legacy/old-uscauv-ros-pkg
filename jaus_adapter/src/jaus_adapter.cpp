@@ -199,12 +199,13 @@ REPORT_ID_MSG msg_report_id;
 typedef struct {
 	unsigned short	msg_id;
 	unsigned char		node_list;
-	unsigned char		node_id;
-	unsigned char		component_list;
-	unsigned char		component_id;
-	unsigned char		instance_id;
-	unsigned char		service_list;
-	string					uri;
+	unsigned char 	node_id;
+	unsigned char 	component_list;
+	unsigned char 	component_id;
+	unsigned char 	instance_id;
+	unsigned char 	service_list;
+	unsigned char		dummy;
+	unsigned char		uri[5];
 	unsigned char		version_major;
 	unsigned char		version_minor;
 } REPORT_SERVICES_MSG;
@@ -214,16 +215,23 @@ REPORT_SERVICES_MSG msg_service;
 // Define some helper functions
 //################################################################
 
-// get_yaw(), return unsigned short
+//################################################################
+//################################################################
+//################################################################
+//################################################################
+// EDWARD!!!!!!!!!!!!!!!!!
+// FILL IN THIS FUNCTION BELOW (get_yaw)
+//################################################################
+//################################################################
+//################################################################
+//################################################################
+
 unsigned short get_yaw()
 {
-	return 0;
-}
+	
+	// put code here to return yaw from Xsens IMU as an unsigned short
 
-// get_vel(), return unsigned int
-unsigned int get_vel()
-{
-	return 0;
+	return 0; //return unsigned short value of yaw
 }
 
 // create 16 bit scale int
@@ -378,7 +386,7 @@ int main( int argc, char* argv[] )
 						msg_vel.msg_id 		= 0x4404;
 						msg_vel.pv 				= 1; // 1 for competition 
 						// rescale this
-						msg_vel.vel_x 		= scaleToUInt32(get_vel(), -327.68, 327.67);
+						msg_vel.vel_x 		= scaleToUInt32(15, -327.68, 327.67);
 
 						if (JrSend(handle, destination, sizeof(msg_vel), (char*)&msg_vel) != Ok)
 							cout << "\n\t *** Unable to Send Message *** \n\n";
@@ -505,7 +513,7 @@ int main( int argc, char* argv[] )
 					// CAPABILITIES 
 					//################################################################
 				case 0x2B03: // msg_id for Query Services [as5710, 50]
-					{/*
+					{
 						// send Report Services, 0x4B03 [as5710, 56]
 						// serialize all these inherited messages together
 						msg_service.msg_id          = 0x4B03;
@@ -515,7 +523,12 @@ int main( int argc, char* argv[] )
 						msg_service.component_id		= 1;
 						msg_service.instance_id			= 0;
 						msg_service.service_list		= 1;
-						msg_service.uri							= "REPORT_YAW";
+						msg_service.dummy						= 5;
+
+						string dummy_uri = "STUFF";
+
+						memcpy(msg_service.uri, dummy_uri.c_str(), 5); //serialize count before string
+						
 						msg_service.version_major		= 4;
 						msg_service.version_minor		= 2;
 
@@ -523,7 +536,7 @@ int main( int argc, char* argv[] )
 							cout << "\n\t *** Unable to Send Message *** \n\n";
 						else 
 							cout << "\n *** REPORT SERVICES MESSAGE sent ***\n";
-							*/
+							
 					}
 
 					ros::Duration(1).sleep();
