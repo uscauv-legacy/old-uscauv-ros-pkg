@@ -105,7 +105,7 @@ unsigned int destination = 	0x002A0101;
 // the compiler to pack on 1-byte boundaries to
 // make sure it doesn't insert padding that would
 // be non-compliant to AS6009.
-#pragma pack(1)
+//#pragma pack(1)
 
 #define MAX_BUFFER_SIZE 		1000				// size of data sent back 
 
@@ -234,17 +234,11 @@ boost::mutex imu_mutex;
 
 void imuCallback(const xsens_node::IMUDataConstPtr & msg)
 {
-	ROS_INFO("imu callback");
-  boost::lock_guard<boost::mutex> lock(imu_mutex); 
-  
   mYaw = msg->ori.z;
 }
 
 unsigned short get_yaw()
 {
-  boost::lock_guard<boost::mutex> lock(imu_mutex); 
-  ROS_INFO("Returning yaw: %f",mYaw);
-
   return (unsigned short)mYaw;
 }
 
@@ -356,9 +350,6 @@ int main( int argc, char* argv[] )
 	while(ros::ok())
 	{
 		ros::spinOnce();
-		get_yaw();
-
-
 		//################################################################
 		// LOOP AND RECEIVE MESSAGES
 		//################################################################
@@ -373,8 +364,6 @@ int main( int argc, char* argv[] )
 			// print info about the message
 			cout << "\n\nMSG_ID = " << msg_id;
 			cout << "\nReceived " << size << " bytes from " << source << "\n";
-			ros::spinOnce();
-			get_yaw();
 
 			// then do something depending on what the message ID was
 			// 
