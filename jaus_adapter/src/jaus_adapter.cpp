@@ -300,7 +300,7 @@ int main( int argc, char* argv[] )
 
 	// We have to call JrConnect before we send any messages.
 	// JrConnect requires us to pass in the JAUS ID for our
-	// component as well as the configuration file.  We 
+	// component as well as the conguration file.  We 
 	// get a handle back that's used for subsequent calls.
 	// I'm using a subsystem ID (in hex), 
 	// and node id 1, component id 1.
@@ -311,7 +311,7 @@ int main( int argc, char* argv[] )
 	cout << "\n\n------------------------------------------------";
 	cout << "\n\tBEGINNING CONNECTION";
 	cout << "\n------------------------------------------------\n\n";
-
+	
 	// connect to Junior
 	jr_connect_rtn = JrConnect (id, "jr_config.xml", &handle);
 	cout << "\nJrConnect Return Value: " << jr_connect_rtn << "\n\n";
@@ -354,6 +354,10 @@ int main( int argc, char* argv[] )
 	// For the rest of the tasks, the COP initatives everything
 	while(ros::ok())
 	{
+			ros::spinOnce();
+			get_yaw();
+
+
 		//################################################################
 		// LOOP AND RECEIVE MESSAGES
 		//################################################################
@@ -368,6 +372,8 @@ int main( int argc, char* argv[] )
 			// print info about the message
 			cout << "\n\nMSG_ID = " << msg_id;
 			cout << "\nReceived " << size << " bytes from " << source << "\n";
+			ros::spinOnce();
+			get_yaw();
 
 			// then do something depending on what the message ID was
 			// 
