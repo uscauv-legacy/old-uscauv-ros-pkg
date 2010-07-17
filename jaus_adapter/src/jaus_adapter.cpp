@@ -234,6 +234,7 @@ boost::mutex imu_mutex;
 
 void imuCallback(const xsens_node::IMUDataConstPtr & msg)
 {
+	ROS_INFO("imu callback");
   boost::lock_guard<boost::mutex> lock(imu_mutex); 
   
   mYaw = msg->ori.z;
@@ -354,8 +355,8 @@ int main( int argc, char* argv[] )
 	// For the rest of the tasks, the COP initatives everything
 	while(ros::ok())
 	{
-			ros::spinOnce();
-			get_yaw();
+		ros::spinOnce();
+		get_yaw();
 
 
 		//################################################################
@@ -562,6 +563,7 @@ int main( int argc, char* argv[] )
 					ros::Duration(1).sleep();
 			}
 		}
+		ros::spinOnce();
 	}
 
 	//################################################################
