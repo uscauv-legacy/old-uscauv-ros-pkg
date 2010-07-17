@@ -63,6 +63,7 @@ geometry_msgs::Vector3 * desiredRPY, * errorInRPY, * desiredChangeInRPYPerSec, *
 double maxRollError, maxPitchError, maxHeadingError, maxDepthError, desiredSpeed, desiredStrafe;
 ros::Time * lastUpdateTime;
 ros::Time * lastPidUpdateTime;
+ros::Time lastCmdVelUpdateTime;
 tf::Vector3 mImuOriOffset;
 
 double 	speed_m1_dir, speed_m2_dir,
@@ -326,7 +327,7 @@ void CmdVelCallback(const geometry_msgs::TwistConstPtr & twist)
 	//	TwistCache->pop();
 	//}
 	
-	lastUpdateTime = ros::Time::now();
+	lastCmdVelUpdateTime = ros::Time::now();
 }
 
 bool setDesiredXYZCallback(seabee3_driver::SetDesiredXYZ::Request & req, seabee3_driver::SetDesiredXYZ::Response & resp)
@@ -549,7 +550,7 @@ int main(int argc, char** argv)
 	{
 		headingPidStep();
 		
-		ros::Duration dt = ros::Time::now() - lastUpdateTime;
+		ros::Duration dt = ros::Time::now() - lastCmdVelUpdateTime;
 		
 		if(dt.toSec() > cmdVelTimeout)
 		{
@@ -558,7 +559,7 @@ int main(int argc, char** argv)
 				motorCntlMsg->motors[i] = 0;
 				motorCntlMsg->mask[i] = 1;
 			}
-			lastUpdateTime = ros::Time::now();
+			lastCmdVelUpdateTime = ros::Time::now();
 		}
 		
 		motor_cntl_pub.publish(*motorCntlMsg);
