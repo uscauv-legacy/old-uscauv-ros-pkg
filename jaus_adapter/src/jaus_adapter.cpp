@@ -33,6 +33,10 @@
  *
  **************************************************************************/
 
+// ask:
+// 1. Strings in report services, report id?
+// 2. 
+
 //################################################################
 //
 // INFORMATION
@@ -378,9 +382,18 @@ int main( int argc, char* argv[] )
 					//################################################################
 					// IF RECEIVE "REPORT IDENTIFICATION" 
 					//################################################################
-				case 0x4B00: // msg_id for Query Control [as5710, 54] 
+				case 0x4B00: // msg_id for Report ID [as5710, 54] 
 					{
 						cout << "\n\nReceieved Report Identification\n\n";
+
+						bool query_id_received = false;
+						while (query_id_received == false)
+						{
+							size = MAX_BUFFER_SIZE;
+							jr_receive_rtn = JrReceive(handle, &source, &size, buffer);
+							if ( *((unsigned short*)buffer) = 0x2B00)
+								query_id_received = true;
+						}
 
 						// now send my own Report Identification back
 						// msg_id for Report ID [as5710, 54] 
