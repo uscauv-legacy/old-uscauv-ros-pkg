@@ -104,9 +104,9 @@ int jr_send_rtn;
 int jr_receive_rtn;
 int jr_connect_rtn;
 
-// Counter for simulating data
-//unsigned short sim_major = 0;
-//float sim_minor = 0;
+// Counters for simulating data
+float 	sim_short 	= 0; // for simulating yaw
+double 	sim_reg 		= 0; // for simulating pos_x
 
 //################################################################
 // DEFINE MESSAGES TO BE PASSED
@@ -312,11 +312,11 @@ int main( int argc, char* argv[] )
 	while(ros::ok())
 	{
 		// increment sim counter
-	//	sim = sim + 1;
+		sim_short = sim_short + 1;
+		sim_reg = sim_reg + 1;
 		// make sure it doesnt get too big
-	//	if(sim > 40) sim = 0;
-
-
+		if(sim_short > 8) sim_short = 0;
+		if(sim_reg > 13) sim_reg = 0;
 
 		//################################################################
 		// LOOP AND RECEIVE MESSAGES
@@ -345,7 +345,7 @@ int main( int argc, char* argv[] )
 						// send Report Local Pose, 0x4403 [as6009, 72]
 						msg_pose.msg_id 	= 0x4403;
 						msg_pose.pv 			= 64; 
-						msg_pose.yaw 			= scaleToUInt16(2.0, -3.14, 3.14); 
+						msg_pose.yaw 			= scaleToUInt16(0.2 * sim_short, -3.14, 3.14); 
 
 						// Now we send the message to the COP using Junior.  Recall
 						// that the COP subsystem id is decimal 90 (0x005A hex)
@@ -364,7 +364,7 @@ int main( int argc, char* argv[] )
 						msg_vel.msg_id 		= 0x4404;
 						msg_vel.pv 				= 1; // 1 for competition 
 						// rescale this
-						msg_vel.vel_x 		= scaleToUInt32(200, -327.68, 327.67);
+						msg_vel.vel_x 		= scaleToUInt32(5 * sim_reg, -327.68, 327.67);
 
 						if (JrSend(handle, destination, sizeof(msg_vel), (char*)&msg_vel) != Ok)
 							cout << "\n\t *** Unable to Send Message *** \n\n";
