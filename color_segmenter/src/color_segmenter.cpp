@@ -22,10 +22,10 @@
 #include <iostream>
 #include <stdio.h>
 
-#define RED_H_MIN 75
-#define RED_H_MAX 100
-#define RED_S_MIN 0
-#define RED_S_MAX 255
+#define RED_H_MIN 0
+#define RED_H_MAX 85
+#define RED_S_MIN 15
+#define RED_S_MAX 75
 
 #define ORANGE_H_MIN 75
 #define ORANGE_H_MAX 255
@@ -150,10 +150,12 @@ color_segmenter::ColorBlobArray filterColor(int color)
   int s_min = colors[color].s_min;
   int s_max = colors[color].s_max;
 
-  Mat filterImg = cvFilterHS(img,h_min,h_max,s_min,s_max,0);
+  Mat filterImg = cvFilterHS(img,h_min,h_max,s_min,s_max, 0);
   
   dilate(filterImg, filterImg, Mat(), Point(-1,-1), 5);
-  erode(filterImg, filterImg, Mat(), Point(-1,-1), 3);
+  erode(filterImg, filterImg, Mat(), Point(-1,-1), 2);
+  dilate(filterImg, filterImg, Mat(), Point(-1,-1), 5);
+  erode(filterImg, filterImg, Mat(), Point(-1,-1), 2);
 
   IplImage fImg = filterImg;
 
@@ -162,8 +164,8 @@ color_segmenter::ColorBlobArray filterColor(int color)
   CBlobResult blobs;
   blobs = CBlobResult(&fImg, NULL, 0, false);
 
-  blobs.Filter(blobs, B_EXCLUDE, CBlobGetArea(), B_LESS, 5);
-  blobs.Filter(blobs, B_EXCLUDE, CBlobGetArea(), B_GREATER, 99999);
+  blobs.Filter(blobs, B_EXCLUDE, CBlobGetArea(), B_LESS, 500);
+  blobs.Filter(blobs, B_EXCLUDE, CBlobGetArea(), B_GREATER, 10000);
 
   color_segmenter::ColorBlobArray msgBlobs;
 
@@ -171,6 +173,7 @@ color_segmenter::ColorBlobArray filterColor(int color)
   Mat dbgImg;
   cvtColor(filterImg, dbgImg, CV_GRAY2RGB);
 
+   
   for(int i = 0; i < blobs.GetNumBlobs(); i++)
     {
       blobs.GetNthBlob(CBlobGetArea(), i, currentBlob);
@@ -190,7 +193,6 @@ color_segmenter::ColorBlobArray filterColor(int color)
       msgBlob.Color = color;
       
       msgBlobs.ColorBlobs.push_back(msgBlob);
-      
 
       // Draw blob information on debug image
       if(show_dbg_img)
@@ -236,7 +238,7 @@ color_segmenter::ColorBlobArray findTheFuckingRedBuoy(int color)
   IplImage* iplImg = bridge.imgMsgToCv(itsCurrentImage);
 
   //Convert IplImage to cv::Mat and copy data
-  cv::Mat img(iplImg,true);
+  cv::Mat img(iplImg);
 
   //Extract the raw red, green, and blue channels
   std::vector<cv::Mat> imgChannels;
@@ -252,70 +254,70 @@ color_segmenter::ColorBlobArray findTheFuckingRedBuoy(int color)
   cv::Mat green = g;// - ((r + b) * 0.5);
 
   //Convert BGR to HSV space
-  cv::Mat hsvImg;
-  cvtColor(img,hsvImg, CV_BGR2HSV);
+//   cv::Mat hsvImg;
+//   cvtColor(img, hsvImg, CV_BGR2HSV);
 
-  cv::Mat img_hue_ = cv::Mat::zeros(hsvImg.rows, hsvImg.cols, CV_8U);
-  cv::Mat img_sat_ = cv::Mat::zeros(hsvImg.rows, hsvImg.cols, CV_8U);
-  cv::Mat img_bin_ = cv::Mat::zeros(hsvImg.rows, hsvImg.cols, CV_8U);
+//   cv::Mat img_hue_ = cv::Mat::zeros(hsvImg.rows, hsvImg.cols, CV_8U);
+//   cv::Mat img_sat_ = cv::Mat::zeros(hsvImg.rows, hsvImg.cols, CV_8U);
+//   cv::Mat img_bin_ = cv::Mat::zeros(hsvImg.rows, hsvImg.cols, CV_8U);
 
-  // HSV Channel 0 -> img_hue_ & HSV Channel 1 -> img_sat_
-  int from_to[] = { 0,0, 1,1};
-  cv::Mat img_split[] = { img_hue_, img_sat_};
-  cv::mixChannels(&hsvImg, 3,img_split,2,from_to,2);
+//   // HSV Channel 0 -> img_hue_ & HSV Channel 1 -> img_sat_
+//   int from_to[] = { 0,0, 1,1};
+//   cv::Mat img_split[] = { img_hue_, img_sat_};
+//   cv::mixChannels(&hsvImg, 3,img_split,2,from_to,2);
   
-  //Get orange
-  cv::Mat orange = img.clone();
+//   //Get orange
+//   cv::Mat orange = img.clone();
   
-  for(int i = 0; i < orange.rows; i++)
-    {
-      for(int j = 0; j < orange.cols; j++)
-	{
-	  // The output pixel is white if the input pixel
-	  // hue is orange and saturation is reasonable
-	  if(img_hue_.at<int>(i,j) > 4 &&
-	     img_hue_.at<int>(i,j) < 28 &&
-	     img_sat_.at<int>(i,j) > 128) 
-	       {
-		 img_bin_.at<int>(i,j) = 255;
-	       } else {
-		 img_bin_.at<int>(i,j) = 0;
-		 // Clear pixel blue output channel
-		 orange.at<int>(i,j*3+0) = 0;
-		 // Clear pixel green output channel
-		 orange.at<int>(i,j*3+1) = 0;
-		 // Clear pixel red output channel
-		 orange.at<int>(i,j*3+2) = 0;
-	       }
-         }
-    }
+//   for(int i = 0; i < orange.rows; i++)
+//     {
+//       for(int j = 0; j < orange.cols; j++)
+// 	{
+// 	  // The output pixel is white if the input pixel
+// 	  // hue is orange and saturation is reasonable
+// 	  if(img_hue_.at<int>(i,j) > 4 &&
+// 	     img_hue_.at<int>(i,j) < 28 &&
+// 	     img_sat_.at<int>(i,j) > 128) 
+// 	       {
+// 		 img_bin_.at<int>(i,j) = 255;
+// 	       } else {
+// 		 img_bin_.at<int>(i,j) = 0;
+// 		 // Clear pixel blue output channel
+// 		 orange.at<int>(i,j*3+0) = 0;
+// 		 // Clear pixel green output channel
+// 		 orange.at<int>(i,j*3+1) = 0;
+// 		 // Clear pixel red output channel
+// 		 orange.at<int>(i,j*3+2) = 0;
+// 	       }
+//          }
+//     }
 
 
 //Build a gaussian pyramid for the red and green components
 std::vector<cv::Mat> redPyramid(PyramidLevels);
 
-//redPyramid[0]   = red;
+//   switch(color){
+//   case 0:
+//     redPyramid[0] = red;
+//     break;
+//   case 1:
+//     //redPyramid[0] = orange;
+//     break;
+//   case 2:
+//     //redPyramid[0] = yellow;
+//     break;
+//   case 3:
+//     redPyramid[0] = green;
+//     break;
+//   case 4:
+//     redPyramid[0] = blue;
+//     break;
+//   default:
+//     break;
+//   }
 
-  switch(color){
-  case 0:
-    redPyramid[0] = red;
-    break;
-  case 1:
-    redPyramid[0] = orange;
-    break;
-  case 2:
-    //redPyramid[0] = yellow;
-    break;
-  case 3:
-    redPyramid[0] = green;
-    break;
-  case 4:
-    redPyramid[0] = blue;
-    break;
-  default:
-    break;
-  }
-
+  redPyramid[0] = red;
+  
   for(int i=1; i<PyramidLevels; i++)
     cv::GaussianBlur(redPyramid[i-1],   redPyramid[i],   cv::Size(GaussianSize, GaussianSize), 0);
 
@@ -337,7 +339,7 @@ std::vector<cv::Mat> redPyramid(PyramidLevels);
   cv::erode(gatedImg, gatedImg, cv::Mat(), cv::Point(-1,-1), 2 );
 
   //Threshold this guy so we end up with a binary image
-  cv::threshold(gatedImg, gatedImg, 128, 255, cv::THRESH_BINARY);
+  cv::threshold(gatedImg, gatedImg, 200, 255, cv::THRESH_BINARY);
 
   //Find the connected components in the image
   std::vector<cv::Vec4i> hierarchy;
@@ -372,6 +374,22 @@ std::vector<cv::Mat> redPyramid(PyramidLevels);
   msgBlob.Area = maxRect.width*maxRect.height;
   msgBlob.Color = color;
   msgBlobs.ColorBlobs.push_back(msgBlob);
+
+
+  // Publish debug image if requested
+  if(show_dbg_img)
+    {
+      cv::Mat dbgImg = img;
+      
+      //Draw the buoy
+      if(maxArea > 0)
+	cv::rectangle(dbgImg, cv::Point(maxRect.x, maxRect.y), cv::Point(maxRect.x+maxRect.width, maxRect.y+maxRect.height), cv::Scalar(255), 3);      
+      //Convert our debug image to an IplImage and send it out
+      IplImage dImg = dbgImg;
+
+      dbg_img_pub->publish(bridge.cvToImgMsg(&dImg));
+    }
+  
   return msgBlobs;
 }
 
