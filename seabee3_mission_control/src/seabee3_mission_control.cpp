@@ -104,7 +104,9 @@ ros::ServiceClient driver_rpy;
 ros::ServiceClient dropper_one_srv;
 ros::ServiceClient dropper_two_srv;
 ros::ServiceClient shooter_srv;
-ros::ServiceClient landmark_finder_srv;
+ros::ServiceClient buoy_finder_srv;
+ros::ServiceClient bin_finder_srv;
+ros::ServiceClient window_finder_srv;
 ros::ServiceClient landmark_map_srv;
 ros::ServiceClient waypoint_controller_srv;
 ros::ServiceClient ft_waypoint_controller_srv;
@@ -289,7 +291,7 @@ void state_first_buoy()
   find_buoy.request.Ids.push_back(mFirstBuoyColor);
 
   // if a buoy is found
-  if(landmark_finder_srv.call(find_buoy))
+  if(buoy_finder_srv.call(find_buoy))
     {      
       // check for state transition: i.e. buoy is close enough to be
       // considered a "hit" and update to next state
@@ -331,7 +333,7 @@ void state_second_buoy()
   find_buoy.request.Ids.push_back(mSecondBuoyColor);
 
   // if a buoy is found
-  if(landmark_finder_srv.call(find_buoy))
+  if(buoy_finder_srv.call(find_buoy))
     {
       // check for state transition: i.e. buoy is close enough to be
       // considered a "hit" and update to next state
@@ -339,7 +341,7 @@ void state_second_buoy()
 	{
 	  mSetWaypoint = false;
 
-	  mCurrentState = STATE_HEDGE;
+	  mCurrentState = STATE_FIRST_BIN;
 
 	  ROS_INFO("Second Buoy -> Hedge");
 	}
@@ -361,43 +363,12 @@ void state_second_buoy()
       setWaypoint(mBuoyWaypoint.mCenter);
     }   
 }
+
 // ######################################################################
 void state_hedge()
 {
   ROS_INFO("Maneuvering Hedge...");
   
-  // Request a bin position update
-  landmark_finder::FindLandmarks find_bin;
-  find_bin.request.Type = Landmark::LandmarkType::Bin;
-  find_bin.request.Ids.push_back(mFirstBinImage);
- 
-  // if a bin is found
-  if(landmark_finder_srv.call(find_bin))
-    {
-      // if we are centered on bin, drop markers and move to next state
-      if(find_bin.response.Landmarks.LandmarkArray[0].Center.x <= BIN_CENTER_THRESHOLD &&
-	 find_bin.response.Landmarks.LandmarkArray[0].Center.y <= BIN_CENTER_THRESHOLD)
-	{
-	  // drop marker
-	  seabee3_driver_base::FiringDeviceAction fire_dropper;
-	  fire_dropper.request.Req = 1;
-	  dropper_one_srv.call(fire_dropper);
-
-	  mSetWaypoint = false;
-
-	  // go to next state
-	  mCurrentState = STATE_FIRST_BIN;
-
-	} 
-      // maneuver towards visible bin
-      else
-	fineTuneWaypoint(find_bin.response.Landmarks.LandmarkArray[0].Center);
-    }
-  else if(!mSetWaypoint)
-    {
-      mSetWaypoint = true;
-      setWaypoint(mBinWaypoint.mCenter);
-    }
 }
 
 
@@ -412,7 +383,7 @@ void state_first_bin()
   find_bin.request.Ids.push_back(mFirstBinImage);
  
   // if a bin is found
-  if(landmark_finder_srv.call(find_bin))
+  if(bin_finder_srv.call(find_bin))
     {
       // if we are centered on bin, drop markers and move to next state
       if(find_bin.response.Landmarks.LandmarkArray[0].Center.x <= BIN_CENTER_THRESHOLD &&
@@ -450,7 +421,7 @@ void state_second_bin()
   find_bin.request.Ids.push_back(mSecondBinImage);
 
   // if a bin is found
-  if(landmark_finder_srv.call(find_bin))
+  if(bin_finder_srv.call(find_bin))
     {
       // if we are centered on bin, drop markers and move to next state
       if(find_bin.response.Landmarks.LandmarkArray[0].Center.x <= BIN_CENTER_THRESHOLD &&
@@ -487,7 +458,7 @@ void state_window()
   find_window.request.Type = Landmark::LandmarkType::Window;
 
   // if a bin is found
-  if(landmark_finder_srv.call(find_window))
+  if(window_finder_srv.call(find_window))
     {
       // if we are centered on window, shoot torpedo and move to next state
       if(find_window.response.Landmarks.LandmarkArray[0].Center.x <= WINDOW_CENTER_THRESHOLD &&
@@ -561,7 +532,9 @@ int main(int argc, char** argv)
   dropper_one_srv = n.serviceClient<seabee3_driver_base::FiringDeviceAction>("seabee3/Dropper1Action");
   dropper_two_srv = n.serviceClient<seabee3_driver_base::FiringDeviceAction>("seabee3/Dropper2Action");
   shooter_srv = n.serviceClient<seabee3_driver_base::FiringDeviceAction>("seabee3/ShooterAction");
-  landmark_finder_srv = n.serviceClient<landmark_finder::FindLandmarks>("landmark_finder/FindBuoys");
+  buoy_finder_srv = n.serviceClient<landmark_finder::FindLandmarks>("landmark_finder/FindBuoys");
+  bin_finder_srv = n.serviceClient<landmark_finder::FindLandmarks>("landmark_finder/FindBins");
+  window_finder_srv = n.serviceClient<landmark_finder::FindLandmarks>("landmark_finder/FindWindows");
   landmark_map_srv = n.serviceClient<landmark_map_server::FetchLandmarkMap>("landmark_map_server/fetchLandmarkMap");
   waypoint_controller_srv = n.serviceClient<waypoint_controller::SetDesiredPose>("waypoint_controller/setDesiredPose");
   ft_waypoint_controller_srv = n.serviceClient<waypoint_controller::SetDesiredPose>("waypoint_controller/fineTunePose");

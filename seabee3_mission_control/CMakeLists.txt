@@ -26,6 +26,7 @@ set(LIBRARY_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/lib)
 #target_link_libraries(${PROJECT_NAME} another_library)
 link_directories("${PROJECT_SOURCE_DIR}/../localization_defs/lib")
 rosbuild_add_executable(seabee3_mission_control src/seabee3_mission_control.cpp)
+rosbuild_add_executable(seabee3_mission_control_simple src/seabee3_mission_control_simple.cpp)
 target_link_libraries(seabee3_mission_control localization_defs)
 
 rosbuild_add_boost_directories()
