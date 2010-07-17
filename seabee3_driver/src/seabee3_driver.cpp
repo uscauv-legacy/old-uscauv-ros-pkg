@@ -78,7 +78,7 @@ bool depthInitialized;
 
 control_toolbox::Pid * pid_D, * pid_R, * pid_P, * pid_Y;
 
-tf::Transform estimatedPose;
+//tf::Transform estimatedPose;
 
 //tf::Vector3 * vel_est_lin;
 //tf::Vector3 * vel_est_ang;
@@ -310,7 +310,7 @@ void IMUDataCallback(const xsens_node::IMUDataConstPtr & data)
 	while(IMUDataCache->ori.z < 0)
 		IMUDataCache->ori.z += 360;
 	
-	estimatedPose.setRotation( tf::Quaternion( IMUDataCache->ori.z, IMUDataCache->ori.y, IMUDataCache->ori.x ) );
+	//estimatedPose.setRotation( tf::Quaternion( IMUDataCache->ori.z, IMUDataCache->ori.y, IMUDataCache->ori.x ) );
 	//ROS_INFO("x %f y %f z %f", IMUDataCache->ori.x, IMUDataCache->ori.y, IMUDataCache->ori.z);
 	//while(IMUDataCache->size() > 5)
 	//{
@@ -326,6 +326,32 @@ void CmdVelCallback(const geometry_msgs::TwistConstPtr & twist)
 	//{
 	//	TwistCache->pop();
 	//}
+	
+	lastCmdVelUpdateTime = ros::Time::now();
+	static bool timeoutSet = false;
+	
+	ros::Duration dt = ros::Time::now() - lastCmdVelUpdateTime;
+		
+	if(dt.toSec() > cmdVelTimeout)
+	{
+		if(!timeoutSet)
+		{
+			ROS_INFO("timed out after %f seconds", dt.toSec());
+			
+			for(int i = 0; i < BeeStem3::NUM_MOTOR_CONTROLLERS; i ++)
+			{
+				motorCntlMsg->motors[i] = 0;
+				motorCntlMsg->mask[i] = 1;
+			}
+			timeoutSet = true;
+		}
+	}
+	else
+	{
+		ROS_INFO("publishing as usual...");
+		timeoutSet = false;
+		updateMotorCntlFromTwist(twist);
+	}
 	
 	lastCmdVelUpdateTime = ros::Time::now();
 }
@@ -382,14 +408,14 @@ void ExtlPressureCallback(const seabee3_driver_base::PressureConstPtr & extlPres
 
 bool ResetPoseCallback(seabee3_driver::ResetPose::Request & req, seabee3_driver::ResetPose::Response & resp)
 {
-	tf::Vector3 thePose = estimatedPose.getOrigin();
+	/*tf::Vector3 thePose = estimatedPose.getOrigin();
 	if(req.Pos.Mask.x == 1.0)
 		thePose.setX(req.Pos.Values.x);
 	if(req.Pos.Mask.y == 1.0)
 		thePose.setY(req.Pos.Values.y);
 	if(req.Pos.Mask.z == 1.0)
 		thePose.setZ(req.Pos.Values.z);
-	estimatedPose.setOrigin(thePose);
+	estimatedPose.setOrigin(thePose);*/
 	
 	seabee3_driver::SetDesiredRPY setRPY;
 	setRPY.request.Mode = req.Ori.Mode;
@@ -430,6 +456,7 @@ void KillSwitchCallback(const seabee3_driver_base::KillSwitchConstPtr & killSwit
 }
 
 int main(int argc, char** argv)
+
 {
 	ros::init(argc, argv, "seabee3_driver");
 	ros::NodeHandle n("~");
@@ -541,8 +568,8 @@ int main(int argc, char** argv)
 	ros::ServiceServer setDesiredRPY_srv = n.advertiseService("/seabee3/setDesiredRPY", setDesiredRPYCallback);
 	ros::ServiceServer ResetPose_srv = n.advertiseService("/seabee3/ResetPose", ResetPoseCallback);
 	
-	tf::TransformBroadcaster tb;
-	estimatedPose.setRotation( estimatedPose.getRotation().normalize() );
+	//tf::TransformBroadcaster tb;
+	//estimatedPose.setRotation( estimatedPose.getRotation().normalize() );
 	
 	ResetPose(); //set current xyz to 0, desired RPY to current RPY
 	
@@ -550,21 +577,9 @@ int main(int argc, char** argv)
 	{
 		headingPidStep();
 		
-		ros::Duration dt = ros::Time::now() - lastCmdVelUpdateTime;
-		
-		if(dt.toSec() > cmdVelTimeout)
-		{
-			for(int i = 0; i < BeeStem3::NUM_MOTOR_CONTROLLERS; i ++)
-			{
-				motorCntlMsg->motors[i] = 0;
-				motorCntlMsg->mask[i] = 1;
-			}
-			lastCmdVelUpdateTime = ros::Time::now();
-		}
-		
 		motor_cntl_pub.publish(*motorCntlMsg);
 		
-		tb.sendTransform(tf::StampedTransform(estimatedPose, ros::Time::now(), "/seabee3/odom", "/seabee3/base_link") );
+		//tb.sendTransform(tf::StampedTransform(estimatedPose, ros::Time::now(), "/seabee3/odom", "/seabee3/base_link") );
 		
 		ros::spinOnce();
 		ros::Rate(20).sleep();

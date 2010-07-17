@@ -54,7 +54,7 @@ ros::ServiceClient set_desired_xyz_srv;
 seabee3_driver::SetDesiredRPY setDesiredRPY;
 seabee3_driver::SetDesiredXYZ setDesiredXYZ;
 
-geometry_msgs::Vector3 waypointRPY, waypointXYZ;
+geometry_msgs::Vector3 waypointRPY, waypointXYZ, navGoalRPY;
 
 ros::Time lastPidUpdateTime;
 
@@ -73,15 +73,17 @@ bool updatePID(geometry_msgs::Twist & cmd_vel)
 		ros::Duration dt = ros::Time::now() - lastPidUpdateTime;
 		ROS_INFO("dt %f", dt.toSec());
 		
-		LocalizationUtil::capValue(errorInPos.x, 20.0);
-		LocalizationUtil::capValue(errorInPos.y, 20.0);
+		LocalizationUtil::capValue(errorInPos.x, 10.0);
+		LocalizationUtil::capValue(errorInPos.y, 10.0);
 		
 		//errorInPos.setX(errorInPos.x);
 		//errorInPos.setY(errorInPos.y);
 		
-		cmd_vel.linear.x = pid_X->updatePid(errorInPos.x, dt);
+		cmd_vel.linear.x = -pid_X->updatePid(errorInPos.x, dt);
+		cmd_vel.linear.y = -pid_Y->updatePid(errorInPos.y, dt);
+		
 		LocalizationUtil::capValue(cmd_vel.linear.x, 0.75);
-		cmd_vel.linear.y = pid_Y->updatePid(errorInPos.y, dt);
+		LocalizationUtil::capValue(cmd_vel.linear.y, 0.75);
 		
 		setDesiredXYZ.request.Mask.z = 1;
 		setDesiredXYZ.request.Mode.z = 1;
@@ -127,8 +129,7 @@ bool updateCmdVel(geometry_msgs::Twist & cmd_vel)
 		
 		ROS_INFO("error in pos x %f y %f z %f", errorInPos.x, errorInPos.y, errorInPos.z);
 		
-		
-		errorInOri = waypointRPY;
+		errorInOri = navGoalRPY;
 		geometry_msgs::Vector3 currentOri;
 		currentPose.getBasis().getEulerYPR(currentOri.z, currentOri.y, currentOri.x);
 		
@@ -142,19 +143,16 @@ bool updateCmdVel(geometry_msgs::Twist & cmd_vel)
 		
 		errorInOri -= currentOri;
 		
-		if(mState == State::translate)
+		if(mState == State::translate || mState == State::holding)
 		{
 			if(errorInPos.x + errorInPos.y + errorInPos.z < maxErrorInPos)
 			{
 				//mState = mState == State::translate ? State::set_rpy : mState;
-				mState = State::set_rpy;
-				return false;
+				//cmd_vel.linear.x = cmd_vel.linear.y = cmd_vel.linear.z = cmd_vel.angular.x = cmd_vel.angular.y = cmd_vel.angular.z = 0.0;
+				mState = mState == State::translate ? State::set_rpy : State::holding;
 			}
-			else
-			{
-				updatePID( cmd_vel );
-				return true;
-			}
+			updatePID( cmd_vel );
+			return true;
 		}
 	}
 	if(mState == State::set_xyz)
@@ -166,6 +164,8 @@ bool updateCmdVel(geometry_msgs::Twist & cmd_vel)
 		//calculate the distance and angle from our current location to the desired waypoint
 		cv::Point2d vectorToWaypoint = LocalizationUtil::vectorTo( cv::Point2d( 0, 0 ), cv::Point2d( errorInPos.x, errorInPos.y ) );
 		
+		ROS_INFO("vector to waypoint %f @ %f", vectorToWaypoint.x, vectorToWaypoint.y);
+		
 		if(vectorToWaypoint.y > strafeOnlyThreshold)
 		{
 			//rotate to face waypoint, then drive forward to reach it
@@ -174,9 +174,14 @@ bool updateCmdVel(geometry_msgs::Twist & cmd_vel)
 			temp.request.Mode.z = 1; //set this orientation relative to our current orientation
 			temp.request.DesiredRPY.z = vectorToWaypoint.x; //set the desired yaw
 			set_desired_rpy_srv.call( temp );
+			
+			navGoalRPY.x = 0;
+			navGoalRPY.y = 0;
+			navGoalRPY.z = vectorToWaypoint.y;
 		}
 		else
 		{
+			navGoalRPY = waypointRPY;
 			//set goal RPY, then strafe
 			set_desired_rpy_srv.call(setDesiredRPY);
 		}
@@ -189,6 +194,7 @@ bool updateCmdVel(geometry_msgs::Twist & cmd_vel)
 		//mState = errorInPos.z < maxErrorInPos ? State::translate : mState;
 		if(errorInPos.z < maxErrorInPos && errorInOri.z < maxErrorInOri )
 		{
+			ROS_INFO("errorInPos.z %f errorInOri.z %f", errorInPos.z, errorInOri.z);
 			mState = State::translate;
 		}
 		//return mState == State::translate;
@@ -209,7 +215,7 @@ bool updateCmdVel(geometry_msgs::Twist & cmd_vel)
 	}
 	else if(mState == State::holding)
 	{
-		//hold this state until we get a reset message
+		return true;
 	}
 	
 	//lastPidUpdateTime = ros::Time::now();
@@ -273,17 +279,17 @@ int main( int argc, char * argv[] )
 	
 	double pid_i_min, pid_i_max;
 	
-	n.param("max_error_in_pos", maxErrorInPos, 0.5);
-	n.param("max_error_in_ori", maxErrorInOri, 0.5);
-	n.param("strafe_only_threshold", strafeOnlyThreshold, 6.0);
+	n.param("max_error_in_pos", maxErrorInPos, 0.25);
+	n.param("max_error_in_ori", maxErrorInOri, 0.25);
+	n.param("strafe_only_threshold", strafeOnlyThreshold, 3.0);
 	
-	n.param("pid/X/p", pid_X_cfg.p, 2.5);
-	n.param("pid/X/i", pid_X_cfg.i, 0.05);
-	n.param("pid/X/d", pid_X_cfg.d, 0.2);
+	n.param("pid/X/p", pid_X_cfg.p, 0.8);
+	n.param("pid/X/i", pid_X_cfg.i, 0.0);
+	n.param("pid/X/d", pid_X_cfg.d, 0.0);
 	
-	n.param("pid/Y/p", pid_Y_cfg.p, 2.5);
-	n.param("pid/Y/i", pid_Y_cfg.i, 0.05);
-	n.param("pid/Y/d", pid_Y_cfg.d, 0.2);
+	n.param("pid/Y/p", pid_Y_cfg.p, 0.8);
+	n.param("pid/Y/i", pid_Y_cfg.i, 0.0);
+	n.param("pid/Y/d", pid_Y_cfg.d, 0.0);
 	
 	n.param("pid/i_max", pid_i_max, 1.0);
 	n.param("pid/i_min", pid_i_min, -1.0);
