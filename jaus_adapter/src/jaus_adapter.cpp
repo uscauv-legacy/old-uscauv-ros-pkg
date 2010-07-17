@@ -75,6 +75,9 @@
 #include "convert.h" 
 #include <sys/time.h>
 #include <time.h>
+#include <xsens_node/IMUData.h>
+#include <boost/thread/thread.hpp> 
+#include <boost/thread/mutex.hpp>
 
 using namespace std;
 
@@ -226,12 +229,22 @@ REPORT_SERVICES_MSG msg_service;
 //################################################################
 //################################################################
 
+float mYaw = 0.0;
+boost::mutex imu_mutex;
+
+void imuCallback(const xsens_node::IMUDataConstPtr & msg)
+{
+  boost::lock_guard<boost::mutex> lock(imu_mutex); 
+  
+  mYaw = msg->ori.z;
+}
+
 unsigned short get_yaw()
 {
-	
-	// put code here to return yaw from Xsens IMU as an unsigned short
+  boost::lock_guard<boost::mutex> lock(imu_mutex); 
+  ROS_INFO("Returning yaw: %f",mYaw);
 
-	return 0; //return unsigned short value of yaw
+  return (unsigned short)mYaw;
 }
 
 // create 16 bit scale int
@@ -274,6 +287,8 @@ int main( int argc, char* argv[] )
 	ros::init(argc, argv, "jaus_adapter");
 	ros::NodeHandle n("~");
 
+	ros::Subscriber imu_sub = n.subscribe("/xsens_node/data_calibrated", 1, imuCallback);
+
 	// make sure we are running this from its own bin directory
 	char cwdBuffer[256];
 	std::string cwd(getcwd(cwdBuffer, 256));
@@ -312,8 +327,7 @@ int main( int argc, char* argv[] )
 
 	ros::Duration(1).sleep();
 
-	//################################################################
-	// SEND QUERY ID
+	//################################################################	// SEND QUERY ID
 	//################################################################
 	// Send Query ID 0x2B00 [as5710, 49]
 	bool connection_established = false;
@@ -407,7 +421,7 @@ int main( int argc, char* argv[] )
 						{
 							size = MAX_BUFFER_SIZE;
 							jr_receive_rtn = JrReceive(handle, &source, &size, buffer);
-							if ( *((unsigned short*)buffer) = 0x2B00)
+							if ( *((unsigned short*)buffer) == 0x2B00)
 								query_id_received = true;
 						}
 
