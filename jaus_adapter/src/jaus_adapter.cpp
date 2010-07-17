@@ -288,7 +288,7 @@ int main( int argc, char* argv[] )
 	ros::init(argc, argv, "jaus_adapter");
 	ros::NodeHandle n("~");
 
-	ros::Subscriber imu_sub = n.subscribe("/xsens_node/data_calibrated", 1, imuCallback);
+	ros::Subscriber imu_sub = n.subscribe("/xsens/data_calibrated", 1, imuCallback);
 
 	// make sure we are running this from its own bin directory
 	char cwdBuffer[256];
