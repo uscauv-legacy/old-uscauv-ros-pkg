@@ -1,3 +1,6 @@
+// Some of this code comes from the find_obj.cpp example that is included with OpenCV
+// compareSURFDescriptors, naiveNearestNeighbor, and findPairs
+
 #include <ros/ros.h>
 #include <sensor_msgs/Image.h>
 #include <image_matcher/MatchImage.h>
@@ -10,7 +13,16 @@
 #include <fstream>
 #include <time.h>
 
+#define HESSIAN_THRESHOLD 500
+#define EXTENDED_DESCRIPTORS 1
+
 using namespace std;
+
+// File names for the bin objects
+string axeFile;
+string clippersFile;
+string hammerFile;
+string macheteFile;
 
 sensor_msgs::ImageConstPtr itsCurrentImage;
 sensor_msgs::ImageConstPtr testImage;
@@ -23,7 +35,7 @@ CvSeq* hammerKeypoints;
 CvSeq* hammerDescriptors;
 CvSeq* macheteKeypoints;
 CvSeq* macheteDescriptors;
-bool alreadyCalled = false;
+bool goodToGo = false;
 
 //int complete = 0; Delete this eventually
 
@@ -115,114 +127,73 @@ void findPairs( const CvSeq* objectKeypoints, const CvSeq* objectDescriptors,
 // When our service is called then we process the image.
 void imageCallback(const sensor_msgs::ImageConstPtr& msg)
 {
-	if (alreadyCalled)	return;
-	alreadyCalled = true;
-
-	sensor_msgs::CvBridge bridge;
-	//clock_t start = clock();
-
 	itsCurrentImage = msg;
-	IplImage* image = bridge.imgMsgToCv(msg);
-	IplImage* grayImage = cvCreateImage(cvGetSize(image), 8, 1);
-	cvCvtColor(image, grayImage, CV_BGR2GRAY);
-	CvSeq* imageKeypoints;
-	CvSeq* imageDescriptors;
-	CvMemStorage* storage = cvCreateMemStorage(0);
-	CvSURFParams params = cvSURFParams(500, 1);
-	cvExtractSURF(grayImage, 0, &imageKeypoints, &imageDescriptors, storage, params);
-	ROS_INFO("Extracted params:");
-
-	//cout << "Object Des: " << objectDescriptors->total << endl;
-	cout << "Image Des: " << imageDescriptors->total << endl;
-/*
-	clock_t end = clock();
-	clock_t difference = end - start;
-	cout << difference << endl;
-	cout << "Running Time: " << (float)difference / (float)CLOCKS_PER_SEC << endl;
-	*/
-
-
-
-	//CvMemStorage* storage = cvCreateMemStorage(0);
-	//CvSURFParams params = cvSURFParams(500, 1);
-
-	vector<int> ptpairs;
-
-	ROS_INFO("Comparing keypoints");
-	// Find matching pairs between images
-	findPairs(axeKeypoints, axeDescriptors, imageKeypoints, imageDescriptors, ptpairs);
-	float axeProbability = 100 * (float)(ptpairs.size()/2) / (float)axeDescriptors->total;
-
-	ptpairs.clear();
-	findPairs(clippersKeypoints, clippersDescriptors, imageKeypoints, imageDescriptors, ptpairs);
-	float clippersProbability = 100 * (float)(ptpairs.size()/2) / (float)clippersDescriptors->total;
-
-	ptpairs.clear();
-	findPairs(hammerKeypoints, hammerDescriptors, imageKeypoints, imageDescriptors, ptpairs);
-	float hammerProbability = 100 * (float)(ptpairs.size()/2) / (float)hammerDescriptors->total;
-
-	ptpairs.clear();
-	findPairs(macheteKeypoints, macheteDescriptors, imageKeypoints, imageDescriptors, ptpairs);
-	float macheteProbability = 100 * (float)(ptpairs.size()/2) / (float)macheteDescriptors->total;
-	//cout << "pairs found: " << ptpairs.size() << endl;
-
-	cout << "axe: " << axeProbability << " clip: " << clippersProbability << " hammer: " << hammerProbability << " machete: " << macheteProbability << endl;
-	
-
-
+	goodToGo = true;
 }
-
-
 
 
 bool MatchImageCallback(image_matcher::MatchImage::Request &req, image_matcher::MatchImage::Response &res)
 {
+	// Check to make sure we've received a valid image
+	if (!goodToGo)	return false;
 
 	sensor_msgs::CvBridge bridge;
-	//boost::shared_ptr<const sensor_msgs::Image> objectPtr(&req.object);
-	//boost::shared_ptr<const sensor_msgs::Image> imagePtr(&req.image);
-	//IplImage* object = bridge.imgMsgToCv(objectPtr);
-	//IplImage* image = bridge.imgMsgToCv(imagePtr);
-
-	IplImage* object = NULL;
-	IplImage* image = bridge.imgMsgToCv(itsCurrentImage);
-
-	CvSeq* objectKeypoints;
-	CvSeq* objectDescriptors;
 	CvSeq* imageKeypoints;
 	CvSeq* imageDescriptors;
-
 	CvMemStorage* storage = cvCreateMemStorage(0);
-	CvSURFParams params = cvSURFParams(500, 1);
+	CvSURFParams params = cvSURFParams(HESSIAN_THRESHOLD, EXTENDED_DESCRIPTORS);
 
-	vector<int> ptpairs;
+	// Convert image from sensor_msg::Image to IplImage
+	IplImage* image = bridge.imgMsgToCv(itsCurrentImage);
 
-	// Extract SURF keypoints/descriptors from both images
-	cvExtractSURF(object, 0, &objectKeypoints, &objectDescriptors, storage, params);
-	cvExtractSURF(image, 0, &imageKeypoints, &imageDescriptors, storage, params);
+	// Convert color image to grayscale
+	IplImage* grayImage = cvCreateImage(cvGetSize(image), 8, 1);
+	cvCvtColor(image, grayImage, CV_BGR2GRAY);
 
-	// Find matching pairs between images
-	findPairs(objectKeypoints, objectDescriptors, imageKeypoints, imageDescriptors, ptpairs);
+	// Extract SURF keypoints/descriptors from the image
+	ROS_INFO("Extracting SURF keypoints/descriptors from image");
+	cvExtractSURF(grayImage, 0, &imageKeypoints, &imageDescriptors, storage, params);
 
-	res.probability = (float)(ptpairs.size()/2) / (float)objectDescriptors->total;
+	// Find matching pairs between objects and image
+	vector<int> matchingPairs;	// Holds matching keypoints b/w object and image
+	ROS_INFO("Comparing keypoints of objects and local image");
+
+	findPairs(axeKeypoints, axeDescriptors, imageKeypoints, imageDescriptors, matchingPairs);
+	float axeProbability = 100 * (float)(matchingPairs.size()/2) / (float)axeDescriptors->total;
+
+	matchingPairs.clear();
+	findPairs(clippersKeypoints, clippersDescriptors, imageKeypoints, imageDescriptors, matchingPairs);
+	float clippersProbability = 100 * (float)(matchingPairs.size()/2) / (float)clippersDescriptors->total;
+
+	matchingPairs.clear();
+	findPairs(hammerKeypoints, hammerDescriptors, imageKeypoints, imageDescriptors, matchingPairs);
+	float hammerProbability = 100 * (float)(matchingPairs.size()/2) / (float)hammerDescriptors->total;
+
+	matchingPairs.clear();
+	findPairs(macheteKeypoints, macheteDescriptors, imageKeypoints, imageDescriptors, matchingPairs);
+	float macheteProbability = 100 * (float)(matchingPairs.size()/2) / (float)macheteDescriptors->total;
+
+	res.axe_probability = axeProbability;
+	res.clippers_probability = clippersProbability;
+	res.hammer_probability = hammerProbability;
+	res.machete_probability = macheteProbability;	
+
+	ROS_INFO("Probabilities --- Axe: %f Clippers: %f Hammer: %f Machete: %f", axeProbability, clippersProbability, hammerProbability, macheteProbability);
+
 	return true;
 }
 
 
+// This is a competition specific function that loads the
+// bin pictures in memory and extracts SURF keypoints/descriptors
 void loadObjectImages()
 {
-	// File names for the bin objects
-	string axeFile = "axe.png";
-	string clippersFile = "clippers.png";
-	string hammerFile = "hammer.png";
-	string macheteFile = "machete.png";
-
 	IplImage* axeImg;
 	IplImage* clippersImg;
 	IplImage* hammerImg;
 	IplImage* macheteImg;
 	CvMemStorage* objectStorage = cvCreateMemStorage(0);
-	CvSURFParams params = cvSURFParams(500, 1);
+	CvSURFParams params = cvSURFParams(HESSIAN_THRESHOLD, EXTENDED_DESCRIPTORS);
 
 	// Extract images from their respective files
 	axeImg = cvLoadImage(axeFile.c_str());
@@ -252,39 +223,28 @@ void loadObjectImages()
 
 int main(int argc, char** argv)
 {
+	// Initialize ros structures
 	ros::init(argc, argv, "image_matcher");
 	ros::NodeHandle nh;
 	image_transport::ImageTransport it(nh);
 
+	// File paths for objects
+	nh.param("axe", axeFile, std::string("axe.png"));
+	nh.param("clippers", clippersFile, std::string("clippers.png"));
+	nh.param("hammer", hammerFile, std::string("hammer.png"));
+	nh.param("machete", macheteFile, std::string("machete.png"));
 
+
+	// Load the competition silhouettes in memory and extract the SURF keypoints/descriptors
+	// This needs to be loaded first before we start subscribing to images
 	loadObjectImages();
-	ROS_INFO("Finished loading objects");
-	/*n.param("axe_img", box_img, );
-	n.param("clippers_img");
-	n.param("hammer_img");
-	n.param("machete_img");
-	string s = "blah";
-	std::ifstream fin(s.c_str());
-	if (!fin.good())
-	{
-		ROS_ERROR("File not found.");
-		return 1;
-	}
+	ROS_INFO("Finished loading competition object silhouettes");
 
-	YAML::Parser parser(fin);
-	YAML::Node doc;
-	ROS_INFO("Yaml Parser instantiated");
-
-	parser.GetNextDocument(doc);
-	ROS_INFO("Document retrieved");
-*/
-
-	// Subscribe to specialized image transport
+	// Subscribe to image topic
 	image_transport::Subscriber sub = it.subscribe("image", 1, imageCallback);	
 
-
 	// Register service
-	//ros::ServiceServer image_match_srv = nh.advertiseService("MatchImage", MatchImageCallback);
+	ros::ServiceServer image_match_srv = nh.advertiseService("MatchImage", MatchImageCallback);
 
 	ros::spin();
 }

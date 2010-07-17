@@ -1,49 +1,59 @@
 #include <ros/ros.h>
+#include <unistd.h>
 #include <sensor_msgs/Image.h>
 #include <image_transport/image_transport.h>
 #include "image_matcher/MatchImage.h"
+#include <iostream>
+
+using namespace std;
 
 ros::ServiceClient client;
-sensor_msgs::ImageConstPtr itsImage1;
-sensor_msgs::ImageConstPtr itsImage2;
-bool isSetImg2;
+image_transport::Publisher pub;
+sensor_msgs::ImageConstPtr itsCurrentImg;
 
-void imageCallback1(const sensor_msgs::ImageConstPtr& msg)
+
+void imageCallback(const sensor_msgs::ImageConstPtr& msg)
 {
-	itsImage1 = msg;
-	if (!isSetImg2)	return;
-	image_matcher::MatchImage srv;
-	srv.request.object = *itsImage1;
-	srv.request.image = *itsImage2;
-	if (client.call(srv))
+	cout << "callback" << endl;
+	itsCurrentImg = msg;
+}
+
+void test()
+{
+	for (int i = 0; i < 10; i++)
 	{
-		ROS_INFO("ImageMatch probability: %4.2f", srv.response.probability);
+		cout << "Testing image matcher" << endl;
+		//pub.publish(itsCurrentImg);
+		image_matcher::MatchImage srv;
+		if (client.call(srv))
+		{
+			ROS_INFO("Probabilities --- Axe: %f Clippers: %f Hammer: %f Machete: %f", srv.response.axe_probability, srv.response.clippers_probability, srv.response.hammer_probability, srv.response.machete_probability);
+		}	
+		else
+		{
+			ROS_ERROR("Service call to MatchImage failed");
+		}
+		sleep(5);
 	}
 }
 
-
-void imageCallback2(const sensor_msgs::ImageConstPtr& msg)
-{
-	itsImage2 = msg;
-	isSetImg2 = true;
-}
 
 int main(int argc, char** argv)
 {
 	ros::init(argc, argv, "test_image_matcher");
 	ros::NodeHandle n;
 	image_transport::ImageTransport it(n);
-	isSetImg2 = false;
-	
-	// Register publisher for image with bins highlighted
-	image_transport::Publisher testPub = it.advertise("image_match", 1);
 
+	// Publish a message
+	pub = it.advertise("/test_matcher/image_out", 1);
+	
 	// Subscribe to an image topic
-	image_transport::Subscriber sub1 = it.subscribe("image1", 1, imageCallback1);
-	image_transport::Subscriber sub2 = it.subscribe("image2", 1, imageCallback2);
+	image_transport::Subscriber sub = it.subscribe("image", 1, imageCallback);
 
 	// Register the service
-	client = n.serviceClient<image_matcher::MatchImage>("image_match");
+	client = n.serviceClient<image_matcher::MatchImage>("MatchImage");
+	ROS_INFO("Starting");
+	test();
 	ros::spin();
 }
 
