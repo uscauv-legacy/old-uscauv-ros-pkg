@@ -104,6 +104,10 @@ int jr_send_rtn;
 int jr_receive_rtn;
 int jr_connect_rtn;
 
+// Counter for simulating data
+//unsigned short sim_major = 0;
+//float sim_minor = 0;
+
 //################################################################
 // DEFINE MESSAGES TO BE PASSED
 //################################################################
@@ -307,6 +311,13 @@ int main( int argc, char* argv[] )
 	// For the rest of the tasks, the COP initatives everything
 	while(ros::ok())
 	{
+		// increment sim counter
+	//	sim = sim + 1;
+		// make sure it doesnt get too big
+	//	if(sim > 40) sim = 0;
+
+
+
 		//################################################################
 		// LOOP AND RECEIVE MESSAGES
 		//################################################################
