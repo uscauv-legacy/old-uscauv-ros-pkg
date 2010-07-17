@@ -467,13 +467,13 @@ rectangle_finder::RectangleArrayMsg findRectangles()
 			
 			/// ToDo: Implement rectangle size calculation
 			
-			msg.Dim.x = 0.0;
-			msg.Dim.y = 0.0;
+			msg.Dim.x = quadVect[a].tr.j - quadVect[a].tl.j;
+			msg.Dim.y = quadVect[a].tr.i - quadVect[a].br.i;
 			msg.Dim.z = 0.0;
 			
 			/// ToDo: Implement rectangle orientation calculation
 			
-			msg.Ori = 0.0;
+			msg.Ori = quadVect[a].angle;
 			
 			rectangles.RectangleArray.push_back(msg);
 		}
