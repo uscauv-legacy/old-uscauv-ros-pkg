@@ -3,7 +3,7 @@
 		<param name="cmd_vel_timeout" type="double" value="2.0" />
 		<!-- ========== PID tuning ========== -->
 		
-		<param name="depth_err_cap_thresh" type="int" value="25" />
+		<param name="depth_err_cap_thresh" type="int" value="100" />
 		<param name="roll_err_cap_thresh" type="double" value="25.0" />
 		<param name="pitch_err_cap_thresh" type="double" value="25.0" />
 		<param name="heading_err_cap_thresh" type="double" value="25.0" />

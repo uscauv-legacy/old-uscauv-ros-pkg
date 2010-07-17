@@ -348,7 +348,7 @@ void CmdVelCallback(const geometry_msgs::TwistConstPtr & twist)
 	}
 	else
 	{
-		ROS_INFO("publishing as usual...");
+		//ROS_INFO("publishing as usual...");
 		timeoutSet = false;
 		updateMotorCntlFromTwist(twist);
 	}
@@ -433,6 +433,8 @@ bool ResetPoseCallback(seabee3_driver::ResetPose::Request & req, seabee3_driver:
 		
 	estimatedPose.setRotation( estimatedPose.getRotation().normalize() );*/
 	
+	desiredXYZ->z = extlPressureCache->Value;
+	
 	return true;
 }
 
@@ -442,7 +444,6 @@ void ResetPose()
 	resetPose.request.Ori.Mask.x = resetPose.request.Ori.Mask.y = resetPose.request.Ori.Mask.z = 1;
 	resetPose.request.Ori.Mode.x = resetPose.request.Ori.Mode.y = resetPose.request.Ori.Mode.z = 1;
 	ResetPoseCallback(resetPose.request, resetPose.response);
-	desiredXYZ->z = extlPressureCache->Value;
 }
 
 void KillSwitchCallback(const seabee3_driver_base::KillSwitchConstPtr & killSwitch)
