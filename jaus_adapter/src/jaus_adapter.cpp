@@ -131,6 +131,8 @@ int jr_connect_rtn;
 float 	sim_short 	= 0; // for simulating yaw
 double 	sim_reg 		= 0; // for simulating pos_x
 
+unsigned char state = 0x02;
+
 //################################################################
 // DEFINE MESSAGES TO BE PASSED
 //################################################################
@@ -155,9 +157,8 @@ REPORT_LOCAL_POSE_MSG msg_pose;
 typedef struct {
 	unsigned short	msg_id;			 	
 	unsigned short  ss_id;				// value_range (0, 65535)
-	unsigned int		node_id;			// value_range (0, 254)
-	unsigned int		component_id; // value_range (0, 254) 
-	unsigned int		auth_code;    // value_range (0, 254)
+	unsigned short  id_stuff;
+	char		auth_code;    // value_range (0, 254)
 } REPORT_CONTROL_MSG;
 REPORT_CONTROL_MSG msg_ctrl;
 
@@ -171,7 +172,7 @@ CONFIRM_CONTROL_MSG msg_cfrm;
 // Report Status
 typedef struct {
 	unsigned short 	msg_id;
-	unsigned int 	 	status;
+	unsigned char 	 	status;
 	unsigned int		reserved;
 }	REPORT_STATUS_MSG;
 REPORT_STATUS_MSG msg_status;
@@ -188,7 +189,8 @@ typedef struct {
 	unsigned short  	msg_id;
 	unsigned char   	query_type;
 	unsigned short  	type;
-	string						identification;					
+	unsigned char			byte;
+	unsigned char			id[6];					
 } REPORT_ID_MSG;
 REPORT_ID_MSG msg_report_id;
 
@@ -211,6 +213,18 @@ REPORT_SERVICES_MSG msg_service;
 //################################################################
 // Define some helper functions
 //################################################################
+
+// get_yaw(), return unsigned short
+unsigned short get_yaw()
+{
+	return 0;
+}
+
+// get_vel(), return unsigned int
+unsigned int get_vel()
+{
+	return 0;
+}
 
 // create 16 bit scale int
 unsigned short scaleToUInt16(float val, float low, float high)
@@ -318,13 +332,6 @@ int main( int argc, char* argv[] )
 	// For the rest of the tasks, the COP initatives everything
 	while(ros::ok())
 	{
-		// increment sim counter
-		sim_short = sim_short + 1;
-		sim_reg = sim_reg + 1;
-		// make sure it doesnt get too big
-		if(sim_short > 8) sim_short = 0;
-		if(sim_reg > 13) sim_reg = 0;
-
 		//################################################################
 		// LOOP AND RECEIVE MESSAGES
 		//################################################################
@@ -352,7 +359,7 @@ int main( int argc, char* argv[] )
 						// send Report Local Pose, 0x4403 [as6009, 72]
 						msg_pose.msg_id 	= 0x4403;
 						msg_pose.pv 			= 64; 
-						msg_pose.yaw 			= scaleToUInt16(0.2 * sim_short, -3.14, 3.14); 
+						msg_pose.yaw 			= scaleToUInt16(get_yaw(), -3.14, 3.14); 
 
 						// Now we send the message to the COP using Junior.  Recall
 						// that the COP subsystem id is decimal 90 (0x005A hex)
@@ -371,7 +378,7 @@ int main( int argc, char* argv[] )
 						msg_vel.msg_id 		= 0x4404;
 						msg_vel.pv 				= 1; // 1 for competition 
 						// rescale this
-						msg_vel.vel_x 		= scaleToUInt32(5 * sim_reg, -327.68, 327.67);
+						msg_vel.vel_x 		= scaleToUInt32(get_vel(), -327.68, 327.67);
 
 						if (JrSend(handle, destination, sizeof(msg_vel), (char*)&msg_vel) != Ok)
 							cout << "\n\t *** Unable to Send Message *** \n\n";
@@ -386,6 +393,7 @@ int main( int argc, char* argv[] )
 					{
 						cout << "\n\nReceieved Report Identification\n\n";
 
+						// now I will receive query_id
 						bool query_id_received = false;
 						while (query_id_received == false)
 						{
@@ -400,7 +408,14 @@ int main( int argc, char* argv[] )
 						msg_report_id.msg_id 					= 0x4B00;
 						msg_report_id.query_type			= 2;
 						msg_report_id.type						= 10001;
-						msg_report_id.identification 	= "SeaBee"; 
+						msg_report_id.byte						= 6;
+						string dummy = "SeaBee";
+
+						memcpy(msg_report_id.id, dummy.c_str(), 6); //serialize count before string
+
+
+						/// needs to be 42 1 1 instead of 42 1 0, 
+						// come up in standby instead of ready
 
 						if (JrSend(handle, destination, sizeof(msg_report_id), (char*)&msg_report_id) != Ok)
 							cout << "\n\t *** Unable to Send Message *** \n\n";
@@ -417,9 +432,8 @@ int main( int argc, char* argv[] )
 						// send Report Control, 0x400D [as5710, 52]
 						msg_ctrl.msg_id				= 0x400D;		 	
 						msg_ctrl.ss_id				= 42;
-						msg_ctrl.node_id			= 1;	
-						msg_ctrl.component_id	= 1; 
-						msg_ctrl.auth_code		= 1; 
+						msg_ctrl.id_stuff			= 0x0101;	
+						msg_ctrl.auth_code		= '1'; 
 
 						if (JrSend(handle, destination, sizeof(msg_ctrl), (char*)&msg_ctrl) != Ok)
 							cout << "\n\t *** Unable to Send Message *** \n\n";
@@ -447,10 +461,28 @@ int main( int argc, char* argv[] )
 							cout << "\n *** CONFIRM CONTROL MESSAGE sent ***\n";
 					}
 
+				case 0x0004:
+					{
+						state = 0x01;
+
+						msg_status.msg_id		=	0x4002;
+						msg_status.status		= state;
+						msg_status.reserved = 0;
+					
+					}
+				case 0x0003:
+					{
+						state = 0x02;
+
+						msg_status.msg_id		=	0x4002;
+						msg_status.status		= state;
+						msg_status.reserved = 0;
+					
+					}
+
 				case 0x2002: // msg_id for Query Status [as5710, 46]
 					{
 						// send Report Status, 0x4002 [as5710, 51]
-						unsigned int state = 1;
 
 						msg_status.msg_id		=	0x4002;
 						msg_status.status		= state;
@@ -466,13 +498,14 @@ int main( int argc, char* argv[] )
 							cout << "\n\t *** Unable to Send Message *** \n\n";
 						else 
 							cout << "\n *** REPORT STATUS MESSAGE sent ***\n";
+
 					}
 
 					//################################################################
 					// CAPABILITIES 
 					//################################################################
 				case 0x2B03: // msg_id for Query Services [as5710, 50]
-					{
+					{/*
 						// send Report Services, 0x4B03 [as5710, 56]
 						// serialize all these inherited messages together
 						msg_service.msg_id          = 0x4B03;
@@ -490,6 +523,7 @@ int main( int argc, char* argv[] )
 							cout << "\n\t *** Unable to Send Message *** \n\n";
 						else 
 							cout << "\n *** REPORT SERVICES MESSAGE sent ***\n";
+							*/
 					}
 
 					ros::Duration(1).sleep();
