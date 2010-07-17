@@ -123,7 +123,7 @@ int jr_send_rtn;
 int jr_receive_rtn;
 int jr_connect_rtn;
 
-// Counters for simulating data
+// Counters for super realistic incremental simulation of data
 float 	sim_short 	= 0; // for simulating yaw
 double 	sim_reg 		= 0; // for simulating pos_x
 
@@ -308,22 +308,6 @@ int main( int argc, char* argv[] )
 		}
 	}
 
-	ros::Duration(1).sleep();
-
-	//################################################################
-	// SEND REPORT ID
-	//################################################################
-	// msg_id for Report ID [as5710, 54] 
-	msg_report_id.msg_id 					= 0x4B00;
-	msg_report_id.query_type			= 2;
-	msg_report_id.type						= 10001;
-	msg_report_id.identification 	= "SeaBee"; 
-
-	if (JrSend(handle, destination, sizeof(msg_report_id), (char*)&msg_report_id) != Ok)
-		cout << "\n\t *** Unable to Send Message *** \n\n";
-	else 
-		cout << "\n *** REPORT ID MESSAGE sent ***\n";
-
 	//################################################################
 	// START INTERACTION
 	//################################################################
@@ -397,6 +381,18 @@ int main( int argc, char* argv[] )
 				case 0x4B00: // msg_id for Query Control [as5710, 54] 
 					{
 						cout << "\n\nReceieved Report Identification\n\n";
+
+						// now send my own Report Identification back
+						// msg_id for Report ID [as5710, 54] 
+						msg_report_id.msg_id 					= 0x4B00;
+						msg_report_id.query_type			= 2;
+						msg_report_id.type						= 10001;
+						msg_report_id.identification 	= "SeaBee"; 
+
+						if (JrSend(handle, destination, sizeof(msg_report_id), (char*)&msg_report_id) != Ok)
+							cout << "\n\t *** Unable to Send Message *** \n\n";
+						else 
+							cout << "\n *** REPORT ID MESSAGE sent ***\n";
 					}
 
 					//################################################################
