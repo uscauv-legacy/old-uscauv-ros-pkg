@@ -1,9 +1,8 @@
-// name
 /**************************************************************************
  *
  * jaus_adapter 
  *
- * Copyright (c) 2010, Johnny 'Pimp Masta' O'Hollaren, more@cow.bell
+ * Copyright (c) 2010, John O'Hollaren, ohollare@usc.edu
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -45,6 +44,19 @@
 //			1. jr_config.xml: XML config file in bin directory
 //			2. JuniorRTE: Executable in bin directory
 //
+// To Make It Work, change variables below where it says
+// CHANGE THESE VARIABLES TO MAKE IT WORK: 
+// 			Change "id" to your ID:
+// 				id = 0x00<last oclet of ip in hex>0101
+//			Change "destination" to Correct Value
+//        -If Using JVT, comment top COP 'destination' and
+//				 uncomment one labeled JVT
+//				-If using the real COP, comment JVT 'destination'
+//				 and uncomment the one labeled COP.
+//      If using a destination other than those two, you will
+//      need to add it to the jr_config.xml file address book
+//      in /bin
+//
 //################################################################
 
 #include "JuniorAPI.h"
@@ -63,25 +75,32 @@
 using namespace std;
 
 //################################################################
-// CHANGE THESE VARIABLES
+// CHANGE THESE VARIABLES TO MAKE IT WORK
 //################################################################
 
-unsigned int id = 					0x00BD0101; // 0xBD = 189, my ID 
-unsigned int destination = 	0x002A0101; // COP_ID 90 = 0x005A
-																				// COP_ID 42 = 0x002A
-#define MAX_BUFFER_SIZE 		1000				// size of data sent back 
-// COP IP: 192.168.1.42:3794
-// COP SSID: 42-1-1
+unsigned int id = 					0x00820101; // 0x82 = 130, my ID 
+
+// uncomment below destination for real COP Testing
+unsigned int destination = 	0x002A0101;	 
+// 0x002A0101 is ID for COP station with IP: 192.168.1.42:3794
+
+// uncomment below destination for JVT TESTING 
+// unsigned int destination = 0x005A0101;
+// 0x005A0101 is ID for JVT server with IP: 24.42.140.203:3794
 
 //################################################################
 // LEAVE THESE ALONE
 //################################################################
+
+// Whole bunch of global variables because I'm a l33t programmer 
 
 // Define the message structure.  We have to tell
 // the compiler to pack on 1-byte boundaries to
 // make sure it doesn't insert padding that would
 // be non-compliant to AS6009.
 #pragma pack(1)
+
+#define MAX_BUFFER_SIZE 		1000				// size of data sent back 
 
 // variables for receiving messages
 char buffer[MAX_BUFFER_SIZE];          	// Allocate space for message
@@ -252,7 +271,7 @@ int main( int argc, char* argv[] )
 	cout << "\n\tBEGINNING CONNECTION";
 	cout << "\n------------------------------------------------\n\n";
 
-	// connect to JAUS
+	// connect to Junior
 	jr_connect_rtn = JrConnect (id, "jr_config.xml", &handle);
 	cout << "\nJrConnect Return Value: " << jr_connect_rtn << "\n\n";
 	if(jr_connect_rtn == 0)
