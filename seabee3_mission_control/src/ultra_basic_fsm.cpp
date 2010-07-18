@@ -3,6 +3,14 @@
 #include <seabee3_driver/SetDesiredXYZ.h>
 #include <geometry_msgs/Twist.h>
 #include <seabee3_driver_base/FiringDeviceAction.h>
+#include <seabee3_driver_base/KillSwitch.h>
+
+bool killSwitchEnabled = true; //killed
+
+void KillSwitchCallback(const seabee3_driver_base::KillSwitchConstPtr & killSwitch)
+{
+	killSwitchEnabled = killSwitch->Value == 1 ? true : false;
+}
 
 int main(int argc, char * argv[])
 {
@@ -21,6 +29,7 @@ int main(int argc, char * argv[])
 	ros::ServiceClient depth_srv = n.serviceClient<seabee3_driver::SetDesiredXYZ>("/seabee3/setDesiredXYZ");
 	ros::ServiceClient shooter_srv = n.serviceClient<seabee3_driver_base::FiringDeviceAction>("/seabee3/ShooterAction");
 	ros::Publisher cmd_vel_pub = n.advertise<geometry_msgs::Twist>("/seabee3/cmd_vel", 1);
+	ros::Subscriber kill_switch_sub = n.subscribe("/seabee3/kill_switch", 1, KillSwitchCallback);
 	seabee3_driver_base::FiringDeviceAction fireShooter;
 	
 	seabee3_driver::SetDesiredXYZ setDesiredXYZ;
@@ -29,14 +38,29 @@ int main(int argc, char * argv[])
 	
 	geometry_msgs::Twist cmd_vel;
 	
-	int mState = 0;
+	int mState = -1;
 	ros::Time lastTime = ros::Time::now();
 	
 	while( ros::ok() )
 	{
 		ros::Duration dt = ros::Time::now() - lastTime;
 		
-		if(mState == 0)
+		if(killSwitchEnabled)
+		{
+			mState = -1;
+			cmd_vel = geometry_msgs::Twist();
+			cmd_vel_pub.publish(cmd_vel);
+		}
+		
+		if(mState == -1)
+		{
+			if(!killSwitchEnabled)
+			{
+				mState = 0;
+				lastTime = ros::Time::now();
+			}
+		}
+		else if(mState == 0)
 		{
 			if(dt.toSec() > sleep1)
 			{

@@ -35,6 +35,10 @@ void test()
 		}
 		sleep(5);
 	}
+	else
+	{
+		cout << "service call failed" << endl;
+	}
 }
 
 

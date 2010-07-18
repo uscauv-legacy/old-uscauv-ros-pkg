@@ -50,7 +50,7 @@ int usbIndex;
 
 float getDepthFromPressure(int pressure)
 {
-  return (pressure - SURFACE_PRESSURE) / PRESSURE_DEPTH_SLOPE;
+  return (float)(pressure - SURFACE_PRESSURE) / PRESSURE_DEPTH_SLOPE;
 }
 
 void motorCntlCallback(const seabee3_driver_base::MotorCntlConstPtr & msg)
