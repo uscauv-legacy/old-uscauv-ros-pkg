@@ -44,26 +44,75 @@
 #include <math.h>
 #include <string>
 
+#include <landmark_finder/FindLandmarks.h>
 #include <landmark_map/LandmarkMap.h>
 #include <landmark_map_server/FetchLandmarkMap.h>
-//#include <localization_tools/LandmarkSensor.h>
+#include <cmath>
 
-std::string map_frame;
-//std::vector <LocalizationParticle> mParticles;
+std::string map_frame, robot_frame;
 //cv::Point3d mEstimatedPosition;
 tf::Transform mOdomCorrection;
 tf::TransformBroadcaster * tb;
+tf::TransformListener * tl;
 
 ros::ServiceClient fetch_landmark_map_srv;
+ros::ServiceClient pipe_finder_srv;
 landmark_map_server::FetchLandmarkMap fetchLandmarkMap;
+
+tf::StampedTransform currentPose;
+
+float distance(tf::Vector3 p1, geometry_msgs::Vector3 p2)
+{
+  return sqrt(pow((p1.x() - p2.x),2) + pow((p1.y() - p2.y),2) + pow((p1.z() - p2.z),2));
+}
 
 void updateLocation()
 {
 	fetch_landmark_map_srv.call(fetchLandmarkMap);
+
+	// find all pipes
+	landmark_finder::FindLandmarks find_pipes;
+	find_pipes.request.Type = Landmark::LandmarkType::Pipe;
+
+	
 	//mach up shit on map, update odom correction
-	mOdomCorrection.setOrigin( tf::Vector3( 0.0, 0.0, 0.0 ) );
-	mOdomCorrection.setRotation( tf::Quaternion( 0.0, 0.0, 0.0 ) );
+	if(pipe_finder_srv.call(find_pipes))
+	  {
+	    
+	    try
+	      {
+		tl->waitForTransform(map_frame.c_str(), robot_frame.c_str(), ros::Time(0), ros::Duration(5.0));
+		tl->lookupTransform(map_frame.c_str(), robot_frame.c_str(), ros::Time(0), currentPose);
+	      }
+	    catch (tf::TransformException ex)
+	      {
+		ROS_ERROR("%s",ex.what());
+	      }
+	    
+	    tf::Vector3 theTf = currentPose.getOrigin();
+	    
+	    float minDistance = -1.0;
+	    int minPipe = 0;
+
+	    for(unsigned int i = 0; i < find_pipes.response.Landmarks.LandmarkArray.size(); i++)
+	      {
+		float currDistance = distance(theTf,find_pipes.response.Landmarks.LandmarkArray[i].Center);
+	     
+		if(minDistance == -1.0 || currDistance < minDistance)
+		  {
+		    minDistance = currDistance;
+		    minPipe = i;
+		  }
+	      }
+
+	    geometry_msgs::Vector3 nearestPipePos = find_pipes.response.Landmarks.LandmarkArray[minPipe].Center;
+	    
+	    mOdomCorrection.setOrigin( tf::Vector3(nearestPipePos.x,nearestPipePos.y,nearestPipePos.z) );
+	    mOdomCorrection.setRotation( tf::Quaternion( 0.0, 0.0, 0.0 ) );
+	  }
+	
 	tb->sendTransform( tf::StampedTransform( mOdomCorrection, ros::Time::now(), "/landmark_map", "/seabee3/odom" ) );
+	
 }
 
 /*void calculatePosition( std::vector & particles, cv::Point3d & mEstimatedPosition)
@@ -79,10 +128,13 @@ int main( int argc, char* argv[] )
 	ros::init(argc, argv, "flsl");
 	ros::NodeHandle n("~");
 	
-	n.param("map_frame", map_frame, std::string("map") );
-	
+	n.param("map_frame", map_frame, std::string("/landmark_map") );
+	n.param("robot_frame", robot_frame, std::string("/base_link") );
+		
 	fetch_landmark_map_srv = n.serviceClient<landmark_map_server::FetchLandmarkMap>("/landmark_map_server/fetchLandmarkMap");
-	
+	pipe_finder_srv = n.serviceClient<landmark_finder::FindLandmarks>("landmark_finder/FindPipes");
+
+	tl = new tf::TransformListener;
 	tb = new tf::TransformBroadcaster;
 	
 	while( ros::ok() )

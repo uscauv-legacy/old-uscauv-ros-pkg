@@ -13,6 +13,9 @@
 #include <fstream>
 #include <time.h>
 
+#include <boost/thread/thread.hpp> 
+#include <boost/thread/mutex.hpp>
+
 #define HESSIAN_THRESHOLD 500
 #define EXTENDED_DESCRIPTORS 1
 
@@ -36,6 +39,8 @@ CvSeq* hammerDescriptors;
 CvSeq* macheteKeypoints;
 CvSeq* macheteDescriptors;
 bool goodToGo = false;
+
+boost::mutex image_mutex;
 
 //int complete = 0; Delete this eventually
 
@@ -127,14 +132,18 @@ void findPairs( const CvSeq* objectKeypoints, const CvSeq* objectDescriptors,
 // When our service is called then we process the image.
 void imageCallback(const sensor_msgs::ImageConstPtr& msg)
 {
-	itsCurrentImage = msg;
-	goodToGo = true;
+  ROS_INFO("Image received");
+  boost::lock_guard<boost::mutex> lock(image_mutex); 
+  itsCurrentImage = msg;
+  goodToGo = true;
 }
 
 
 bool MatchImageCallback(image_matcher::MatchImage::Request &req, image_matcher::MatchImage::Response &res)
 {
-	// Check to make sure we've received a valid image
+  boost::lock_guard<boost::mutex> lock(image_mutex); 
+  
+        // Check to make sure we've received a valid image
 	if (!goodToGo)	return false;
 
 	sensor_msgs::CvBridge bridge;
@@ -225,10 +234,12 @@ int main(int argc, char** argv)
 {
 	// Initialize ros structures
 	ros::init(argc, argv, "image_matcher");
-	ros::NodeHandle nh;
+	ros::NodeHandle nh;//("~");
 	image_transport::ImageTransport it(nh);
+	std::string transport;
 
 	// File paths for objects
+	//nh.param("image_transport", transport, std::string("raw"));
 	nh.param("axe", axeFile, std::string("axe.png"));
 	nh.param("clippers", clippersFile, std::string("clippers.png"));
 	nh.param("hammer", hammerFile, std::string("hammer.png"));
@@ -241,7 +252,7 @@ int main(int argc, char** argv)
 	ROS_INFO("Finished loading competition object silhouettes");
 
 	// Subscribe to image topic
-	image_transport::Subscriber sub = it.subscribe("image", 1, imageCallback);	
+	image_transport::Subscriber sub = it.subscribe("image", 1, &imageCallback);
 
 	// Register service
 	ros::ServiceServer image_match_srv = nh.advertiseService("MatchImage", MatchImageCallback);

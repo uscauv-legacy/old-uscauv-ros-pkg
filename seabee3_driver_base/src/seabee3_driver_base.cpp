@@ -38,11 +38,20 @@
 #include <seabee3_beestem/BeeStem3_driver.h>
 #include <seabee3_driver_base/KillSwitch.h>
 #include <seabee3_driver_base/Pressure.h>
+#include <seabee3_driver_base/Depth.h>
 #include <seabee3_driver_base/MotorCntl.h>
 #include <seabee3_driver_base/FiringDeviceAction.h>
 
+#define SURFACE_PRESSURE 908
+#define PRESSURE_DEPTH_SLOPE 33
+
 BeeStem3Driver * mDriver;
 int usbIndex;
+
+float getDepthFromPressure(int pressure)
+{
+  return (pressure - SURFACE_PRESSURE) / PRESSURE_DEPTH_SLOPE;
+}
 
 void motorCntlCallback(const seabee3_driver_base::MotorCntlConstPtr & msg)
 {
@@ -116,6 +125,7 @@ int main (int argc, char** argv)
 	
 	ros::Publisher intl_pressure_pub = n.advertise<seabee3_driver_base::Pressure>("/seabee3/intl_pressure", 1);
 	ros::Publisher extl_pressure_pub = n.advertise<seabee3_driver_base::Pressure>("/seabee3/extl_pressure", 1);
+	ros::Publisher depth_pub = n.advertise<seabee3_driver_base::Depth>("/seabee3/depth", 1);
 	ros::Publisher kill_switch_pub = n.advertise<seabee3_driver_base::KillSwitch>("/seabee3/kill_switch", 1);
 	
 	ros::ServiceServer dropper1action_srv = n.advertiseService("/seabee3/Dropper1Action", Dropper1ActionCB);
@@ -126,13 +136,16 @@ int main (int argc, char** argv)
 	{
 	  seabee3_driver_base::Pressure intlPressureMsg;
 	  seabee3_driver_base::Pressure extlPressureMsg;
+	  seabee3_driver_base::Depth depthMsg;
 	  seabee3_driver_base::KillSwitch killSwitchMsg;
 	  
 	  mDriver->readPressure(intlPressureMsg.Value, extlPressureMsg.Value);
-	  mDriver->readKillSwitch(killSwitchMsg.Value);
-	  
+	  mDriver->readKillSwitch(killSwitchMsg.Value);	 
+	  depthMsg.Value = getDepthFromPressure(extlPressureMsg.Value);
+
 	  intl_pressure_pub.publish(intlPressureMsg);
 	  extl_pressure_pub.publish(extlPressureMsg);
+	  depth_pub.publish(depthMsg);
 	  kill_switch_pub.publish(killSwitchMsg);
 	  
 	  ros::spinOnce();
