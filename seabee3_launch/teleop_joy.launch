@@ -8,7 +8,7 @@
 		<param name="heading" type="int" value="3" />
 		<param name="roll" type="int" value="4" />
 		
-		<param name="speed_scale" type="double" value="-1.0" />
+		<param name="speed_scale" type="double" value="0.75" />
 		<param name="strafe_scale" type="double" value="-1.0" />
 		<param name="surface_scale" type="double" value="-0.25" />
 		<param name="dive_scale" type="double" value="-0.25" />
