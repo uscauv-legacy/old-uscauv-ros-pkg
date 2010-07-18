@@ -279,7 +279,7 @@ int main( int argc, char * argv[] )
 	
 	double pid_i_min, pid_i_max;
 	
-	n.param("max_error_in_pos", maxErrorInPos, 0.25);
+	n.param("max_error_in_pos", maxErrorInPos, 5.0);
 	n.param("max_error_in_ori", maxErrorInOri, 0.25);
 	n.param("strafe_only_threshold", strafeOnlyThreshold, 3.0);
 	
@@ -313,6 +313,7 @@ int main( int argc, char * argv[] )
 		else if(mState == State::fine_tune)
 		{
 			updatePID( desiredVelocity );
+			cmd_vel_pub.publish( desiredVelocity );
 		}
 		
 		currentState.State = mState;

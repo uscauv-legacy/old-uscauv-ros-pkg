@@ -357,7 +357,6 @@ int main( int argc, char* argv[] )
 
 		jr_receive_rtn = JrReceive(handle, &source, &size, buffer);
 													//&priority, &flags, &msg_id);
-		ros::Duration(1).sleep();
 		cout << "\nJrReceive Return Value: " << jr_receive_rtn << "\n\n";
 		if (jr_receive_rtn == 0)
 		{
@@ -372,6 +371,7 @@ int main( int argc, char* argv[] )
 				//################################################################
 				// REPORT LOCAL POSE
 				//################################################################
+				
 				case 0x2403: // msg_id for Query Local Pose, [as6009, 66]
 					{
 						// send Report Local Pose, 0x4403 [as6009, 72]
@@ -385,6 +385,7 @@ int main( int argc, char* argv[] )
 							cout << "\n\t *** Unable to Send Message *** \n\n";
 						else 
 							cout << "\n *** REPORT LOCAL POSE sent ***\n";
+						break;
 					}
 
 					//################################################################
@@ -402,6 +403,7 @@ int main( int argc, char* argv[] )
 							cout << "\n\t *** Unable to Send Message *** \n\n";
 						else 
 							cout << "\n *** REPORT VELOCITY STATE sent ***\n";
+						break;
 					}
 
 					//################################################################
@@ -439,6 +441,7 @@ int main( int argc, char* argv[] )
 							cout << "\n\t *** Unable to Send Message *** \n\n";
 						else 
 							cout << "\n *** REPORT ID MESSAGE sent ***\n";
+						break;
 					}
 
 					//################################################################
@@ -457,6 +460,7 @@ int main( int argc, char* argv[] )
 							cout << "\n\t *** Unable to Send Message *** \n\n";
 						else 
 							cout << "\n *** REPORT CONTROL MESSAGE sent ***\n";
+						break;
 					}
 
 				case 0x000D: // msg_id for Request Control [as5710, 41]
@@ -477,8 +481,10 @@ int main( int argc, char* argv[] )
 							cout << "\n\t *** Unable to Send Message *** \n\n";
 						else 
 							cout << "\n *** CONFIRM CONTROL MESSAGE sent ***\n";
+						break;
 					}
-
+				case 11008:
+					
 				case 0x0004:
 					{
 						state = 0x01;
@@ -486,6 +492,7 @@ int main( int argc, char* argv[] )
 						msg_status.msg_id		=	0x4002;
 						msg_status.status		= state;
 						msg_status.reserved = 0;
+						break;
 					
 					}
 				case 0x0003:
@@ -495,6 +502,7 @@ int main( int argc, char* argv[] )
 						msg_status.msg_id		=	0x4002;
 						msg_status.status		= state;
 						msg_status.reserved = 0;
+						break;
 					
 					}
 
@@ -516,7 +524,7 @@ int main( int argc, char* argv[] )
 							cout << "\n\t *** Unable to Send Message *** \n\n";
 						else 
 							cout << "\n *** REPORT STATUS MESSAGE sent ***\n";
-
+						break;
 					}
 
 					//################################################################
@@ -546,12 +554,16 @@ int main( int argc, char* argv[] )
 							cout << "\n\t *** Unable to Send Message *** \n\n";
 						else 
 							cout << "\n *** REPORT SERVICES MESSAGE sent ***\n";
+						break;
 							
 					}
-
-					ros::Duration(1).sleep();
+					default: 
+					{
+						cout << "\n \n \n \n \n" << *((unsigned short*)buffer) << "state: " << state << "\n \n \n \n \n \n" << endl;
+					}
 			}
 		}
+		ros::Rate(20).sleep();
 		ros::spinOnce();
 	}
 
