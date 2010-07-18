@@ -143,6 +143,8 @@ bool updateCmdVel(geometry_msgs::Twist & cmd_vel)
 		
 		errorInOri -= currentOri;
 		
+		ROS_INFO("error in ori x %f y %f z %f", errorInOri.x, errorInOri.y, errorInOri.z);
+		
 		if(mState == State::translate || mState == State::holding)
 		{
 			if(errorInPos.x + errorInPos.y + errorInPos.z < maxErrorInPos)
@@ -168,6 +170,7 @@ bool updateCmdVel(geometry_msgs::Twist & cmd_vel)
 		
 		if(vectorToWaypoint.y > strafeOnlyThreshold)
 		{
+			ROS_INFO("rotating to face the waypoint");
 			//rotate to face waypoint, then drive forward to reach it
 			seabee3_driver::SetDesiredRPY temp;
 			temp.request.Mask.z = 1; //activate yaw
@@ -181,6 +184,7 @@ bool updateCmdVel(geometry_msgs::Twist & cmd_vel)
 		}
 		else
 		{
+			ROS_INFO("the waypoint is close enough that we can just strafe to it");
 			navGoalRPY = waypointRPY;
 			//set goal RPY, then strafe
 			set_desired_rpy_srv.call(setDesiredRPY);
