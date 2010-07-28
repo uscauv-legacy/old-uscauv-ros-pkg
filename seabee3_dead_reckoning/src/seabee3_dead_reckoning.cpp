@@ -5,7 +5,7 @@ Code taken from: http://www.ros.org/wiki/navigation/Tutorials/RobotSetup/Odom
 
 #include <ros/ros.h>
 #include <seabee3_driver_base/MotorCntl.h>
-#include <seabee3_driver_base/Pressure.h>
+#include <seabee3_driver_base/Depth.h>
 #include <tf/transform_broadcaster.h>
 #include <xsens_node/IMUData.h>
 #include <seabee3_dead_reckoning/ResetOdom.h>
@@ -53,9 +53,10 @@ void imuCallback(const xsens_node::IMUDataConstPtr & msg)
 }
 
 //######################################################################
-void extlPressureCallback(const seabee3_driver_base::PressureConstPtr & msg)
+void depthCallback(const seabee3_driver_base::DepthConstPtr & msg)
 {
-	depth = msg->Value;
+  depth = msg->Value;
+  ROS_INFO("Got depth: %f",depth);
 }
 
 //######################################################################
@@ -144,7 +145,7 @@ int main(int argc, char** argv)
 
 	ros::Subscriber imu_sub = n.subscribe ("/xsens/data_calibrated", 1, imuCallback);
 
-	ros::Subscriber extl_pressure_sub = n.subscribe ("/seabee3/extl_pressure", 1, extlPressureCallback);
+	ros::Subscriber depth_sub = n.subscribe ("/seabee3/depth", 1, depthCallback);
 
 	ros::Subscriber cmd_vel_sub = n.subscribe ("/seabee3/cmd_vel", 1, cmdVelocityCallback);
 

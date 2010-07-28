@@ -3,17 +3,15 @@
   <author>Maintained by Edward T. Kaszubski</author>
   <license>BSD</license>  
   <review status="unreviewed" notes=""/>
-  <url>http://ros.org/wiki/seabee3</url>
-  <depend stack="ros" />
-  <depend stack="common_msgs" />
-  <depend stack="joystick_drivers" />
-  <depend stack="geometry" />
-  <depend stack="camera_drivers" />
-  <depend stack="visualization_common" />
-  <depend stack="visualization" />
-  <depend stack="vision_opencv" />
-  <depend stack="image_common" />
-  <depend stack="driver_common" />
-  <depend stack="common" />
-<!--  <depend name="control_toolbox" /> -->
+  <url>http://ros.org/wiki/seabee3-ros-pkg</url>
+  <depend stack="common" /> <!-- yaml_cpp -->
+  <depend stack="common_msgs" /> <!-- nav_msgs, sensor_msgs, geometry_msgs -->
+  <depend stack="driver_common" /> <!-- dynamic_reconfigure, driver_base -->
+  <depend stack="geometry" /> <!-- tf -->
+  <depend stack="image_common" /> <!-- image_transport -->
+  <depend stack="joystick_drivers" /> <!-- joy -->
+  <depend stack="ros" /> <!-- roslib, std_msgs, roscpp -->
+  <depend stack="vision_opencv" /> <!-- opencv2, cv_bridge -->
+  <depend stack="visualization_common" /> <!-- visualization_msgs -->
+
 </stack>
