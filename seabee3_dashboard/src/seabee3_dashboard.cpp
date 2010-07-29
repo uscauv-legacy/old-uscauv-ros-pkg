@@ -46,6 +46,8 @@
 #include <boost/format.hpp>
 #include <boost/lexical_cast.hpp>
 
+#include "depth_meter.h"
+
 using namespace cv;
 
 class Dashboard
@@ -63,6 +65,8 @@ private:
   boost::format filename_format_;
   int count_;
   int extl_pressure_;
+  depth_meter::depth_meter depth_meter_;
+
 public:
   Dashboard(const ros::NodeHandle& nh, const std::string& transport)
     : filename_format_(""), count_(0)
@@ -79,6 +83,8 @@ public:
     filename_format_.parse(format_string);
 
     dash_img_ = cvCreateImage(cvSize(640,480),IPL_DEPTH_32F,3);
+
+    depth_meter_ = depth_meter(160,220);
 
     cvNamedWindow(window_name_.c_str(), 0);
     cvResizeWindow(window_name_.c_str(), 640, 480);
@@ -100,90 +106,44 @@ public:
     cvDestroyWindow(window_name_.c_str());
   }
 
+ 
+  // from: http://www.aishack.in/2010/07/transparent-image-overlays-in-opencv/
+  // modified
+  void OverlayImage(IplImage* src, IplImage* overlay, 
+CvPoint location, CvScalar S, CvScalar D)
+  {
+    for(int x=0;x < overlay->width-1;x++)
+    {
+        if(x+location.x>=src->width || x+location.x<0) continue;
+        for(int y=0; y < overlay->height-1;y++)
+        {
+            if(y+location.y>=src->height || y+location.y<0) continue;	    
+	    //ROS_INFO("x: %d, y: %d",x+location.x, y+location.y);
+	    CvScalar source = cvGet2D(src, y+location.y, x+location.x);
+            CvScalar over = cvGet2D(overlay, y, x);
+
+	    CvScalar merged;
+	    for(int i=0;i<4;i++)
+	      merged.val[i] = (S.val[i]*source.val[i]+D.val[i]*over.val[i]);
+
+	    cvSet2D(src, y+location.y, x+location.x, merged);
+        }
+    }    
+  }
+  // http://www.aishack.in/2010/07/transparent-image-overlays-in-opencv/
+
   void renderDepth()
   {
     boost::lock_guard<boost::mutex> guard(pressure_mutex_);
 
-    int itsCurrentDepth = extl_pressure_;
-    ROS_INFO("depth: %d",itsCurrentDepth);
-    int minDrawDepth = itsCurrentDepth - 100;
-
-    int drawHeight = (int)(.3*(float)dash_img_->height);
-    int maxDrawHeight = drawHeight + 200;
-
-    // draw tick marks
-    while(drawHeight < maxDrawHeight)
-      {	
-	if((minDrawDepth %100 ) % 13 == 0)
-	  {
-	    cvLine(dash_img_,
-		   cvPoint((int)(.48*(float)dash_img_->width),(int)drawHeight),
-		   cvPoint((int)(.52*(float)dash_img_->width),(int)drawHeight),
-		   CV_RGB(20,253,0)//CV_RGB( 100, 100, 100 )
-		   );
-	  }
-
-	if(minDrawDepth % 25 == 0)
-	  {
-	    if(minDrawDepth % 100 == 0 ||
-	       minDrawDepth % 100 == 50)
-	      {
-		cvLine(dash_img_, cvPoint((int)(.35*(float)dash_img_->width),drawHeight),
-		       cvPoint((int)(.65*(float)dash_img_->width),drawHeight),
-		       CV_RGB(20,253,0)//CV_RGB(200,200,200)
-		       );
-	      }
-	    else if(minDrawDepth % 100 == 25 ||
-		    minDrawDepth % 100 == 75)
-	      {
-		CvFont font;
-		double hScale=0.5;
-		double vScale=0.5;
-		int lineWidth=2;
-
-		cvInitFont(&font,CV_FONT_HERSHEY_SIMPLEX, hScale,vScale,0,lineWidth);
-
-		cvPutText(dash_img_,
-			  boost::lexical_cast<std::string>(minDrawDepth).c_str(),
-			  cvPoint((int)(.60*(float)dash_img_->width + 8),drawHeight-12),
-			  &font,
-			  //			8.0,
-			  CV_RGB(20,253,0)
-			  );
-		
-		cvLine(dash_img_,
-		       cvPoint((int)(.35*(float)dash_img_->width),drawHeight),
-		       cvPoint((int)(.65*(float)dash_img_->width),drawHeight),
-		       CV_RGB(20,253,0)//CV_RGB(100,100,100)
-		       );
-	      }
-
-	    if(drawHeight + 13 < dash_img_->height)
-	      {
-		cvLine(dash_img_,
-		       cvPoint((int)(.48*(float)dash_img_->width),drawHeight + 13),
-		       cvPoint((int)(.52*(float)dash_img_->width),drawHeight+13),
-		       CV_RGB(20,253,0)//CV_RGB(100,100,100)
-		       );
-	      }
-
-	    drawHeight += 25;
-	    minDrawDepth += 25;
-	  }
-	else
-	  {
-	    drawHeight++;
-	    minDrawDepth++;
-	  }
-      }
     
-    // draw current depth line as horizontal over middle of image
-    cvLine(dash_img_, cvPoint((int)(.35*(float)dash_img_->width),
-			      (int)(dash_img_->height/2-2)), 
-	   cvPoint((int)(.65*(float)dash_img_->width),
-		   (dash_img_->height/2 - 2)),
-	   CV_RGB(200,200,200));
-    cvLine(dash_img_, cvPoint((int)(.35*(float)dash_img_->width),(dash_img_->height/2+2)), cvPoint((int)(.65*(float)dash_img_->width),(dash_img_->height/2 + 2)), CV_RGB(200,200,200));		 
+    IplImage* depthImg = depth_meter_.render(extl_pressure_);
+    
+    OverlayImage(dash_img_, depthImg, 
+		 cvPoint((dash_img_->width/2) - (depthImg->width/2), 
+			 (dash_img_->height/2) - (depthImg->height/2)), 
+		 cvScalar(0.55,0.55,0.55,0.55), 
+		 cvScalar(0.45,0.45,0.45,0.45));
   }
   
   void image_cb(const sensor_msgs::ImageConstPtr& msg)
