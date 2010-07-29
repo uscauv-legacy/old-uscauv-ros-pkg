@@ -5,5 +5,5 @@
     uri: https://code.ros.org/svn/wg-ros-pkg/stacks/pr2_controllers/trunk/control_toolbox/ 
     local-name: stacks/control_toolbox
 - svn:
-    uri: svn checkout https://seabee3-ros-pkg.googlecode.com/svn/trunk/cturtle/
+    uri: https://seabee3-ros-pkg.googlecode.com/svn/trunk/cturtle/
     local-name: stacks/seabee3-ros-pkg
