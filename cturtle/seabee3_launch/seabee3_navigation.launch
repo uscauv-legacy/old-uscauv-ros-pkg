@@ -1,0 +1,14 @@
+<launch>
+	<node pkg="flsl" type="flsl" name="flsl" output="screen" >
+		<param name="map_frame" type="string" value="/landmark_map" />
+		<param name="robot_frame" type="string" value="/seabee3/base_link" />
+	</node>
+	<node pkg="waypoint_controller" type="waypoint_controller" name="waypoint_controller" output="screen" >
+		<param name="map_frame" type="string" value="/landmark_map" />
+		<param name="robot_frame" type="string" value="/seabee3/base_link" />
+	</node>
+	<node pkg="seabee3_dead_reckoning" type="seabee3_dead_reckoning" name="seabee3_dead_reckoning" output="screen" >
+		<param name="motor_cntl_timeout" type="double" value="2.0" />
+	</node>
+	<include file="$(find seabee3_launch)/seabee3_driver_tuned.launch" />
+</launch>

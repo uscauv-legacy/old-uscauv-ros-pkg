@@ -1,0 +1,20 @@
+<package>
+  <description brief="seabee3_mission_control">
+
+     seabee3_mission_control
+
+  </description>
+  <author>Michael Montalbo</author>
+  <license>BSD</license>
+  <review status="unreviewed" notes=""/>
+  <url>http://ros.org/wiki/seabee3_mission_control</url>
+  <depend package="roscpp"/>
+  <depend package="seabee3_driver"/>
+  <depend package="seabee3_driver_base" />
+  <depend package="geometry_msgs" />
+  <depend package="landmark_finder" />
+  <depend package="landmark_map_server" />
+  <depend package="localization_defs" />
+  <depend package="waypoint_controller" />
+
+</package>

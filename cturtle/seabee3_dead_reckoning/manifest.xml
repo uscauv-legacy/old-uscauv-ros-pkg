@@ -1,0 +1,20 @@
+<package>
+  <description brief="dead_reckoning">
+
+     dead_reckoning
+
+  </description>
+  <author>USCART</author>
+  <license>BSD</license>
+  <review status="unreviewed" notes=""/>
+  <url>http://ros.org/wiki/dead_reckoning</url>
+  <depend package="roscpp"/>
+  <depend package="nav_msgs"/>
+  <depend package="seabee3_driver_base" />
+  <depend package="tf" />
+  <depend package="xsens_node" />
+  <depend package="geometry_msgs" />
+
+</package>
+
+

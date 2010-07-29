@@ -1,0 +1,14 @@
+<package>
+  <description brief="seabee3_launch">
+
+     seabee3_launch
+
+  </description>
+  <author>Edward T. Kaszubski</author>
+  <license>BSD</license>
+  <review status="unreviewed" notes=""/>
+  <url>http://ros.org/wiki/seabee3_launch</url>
+
+</package>
+
+

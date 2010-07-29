@@ -1,0 +1,4 @@
+<launch>
+	<include file="$(find seabee3_launch)/front_cameras.launch" />
+	<include file="$(find seabee3_launch)/down_cameras.launch" />
+</launch>

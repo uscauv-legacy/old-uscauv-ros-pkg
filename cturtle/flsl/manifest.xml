@@ -1,0 +1,24 @@
+<package>
+  <description brief="flsl">
+
+     Filtered Landmark Sampling for Localization
+
+  </description>
+  <author>Edward T. Kaszubski</author>
+  <license>BSD</license>
+  <review status="unreviewed" notes=""/>
+  <url>http://ros.org/wiki/flsl</url>
+  <depend package="roscpp" />
+  <depend package="tf" />
+  <depend package="geometry_msgs" />
+  <depend package="std_msgs" />
+  <depend package="opencv2" />
+  <depend package="localization_defs" />
+  <depend package="landmark_map_server" />
+  <depend package="landmark_finder" />
+  <export>
+    <cpp cflags="-I${prefix}/include -I${prefix}/msg/cpp -I${prefix}/srv/cpp" lflags="-L/{prefix}/lib"/>
+  </export>
+</package>
+
+

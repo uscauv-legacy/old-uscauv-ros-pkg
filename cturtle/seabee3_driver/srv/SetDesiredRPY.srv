@@ -1,0 +1,6 @@
+geometry_msgs/Vector3 Mode
+geometry_msgs/Vector3 Mask
+geometry_msgs/Vector3 DesiredRPY
+---
+geometry_msgs/Vector3 CurrentDesiredRPY
+geometry_msgs/Vector3 ErrorInRPY

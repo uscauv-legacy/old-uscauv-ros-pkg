@@ -1,0 +1,3 @@
+<launch>
+	<node pkg="xsens_node" type="xsens_node" name="xsens_node" output="screen" />
+</launch>

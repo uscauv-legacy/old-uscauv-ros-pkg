@@ -1,0 +1,3 @@
+geometry_msgs/Point AspectRange
+geometry_msgs/Point DimXRange
+geometry_msgs/Point DimYRange

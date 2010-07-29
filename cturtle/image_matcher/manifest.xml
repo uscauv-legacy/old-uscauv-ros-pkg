@@ -1,0 +1,20 @@
+<package>
+  <description brief="image_matcher">
+
+     image_matcher
+
+  </description>
+  <author>Michael Wei</author>
+  <license>BSD</license>
+  <review status="unreviewed" notes=""/>
+  <url>http://ros.org/wiki/image_matcher</url>
+  <depend package="roscpp"/>
+  <depend package="sensor_msgs"/>
+  <depend package="image_transport"/>
+  <depend package="opencv2"/>
+  <depend package="cv_bridge"/>
+  <depend package="yaml_cpp"/>
+
+</package>
+
+

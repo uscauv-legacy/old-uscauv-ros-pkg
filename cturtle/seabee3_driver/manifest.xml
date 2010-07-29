@@ -1,0 +1,24 @@
+<package>
+  <description brief="seabee3_driver">
+
+     seabee3_driver
+
+  </description>
+  <author>Edward T. Kaszubski</author>
+  <license>BSD</license>
+  <review status="unreviewed" notes=""/>
+  <url>http://ros.org/wiki/seabee3_driver</url>
+  <depend package="roscpp"/>
+  <depend package="control_toolbox" />
+  <depend package="seabee3_driver_base" />
+  <depend package="xsens_node" />
+  <depend package="geometry_msgs" />
+  <depend package="localization_defs" />
+  <depend package="tf"/>
+  <export>
+    <cpp cflags="-I${prefix}/include -I${prefix}/msg/cpp -I${prefix}/srv/cpp" /> <!-- lflags="-L/{prefix}/../seabee3_util/lib"/>-->
+  </export>
+
+</package>
+
+

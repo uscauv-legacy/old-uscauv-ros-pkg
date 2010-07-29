@@ -1,0 +1,2 @@
+geometry_msgs/Vector3 Dim
+localization_defs/LandmarkArrayMsg Map

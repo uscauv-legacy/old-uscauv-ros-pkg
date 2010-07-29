@@ -1,0 +1,4 @@
+int8 Type
+int8[] Ids
+----
+localization_defs/LandmarkArrayMsg Landmarks

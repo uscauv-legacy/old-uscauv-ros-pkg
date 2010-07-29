@@ -1,0 +1,18 @@
+<launch>
+	<node pkg="joy" type="joy_node" name="joy_node" />
+	<node pkg="seabee3_teleop" type="seabee3_teleop" name="seabee3_teleop" output="screen" >
+		<param name="speed" type="int" value="1" />
+		<param name="strafe" type="int" value="0" />
+		<param name="surface" type="int" value="2" />
+		<param name="dive" type="int" value="5" />
+		<param name="heading" type="int" value="3" />
+		<param name="roll" type="int" value="4" />
+		
+		<param name="speed_scale" type="double" value="0.75" />
+		<param name="strafe_scale" type="double" value="-1.0" />
+		<param name="surface_scale" type="double" value="-0.25" />
+		<param name="dive_scale" type="double" value="-0.25" />
+		<param name="heading_scale" type="double" value="-1.0" />
+		<param name="roll_scale" type="double" value="-0.25" />
+	</node>
+</launch>
