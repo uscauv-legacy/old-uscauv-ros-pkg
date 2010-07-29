@@ -2,7 +2,8 @@
  *
  *      seabee3_driver
  * 
- *      Copyright (c) 2010, Edward T. Kaszubski (ekaszubski@gmail.com)
+ *      Copyright (c) 2010, Edward T. Kaszubski (ekaszubski@gmail.com),
+ *      Michael Montalbo (mmontalbo@gmail.com)
  *      All rights reserved.
  *
  *      Redistribution and use in source and binary forms, with or without
@@ -41,7 +42,7 @@
 #include <seabee3_driver/SetDesiredXYZ.h>
 #include <seabee3_driver/SetDesiredRPY.h>
 #include <seabee3_driver_base/MotorCntl.h>
-#include <seabee3_driver_base/Pressure.h>
+#include <seabee3_driver_base/Depth.h>
 #include <seabee3_driver_base/KillSwitch.h>
 #include <geometry_msgs/Twist.h>
 #include <geometry_msgs/Vector3.h>
@@ -57,7 +58,7 @@ xsens_node::IMUData * IMUDataCache;
 geometry_msgs::Twist * TwistCache;
 //ros::Time * velocity_sample_start;
 seabee3_driver_base::MotorCntl * motorCntlMsg;
-seabee3_driver_base::Pressure * extlPressureCache;
+seabee3_driver_base::Depth * depthCache;
 seabee3_driver_base::KillSwitch * killSwitchCache;
 geometry_msgs::Vector3 * desiredRPY, * errorInRPY, * desiredChangeInRPYPerSec, * desiredXYZ, * errorInXYZ, * desiredChangeInXYZPerSec;
 double maxRollError, maxPitchError, maxHeadingError, maxDepthError, desiredSpeed, desiredStrafe;
@@ -248,7 +249,7 @@ void headingPidStep()
 		
 		//errorInXYZ->x = desiredXYZ->y - <some sensor value>;
 		//errorInXYZ->y = desiredXYZ->x - <some sensor value>;
-		errorInXYZ->z = desiredXYZ->z - extlPressureCache->Value;
+		errorInXYZ->z = desiredXYZ->z - depthCache->Value;
 		
 		//errorInRPY->x = LocalizationUtil::angleDistRel(desiredRPY->x, IMUDataCache->ori.x);
 		//errorInRPY->y = LocalizationUtil::angleDistRel(desiredRPY->y, IMUDataCache->ori.y);
@@ -282,7 +283,7 @@ void headingPidStep()
 
 		//ROS_INFO("heading: %f desired heading: %f heading error: %f motorValue: %f", IMUDataCache->ori.z, desiredRPY->z, errorInRPY->z, headingMotorVal);
 		
-		//ROS_INFO("Depth; desired: %d current %d error %d motorVal %f", *desiredDepth, extlPressureCache->Value, *errorInDepth, depthMotorVal);
+		//ROS_INFO("Depth; desired: %d current %d error %d motorVal %f", *desiredDepth, depthCache->Value, *errorInDepth, depthMotorVal);
 		
 		updateMotorCntlMsg(*motorCntlMsg, axis_speed, speedMotorVal);
 		updateMotorCntlMsg(*motorCntlMsg, axis_strafe, strafeMotorVal);
@@ -327,6 +328,9 @@ void CmdVelCallback(const geometry_msgs::TwistConstPtr & twist)
 	//	TwistCache->pop();
 	//}
 	
+	updateMotorCntlFromTwist(twist);
+	
+	/*
 	lastCmdVelUpdateTime = ros::Time::now();
 	static bool timeoutSet = false;
 	
@@ -354,6 +358,7 @@ void CmdVelCallback(const geometry_msgs::TwistConstPtr & twist)
 	}
 	
 	lastCmdVelUpdateTime = ros::Time::now();
+	*/
 }
 
 bool setDesiredXYZCallback(seabee3_driver::SetDesiredXYZ::Request & req, seabee3_driver::SetDesiredXYZ::Response & resp)
@@ -365,7 +370,7 @@ bool setDesiredXYZCallback(seabee3_driver::SetDesiredXYZ::Request & req, seabee3
 	//	desiredXYZ->y = req.DesiredXYZ.y + (req.Mode.y == 1.0f ? IMUDataCache->ori.y : 0);
 			
 	if(req.Mask.z > 0.0f)
-		desiredXYZ->z = req.DesiredXYZ.z + (req.Mode.z == 1.0f ? extlPressureCache->Value : 0);
+		desiredXYZ->z = req.DesiredXYZ.z + (req.Mode.z == 1.0f ? depthCache->Value : 0);
 		
 	resp.CurrentDesiredXYZ = *desiredXYZ;
 	resp.ErrorInXYZ = *errorInXYZ;
@@ -388,12 +393,12 @@ bool setDesiredRPYCallback(seabee3_driver::SetDesiredRPY::Request & req, seabee3
 	return true;
 }
 
-void ExtlPressureCallback(const seabee3_driver_base::PressureConstPtr & extlPressure)
+void DepthCallback(const seabee3_driver_base::DepthConstPtr & depth)
 {
-	*extlPressureCache = *extlPressure;
+	*depthCache = *depth;
 	if(!depthInitialized)
 	{
-		desiredXYZ->z = extlPressureCache->Value;
+		desiredXYZ->z = depthCache->Value;
 		depthInitialized = true;
 	}
 }
@@ -433,7 +438,7 @@ bool ResetPoseCallback(seabee3_driver::ResetPose::Request & req, seabee3_driver:
 		
 	estimatedPose.setRotation( estimatedPose.getRotation().normalize() );*/
 	
-	desiredXYZ->z = extlPressureCache->Value;
+	desiredXYZ->z = depthCache->Value;
 	
 	return true;
 }
@@ -457,7 +462,6 @@ void KillSwitchCallback(const seabee3_driver_base::KillSwitchConstPtr & killSwit
 }
 
 int main(int argc, char** argv)
-
 {
 	ros::init(argc, argv, "seabee3_driver");
 	ros::NodeHandle n("~");
@@ -472,7 +476,7 @@ int main(int argc, char** argv)
 	ros::Subscriber imu_sub = n.subscribe("/xsens/data_calibrated", 1, IMUDataCallback); //likely necessary to remap this to something real ie. /xsens/data_calibrated
 	//ros::Subscriber odom_prim_sub = n.subscribe("/seabee3/odom_prim", 1, OdomPrimCallback);
 	ros::Subscriber cmd_vel_sub = n.subscribe("/seabee3/cmd_vel", 1, CmdVelCallback);
-	ros::Subscriber extl_depth_sub = n.subscribe("/seabee3/extl_pressure", 1, ExtlPressureCallback);
+	ros::Subscriber extl_depth_sub = n.subscribe("/seabee3/depth", 1, DepthCallback);
 	ros::Subscriber kill_switch_sub = n.subscribe("/seabee3/kill_switch", 1, KillSwitchCallback);
 	
 	desiredRPY = new geometry_msgs::Vector3; desiredRPY->x = 0; desiredRPY->y = 0; desiredRPY->z = 0;
@@ -485,7 +489,7 @@ int main(int argc, char** argv)
 	
 	lastUpdateTime = new ros::Time(ros::Time(-1));
 	lastPidUpdateTime = new ros::Time(ros::Time(-1));
-	extlPressureCache = new seabee3_driver_base::Pressure;
+	depthCache = new seabee3_driver_base::Depth;
 	killSwitchCache = new seabee3_driver_base::KillSwitch;
 	
 	depthInitialized = false;
@@ -501,7 +505,7 @@ int main(int argc, char** argv)
 	
 	n.param("cmd_vel_timeout", cmdVelTimeout, 2.0);
 	
-	n.param("depth_err_cap", maxDepthError, 25.0);
+	n.param("depth_err_cap", maxDepthError, 100.0);
 	n.param("roll_err_cap", maxRollError, 25.0);
 	n.param("pitch_err_cap", maxPitchError, 25.0);
 	n.param("heading_err_cap", maxHeadingError, 25.0);
@@ -542,7 +546,7 @@ int main(int argc, char** argv)
 	
 	n.param("speed_axis_dir", speed_axis_dir, 1.0);
 	n.param("strafe_axis_dir", strafe_axis_dir, 1.0);
-	n.param("depth_axis_dir", depth_axis_dir, 1.0);
+	n.param("depth_axis_dir", depth_axis_dir, -1.0);
 	n.param("roll_axis_dir", roll_axis_dir, -1.0);
 	n.param("pitch_axis_dir", pitch_axis_dir, -1.0);
 	n.param("heading_axis_dir", heading_axis_dir, -1.0);

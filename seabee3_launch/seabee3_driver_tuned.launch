@@ -46,7 +46,7 @@
 		
 		<param name="speed_axis_dir" type="double" value="-1.0" />
 		<param name="strafe_axis_dir" type="double" value="1.0" />
-		<param name="depth_axis_dir" type="double" value="1.0" />
+		<param name="depth_axis_dir" type="double" value="-1.0" />
 		<param name="roll_axis_dir" type="double" value="-1.0" />
 		<param name="pitch_axis_dir" type="double" value="-1.0" />
 		<param name="heading_axis_dir" type="double" value="-1.0" />
