@@ -161,18 +161,14 @@ int main( int argc, char* argv[] )
 	
 	YAML::Parser parser(fin);
 	YAML::Node doc;
-	ROS_INFO("instantiated the yaml parser");
 	
 	parser.GetNextDocument(doc);
-	ROS_INFO("did 'GetNextDocument'");
 	
 	LandmarkMap mMap;
 	
 	doc["dim"] >> mMap.mDim;
-	ROS_INFO("set dim");
 	
 	const YAML::Node & landmarks = doc["landmarks"];
-	ROS_INFO("got top node for landmarks");
 	
 	//populate the list of landmarks
 	
@@ -181,10 +177,7 @@ int main( int argc, char* argv[] )
 		Landmark temp;
 		landmarks[i] >> temp;
 		mMap.addLandmark(temp);
-		ROS_INFO("Landmark type: %d", temp.mLandmarkType);
 	}
-	
-	ROS_INFO("populated list of landmarks");
 	
 	std::vector<visualization_msgs::Marker> markers = mMap.createMarkerArray( map_frame );
 	mapMsg = mMap.createMsg();
