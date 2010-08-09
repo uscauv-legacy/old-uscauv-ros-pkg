@@ -226,32 +226,41 @@ bool updateCmdVel(geometry_msgs::Twist & cmd_vel)
 	return false;
 }
 
-bool FineTunePoseCallback( waypoint_controller::FineTunePose::Request & req, waypoint_controller::FineTunePose::Response & resp)
+bool SetDesiredXYZCallback(waypoint_controller::SetDesiredVec3::Request & req, waypoint_controller::SetDesiredVec3::Response & resp)
 {
-	mState = State::fine_tune;
-	errorInPos = req.Pos;
+	//if(req.Mask.x > 0.0f)
+	//	desiredXYZ->x = req.DesiredXYZ.x + (req.Mode.x == 1.0f ? IMUDataCache->ori.x : 0);
+
+	//if(req.Mask.y > 0.0f)
+	//	desiredXYZ->y = req.DesiredXYZ.y + (req.Mode.y == 1.0f ? IMUDataCache->ori.y : 0);
+
+	if(req.mask.z > 0.0f)
+		desiredXYZ->z = req.desiredXYZ.z + (req.mode.z == 1.0f ? depthCache->value : 0);
+
+	resp.CurrentDesiredXYZ = *desiredXYZ;
+	resp.ErrorInXYZ = *errorInXYZ;
 	return true;
 }
 
-bool SetDesiredPoseCallback( waypoint_controller::SetDesiredPose::Request & req, waypoint_controller::SetDesiredPose::Response & resp)
+bool SetDesiredRPYCallback(waypoint_controller::SetDesiredVec3::Request & req, waypoint_controller::SetDesiredVec3::Response & resp)
 {
-	waypointRPY.x = req.Ori.x;
-	waypointRPY.y = req.Ori.y;
-	waypointRPY.z = req.Ori.z;
-	
-	waypointXYZ.x = req.Pos.x;
-	waypointXYZ.y = req.Pos.y;
-	waypointXYZ.z = req.Pos.z;
-	
-	mState = State::set_xyz;
-	
+	if(req.mask.x > 0.0f)
+		desiredRPY->x = req.DesiredRPY.x + (req.Mode.x == 1.0f ? IMUDataCache->ori.x : 0);
+
+	if(req.mask.y > 0.0f)
+		desiredRPY->y = req.DesiredRPY.y + (req.Mode.y == 1.0f ? IMUDataCache->ori.y : 0);
+
+	if(req.mask.z > 0.0f)
+		desiredRPY->z = req.DesiredRPY.z + (req.Mode.z == 1.0f ? IMUDataCache->ori.z : 0);
+
+	resp.CurrentDesiredRPY = *desiredRPY;
+	resp.ErrorInRPY = *errorInRPY;
 	return true;
 }
 
-bool ReleasePoseCallback( waypoint_controller::ReleasePose::Request & req, waypoint_controller::ReleasePose::Response & resp)
+bool ResetPoseCallback(waypoint_controller::ResetPose::Request & req, waypoint_controller::ResetPose::Response & resp)
 {
-	mState = State::idle;
-	return true;
+	// TODO: change the appropriate TF frame here
 }
 
 int main( int argc, char * argv[] )
@@ -265,12 +274,9 @@ int main( int argc, char * argv[] )
 	ros::Publisher cmd_vel_pub = n.advertise<geometry_msgs::Twist>("/seabee3/cmd_vel", 1);
 	ros::Publisher state_pub = n.advertise<waypoint_controller::CurrentState>("current_state", 1);
 	
-	set_desired_rpy_srv = n.serviceClient<seabee3_driver::SetDesiredRPY>("setRPY");
-	set_desired_xyz_srv = n.serviceClient<seabee3_driver::SetDesiredXYZ>("setXYZ");
-	
-	ros::ServiceServer set_desired_pose_srv = n.advertiseService("setDesiredPose", SetDesiredPoseCallback);
-	ros::ServiceServer fine_tune_pose_srv = n.advertiseService("fineTunePose", FineTunePoseCallback);
-	ros::ServiceServer release_desired_pose_srv = n.advertiseService("releasePose", ReleasePoseCallback);
+	ros::ServiceServer SetDesiredXYZ_srv = n.advertiseService("/seabee3/setDesiredXYZ", SetDesiredXYZCallback);
+	ros::ServiceServer SetDesiredRPY_srv = n.advertiseService("/seabee3/setDesiredRPY", SetDesiredRPYCallback);
+	ros::ServiceServer ResetPose_srv = n.advertiseService("/seabee3/ResetPose", ResetPoseCallback);
 	
 	tl = new tf::TransformListener;
 	

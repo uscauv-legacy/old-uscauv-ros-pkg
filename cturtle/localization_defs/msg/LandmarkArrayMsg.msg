@@ -1,1 +1,1 @@
-localization_defs/LandmarkMsg[] LandmarkArray
+localization_defs/LandmarkMsg[] landmarkArray

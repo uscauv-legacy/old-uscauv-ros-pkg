@@ -13,19 +13,11 @@ rosbuild_init()
 
 #set the default path for built executables to the "bin" directory
 set(EXECUTABLE_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/bin)
+
 #set the default path for built libraries to the "lib" directory
 set(LIBRARY_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/lib)
 
-#uncomment if you have defined messages
 rosbuild_genmsg()
-#uncomment if you have defined services
 rosbuild_gensrv()
 
-#common commands for building c++ executables and libraries
-#rosbuild_add_library(seabee3_util src/seabee3_util/seabee3_util.cpp)
-#target_link_libraries(${PROJECT_NAME} another_library)
-#rosbuild_add_boost_directories()
-#rosbuild_link_boost(${PROJECT_NAME} thread)
-#link_directories("${PROJECT_SOURCE_DIR}/../seabee3_util/lib")
 rosbuild_add_executable(seabee3_driver src/seabee3_driver.cpp)
-#target_link_libraries(seabee3_driver seabee3_util)

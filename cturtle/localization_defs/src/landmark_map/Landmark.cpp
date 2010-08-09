@@ -107,34 +107,34 @@ localization_defs::LandmarkMsg Landmark::createMsg() const
 {
 	localization_defs::LandmarkMsg msg;
 	
-	msg.Center.x = mCenter.x;
-	msg.Center.y = mCenter.y;
-	msg.Center.z = mCenter.z;
+	msg.center.x = mCenter.x;
+	msg.center.y = mCenter.y;
+	msg.center.z = mCenter.z;
 	
-	msg.Ori = mOrientation;
+	msg.ori = mOrientation;
 	
-	msg.Color = mColor;
+	msg.color = mColor;
 	
-	msg.Type = mLandmarkType;
+	msg.type = mLandmarkType;
 	
-	msg.Id = mId;
+	msg.id = mId;
 	
 	return msg;
 }
 
 Landmark Landmark::parseMessage( const localization_defs::LandmarkMsg & msg )
 {
-	if(msg.Type == Landmark::LandmarkType::Buoy)
+	if(msg.type == Landmark::LandmarkType::Buoy)
 	{
-		return LandmarkTypes::Buoy( cv::Point3d( msg.Center.x, msg.Center.y, msg.Center.z ), msg.Ori, msg.Color );
+		return LandmarkTypes::Buoy( cv::Point3d( msg.center.x, msg.center.y, msg.center.z ), msg.ori, msg.color );
 	}
-	else if(msg.Type == Landmark::LandmarkType::Pinger)
+	else if(msg.type == Landmark::LandmarkType::Pinger)
 	{
-		return LandmarkTypes::Pinger( cv::Point3d( msg.Center.x, msg.Center.y, msg.Center.z), msg.Ori, msg.Id );
+		return LandmarkTypes::Pinger( cv::Point3d( msg.center.x, msg.center.y, msg.center.z), msg.ori, msg.id );
 	}
-	else if(msg.Type == Landmark::LandmarkType::Pipe)
+	else if(msg.type == Landmark::LandmarkType::Pipe)
 	{
-		return LandmarkTypes::Pipe( cv::Point3d( msg.Center.x, msg.Center.y, msg.Center.z), msg.Ori );
+		return LandmarkTypes::Pipe( cv::Point3d( msg.center.x, msg.center.y, msg.center.z), msg.ori );
 	}
 	return Landmark();
 }

@@ -1,1 +1,1 @@
-int8 Value
+int8 isKilled

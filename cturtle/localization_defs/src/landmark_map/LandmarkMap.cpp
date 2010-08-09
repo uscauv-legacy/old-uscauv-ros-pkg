@@ -48,14 +48,14 @@ LandmarkMap::LandmarkMap( std::vector<Landmark> landmarks, cv::Point2d dim )
 
 LandmarkMap::LandmarkMap( const localization_defs::LandmarkMapMsg & msg )
 {
-	mDim.x = msg.Dim.x;
-	mDim.y = msg.Dim.y;
+	mDim.x = msg.dim.x;
+	mDim.y = msg.dim.y;
 	
-	mLandmarks.resize( msg.Map.LandmarkArray.size() );
+	mLandmarks.resize( msg.map.landmarkArray.size() );
 	
 	for(unsigned int i = 0; i < mLandmarks.size(); i ++)
 	{
-		mLandmarks[i] = Landmark::parseMessage( msg.Map.LandmarkArray[i] );
+		mLandmarks[i] = Landmark::parseMessage( msg.map.landmarkArray[i] );
 	}
 }
 
@@ -127,7 +127,7 @@ localization_defs::LandmarkMapMsg LandmarkMap::createMsg() const
 	localization_defs::LandmarkMapMsg msg;
 	for(unsigned int i = 0; i < mLandmarks.size(); i ++)
 	{
-		msg.Map.LandmarkArray.push_back( mLandmarks[i].createMsg() );
+		msg.map.landmarkArray.push_back( mLandmarks[i].createMsg() );
 	}
 	
 	return msg;

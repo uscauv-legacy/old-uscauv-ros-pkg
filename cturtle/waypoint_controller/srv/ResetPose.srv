@@ -1,0 +1,4 @@
+xsens_node/Vector3Masked pos
+xsens_node/Vector3Masked ori
+---
+std_msgs/Empty response
