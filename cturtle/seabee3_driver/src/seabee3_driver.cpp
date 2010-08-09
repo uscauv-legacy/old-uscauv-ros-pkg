@@ -37,8 +37,10 @@
 
 //tools
 #include <control_toolbox/pid.h> // for Pid
+#include <localization_tools/Util.h>
 #include <ros/ros.h>
 #include <seabee3_beestem/BeeStem3.h> // for MotorControllerIDs
+#include <string>
 #include <tf/transform_broadcaster.h> // for TransformBroadcaster
 #include <tf/transform_listener.h> // for TransformListener
 
@@ -51,26 +53,44 @@
 //srvs
 #include <seabee3_driver/SetDesiredPose.h> // for SetDesiredPose
 
-geometry_msgs::Twist * TwistCache;
+std::string global_frame;
 
-seabee3_driver_base::MotorCntl * motorCntlMsg;
+geometry_msgs::Twist twistCache;
 
-geometry_msgs::Vector3 * desiredRPY, *errorInRPY, *desiredChangeInRPYPerSec, *desiredXYZ, *errorInXYZ, *desiredChangeInXYZPerSec;
-double maxRollError, maxPitchError, maxYawError, maxDepthError, desiredSpeed, desiredStrafe;
+seabee3_driver_base::MotorCntl motorCntlMsg;
 
-ros::Time * lastUpdateTime;
-ros::Time * lastPidUpdateTime;
-ros::Time lastCmdVelUpdateTime;
-tf::Vector3 mImuOriOffset;
+geometry_msgs::Vector3 desiredRPY, errorInRPY, desiredChangeInRPYPerSec, desiredXYZ, errorInXYZ, desiredChangeInXYZPerSec;
+geometry_msgs::Vector3 maxErrorInRPY, maxErrorInXYZ;
 
-tf::Transform desiredPose;
-tf::Transform currentPose;
+ros::Time lastPidUpdateTime;
 
-double speed_m1_dir, speed_m2_dir, strafe_m1_dir, strafe_m2_dir, depth_m1_dir, depth_m2_dir, roll_m1_dir, roll_m2_dir, yaw_m1_dir, yaw_m2_dir;
+tf::Transform desiredPoseTf;
+tf::Transform currentPoseTf;
 
-double speed_axis_dir, strafe_axis_dir, depth_axis_dir, roll_axis_dir, pitch_axis_dir, yaw_axis_dir, cmdVelTimeout;
+geometry_msgs::Twist desiredPose;
+geometry_msgs::Twist currentPose;
+
+tf::TransformListener * tl;
+tf::TransformBroadcaster * tb;
 
 bool depthInitialized;
+
+struct ThrusterArrayCfg // define the direction of each thruster in an array that is responsible for controlling a single axis of movement
+{
+	std::vector<double> thrusters;
+	double & at( const unsigned int & i )
+	{
+		if(thrusters.size() < i)
+		{
+			thrusters.resize(i);
+		}
+		return thrusters.at(i - 1);
+	}
+};
+
+std::vector<ThrusterArrayCfg> thrusterDirCfg;
+
+double axisDirCfg [6];
 
 struct Axes
 {
@@ -98,18 +118,52 @@ struct PidConfig
 	double d;
 };
 
-struct PidConfig3D
+struct ConfiguredPid
 {
-	PidConfig x, y, z;
+	control_toolbox::Pid pid;
+	PidConfig cfg;
+
+	inline void initPid(double i_min, double i_max) { pid.initPid( cfg.p, cfg.i, cfg.d, i_min, i_max ); };
+	inline void reset() { pid.reset(); };
 };
 
 struct Pid3D
 {
-	control_toolbox::Pid x, y, z;
-	PidConfig3D cfg;
+	ConfiguredPid x, y, z;
+
+	inline void initPid(double i_min, double i_max) { x.initPid(i_min, i_max); y.initPid(i_min, i_max); z.initPid(i_min, i_max); };
+	inline void reset() { x.reset(); y.reset(); z.reset(); };
 };
 
 Pid3D xyzPid, rpyPid;
+
+void operator >> ( const geometry_msgs::Twist & thePose, tf::Transform & thePoseTf )
+{
+	thePoseTf.setOrigin( tf::Vector3( thePose.linear.x, thePose.linear.y, thePose.linear.z ) );
+	thePoseTf.setRotation( tf::Quaternion( thePose.angular.z, thePose.angular.y, thePose.angular.x ) );
+}
+
+void operator >> ( const tf::Transform & thePoseTf, geometry_msgs::Twist & thePose )
+{
+	thePose.linear.x = thePoseTf.getOrigin().x();
+	thePose.linear.y = thePoseTf.getOrigin().y();
+	thePose.linear.z = thePoseTf.getOrigin().z();
+
+	thePoseTf.getBasis().getEulerZYX( thePose.angular.z, thePose.angular.y, thePose.angular.x );
+}
+
+void operator *= ( geometry_msgs::Vector3 & v, const double & scale )
+{
+	v.x = v.x * scale;
+	v.y = v.y * scale;
+	v.z = v.z * scale;
+}
+
+geometry_msgs::Twist operator * ( geometry_msgs::Twist & twist, const double & scale )
+{
+	twist.linear *= scale;
+	twist.angular *= scale;
+}
 
 void updateMotorCntlMsg( seabee3_driver_base::MotorCntl & msg, int axis, int p_value )
 {
@@ -123,8 +177,8 @@ void updateMotorCntlMsg( seabee3_driver_base::MotorCntl & msg, int axis, int p_v
 	case Axes::speed: //relative to the robot
 		motor1 = BeeStem3::MotorControllerIDs::FWD_RIGHT_THRUSTER;
 		motor2 = BeeStem3::MotorControllerIDs::FWD_LEFT_THRUSTER;
-		motor1_scale = speed_m1_dir;
-		motor2_scale = speed_m2_dir;
+		motor1_scale = thrusterDirCfg[Axes::speed].at(1);
+		motor2_scale = thrusterDirCfg[Axes::speed].at(2);
 		break;
 	case Axes::strafe: //absolute; relative to the world
 		updateMotorCntlMsg( msg, Axes::strafe_rel, value );
@@ -134,8 +188,8 @@ void updateMotorCntlMsg( seabee3_driver_base::MotorCntl & msg, int axis, int p_v
 	case Axes::strafe_rel: //relative to the robot
 		motor1 = BeeStem3::MotorControllerIDs::STRAFE_FRONT_THRUSTER;
 		motor2 = BeeStem3::MotorControllerIDs::STRAFE_BACK_THRUSTER;
-		motor1_scale = strafe_m1_dir;
-		motor2_scale = strafe_m2_dir;
+		motor1_scale = thrusterDirCfg[Axes::strafe].at(1);
+		motor2_scale = thrusterDirCfg[Axes::strafe].at(2);
 		break;
 	case Axes::depth: //absolute; relative to the world
 		updateMotorCntlMsg( msg, Axes::depth_rel, value * -1.0 );
@@ -145,17 +199,17 @@ void updateMotorCntlMsg( seabee3_driver_base::MotorCntl & msg, int axis, int p_v
 	case Axes::depth_rel: //relative to the robot
 		motor1 = BeeStem3::MotorControllerIDs::DEPTH_RIGHT_THRUSTER;
 		motor2 = BeeStem3::MotorControllerIDs::DEPTH_LEFT_THRUSTER;
-		motor1_scale = depth_m1_dir;
-		motor2_scale = depth_m2_dir;
+		motor1_scale = thrusterDirCfg[Axes::depth].at(1);
+		motor2_scale = thrusterDirCfg[Axes::depth].at(2);
 		break;
 	case Axes::roll: //absolute; relative to the world
 		motor1 = BeeStem3::MotorControllerIDs::DEPTH_RIGHT_THRUSTER;
 		motor2 = BeeStem3::MotorControllerIDs::DEPTH_LEFT_THRUSTER;
-		motor1_scale = roll_m1_dir;
-		motor2_scale = roll_m2_dir;
+		motor1_scale = thrusterDirCfg[Axes::roll].at(1);
+		motor2_scale = thrusterDirCfg[Axes::roll].at(2);
 		break;
 	case Axes::pitch: //pitch is only available as seabee starts to roll; make sure that's the case here
-		updateMotorCntlMsg( msg, Axes::yaw_rel, value * -sin( LocalizationUtil::degToRad( IMUDataCache->ori.x ) ) );
+		//updateMotorCntlMsg( msg, Axes::yaw_rel, value * -sin( LocalizationUtil::degToRad( IMUDataCache->ori.x ) ) );
 		return;
 	case Axes::yaw: //absolute; relative to the world
 		//updateMotorCntlMsg(msg, Axes::yaw_rel, value * cos( LocalizationUtil::degToRad( IMUDataCache->ori.x ) ) );
@@ -164,8 +218,8 @@ void updateMotorCntlMsg( seabee3_driver_base::MotorCntl & msg, int axis, int p_v
 	case Axes::yaw_rel: //relative to the robot
 		motor1 = BeeStem3::MotorControllerIDs::STRAFE_FRONT_THRUSTER;
 		motor2 = BeeStem3::MotorControllerIDs::STRAFE_BACK_THRUSTER;
-		motor1_scale = yaw_m1_dir;
-		motor2_scale = yaw_m2_dir;
+		motor1_scale = thrusterDirCfg[Axes::yaw].at(1);
+		motor2_scale = thrusterDirCfg[Axes::yaw].at(2);
 		break;
 	}
 
@@ -184,7 +238,7 @@ void updateMotorCntlMsg( seabee3_driver_base::MotorCntl & msg, int axis, int p_v
 	msg.mask[motor2] = 1;
 }
 
-void updateMotorCntlFromTwist( const geometry_msgs::TwistConstPtr & twist )
+/*void updateMotorCntlFromTwist( const geometry_msgs::TwistConstPtr & twist )
 {
 	//ROS_INFO("udpateMotorCntlFromTwist()");
 	tf::Vector3 vel_desired_lin( twist->linear.x, twist->linear.y, twist->linear.z );
@@ -192,14 +246,14 @@ void updateMotorCntlFromTwist( const geometry_msgs::TwistConstPtr & twist )
 	//tf::Vector3 vel_diff_lin (vel_desired_lin - *vel_est_lin);
 	//tf::Vector3 vel_diff_ang (vel_desired_ang - *vel_est_ang);
 
-	/*ROS_INFO("-----------------------------------------------------");
-
-	 ROS_INFO("linear x %f y %f z %f", vel_desired_lin.getX(), vel_desired_lin.getY(), vel_desired_lin.getZ());
-	 ROS_INFO("angular x %f y %f z %f", vel_desired_ang.getX(), vel_desired_ang.getY(), vel_desired_ang.getZ());*/
+//	ROS_INFO("-----------------------------------------------------");
+//
+//	ROS_INFO("linear x %f y %f z %f", vel_desired_lin.getX(), vel_desired_lin.getY(), vel_desired_lin.getZ());
+//	ROS_INFO("angular x %f y %f z %f", vel_desired_ang.getX(), vel_desired_ang.getY(), vel_desired_ang.getZ());
 
 	desiredSpeed = vel_desired_lin.getX() * 100.0;
 	desiredStrafe = vel_desired_lin.getY() * 100.0;
-	//*desiredDepth = vel_diff_lin.getZ() * 100.0;
+	// *desiredDepth = vel_diff_lin.getZ() * 100.0;
 
 	//updateMotorCntlMsg(*motorCntlMsg, Axes::speed, vel_diff_lin.getX() * 100.0);
 	//updateMotorCntlMsg(*motorCntlMsg, Axes::strafe, vel_diff_lin.getY() * 50.0);
@@ -207,7 +261,7 @@ void updateMotorCntlFromTwist( const geometry_msgs::TwistConstPtr & twist )
 	//updateMotorCntlMsg(*motorCntlMsg, Axes::roll, vel_diff_ang.getX() * 100.0);
 	//updateMotorCntlMsg(*motorCntlMsg, Axes::yaw, vel_diff_ang.getZ() * 100.0);
 
-	if ( *lastUpdateTime != ros::Time( -1 ) )
+	if ( lastUpdateTime != ros::Time( -1 ) )
 	{
 		//ros::Duration dt = ros::Time::now() - *lastYawUpdateTime;
 
@@ -227,308 +281,241 @@ void updateMotorCntlFromTwist( const geometry_msgs::TwistConstPtr & twist )
 		//			ROS_INFO("desired yaw: %f actualYaw: %f dt: %f", *desiredRPY.z, IMUDataCache->front().ori.z, dt.toSec());
 	}
 	
-	*lastUpdateTime = ros::Time::now();
+	lastUpdateTime = ros::Time::now();
+}*/
+
+bool SetDesiredPoseCallback( seabee3_driver::SetDesiredPose::Request & req, seabee3_driver::SetDesiredPose::Response & resp )
+{
+	//desiredPoseTf >> desiredPose;
+
+	if(req.pos.mask.x != 0.0)
+		desiredPose.linear.x =  req.pos.values.x + ( req.pos.mode.x == 1.0 ? desiredPose.linear.x : 0.0 );
+	if(req.pos.mask.y != 0.0)
+		desiredPose.linear.y = req.pos.values.y + ( req.pos.mode.y == 1.0 ? desiredPose.linear.y : 0.0 );
+	if(req.pos.mask.z != 0.0)
+		desiredPose.linear.z = req.pos.values.z + ( req.pos.mode.z == 1.0 ? desiredPose.linear.z : 0.0 );
+
+	if(req.ori.mask.x != 0.0)
+		desiredPose.angular.x = req.ori.values.x + ( req.ori.mode.x == 1.0 ? desiredPose.angular.x : 0.0 );
+	if(req.ori.mask.y != 0.0)
+		desiredPose.angular.y = req.ori.values.y + ( req.ori.mode.y == 1.0 ? desiredPose.angular.y : 0.0 );
+	if(req.ori.mask.z != 0.0)
+		desiredPose.angular.z = req.ori.values.z + ( req.ori.mode.z == 1.0 ? desiredPose.angular.z : 0.0 );
+
+	//desiredPose >> desiredPoseTf;
+	return true;
+}
+
+void SetDesiredPose(const geometry_msgs::Twist & msg)
+{
+	seabee3_driver::SetDesiredPose::Request req;
+	seabee3_driver::SetDesiredPose::Response resp;
+	seabee3_driver::Vector3Masked changeInDesiredPose;
+
+	changeInDesiredPose.mask.x = changeInDesiredPose.mask.y = changeInDesiredPose.mask.z = 1; //enable all values
+	changeInDesiredPose.mode.x = changeInDesiredPose.mode.y = changeInDesiredPose.mode.z = 1; //set mode to incremental
+
+	req.pos = req.ori = changeInDesiredPose;
+
+	req.pos.values = msg.linear;
+	req.ori.values = msg.angular;
+
+	SetDesiredPoseCallback(req, resp);
+}
+
+void fetchTfFrame(tf::Transform transform, const std::string & frame1, const std::string & frame2)
+{
+	tf::StampedTransform temp;
+	try
+	{
+		tl->lookupTransform( frame1, frame2, ros::Time(0), temp );
+
+		transform.setOrigin( temp.getOrigin() );
+		transform.setRotation( temp.getRotation() );
+	}
+	catch( tf::TransformException ex )
+	{
+		ROS_ERROR( "%s", ex.what() );
+	}
 }
 
 void pidStep()
 {
-	if ( *lastPidUpdateTime != ros::Time( -1 ) )
+	fetchTfFrame( desiredPoseTf, "seabee3/landmark_map", "seabee3/desired_pose" );
+	fetchTfFrame( currentPoseTf, "seabee3/landmark_map", "seabee3/base_link" );
+
+	desiredPoseTf >> desiredPose;
+	currentPoseTf >> currentPose;
+
+	if ( lastPidUpdateTime != ros::Time( -1 ) )
 	{
 		for ( int i = 0; i < BeeStem3::NUM_MOTOR_CONTROLLERS; i++ )
 		{
-			motorCntlMsg->mask[i] = 0;
-			motorCntlMsg->motors[i] = 0;
+			motorCntlMsg.mask[i] = 0;
+			motorCntlMsg.motors[i] = 0;
 		}
 
-		ros::Duration dt = ros::Time::now() - *lastPidUpdateTime;
+		ros::Duration dt = ros::Time::now() - lastPidUpdateTime;
 		
-		
-		//desiredRPY->x -= desiredChangeInRPYPerSec->x * dt.toSec();
-		//desiredRPY->y -= desiredChangeInRPYPerSec->y * dt.toSec();
-		desiredRPY->z -= desiredChangeInRPYPerSec->z * dt.toSec();
+		//twistCache is essentially the linear and angular change in desired pose
+		//we multiply by the change in time and an arbitrary constant to obtain the desired change in pose per second
+		//this change in pose is then added to the current pose; the result is desiredPose
+		const double t1 = dt.toSec() * -100.0;
+		geometry_msgs::Twist changeInDesiredPose = twistCache * t1;
+		SetDesiredPose(  changeInDesiredPose );
 
-		
-		//desiredXYZ->x -= desiredChangeInXYZPerSec->x * dt.toSec();
-		//desiredXYZ->y -= desiredChangeInXYZPerSec->y * dt.toSec();
-		desiredXYZ->z -= desiredChangeInXYZPerSec->z * dt.toSec();
+		LocalizationUtil::normalizeAngle( desiredPose.angular.x );
+		LocalizationUtil::normalizeAngle( desiredPose.angular.y );
+		LocalizationUtil::normalizeAngle( desiredPose.angular.z );
 
-
-		//LocalizationUtil::normalizeAngle(desiredRPY->x);
-		//LocalizationUtil::normalizeAngle(desiredRPY->y);
-		LocalizationUtil::normalizeAngle( desiredRPY->z );
-
-
-		//actual - desired; 0 - 40 = -40;
-		//desired -> actual; 40 -> 0 = 40 cw = -40
-		//double yawError = LocalizationUtil::angleDistRel(desiredRPY->z, IMUDataCache->ori.z);
-
-		//errorInXYZ->x = desiredXYZ->y - <some sensor value>;
-		//errorInXYZ->y = desiredXYZ->x - <some sensor value>;
-		errorInXYZ->z = desiredXYZ->z - depthCache->value;
+		errorInXYZ.x = desiredPose.linear.x - currentPose.linear.x;
+		errorInXYZ.y = desiredPose.linear.y - currentPose.linear.y;
+		errorInXYZ.z = desiredPose.linear.z - currentPose.linear.z;
 		
 
-		//errorInRPY->x = LocalizationUtil::angleDistRel(desiredRPY->x, IMUDataCache->ori.x);
-		//errorInRPY->y = LocalizationUtil::angleDistRel(desiredRPY->y, IMUDataCache->ori.y);
-		errorInRPY->z = LocalizationUtil::angleDistRel( desiredRPY->z, IMUDataCache->ori.z );
+		errorInRPY.x = LocalizationUtil::angleDistRel( desiredPose.angular.x, currentPose.angular.x );
+		errorInRPY.y = LocalizationUtil::angleDistRel( desiredPose.angular.y, currentPose.angular.y );
+		errorInRPY.z = LocalizationUtil::angleDistRel( desiredPose.angular.z, currentPose.angular.z );
 
-		
-		//LocalizationUtil::capValue(errorInDepth->x, maxXError);
-		//LocalizationUtil::capValue(errorInDepth->y, maxYError);
-		LocalizationUtil::capValue( errorInXYZ->z, maxDepthError );
+		LocalizationUtil::capValue( errorInXYZ.x, maxErrorInXYZ.x );
+		LocalizationUtil::capValue( errorInXYZ.y, maxErrorInXYZ.y );
+		LocalizationUtil::capValue( errorInXYZ.z, maxErrorInXYZ.z );
 
-		
-		//LocalizationUtil::capValue(errorInRPY->x, maxRollError);
-		//LocalizationUtil::capValue(errorInRPY->y, maxPitchError);
-		LocalizationUtil::capValue( errorInRPY->z, maxYawError );
+		LocalizationUtil::capValue( errorInRPY.x, maxErrorInRPY.x );
+		LocalizationUtil::capValue( errorInRPY.y, maxErrorInRPY.y );
+		LocalizationUtil::capValue( errorInRPY.z, maxErrorInRPY.z );
 
-		
-		//yawError = abs(yawError) > *maxYawError ? *maxYawError * yawError / abs(yawError) : yawError;
+		double speedMotorVal = axisDirCfg[Axes::speed] * xyzPid.x.pid.updatePid( errorInXYZ.x, dt );
+		double strafeMotorVal = axisDirCfg[Axes::strafe] * xyzPid.y.pid.updatePid( errorInXYZ.y, dt );
+		double depthMotorVal = axisDirCfg[Axes::depth] * xyzPid.z.pid.updatePid( errorInXYZ.z, dt );
 
-		double speedMotorVal = speed_axis_dir * desiredSpeed;
-		double strafeMotorVal = strafe_axis_dir * desiredStrafe;
-		double depthMotorVal = depth_axis_dir * pid_D->updatePid( errorInXYZ->z, dt );
-		//double rollMotorVal = roll_axis_dir * pid_R->updatePid(errorInRPY->x, dt);
-		//double pitchMotorVal = pitch_axis_dir * pid_P->updatePid(errorInRPY->y, dt);
-		double yawMotorVal = yaw_axis_dir * pid_Y->updatePid( errorInRPY->z, dt );
-
-
-		//ROS_INFO("initial motor val: %f", motorVal);
+		double rollMotorVal = axisDirCfg[Axes::roll] * rpyPid.x.pid.updatePid( errorInRPY.x, dt );
+		double pitchMotorVal = axisDirCfg[Axes::pitch] * rpyPid.y.pid.updatePid( errorInRPY.y, dt );
+		double yawMotorVal = axisDirCfg[Axes::yaw] * rpyPid.z.pid.updatePid( errorInRPY.z, dt );
 
 		/*LocalizationUtil::capValue(rollMotorVal, 50.0);
 		 LocalizationUtil::capValue(pitchMotorVal, 50.0);
 		 LocalizationUtil::capValue(yawMotorVal, 50.0);
 		 LocalizationUtil::capValue(depthMotorVal, 50.0);*/
 
-		//motorVal = abs(motorVal) > 100 ? 100 * motorVal / abs(motorVal) : motorVal;
+		updateMotorCntlMsg( motorCntlMsg, Axes::speed, speedMotorVal );
+		updateMotorCntlMsg( motorCntlMsg, Axes::strafe, strafeMotorVal );
+		updateMotorCntlMsg( motorCntlMsg, Axes::depth, depthMotorVal );
+		//updateMotorCntlMsg( motorCntlMsg, Axes::roll, rollMotorVal );
+		//updateMotorCntlMsg( motorCntlMsg, Axes::pitch, pitchMotorVal );
+		updateMotorCntlMsg( motorCntlMsg, Axes::yaw, yawMotorVal );
 
-		//ROS_INFO("yaw: %f desired yaw: %f yaw error: %f motorValue: %f", IMUDataCache->ori.z, desiredRPY->z, errorInRPY->z, yawMotorVal);
-
-		//ROS_INFO("Depth; desired: %d current %d error %d motorVal %f", *desiredDepth, depthCache->Value, *errorInDepth, depthMotorVal);
-
-		updateMotorCntlMsg( *motorCntlMsg, Axes::speed, speedMotorVal );
-		updateMotorCntlMsg( *motorCntlMsg, Axes::strafe, strafeMotorVal );
-		updateMotorCntlMsg( *motorCntlMsg, Axes::depth, depthMotorVal );
-		//updateMotorCntlMsg(*motorCntlMsg, Axes::roll, rollMotorVal);
-		//updateMotorCntlMsg(*motorCntlMsg, Axes::pitch, pitchMotorVal);
-		updateMotorCntlMsg( *motorCntlMsg, Axes::yaw, yawMotorVal );
-
-
-		//ROS_INFO("yaw error: %f motorVal: %f", yawError, motorVal);
+		desiredPose >> desiredPoseTf;
+		tb->sendTransform( tf::StampedTransform( desiredPoseTf, ros::Time::now(), global_frame, "seabee3/desired_pose" ) );
 	}
-	*lastPidUpdateTime = ros::Time::now();
-}
-
-void IMUDataCallback( const xsens_node::IMUDataConstPtr & data )
-{
-	//	ROS_INFO("IMUDataCallback()");
-	*IMUDataCache = *data;
-	
-	IMUDataCache->ori.x += mImuOriOffset.x();
-	IMUDataCache->ori.y += mImuOriOffset.y();
-	IMUDataCache->ori.z += mImuOriOffset.z();
-	
-	while ( IMUDataCache->ori.z > 360 )
-		IMUDataCache->ori.z -= 360;
-	while ( IMUDataCache->ori.z < 0 )
-		IMUDataCache->ori.z += 360;
-	
-
-	//estimatedPose.setRotation( tf::Quaternion( IMUDataCache->ori.z, IMUDataCache->ori.y, IMUDataCache->ori.x ) );
-	//ROS_INFO("x %f y %f z %f", IMUDataCache->ori.x, IMUDataCache->ori.y, IMUDataCache->ori.z);
-	//while(IMUDataCache->size() > 5)
-	//{
-	//	IMUDataCache->pop();
-	//}
+	lastPidUpdateTime = ros::Time::now();
 }
 
 void CmdVelCallback( const geometry_msgs::TwistConstPtr & twist )
 {
-	*TwistCache = *twist;
-	
-	SetDesiredPose(*twist);
-
-	//updateMotorCntlFromTwist( twist );
-}
-
-void DepthCallback( const seabee3_driver_base::DepthConstPtr & depth )
-{
-	*depthCache = *depth;
-	if ( !depthInitialized )
-	{
-		desiredXYZ->z = depthCache->value;
-		depthInitialized = true;
-	}
-}
-
-void SetDesiredPoseCallback(seabee3_driver::SetDesiredPose::Request & req, seabee3_driver::SetDesiredPose::Reponse & resp)
-{
-	if(req.pos.mask == 1)
-	{
-
-	}
-}
-
-void SetDesiredPose(const geometry_msgs::Twist & msg)
-{
-	seabee3_driver::Vector3Masked changeInDesiredPose;
-
-	seabee3_driver::SetDesiredPose setDesiredPose;
-	setDesiredPoseRequest = changeInDesiredPose;
-	setDesiredPose.call
-}
-
-void KillSwitchCallback( const seabee3_driver_base::KillSwitchConstPtr & killSwitch )
-{
-	if ( killSwitch->isKilled == 0 && killSwitchCache->isKilled == 1 )
-	{
-		//set desired pose to our current pose so we don't move yet
-		SetDesiredPose();
-	}
-	*killSwitchCache = *killSwitch;
+	twistCache = *twist;
 }
 
 int main( int argc, char** argv )
 {
 	ros::init( argc, argv, "seabee3_driver" );
-	ros::NodeHandle n( "~" );
+	ros::NodeHandle n;
+	ros::NodeHandle n_priv( "~" ); // allow direct access to parameters
 
+	tl = new tf::TransformListener;
+	tb = new tf::TransformBroadcaster;
 	
-	//vel_est_lin = new tf::Vector3(0, 0, 0);
-	//vel_est_ang = new tf::Vector3(0, 0, 0);
-	//velocity_sample_start = new ros::Time(-1);
-
-	IMUDataCache = new xsens_node::IMUData;
-	TwistCache = new geometry_msgs::Twist;
-	
-	ros::Subscriber imu_sub = n.subscribe( "/xsens/data_calibrated", 1, IMUDataCallback ); //likely necessary to remap this to something real ie. /xsens/data_calibrated
-	//ros::Subscriber odom_prim_sub = n.subscribe("/seabee3/odom_prim", 1, OdomPrimCallback);
 	ros::Subscriber cmd_vel_sub = n.subscribe( "/seabee3/cmd_vel", 1, CmdVelCallback );
-	ros::Subscriber extl_depth_sub = n.subscribe( "/seabee3/depth", 1, DepthCallback );
-	ros::Subscriber kill_switch_sub = n.subscribe( "/seabee3/kill_switch", 1, KillSwitchCallback );
 	
-	desiredRPY = new geometry_msgs::Vector3;
-	desiredRPY->x = 0;
-	desiredRPY->y = 0;
-	desiredRPY->z = 0;
-	errorInRPY = new geometry_msgs::Vector3;
-	errorInRPY->x = 0;
-	errorInRPY->y = 0;
-	errorInRPY->z = 0;
-	desiredChangeInRPYPerSec = new geometry_msgs::Vector3;
-	desiredChangeInRPYPerSec->x = 0;
-	desiredChangeInRPYPerSec->y = 0;
-	desiredChangeInRPYPerSec->z = 0;
-	
-	desiredXYZ = new geometry_msgs::Vector3;
-	desiredXYZ->x = 0;
-	desiredXYZ->y = 0;
-	desiredXYZ->z = 0;
-	errorInXYZ = new geometry_msgs::Vector3;
-	errorInXYZ->x = 0;
-	errorInXYZ->y = 0;
-	errorInXYZ->z = 0;
-	desiredChangeInXYZPerSec = new geometry_msgs::Vector3;
-	desiredChangeInXYZPerSec->x = 0;
-	desiredChangeInXYZPerSec->y = 0;
-	desiredChangeInXYZPerSec->z = 0;
-	
-	lastUpdateTime = new ros::Time( ros::Time( -1 ) );
-	lastPidUpdateTime = new ros::Time( ros::Time( -1 ) );
-	depthCache = new seabee3_driver_base::Depth;
-	killSwitchCache = new seabee3_driver_base::KillSwitch;
+	lastPidUpdateTime = ros::Time( -1 );
 	
 	depthInitialized = false;
 	
-	pid_D = new control_toolbox::Pid;
-	pid_R = new control_toolbox::Pid;
-	pid_P = new control_toolbox::Pid;
-	pid_Y = new control_toolbox::Pid;
-	
-	PIDConfig pid_D_cfg, pid_R_cfg, pid_P_cfg, pid_Y_cfg;
-	
 	double pid_i_min, pid_i_max;
 	
-	n.param( "cmd_vel_timeout", cmdVelTimeout, 2.0 );
+	n_priv.param( "global_frame", global_frame, std::string("/landmark_map") );
 	
-	n.param( "depth_err_cap", maxDepthError, 100.0 );
-	n.param( "roll_err_cap", maxRollError, 25.0 );
-	n.param( "pitch_err_cap", maxPitchError, 25.0 );
-	n.param( "yaw_err_cap", maxYawError, 25.0 );
+	n_priv.param( "speed_err_cap", maxErrorInXYZ.x, 100.0 );
+	n_priv.param( "strafe_err_cap", maxErrorInXYZ.y, 100.0 );
+	n_priv.param( "depth_err_cap", maxErrorInXYZ.z, 100.0 );
+
+	n_priv.param( "roll_err_cap", maxErrorInRPY.x, 25.0 );
+	n_priv.param( "pitch_err_cap", maxErrorInRPY.y, 25.0 );
+	n_priv.param( "yaw_err_cap", maxErrorInRPY.z, 25.0 );
 	
-	n.param( "pid/D/p", pid_D_cfg.p, 2.5 );
-	n.param( "pid/D/i", pid_D_cfg.i, 0.05 );
-	n.param( "pid/D/d", pid_D_cfg.d, 0.2 );
+	n_priv.param( "pid/pos/X/p", xyzPid.x.cfg.p, 2.5 );
+	n_priv.param( "pid/pos/X/i", xyzPid.x.cfg.i, 0.05 );
+	n_priv.param( "pid/pos/X/d", xyzPid.x.cfg.d, 0.2 );
+
+	n_priv.param( "pid/pos/Y/p", xyzPid.y.cfg.p, 2.5 );
+	n_priv.param( "pid/pos/Y/i", xyzPid.y.cfg.i, 0.05 );
+	n_priv.param( "pid/pos/Y/d", xyzPid.y.cfg.d, 0.2 );
+
+	n_priv.param( "pid/pos/Z/p", xyzPid.z.cfg.p, 2.5 );
+	n_priv.param( "pid/pos/Z/i", xyzPid.z.cfg.i, 0.05 );
+	n_priv.param( "pid/pos/Z/d", xyzPid.z.cfg.d, 0.2 );
 	
-	n.param( "pid/R/p", pid_R_cfg.p, 2.5 );
-	n.param( "pid/R/i", pid_R_cfg.i, 0.05 );
-	n.param( "pid/R/d", pid_R_cfg.d, 0.2 );
+	n_priv.param( "pid/ori/R/p", rpyPid.x.cfg.p, 2.5 );
+	n_priv.param( "pid/ori/R/i", rpyPid.x.cfg.i, 0.05 );
+	n_priv.param( "pid/ori/R/d", rpyPid.x.cfg.d, 0.2 );
 	
-	n.param( "pid/P/p", pid_P_cfg.p, 2.5 );
-	n.param( "pid/P/i", pid_P_cfg.i, 0.05 );
-	n.param( "pid/P/d", pid_P_cfg.d, 0.2 );
+	n_priv.param( "pid/ori/P/p", rpyPid.y.cfg.p, 2.5 );
+	n_priv.param( "pid/ori/P/i", rpyPid.y.cfg.i, 0.05 );
+	n_priv.param( "pid/ori/P/d", rpyPid.y.cfg.d, 0.2 );
 	
-	n.param( "pid/Y/p", pid_Y_cfg.p, 2.5 );
-	n.param( "pid/Y/i", pid_Y_cfg.i, 0.05 );
-	n.param( "pid/Y/d", pid_Y_cfg.d, 0.2 );
+	n_priv.param( "pid/ori/Y/p", rpyPid.z.cfg.p, 2.5 );
+	n_priv.param( "pid/ori/Y/i", rpyPid.z.cfg.i, 0.05 );
+	n_priv.param( "pid/ori/Y/d", rpyPid.z.cfg.d, 0.2 );
 	
-	n.param( "pid/i_max", pid_i_max, 1.0 );
-	n.param( "pid/i_min", pid_i_min, -1.0 );
+	n_priv.param( "pid/i_max", pid_i_max, 1.0 );
+	n_priv.param( "pid/i_min", pid_i_min, -1.0 );
 	
-	n.param( "speed_m1_dir", speed_m1_dir, 1.0 );
-	n.param( "speed_m2_dir", speed_m2_dir, 1.0 );
+	n_priv.param( "speed_m1_dir", thrusterDirCfg[Axes::speed].at(1), 1.0 );
+	n_priv.param( "speed_m2_dir", thrusterDirCfg[Axes::speed].at(2), 1.0 );
+
+	n_priv.param( "strafe_m1_dir", thrusterDirCfg[Axes::strafe].at(1), 1.0 );
+	n_priv.param( "strafe_m2_dir", thrusterDirCfg[Axes::strafe].at(2), 1.0 );
 	
-	n.param( "strafe_m1_dir", strafe_m1_dir, 1.0 );
-	n.param( "strafe_m2_dir", strafe_m2_dir, 1.0 );
+	n_priv.param( "depth_m1_dir", thrusterDirCfg[Axes::depth].at(1), 1.0 );
+	n_priv.param( "depth_m2_dir", thrusterDirCfg[Axes::depth].at(2), 1.0 );
 	
-	n.param( "depth_m1_dir", depth_m1_dir, 1.0 );
-	n.param( "depth_m2_dir", depth_m2_dir, 1.0 );
+	n_priv.param( "roll_m1_dir", thrusterDirCfg[Axes::roll].at(1), 1.0 );
+	n_priv.param( "roll_m2_dir", thrusterDirCfg[Axes::roll].at(2), 1.0 );
 	
-	n.param( "roll_m1_dir", roll_m1_dir, 1.0 );
-	n.param( "roll_m2_dir", roll_m2_dir, 1.0 );
+	n_priv.param( "pitch_m1_dir", thrusterDirCfg[Axes::pitch].at(1), 1.0 );
+	n_priv.param( "pitch_m2_dir", thrusterDirCfg[Axes::pitch].at(2), 1.0 );
 	
-	n.param( "yaw_m1_dir", yaw_m1_dir, -1.0 );
-	n.param( "yaw_m2_dir", yaw_m2_dir, 1.0 );
+	n_priv.param( "yaw_m1_dir", thrusterDirCfg[Axes::yaw].at(1), -1.0 );
+	n_priv.param( "yaw_m2_dir", thrusterDirCfg[Axes::yaw].at(2), 1.0 );
 	
-	n.param( "speed_axis_dir", speed_axis_dir, 1.0 );
-	n.param( "strafe_axis_dir", strafe_axis_dir, 1.0 );
-	n.param( "depth_axis_dir", depth_axis_dir, -1.0 );
-	n.param( "roll_axis_dir", roll_axis_dir, -1.0 );
-	n.param( "pitch_axis_dir", pitch_axis_dir, -1.0 );
-	n.param( "yaw_axis_dir", yaw_axis_dir, -1.0 );
+	n_priv.param( "speed_axis_dir", axisDirCfg[Axes::speed], 1.0 );
+	n_priv.param( "strafe_axis_dir", axisDirCfg[Axes::strafe], 1.0 );
+	n_priv.param( "depth_axis_dir", axisDirCfg[Axes::depth], -1.0 );
+	n_priv.param( "roll_axis_dir", axisDirCfg[Axes::roll], -1.0 );
+	n_priv.param( "pitch_axis_dir", axisDirCfg[Axes::pitch], -1.0 );
+	n_priv.param( "yaw_axis_dir", axisDirCfg[Axes::yaw], -1.0 );
 	
-	pid_D->initPid( pid_D_cfg.p, pid_D_cfg.i, pid_D_cfg.d, pid_i_max, pid_i_min );
-	pid_D->reset();
-	pid_R->initPid( pid_R_cfg.p, pid_R_cfg.i, pid_R_cfg.d, pid_i_max, pid_i_min );
-	pid_R->reset();
-	pid_P->initPid( pid_P_cfg.p, pid_P_cfg.i, pid_P_cfg.d, pid_i_max, pid_i_min );
-	pid_P->reset();
-	pid_Y->initPid( pid_Y_cfg.p, pid_Y_cfg.i, pid_Y_cfg.d, pid_i_max, pid_i_min );
-	pid_Y->reset();
-	
-	motorCntlMsg = new seabee3_driver_base::MotorCntl;
+	xyzPid.initPid(pid_i_min, pid_i_max);
+	xyzPid.reset();
+
+	rpyPid.initPid(pid_i_min, pid_i_max);
+	rpyPid.reset();
 	
 	for ( int i = 0; i < BeeStem3::NUM_MOTOR_CONTROLLERS; i++ )
 	{
-		motorCntlMsg->motors[i] = 0;
-		motorCntlMsg->mask[i] = 0;
+		motorCntlMsg.motors[i] = 0;
+		motorCntlMsg.mask[i] = 0;
 	}
 
 	ros::Publisher motor_cntl_pub = n.advertise<seabee3_driver_base::MotorCntl> ( "/seabee3/motor_cntl", 1 );
 	
-	
-	//tf::TransformBroadcaster tb;
-	//estimatedPose.setRotation( estimatedPose.getRotation().normalize() );
-
-	SetDesiredPose(); //set current xyz to 0, desired RPY to current RPY
+	SetDesiredPose( geometry_msgs::Twist() ); //set current xyz to 0, desired RPY to current RPY
 
 	while ( ros::ok() )
 	{
-		yawPidStep();
+		pidStep(); //this also grabs and publishes tf frames
 
-		motor_cntl_pub.publish( *motorCntlMsg );
-		
-		
-		//tb.sendTransform(tf::StampedTransform(estimatedPose, ros::Time::now(), "/seabee3/odom", "/seabee3/base_link") );
+		motor_cntl_pub.publish( motorCntlMsg );
 
 		ros::spinOnce();
 		ros::Rate( 20 ).sleep();

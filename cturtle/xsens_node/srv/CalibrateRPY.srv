@@ -1,3 +1,3 @@
-int32 NumSamples
+int32 numSamples
 ---
-geometry_msgs/Vector3 Result
+geometry_msgs/Vector3 calibration
