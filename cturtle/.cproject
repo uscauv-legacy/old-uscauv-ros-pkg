@@ -19,7 +19,7 @@
 <folderInfo id="0.912381842." name="/" resourcePath="">
 <toolChain id="org.eclipse.cdt.build.core.prefbase.toolchain.1201874688" name="No ToolChain" resourceTypeBasedDiscovery="false" superClass="org.eclipse.cdt.build.core.prefbase.toolchain">
 <targetPlatform id="org.eclipse.cdt.build.core.prefbase.toolchain.1201874688.1221371966" name=""/>
-<builder arguments="make.sh" buildPath="${workspace_loc:/seabee3-ros-pkg/src}" cleanBuildTarget="clean ${selected_resource_name}" command="bash" id="org.eclipse.cdt.build.core.settings.default.builder.1834300730" incrementalBuildTarget="${selected_resource_name}" keepEnvironmentInBuildfile="false" managedBuildOn="false" name="Gnu Make Builder" parallelBuildOn="true" parallelizationNumber="5" superClass="org.eclipse.cdt.build.core.settings.default.builder"/>
+<builder arguments="make.sh" buildPath="${workspace_loc:/seabee3-ros-pkg/src}" cleanBuildTarget="clean all" command="bash" id="org.eclipse.cdt.build.core.settings.default.builder.1834300730" incrementalBuildTarget="${selected_resource_name}" keepEnvironmentInBuildfile="false" managedBuildOn="false" name="Gnu Make Builder" parallelBuildOn="true" parallelizationNumber="5" superClass="org.eclipse.cdt.build.core.settings.default.builder"/>
 <tool id="org.eclipse.cdt.build.core.settings.holder.libs.436558697" name="holder for library settings" superClass="org.eclipse.cdt.build.core.settings.holder.libs"/>
 <tool id="org.eclipse.cdt.build.core.settings.holder.73167937" name="Assembly" superClass="org.eclipse.cdt.build.core.settings.holder">
 <inputType id="org.eclipse.cdt.build.core.settings.holder.inType.977563754" languageId="org.eclipse.cdt.core.assembly" languageName="Assembly" sourceContentType="org.eclipse.cdt.core.asmSource" superClass="org.eclipse.cdt.build.core.settings.holder.inType"/>
@@ -203,6 +203,7 @@
 <storageModule moduleId="org.eclipse.cdt.core.externalSettings"/>
 <storageModule moduleId="org.eclipse.cdt.core.language.mapping"/>
 <storageModule moduleId="org.eclipse.cdt.internal.ui.text.commentOwnerProjectMappings"/>
+<storageModule moduleId="org.eclipse.cdt.make.core.buildtargets"/>
 </cconfiguration>
 </storageModule>
 <storageModule moduleId="cdtBuildSystem" version="4.0.0">
