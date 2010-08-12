@@ -57,4 +57,12 @@ fi
 echo "----------"
 
 echo ""
+echo -n 'Update permissions for video devices? (y/n) '
+read res
+if [ "$res" == "y" ]; then
+	sudo sh ~/ros/stacks/seabee3-ros-pkg/seabee3-util/config-1394.sh
+fi
+echo "----------"
+
+echo ""
 echo 'Done'
