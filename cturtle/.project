@@ -19,11 +19,11 @@
 				</dictionary>
 				<dictionary>
 					<key>org.eclipse.cdt.make.core.autoBuildTarget</key>
-					<value>all</value>
+					<value>--command rosmake @ --target ${selected_resource_name}</value>
 				</dictionary>
 				<dictionary>
 					<key>org.eclipse.cdt.make.core.buildArguments</key>
-					<value>make.sh  -j5</value>
+					<value>make.sh</value>
 				</dictionary>
 				<dictionary>
 					<key>org.eclipse.cdt.make.core.buildCommand</key>
@@ -31,11 +31,11 @@
 				</dictionary>
 				<dictionary>
 					<key>org.eclipse.cdt.make.core.buildLocation</key>
-					<value>${workspace_loc:/seabee3-ros-pkg/src}</value>
+					<value>${workspace_loc:/seabee3-ros-pkg/}</value>
 				</dictionary>
 				<dictionary>
 					<key>org.eclipse.cdt.make.core.cleanBuildTarget</key>
-					<value>clean all</value>
+					<value>--foreach --command cd $ --command make clean --target &apos;$&lt;find -maxdepth 1 -type d ! -name &quot;*.*&quot;&gt;$&apos;</value>
 				</dictionary>
 				<dictionary>
 					<key>org.eclipse.cdt.make.core.contents</key>
@@ -55,7 +55,7 @@
 				</dictionary>
 				<dictionary>
 					<key>org.eclipse.cdt.make.core.fullBuildTarget</key>
-					<value>${selected_resource_name}</value>
+					<value>--foreach --command rosmake $ --target ${selected_resource_name}</value>
 				</dictionary>
 				<dictionary>
 					<key>org.eclipse.cdt.make.core.stopOnError</key>
