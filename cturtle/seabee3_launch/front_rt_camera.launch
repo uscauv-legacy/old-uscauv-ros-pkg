@@ -2,7 +2,7 @@
 
 <!--	<group ns="left" > -->
 		<node name="left_usync" pkg="camera1394" type="camera1394_node">
-			<param name="frame_id" type="string" value="camera_front_r" />
+			<param name="frame_id" type="string" value="wide_stereo" />
 			<param name="bayer_pattern" type="string" value="rggb"/>
 			<param name="guid" type="string" value="00b09d010090f9dc"/>
 			<remap from="camera/image_raw" to="left_usync/image_raw" />
