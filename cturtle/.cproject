@@ -207,8 +207,8 @@
 <buildTargets>
 <target name="clean" path="" targetID="org.eclipse.cdt.build.MakeTargetBuilder">
 <buildCommand>bash</buildCommand>
-<buildArguments>make.sh --foreach --command cd $ --command make clean --target '$&lt;find -maxdepth 1 -type d ! -name "*.*"&gt;$'</buildArguments>
-<buildTarget/>
+<buildArguments>make.sh --foreach --command cd $ --command make clean --command rm -rf bin lib --command rm -rf src/$</buildArguments>
+<buildTarget>--target '$&lt;find -maxdepth 1 -type d ! -name "*.*"&gt;$'</buildTarget>
 <stopOnError>true</stopOnError>
 <useDefaultCommand>false</useDefaultCommand>
 <runAllBuilders>true</runAllBuilders>
@@ -216,7 +216,6 @@
 <target name="current" path="" targetID="org.eclipse.cdt.build.MakeTargetBuilder">
 <buildCommand>bash</buildCommand>
 <buildArguments>make.sh --command rosmake $ --target ${build_file}</buildArguments>
-<buildTarget/>
 <stopOnError>true</stopOnError>
 <useDefaultCommand>false</useDefaultCommand>
 <runAllBuilders>true</runAllBuilders>
