@@ -1,0 +1,21 @@
+<package>
+  <description brief="filtered_odom">
+
+     filtered_odom
+
+  </description>
+  <author>Edward T. Kaszubski</author>
+  <license>BSD</license>
+  <review status="unreviewed" notes=""/>
+  <url>http://ros.org/wiki/filtered_odom</url>
+  <depend package="geometry_msgs"/>
+  <depend package="roscpp"/>
+  <depend package="tf"/>
+  <depend package="bfl"/>
+  <export>
+    <cpp cflags="-I${prefix}/include -I${prefix}/msg/cpp -I${prefix}/srv/cpp" lflags="-Wl,-rpath,${prefix}/lib -L${prefix}/lib -lfiltered_odom"/>
+  </export>
+
+</package>
+
+

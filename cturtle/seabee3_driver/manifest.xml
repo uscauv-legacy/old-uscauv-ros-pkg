@@ -16,7 +16,7 @@
   <depend package="tf"/> <!-- for TransformBroadcaster, TransformListener -->
   <depend package="localization_defs" /> <!-- for localization_tools/Util.h -->
   <export>
-  	<cpp cflags="-I${prefix}/include -I${prefix}/msg/cpp -I${prefix}/srv/cpp" lflags="-L/{prefix}/lib"/>
+    <cpp cflags="-I${prefix}/include -I${prefix}/msg/cpp -I${prefix}/srv/cpp" lflags="-Wl,-rpath,${prefix}/lib -L${prefix}/lib -lseabee3_driver"/>
   </export>
 
 </package>

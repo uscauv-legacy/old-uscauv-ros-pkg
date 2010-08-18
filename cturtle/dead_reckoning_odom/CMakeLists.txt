@@ -21,10 +21,11 @@ rosbuild_genmsg()
 #uncomment if you have defined services
 rosbuild_gensrv()
 
-#common commands for building c++ executables and libraries
-#rosbuild_add_library(${PROJECT_NAME} src/example.cpp)
-#target_link_libraries(${PROJECT_NAME} another_library)
-#rosbuild_add_boost_directories()
-#rosbuild_link_boost(${PROJECT_NAME} thread)
-rosbuild_add_executable(seabee3_dead_reckoning src/seabee3_dead_reckoning.cpp)
-#target_link_libraries(example ${PROJECT_NAME})
+rosbuild_add_executable(odom_node src/odom_node.cpp)
+if (UNIX AND NOT WIN32)
+  if (CMAKE_SIZEOF_VOID_P MATCHES "8")
+    target_link_libraries(odom_node ../seabee3_driver_base/lib/seabee3_beestem_x64)
+  else (CMAKE_SIZEOF_VOID_P MATCHES "8")
+	target_link_libraries(odom_node ../seabee3_driver_base/lib/seabee3_beestem_i386)
+  endif (CMAKE_SIZEOF_VOID_P MATCHES "8")
+endif (UNIX AND NOT WIN32)

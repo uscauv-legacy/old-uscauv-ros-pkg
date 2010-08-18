@@ -1,35 +1,17 @@
-/*
-Code taken from: http://www.ros.org/wiki/navigation/Tutorials/RobotSetup/Odom
-*/
-
-
 #include <ros/ros.h>
 #include <seabee3_driver_base/MotorCntl.h>
 #include <seabee3_driver_base/Depth.h>
-#include <tf/transform_broadcaster.h>
 #include <xsens_node/IMUData.h>
-#include <seabee3_dead_reckoning/ResetOdom.h>
-
-//This is terrible, and needs to be put somewhere more logical and global
-#define FWD_RIGHT_THRUSTER 	   3
-#define FWD_LEFT_THRUSTER 	   1
-#define DEPTH_RIGHT_THRUSTER 	 4
-#define DEPTH_LEFT_THRUSTER 	 2
-#define STRAFE_FRONT_THRUSTER	 0
-#define STRAFE_BACK_THRUSTER 	 5
-#define SHOOTER 	             6
-#define DROPPER_STAGE1 	       7
-#define DROPPER_STAGE2 	       8
+#include <seabee3_beestem/BeeStem3_driver.h>
 
 #define POS_TRANSLATE_COEFF   0.004
 #define NEG_TRANSLATE_COEFF   0.001
 #define POS_STRAFE_COEFF      0.002
 #define NEG_STRAFE_COEFF      0.002 
 
-geometry_msgs::Vector3 ori, linear;
+geometry_msgs::Twist changeInPose, lastPose;
 double depth;
 double x, y, z;
-tf::Transform odom_trans;
 
 float getSimpleSpeed(int pwr, int translate)
 {
@@ -45,27 +27,21 @@ float getSimpleSpeed(int pwr, int translate)
 		return 0.0;
 }
 
-tf::TransformBroadcaster * odom_broadcaster;
-
 void imuCallback(const xsens_node::IMUDataConstPtr & msg)
 {
-	ori = msg->ori;
+
 }
 
-//######################################################################
 void depthCallback(const seabee3_driver_base::DepthConstPtr & msg)
 {
-  depth = msg->Value;
-  ROS_INFO("Got depth: %f",depth);
+
 }
 
-//######################################################################
 void cmdVelocityCallback(const geometry_msgs::TwistConstPtr & msg)
 {
-	linear = msg->linear;
+
 }
 
-//######################################################################
 void motorCntlCallback(const seabee3_driver_base::MotorCntlConstPtr & msg)
 {
 	ROS_INFO("%d %d %d %d %d %d %d %d %d", msg->motors[0], msg->motors[1], msg->motors[2], msg->motors[3], msg->motors[4], msg->motors[5], msg->motors[6], msg->motors[7], msg->motors[8] );
@@ -127,18 +103,9 @@ void motorCntlCallback(const seabee3_driver_base::MotorCntlConstPtr & msg)
 	last_th = th;
 }
 
-bool ResetOdomCallback( seabee3_dead_reckoning::ResetOdom::Request & req, seabee3_dead_reckoning::ResetOdom::Response & resp)
-{
-	x = req.Pos.x;
-	y = req.Pos.y;
-	z = req.Pos.z; //this is just depth
-	odom_trans = tf::Transform( tf::Quaternion( ori.z, ori.y, ori.x), tf::Vector3( x, y, z) );
-	return true;
-}
-
 int main(int argc, char** argv)
 {
-	ros::init(argc, argv, "seabee3_dead_reckoning");
+	ros::init(argc, argv, "dead_reckoning_odom");
 	ros::NodeHandle n("~");
 
 	ros::Subscriber motor_cntl_sub = n.subscribe ("/seabee3/motor_cntl", 1, motorCntlCallback);
@@ -155,12 +122,7 @@ int main(int argc, char** argv)
 		
 	odom_trans = tf::Transform( tf::Quaternion( ori.z, ori.y, ori.x), tf::Vector3( x, y, z) );
 
-	while( ros::ok() )
-	{
-		odom_broadcaster->sendTransform( tf::StampedTransform( odom_trans, ros::Time::now(), "/seabee3/odom", "/seabee3/base_link" ) );
-		ros::spinOnce();
-		ros::Rate(20).sleep();
-	}
+	ros::spin();
 
 	return 0;
 }
