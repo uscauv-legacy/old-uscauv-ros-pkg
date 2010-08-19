@@ -1,0 +1,19 @@
+<launch>
+	<group ns="stereo">
+		<include file="$(find seabee3_launch)/down_rt_camera.launch" />
+		<include file="$(find seabee3_launch)/front_rt_camera.launch" />
+	</group>
+	<node pkg="image_sync" type="image_sync" name="image_sync" >
+		<remap from="image_sync/image_l" 		to="/stereo/left_usync/image_raw" />
+		<remap from="image_sync/image_r" 		to="/stereo/right_usync/image_raw" />
+		
+		<remap from="image_sync/image_l_sync" 	to="/stereo/left/image_raw" />
+		<remap from="image_sync/image_r_sync" 	to="/stereo/right/image_raw" />
+		
+		<remap from="image_sync/info_l" 		to="/stereo/left_usync/camera_info" />
+		<remap from="image_sync/info_r" 		to="/stereo/right_usync/camera_info" />
+		
+		<remap from="image_sync/info_l_sync" 	to="/stereo/left/camera_info" />
+		<remap from="image_sync/info_r_sync" 	to="/stereo/right/camera_info" />
+	</node>
+</launch>
