@@ -34,7 +34,7 @@ echo -n 'Configure environment variables? (y/n) '
 read res
 if [ "$res" == "y" ]; then
 	sudo sh -c 'echo "source /opt/ros/cturtle/setup.sh" >> ~/.bashrc'
-	sudo sh -c 'echo "ROS_PACKAGE_PATH=${ROS_PACKAGE_PATH}:~/workspace" >> /opt/ros/cturtle/setup.sh'
+	sudo sh -c 'echo "ROS_PACKAGE_PATH=\${ROS_PACKAGE_PATH}:~/workspace" >> /opt/ros/cturtle/setup.sh'
 	. ~/.bashrc
 fi
 echo "----------"
