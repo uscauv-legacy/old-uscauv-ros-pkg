@@ -1,1 +1,1 @@
-int8 isKilled
+int8 is_killed

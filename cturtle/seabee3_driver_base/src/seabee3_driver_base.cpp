@@ -36,131 +36,156 @@
 
 //tools
 #include <ros/ros.h>
-#include <seabee3_beestem/BeeStem3_driver.h> //for BeeStem3Driver
-
+#include <seabee3_beestem/BeeStem3Driver.h> //for BeeStem3Driver
+#include <string>
 //msgs
 #include <seabee3_driver_base/Depth.h> // for outgoing Depth
 #include <seabee3_driver_base/KillSwitch.h> // for outgoing KillSwitch
 #include <seabee3_driver_base/MotorCntl.h> // for incoming MotorCntl
 #include <seabee3_driver_base/Pressure.h> // for outgoing Pressure
-
 //srvs
 #include <seabee3_driver_base/FiringDeviceAction.h> // for FiringDeviceAction
 
-//#define SURFACE_PRESSURE 908
-#define PRESSURE_DEPTH_SLOPE 33
-
-BeeStem3Driver * mDriver;
-int usbIndex;
-int surfacePressure = 908;
-bool pressureCalibrated = false;
-
-float getDepthFromPressure( int pressure )
+class Seabee3DriverBaseNode
 {
-	return (float) ( pressure - surfacePressure ) / PRESSURE_DEPTH_SLOPE;
-}
+private:
+	ros::NodeHandle n_priv_;
+	ros::Subscriber motor_cntl_sub_;
 
-void motorCntlCallback( const seabee3_driver_base::MotorCntlConstPtr & msg )
-{
-	//cout << "setting motor values..." << endl;
-	for ( unsigned int i = 0; i < msg->motors.size(); i++ )
+	ros::Publisher intl_pressure_pub_;
+	ros::Publisher extl_pressure_pub_;
+	ros::Publisher depth_pub_;
+	ros::Publisher kill_switch_pub_;
+
+	ros::ServiceServer dropper1_action_srv_;
+	ros::ServiceServer dropper2_action_srv_;
+	ros::ServiceServer shooter_action_srv_;
+
+	BeeStem3Driver * bee_stem_3_driver_;
+	std::string port_;
+	int surface_pressure_;
+	bool pressure_calibrated_;
+public:
+	//#define SURFACE_PRESSURE 908
+	const static int PRESSURE_DEPTH_SLOPE = 33;
+
+	Seabee3DriverBaseNode( ros::NodeHandle & n ) :
+		n_priv_( "~" )
 	{
-		// printf("%d|%d : ", i, msg->values[i]);
-		if ( msg->mask[i] == 1 ) mDriver->itsStem->setThruster( i, msg->motors[i] );
-	}
-	//cout << endl;
-}
+		pressure_calibrated_ = false;
 
-bool Dropper1ActionCB( seabee3_driver_base::FiringDeviceAction::Request &req, seabee3_driver_base::FiringDeviceAction::Response &res )
-{
-	if ( req.req == 1 )
-	{
-		mDriver->dropper1_ready = true;
-	}
-	res.resp = mDriver->dropper1_ready ? 1 : 0;
-	if ( req.req != 1 ) mDriver->fireDevice( BeeStem3Driver::FiringDeviceID::DropperStage1 );
-	return true;
-}
+		n_priv_.param( "surface_pressure", surface_pressure_, 908 );
+		n_priv_.param( "port", port_, std::string("/dev/ttyUSB0") );
 
-bool Dropper2ActionCB( seabee3_driver_base::FiringDeviceAction::Request &req, seabee3_driver_base::FiringDeviceAction::Response &res )
-{
-	if ( req.req == 1 )
-	{
-		mDriver->dropper2_ready = true;
-	}
-	res.resp = mDriver->dropper2_ready ? 1 : 0;
-	if ( req.req != 1 ) mDriver->fireDevice( BeeStem3Driver::FiringDeviceID::DropperStage2 );
-	return true;
-}
+		ROS_INFO( "constructing new driver instance" );
+		bee_stem_3_driver_ = new BeeStem3Driver( port_ );
 
-bool ShooterActionCB( seabee3_driver_base::FiringDeviceAction::Request &req, seabee3_driver_base::FiringDeviceAction::Response &res )
-{
-	if ( req.req == 1 )
-	{
-		mDriver->shooter_ready = true;
+		n_priv_.param( "shooter/trigger_time", bee_stem_3_driver_->shooter_params_.trigger_time_, 50 );
+		n_priv_.param( "shooter/trigger_value", bee_stem_3_driver_->shooter_params_.trigger_value_, 80 );
+
+		n_priv_.param( "dropper1/trigger_time", bee_stem_3_driver_->dropper1_params_.trigger_time_, 50 );
+		n_priv_.param( "dropper1/trigger_value", bee_stem_3_driver_->dropper1_params_.trigger_value_, 40 );
+
+		n_priv_.param( "dropper2/trigger_time", bee_stem_3_driver_->dropper2_params_.trigger_time_, 50 );
+		n_priv_.param( "dropper2/trigger_value", bee_stem_3_driver_->dropper2_params_.trigger_value_, 40 );
+
+		motor_cntl_sub_ = n.subscribe( "/seabee3/motor_cntl", 1, &Seabee3DriverBaseNode::motorCntlCB, this );
+
+		intl_pressure_pub_ = n.advertise<seabee3_driver_base::Pressure> ( "/seabee3/intl_pressure", 1 );
+		extl_pressure_pub_ = n.advertise<seabee3_driver_base::Pressure> ( "/seabee3/extl_pressure", 1 );
+		depth_pub_ = n.advertise<seabee3_driver_base::Depth> ( "/seabee3/depth", 1 );
+		kill_switch_pub_ = n.advertise<seabee3_driver_base::KillSwitch> ( "/seabee3/kill_switch", 1 );
+
+		dropper1_action_srv_ = n.advertiseService( "/seabee3/dropper1_action", &Seabee3DriverBaseNode::dropper1ActionCB, this );
+		dropper2_action_srv_ = n.advertiseService( "/seabee3/dropper2_action", &Seabee3DriverBaseNode::dropper2ActionCB, this );
+		shooter_action_srv_ = n.advertiseService( "/seabee3/shooter_action", &Seabee3DriverBaseNode::shooterActionCB, this );
 	}
-	res.resp = mDriver->shooter_ready ? 1 : 0;
-	if ( req.req != 1 ) mDriver->fireDevice( BeeStem3Driver::FiringDeviceID::Shooter );
-	return true;
-}
+
+	float getDepthFromPressure( int pressure )
+	{
+		return (float) ( pressure - surface_pressure_ ) / PRESSURE_DEPTH_SLOPE;
+	}
+
+	void motorCntlCB( const seabee3_driver_base::MotorCntlConstPtr & msg )
+	{
+		for ( unsigned int i = 0; i < msg->motors.size(); i++ )
+		{
+			if ( msg->mask[i] == 1 ) bee_stem_3_driver_->bee_stem_3_->setThruster( i, msg->motors[i] );
+		}
+	}
+
+	bool executeFiringDeviceAction( seabee3_driver_base::FiringDeviceAction::Request &req, seabee3_driver_base::FiringDeviceAction::Response &res, int device_id )
+	{
+		bool & device_status = bee_stem_3_driver_->getDeviceStatus( device_id );
+		switch ( req.action )
+		{
+		case seabee3_driver_base::FiringDeviceAction::Request::CHECK_STATUS:
+			break;
+		case seabee3_driver_base::FiringDeviceAction::Request::RESET_STATUS:
+			device_status = true;
+			break;
+		case seabee3_driver_base::FiringDeviceAction::Request::FIRE:
+			bee_stem_3_driver_->fireDevice( device_id );
+			break;
+		}
+		res.is_loaded = device_status;
+		return true;
+	}
+
+	bool dropper1ActionCB( seabee3_driver_base::FiringDeviceAction::Request &req, seabee3_driver_base::FiringDeviceAction::Response &res )
+	{
+		return executeFiringDeviceAction( req, res, BeeStem3Driver::FiringDeviceID::DropperStage1 );
+	}
+
+	bool dropper2ActionCB( seabee3_driver_base::FiringDeviceAction::Request &req, seabee3_driver_base::FiringDeviceAction::Response &res )
+	{
+		return executeFiringDeviceAction( req, res, BeeStem3Driver::FiringDeviceID::DropperStage2 );
+	}
+
+	bool shooterActionCB( seabee3_driver_base::FiringDeviceAction::Request &req, seabee3_driver_base::FiringDeviceAction::Response &res )
+	{
+		return executeFiringDeviceAction( req, res, BeeStem3Driver::FiringDeviceID::Shooter );
+	}
+
+	void spin()
+	{
+		while ( ros::ok() )
+		{
+			seabee3_driver_base::Pressure intl_pressure_msg;
+			seabee3_driver_base::Pressure extl_pressure_msg;
+			seabee3_driver_base::Depth depth_msg;
+			seabee3_driver_base::KillSwitch kill_switch_msg;
+
+			bee_stem_3_driver_->readPressure( intl_pressure_msg.value, extl_pressure_msg.value );
+
+			if ( !pressure_calibrated_ )
+			{
+				surface_pressure_ = extl_pressure_msg.value;
+				pressure_calibrated_ = true;
+			}
+
+			bee_stem_3_driver_->readKillSwitch( kill_switch_msg.is_killed );
+			depth_msg.value = getDepthFromPressure( extl_pressure_msg.value );
+
+			intl_pressure_pub_.publish( intl_pressure_msg );
+			extl_pressure_pub_.publish( extl_pressure_msg );
+			depth_pub_.publish( depth_msg );
+			kill_switch_pub_.publish( kill_switch_msg );
+
+			ros::spinOnce();
+			ros::Rate( 20 ).sleep();
+		}
+	}
+
+};
 
 int main( int argc, char** argv )
 {
 	ros::init( argc, argv, "seabee3_driver_base" );
-	ros::NodeHandle n( "~" );
+	ros::NodeHandle n;
+	
+	Seabee3DriverBaseNode seabee3_driver_base_node( n );
+	seabee3_driver_base_node.spin();
 
-	n.param( "usb_index", usbIndex, 0 );
-	
-	ROS_INFO( "constructing new driver instance" );
-	mDriver = new BeeStem3Driver( usbIndex );
-	
-	n.param( "shooter/trigger_time", mDriver->mShooterParams.trigger_time, 50 );
-	n.param( "shooter/trigger_value", mDriver->mShooterParams.trigger_value, 80 );
-	
-	n.param( "dropper1/trigger_time", mDriver->mDropper1Params.trigger_time, 50 );
-	n.param( "dropper1/trigger_value", mDriver->mDropper1Params.trigger_value, 40 );
-	
-	n.param( "dropper2/trigger_time", mDriver->mDropper2Params.trigger_time, 50 );
-	n.param( "dropper2/trigger_value", mDriver->mDropper2Params.trigger_value, 40 );
-	
-	ROS_INFO( "subscribing to MotorCntl" );
-	ros::Subscriber motor_cntl_sub = n.subscribe( "/seabee3/motor_cntl", 1, motorCntlCallback );
-	
-	ros::Publisher intl_pressure_pub = n.advertise<seabee3_driver_base::Pressure> ( "/seabee3/intl_pressure", 1 );
-	ros::Publisher extl_pressure_pub = n.advertise<seabee3_driver_base::Pressure> ( "/seabee3/extl_pressure", 1 );
-	ros::Publisher depth_pub = n.advertise<seabee3_driver_base::Depth> ( "/seabee3/depth", 1 );
-	ros::Publisher kill_switch_pub = n.advertise<seabee3_driver_base::KillSwitch> ( "/seabee3/kill_switch", 1 );
-	
-	ros::ServiceServer dropper1action_srv = n.advertiseService( "/seabee3/Dropper1Action", Dropper1ActionCB );
-	ros::ServiceServer dropper2action_srv = n.advertiseService( "/seabee3/Dropper2Action", Dropper2ActionCB );
-	ros::ServiceServer shooter_srv = n.advertiseService( "/seabee3/ShooterAction", ShooterActionCB );
-	
-	while ( ros::ok() )
-	{
-		seabee3_driver_base::Pressure intlPressureMsg;
-		seabee3_driver_base::Pressure extlPressureMsg;
-		seabee3_driver_base::Depth depthMsg;
-		seabee3_driver_base::KillSwitch killSwitchMsg;
-
-		mDriver->readPressure( intlPressureMsg.value, extlPressureMsg.value );
-
-		if ( !pressureCalibrated )
-		{
-			surfacePressure = extlPressureMsg.value;
-			pressureCalibrated = true;
-		}
-
-		mDriver->readKillSwitch( killSwitchMsg.isKilled );
-		depthMsg.value = getDepthFromPressure( extlPressureMsg.value );
-
-		intl_pressure_pub.publish( intlPressureMsg );
-		extl_pressure_pub.publish( extlPressureMsg );
-		depth_pub.publish( depthMsg );
-		kill_switch_pub.publish( killSwitchMsg );
-
-		ros::spinOnce();
-		ros::Rate( 20 ).sleep();
-	}
-	ros::spin();
 	return 0;
 }
