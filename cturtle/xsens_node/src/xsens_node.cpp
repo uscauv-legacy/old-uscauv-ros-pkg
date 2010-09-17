@@ -37,7 +37,7 @@
 #include <queue> // for queue
 #include <ros/ros.h>
 #include <tf/tf.h> // for tf::Vector3
-#include <xsens/xsens_driver.h> // for XSensDriver
+#include <xsens/XSensDriver.h> // for XSensDriver
 //msgs
 #include <xsens_node/IMUData.h> // for outgoing IMUData
 //srvs
@@ -92,8 +92,8 @@ public:
 	{
 		imu_pub_calib_ = n.advertise<xsens_node::IMUData> ( "data_calibrated", 1 );
 		imu_pub_raw_ = n.advertise<xsens_node::IMUData> ( "data_raw", 1 );
-		calibrate_rpy_drift_srv_ = n.advertiseService( "calibrate_rpy_drift", &XSensNode::calibrateRPYDriftCallback, this );
-		calibrate_rpy_ori_srv_ = n.advertiseService( "calibrate_rpy_ori", &XSensNode::calibrateRPYOriCallback, this );
+		calibrate_rpy_drift_srv_ = n.advertiseService( "calibrate_rpy_drift", &XSensNode::calibrateRPYDriftCB, this );
+		calibrate_rpy_ori_srv_ = n.advertiseService( "calibrate_rpy_ori", &XSensNode::calibrateRPYOriCB, this );
 
 		imu_driver_ = new XSensDriver( 0 );
 		if ( !imu_driver_->initMe() )
@@ -119,7 +119,7 @@ public:
 		else
 		{
 			tf::Vector3 temp;
-			imu_driver_->ori >> temp;
+			imu_driver_->ori_ >> temp;
 
 			while ( ori_data_cache_.size() >= IMU_DATA_CACHE_SIZE )
 			{
@@ -159,7 +159,7 @@ public:
 		drift_comp_ /= (double) ( n ); //avg drift per cycle
 	}
 
-	bool calibrateRPYOriCallback( xsens_node::CalibrateRPY::Request &req, xsens_node::CalibrateRPY::Response &res )
+	bool calibrateRPYOriCB( xsens_node::CalibrateRPY::Request &req, xsens_node::CalibrateRPY::Response &res )
 	{
 		runRPYOriCalibration( req.num_samples );
 
@@ -168,7 +168,7 @@ public:
 		return true;
 	}
 
-	bool calibrateRPYDriftCallback( xsens_node::CalibrateRPY::Request &req, xsens_node::CalibrateRPY::Response &res )
+	bool calibrateRPYDriftCB( xsens_node::CalibrateRPY::Request &req, xsens_node::CalibrateRPY::Response &res )
 	{
 		runRPYDriftCalibration( req.num_samples );
 
@@ -186,21 +186,21 @@ public:
 
 			updateIMUData();
 
-			imu_driver_->accel >> msg_raw.accel;
-			imu_driver_->gyro >> msg_raw.gyro;
-			imu_driver_->mag >> msg_raw.mag;
-			imu_driver_->ori >> msg_raw.ori;
+			imu_driver_->accel_ >> msg_raw.accel;
+			imu_driver_->gyro_ >> msg_raw.gyro;
+			imu_driver_->mag_ >> msg_raw.mag;
+			imu_driver_->ori_ >> msg_raw.ori;
 
-			imu_driver_->accel >> msg_calib.accel;
-			imu_driver_->gyro >> msg_calib.gyro;
-			imu_driver_->mag >> msg_calib.mag;
+			imu_driver_->accel_ >> msg_calib.accel;
+			imu_driver_->gyro_ >> msg_calib.gyro;
+			imu_driver_->mag_ >> msg_calib.mag;
 
 			drift_comp_total_ += drift_comp_;
 
-			imu_driver_->ori += drift_comp_total_;
+			imu_driver_->ori_ += drift_comp_total_;
 
 			tf::Vector3 temp;
-			imu_driver_->ori >> temp;
+			imu_driver_->ori_ >> temp;
 			temp += ori_comp_;
 
 			temp >> msg_calib.ori;
