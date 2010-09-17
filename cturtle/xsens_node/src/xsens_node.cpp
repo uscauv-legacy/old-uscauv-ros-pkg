@@ -38,200 +38,188 @@
 #include <ros/ros.h>
 #include <tf/tf.h> // for tf::Vector3
 #include <xsens/xsens_driver.h> // for XSensDriver
-
 //msgs
 #include <xsens_node/IMUData.h> // for outgoing IMUData
 //srvs
 #include <xsens_node/CalibrateRPY.h> // for CalibrateRPY
 
-std::queue<tf::Vector3> ori_data_cache;
-tf::Vector3 ori_comp, ori_offset, drift_comp, drift_comp_total;
-
-XSensDriver * mImuDriver;
-double sampleTime;
-const static unsigned int IMU_DATA_CACHE_SIZE = 2;
-
-void operator += (XSensDriver::Vector3 & v1, tf::Vector3 & v2)
+void operator +=( XSensDriver::Vector3 & v1, tf::Vector3 & v2 )
 {
 	v1.x += v2.getX();
 	v1.y += v2.getY();
 	v1.z += v2.getZ();
 }
 
-void operator >> (XSensDriver::Vector3 & v1, geometry_msgs::Vector3 & v2)
+void operator >>( XSensDriver::Vector3 & v1, geometry_msgs::Vector3 & v2 )
 {
 	v2.x = v1.x;
 	v2.y = v1.y;
 	v2.z = v1.z;
 }
 
-void operator >> (XSensDriver::Vector3 & v1, tf::Vector3 & v2)
+void operator >>( XSensDriver::Vector3 & v1, tf::Vector3 & v2 )
 {
-	v2.setX(v1.x);
-	v2.setY(v1.y);
-	v2.setZ(v1.z);
+	v2.setX( v1.x );
+	v2.setY( v1.y );
+	v2.setZ( v1.z );
 }
 
-void operator >> (tf::Vector3 & v1, geometry_msgs::Vector3 & v2)
+void operator >>( tf::Vector3 & v1, geometry_msgs::Vector3 & v2 )
 {
 	v2.x = v1.getX();
 	v2.y = v1.getY();
 	v2.z = v1.getZ();
 }
 
-void updateIMUData()
+class XSensNode
 {
-	if( !mImuDriver->updateData() )
+private:
+	std::queue<tf::Vector3> ori_data_cache_;
+	tf::Vector3 ori_comp_, drift_comp_, drift_comp_total_;
+
+	ros::NodeHandle n_priv_;
+	ros::Publisher imu_pub_calib_;
+	ros::Publisher imu_pub_raw_;
+	ros::ServiceServer calibrate_rpy_drift_srv_;
+	ros::ServiceServer calibrate_rpy_ori_srv_;
+
+	XSensDriver * imu_driver_;
+	const static unsigned int IMU_DATA_CACHE_SIZE = 2;
+
+public:
+	XSensNode( ros::NodeHandle & n ) :
+		n_priv_( "~" )
 	{
-		ROS_WARN("Failed to update data during this cycle...");
-		//fprintf(stdout, "-");
-	}
-	else
-	{
-		//fprintf(stdout, ".");
-		//std::cout << std::flush;
-		tf::Vector3 temp;
-		mImuDriver->ori >> temp;
-		
-		while(ori_data_cache.size() >= IMU_DATA_CACHE_SIZE)
+		imu_pub_calib_ = n.advertise<xsens_node::IMUData> ( "data_calibrated", 1 );
+		imu_pub_raw_ = n.advertise<xsens_node::IMUData> ( "data_raw", 1 );
+		calibrate_rpy_drift_srv_ = n.advertiseService( "calibrate_rpy_drift", &XSensNode::calibrateRPYDriftCallback, this );
+		calibrate_rpy_ori_srv_ = n.advertiseService( "calibrate_rpy_ori", &XSensNode::calibrateRPYOriCallback, this );
+
+		imu_driver_ = new XSensDriver( 0 );
+		if ( !imu_driver_->initMe() )
 		{
-			ori_data_cache.pop();
+			ROS_WARN( "Failed to connect to IMU. Exiting..." );
+			return;
 		}
-		
-		ori_data_cache.push(temp);
-	}
-}
 
-void runRPYOriCalibration(int n = 10)
-{
-	ori_comp *= 0.0; //reset the vector to <0, 0, 0>
-	for(int i = 0; i < n && ros::ok(); i ++)
+		runRPYOriCalibration( 10 );
+	}
+
+	~XSensNode()
 	{
-		updateIMUData();
-		ori_comp += ori_data_cache.front();
-		ros::spinOnce();
-		ros::Rate(110).sleep();
-		//ROS_INFO("sample %d: x %f y %f z %f", i, diff.getX(), diff.getY(), diff.getZ());
+		delete imu_driver_;
 	}
-	
-	ori_comp /= (double)(-n);
-}
 
-void runRPYDriftCalibration(int n = 10)
-{
-	drift_comp *= 0.0; //reset the vector to <0, 0, 0>
-	updateIMUData();
-	drift_comp = ori_data_cache.front();
-	for(int i = 0; i < n && ros::ok(); i ++)
+	void updateIMUData()
 	{
-		updateIMUData();
-		ros::spinOnce();
-		ros::Rate(110).sleep();
-		//ROS_INFO("sample %d: x %f y %f z %f", i, diff.getX(), diff.getY(), diff.getZ());
+		if ( !imu_driver_->updateData() )
+		{
+			ROS_WARN( "Failed to update data during this cycle..." );
+		}
+		else
+		{
+			tf::Vector3 temp;
+			imu_driver_->ori >> temp;
+
+			while ( ori_data_cache_.size() >= IMU_DATA_CACHE_SIZE )
+			{
+				ori_data_cache_.pop();
+			}
+
+			ori_data_cache_.push( temp );
+		}
 	}
-	drift_comp -= ori_data_cache.front();
-	
-	//*sampleTime = (double)n / 110.0;
-	
-	drift_comp /= (double)(n); //avg drift per cycle
-}
 
-/*bool SetRPYOffsetCallback (xsens_node::SetRPYOffset::Request &req, xsens_node::SetRPYOffset::Response &res)
-{
-	//Mode = 1 : set change in rpy offset; else set absolute rpy offset
-	if(req.Offset.Mask.x != 0.0)
-		ori_offset->setX( req.Offset.Values.x + ( req.Offset.Mode.x == 1.0 ? ori_offset->x() : 0.0 ) );
-	if(req.Offset.Mask.y != 0.0)
-		ori_offset->setY( req.Offset.Values.y + ( req.Offset.Mode.y == 1.0 ? ori_offset->y() : 0.0 ) );
-	if(req.Offset.Mask.z != 0.0)
-		ori_offset->setZ( req.Offset.Values.z + ( req.Offset.Mode.z == 1.0 ? ori_offset->z() : 0.0 ) );
-	
-	*ori_offset >> res.Result;
-	
-	return true;
-}*/
+	void runRPYOriCalibration( int n )
+	{
+		ori_comp_ *= 0.0; //reset the vector to <0, 0, 0>
+		for ( int i = 0; i < n && ros::ok(); i++ )
+		{
+			updateIMUData();
+			ori_comp_ += ori_data_cache_.front();
+			ros::spinOnce();
+			ros::Rate( 110 ).sleep();
+		}
 
-bool CalibrateRPYOriCallback (xsens_node::CalibrateRPY::Request &req, xsens_node::CalibrateRPY::Response &res)
-{
-	int numSamples = req.numSamples;
-	
-	runRPYOriCalibration(numSamples);
-	
-	ori_comp >> res.calibration;
-	
-	return true;
-}
+		ori_comp_ /= (double) ( -n );
+	}
 
-bool CalibrateRPYDriftCallback (xsens_node::CalibrateRPY::Request &req, xsens_node::CalibrateRPY::Response &res)
-{
-	int numSamples = req.numSamples;
-	
-	runRPYDriftCalibration(numSamples);
-	
-	drift_comp >> res.calibration;
-	
-	return true;
-}
+	void runRPYDriftCalibration( int n )
+	{
+		drift_comp_ *= 0.0; //reset the vector to <0, 0, 0>
+		updateIMUData();
+		drift_comp_ = ori_data_cache_.front();
+		for ( int i = 0; i < n && ros::ok(); i++ )
+		{
+			updateIMUData();
+			ros::spinOnce();
+			ros::Rate( 110 ).sleep();
+		}
+		drift_comp_ -= ori_data_cache_.front();
+		drift_comp_ /= (double) ( n ); //avg drift per cycle
+	}
 
-int main(int argc, char** argv)
+	bool calibrateRPYOriCallback( xsens_node::CalibrateRPY::Request &req, xsens_node::CalibrateRPY::Response &res )
+	{
+		runRPYOriCalibration( req.num_samples );
+
+		ori_comp_ >> res.calibration;
+
+		return true;
+	}
+
+	bool calibrateRPYDriftCallback( xsens_node::CalibrateRPY::Request &req, xsens_node::CalibrateRPY::Response &res )
+	{
+		runRPYDriftCalibration( req.num_samples );
+
+		drift_comp_ >> res.calibration;
+
+		return true;
+	}
+
+	void spin()
+	{
+		while ( ros::ok() )
+		{
+			xsens_node::IMUData msg_calib;
+			xsens_node::IMUData msg_raw;
+
+			updateIMUData();
+
+			imu_driver_->accel >> msg_raw.accel;
+			imu_driver_->gyro >> msg_raw.gyro;
+			imu_driver_->mag >> msg_raw.mag;
+			imu_driver_->ori >> msg_raw.ori;
+
+			imu_driver_->accel >> msg_calib.accel;
+			imu_driver_->gyro >> msg_calib.gyro;
+			imu_driver_->mag >> msg_calib.mag;
+
+			drift_comp_total_ += drift_comp_;
+
+			imu_driver_->ori += drift_comp_total_;
+
+			tf::Vector3 temp;
+			imu_driver_->ori >> temp;
+			temp += ori_comp_;
+
+			temp >> msg_calib.ori;
+
+			imu_pub_calib_.publish( msg_calib );
+			imu_pub_raw_.publish( msg_raw );
+			ros::spinOnce();
+			ros::Rate( 110 ).sleep();
+		}
+	}
+};
+
+int main( int argc, char** argv )
 {
-	ros::init(argc, argv, "xsens_node");
+	ros::init( argc, argv, "xsens_node" );
 	ros::NodeHandle n;
-	ros::Publisher imu_pub_calib = n.advertise<xsens_node::IMUData>("data_calibrated", 1);
-	ros::Publisher imu_pub_raw = n.advertise<xsens_node::IMUData>("data_raw", 1);
-	ros::ServiceServer CalibrateRPYDrift_srv = n.advertiseService("CalibrateRPYDrift", CalibrateRPYDriftCallback);
-	ros::ServiceServer CalibrateRPYOri_srv = n.advertiseService("CalibrateRPYOri", CalibrateRPYOriCallback);
-	//ros::ServiceServer SetRPYOffset_srv = n.advertiseService("SetRPYOffset", SetRPYOffsetCallback);
-	
-	sampleTime = 1.0;
-	
-	mImuDriver = new XSensDriver(0);
-	if( !mImuDriver->initMe() )
-	{
-		ROS_WARN("Failed to connect to IMU. Exiting...");
-		return 1;
-	}
-	
-	runRPYOriCalibration(10);
-	//runRPYDriftCalibration(10);
-	
-	while(ros::ok())
-	{
-		xsens_node::IMUData msg_calib;
-		xsens_node::IMUData msg_raw;
-		
-		updateIMUData();
-		
-		mImuDriver->accel >> msg_raw.accel;
-		mImuDriver->gyro >> msg_raw.gyro;
-		mImuDriver->mag >> msg_raw.mag;
-		mImuDriver->ori >> msg_raw.ori;
-		
-		mImuDriver->accel >> msg_calib.accel;
-		mImuDriver->gyro >> msg_calib.gyro;
-		mImuDriver->mag >> msg_calib.mag;
-		
-		drift_comp_total += drift_comp;// * *sampleTime;
-		
-		//ROS_INFO("Offset x %f y %f z %f", ori_comp_total->getX(), ori_comp_total->getY(), ori_comp_total->getZ());
-		
-		mImuDriver->ori += drift_comp_total;
-		
-		tf::Vector3 temp;
-		mImuDriver->ori >> temp;
-		temp += ori_comp;// + *ori_offset;
-		
-		temp >> msg_calib.ori;
-		
-		//mImuDriver->ori >> msg.ori;
-		
-		imu_pub_calib.publish(msg_calib);
-		imu_pub_raw.publish(msg_raw);
-		ros::spinOnce();
-		ros::Rate(110).sleep();
-	}
-	
-	delete mImuDriver;
 
+	XSensNode xsens_node( n );
+	xsens_node.spin();
+	
 	return 0;
 }
