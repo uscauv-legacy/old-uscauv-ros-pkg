@@ -95,7 +95,7 @@ public:
 		calibrate_rpy_drift_srv_ = n.advertiseService( "calibrate_rpy_drift", &XSensNode::calibrateRPYDriftCB, this );
 		calibrate_rpy_ori_srv_ = n.advertiseService( "calibrate_rpy_ori", &XSensNode::calibrateRPYOriCB, this );
 
-		imu_driver_ = new XSensDriver( 0 );
+		imu_driver_ = new XSensDriver();
 		if ( !imu_driver_->initMe() )
 		{
 			ROS_WARN( "Failed to connect to IMU. Exiting..." );

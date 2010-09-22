@@ -33,7 +33,7 @@ public:
 		double z;
 	};
 
-	XSensDriver( std::string port );
+	XSensDriver( std::string port = "" );
 
 	~XSensDriver();
 

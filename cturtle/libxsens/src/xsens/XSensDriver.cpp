@@ -158,7 +158,7 @@ int XSensDriver::doHardwareScan( xsens::Cmt3 &cmt3, CmtDeviceId deviceIds[] )
 	unsigned long portCount = 0;
 	int mtCount;
 	
-	std::cout << "Scanning for connected Xsens devices...";
+	std::cout << "Scanning for connected Xsens devices..." << std::endl;
 	xsens::cmtScanPorts( portInfo );
 	portCount = portInfo.length();
 	std::cout << "done" << std::endl;
