@@ -94,17 +94,17 @@ typedef type_with_N_bits<int, 32>::type int32;
 typedef type_with_N_bits<unsigned int, 32>::type uint32;
 #endif
 
-#ifndef INVT_TYPEDEF_INT64
+/*#ifndef INVT_TYPEDEF_INT64
 #define INVT_TYPEDEF_INT64
 //! 64-bit signed integer
 typedef type_with_N_bits<long long int, 64>::type int64;
-#endif
+#endif*/
 
-#ifndef INVT_TYPEDEF_UINT64
+/*#ifndef INVT_TYPEDEF_UINT64
 #define INVT_TYPEDEF_UINT64
 //! 64-bit unsigned integer
 typedef type_with_N_bits<unsigned long long int, 64>::type uint64;
-#endif
+#endif*/
 
 #ifndef INVT_TYPEDEF_USHORT
 #define INVT_TYPEDEF_USHORT
