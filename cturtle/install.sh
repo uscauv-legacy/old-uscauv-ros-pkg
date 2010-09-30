@@ -43,7 +43,6 @@ echo ""
 echo -n 'Download seabee3-ros-pkg? (y/n) '
 read res
 if [ "$res" == "y" ]; then
-	mkdir 
 	svn co https://seabee3-ros-pkg.googlecode.com/svn/trunk/cturtle/ ~/workspace/seabee3-ros-pkg
 	rosstack profile && rospack profile
 fi
@@ -62,7 +61,7 @@ echo ""
 echo -n 'Update permissions for video devices? (y/n) '
 read res
 if [ "$res" == "y" ]; then
-	sudo sh ~/workspace/seabee3-ros-pkg/seabee3-util/config-1394.sh
+	sudo sh ~/workspace/seabee3-ros-pkg/seabee3_util/config-1394.sh
 fi
 echo "----------"
 
