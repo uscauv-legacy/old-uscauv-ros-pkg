@@ -15,7 +15,7 @@
  *        copyright notice, this list of conditions and the following disclaimer
  *        in the documentation and/or other materials provided with the
  *        distribution.
- *      * Neither the name of the USC Underwater Robotics Team nor the names of its
+ *      * Neither the name of the USC nor the names of its
  *        contributors may be used to endorse or promote products derived from
  *        this software without specific prior written permission.
  *      
@@ -41,7 +41,8 @@
 #include <geometry_msgs/Vector3.h>
 #include <math.h> //for pow, sqrt
 //msgs
-#include <sensor_msgs/Imu.h> // for outgoing IMU data
+#include <sensor_msgs/Imu.h> // for outgoing IMU data; quaternions? srsly? fuckin bullshit
+#include <xsens_node/Imu.h> // for backwards-compatibility; also gives euler angles (because fuck quaternions)
 #include <std_msgs/Bool.h> //for Bool
 //srvs
 #include <xsens_node/CalibrateRPY.h> // for CalibrateRPY
@@ -86,6 +87,7 @@ private:
 
 	ros::NodeHandle n_priv_;
 	ros::Publisher imu_pub_;
+	ros::Publisher custom_imu_pub_;
 	ros::Publisher is_calibrated_pub_;
 	ros::ServiceServer calibrate_rpy_drift_srv_;
 	ros::ServiceServer calibrate_rpy_ori_srv_;
@@ -109,6 +111,7 @@ public:
 		calibrated_ = false;
 
 		imu_pub_ = n.advertise<sensor_msgs::Imu> ( "data", 1 );
+		custom_imu_pub_ = n.advertise<sensor_msgs::Imu> ( "custom_data", 1 );
 		is_calibrated_pub_ = n.advertise<std_msgs::Bool> ( "is_calibrated", 1 );
 		calibrate_rpy_drift_srv_ = n.advertiseService( "calibrate_rpy_drift", &XSensNode::calibrateRPYDriftCB, this );
 		calibrate_rpy_ori_srv_ = n.advertiseService( "calibrate_rpy_ori", &XSensNode::calibrateRPYOriCB, this );
@@ -223,20 +226,19 @@ public:
 	{
 		while ( ros::ok() )
 		{
-//			if ( autocalibrate_ && !calibrated_ )
-//				runFullCalibration();
+			if ( autocalibrate_ && !calibrated_ ) runFullCalibration();
 
-			sensor_msgs::Imu msg;
+			sensor_msgs::Imu imu_msg;
+			xsens_node::Imu custom_imu_msg;
 
 			updateIMUData();
 
-			imu_driver_->accel_ >> msg.linear_acceleration;
-			imu_driver_->gyro_ >> msg.angular_velocity;
-			//imu_driver_->mag_ >> msg.mag;
+			imu_driver_->accel_ >> imu_msg.linear_acceleration;
+			imu_driver_->gyro_ >> imu_msg.angular_velocity;
 
-			//imu_driver_->accel_ >> msg_calib.accel;
-			//imu_driver_->gyro_ >> msg_calib.gyro;
-			//imu_driver_->mag_ >> msg_calib.mag;
+			imu_driver_->accel_ >> custom_imu_msg.accel;
+			imu_driver_->gyro_ >> custom_imu_msg.gyro;
+			imu_driver_->mag_ >> custom_imu_msg.mag;
 
 			drift_comp_total_ += drift_comp_;
 
@@ -246,18 +248,21 @@ public:
 			imu_driver_->ori_ >> temp;
 			temp += ori_comp_;
 
-			tf::Quaternion ori ( temp.z(), temp.y(), temp.x() );
+			temp >> custom_imu_msg.ori;
 
-			msg.orientation.w = ori.w();
-			msg.orientation.x = ori.x();
-			msg.orientation.y = ori.y();
-			msg.orientation.z = ori.z();
+			tf::Quaternion ori( temp.z(), temp.y(), temp.x() );
 
-			msg.angular_velocity_covariance[0] = msg.angular_velocity_covariance[4] = msg.angular_velocity_covariance[8] = angular_velocity_stdev_ * angular_velocity_stdev_;
-			msg.linear_acceleration_covariance[0] = msg.linear_acceleration_covariance[4] = msg.linear_acceleration_covariance[8] = linear_acceleration_stdev_ * linear_acceleration_stdev_;
-			msg.orientation_covariance[0] = msg.orientation_covariance[4] = msg.orientation_covariance[8] = orientation_stdev_ * orientation_stdev_;
+			imu_msg.orientation.w = ori.w();
+			imu_msg.orientation.x = ori.x();
+			imu_msg.orientation.y = ori.y();
+			imu_msg.orientation.z = ori.z();
 
-			imu_pub_.publish( msg );
+			imu_msg.angular_velocity_covariance[0] = imu_msg.angular_velocity_covariance[4] = imu_msg.angular_velocity_covariance[8] = angular_velocity_stdev_ * angular_velocity_stdev_;
+			imu_msg.linear_acceleration_covariance[0] = imu_msg.linear_acceleration_covariance[4] = imu_msg.linear_acceleration_covariance[8] = linear_acceleration_stdev_ * linear_acceleration_stdev_;
+			imu_msg.orientation_covariance[0] = imu_msg.orientation_covariance[4] = imu_msg.orientation_covariance[8] = orientation_stdev_ * orientation_stdev_;
+
+			imu_pub_.publish( imu_msg );
+			custom_imu_pub_.publish( custom_imu_msg );
 			//imu_pub_raw_.publish( msg_raw );
 			ros::spinOnce();
 			ros::Rate( 110 ).sleep();
