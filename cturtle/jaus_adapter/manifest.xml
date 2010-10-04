@@ -4,16 +4,14 @@
      jaus_adapter
 
   </description>
-  <author>Edward T. Kaszubski</author>
+  <author>John O'Hollaren, Edward T. Kaszubski</author>
   <license>BSD</license>
   <review status="unreviewed" notes=""/>
   <url>http://ros.org/wiki/jaus_adapter</url>
   <depend package="roscpp"/>
-  <depend package="geometry_msgs"/>
-  <depend package="sensor_msgs"/>
-  <depend package="seabee3_driver"/>
-  <depend package="waypoint_controller"/>
-  <depend package="stereo_image_odom"/>
+  <depend package="geometry_msgs" />
+  <depend package="sensor_msgs" />
+  <depend package="xsens_node" />
 
 </package>
 

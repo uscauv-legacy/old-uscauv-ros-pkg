@@ -13,5 +13,8 @@
   <depend stack="ros" /> <!-- roslib, std_msgs, roscpp -->
   <depend stack="vision_opencv" /> <!-- opencv2, cv_bridge -->
   <depend stack="visualization_common" /> <!-- visualization_msgs -->
+  <export>
+    <rosdoc config="rosdoc.yaml" />
+  </export>
 
 </stack>

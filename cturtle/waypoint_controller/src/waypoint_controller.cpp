@@ -15,7 +15,7 @@
 #include <waypoint_controller/CurrentState.h>
 #include <opencv/cv.h>
 
-std::string robot_frame, map_frame;
+std::string robot_frame, map_frame_;
 
 struct PIDConfig
 {
@@ -39,8 +39,8 @@ struct State
 int mState;
 
 control_toolbox::Pid * pid_X, * pid_Y;
-tf::StampedTransform currentPose;
-tf::TransformListener * tl;
+tf::StampedTransform current_pose_;
+tf::TransformListener * tl_;
 
 geometry_msgs::Vector3 errorInPos, errorInOri;
 
@@ -56,7 +56,7 @@ seabee3_driver::SetDesiredXYZ setDesiredXYZ;
 
 geometry_msgs::Vector3 waypointRPY, waypointXYZ, navGoalRPY;
 
-ros::Time lastPidUpdateTime;
+ros::Time last_pid_update_time_;
 
 void operator -= (geometry_msgs::Vector3 & v1, geometry_msgs::Vector3 & v2)
 {
@@ -68,9 +68,9 @@ void operator -= (geometry_msgs::Vector3 & v1, geometry_msgs::Vector3 & v2)
 bool updatePID(geometry_msgs::Twist & cmd_vel)
 {
 	ROS_INFO("update PID");
-	if(lastPidUpdateTime != ros::Time(-1))
+	if(last_pid_update_time_ != ros::Time(-1))
 	{
-		ros::Duration dt = ros::Time::now() - lastPidUpdateTime;
+		ros::Duration dt = ros::Time::now() - last_pid_update_time_;
 		ROS_INFO("dt %f", dt.toSec());
 		
 		LocalizationUtil::capValue(errorInPos.x, 10.0);
@@ -90,7 +90,7 @@ bool updatePID(geometry_msgs::Twist & cmd_vel)
 		setDesiredXYZ.request.DesiredXYZ.z = errorInPos.z;
 	}
 	
-	lastPidUpdateTime = ros::Time::now();
+	last_pid_update_time_ = ros::Time::now();
 	return true;
 }
 
@@ -105,8 +105,8 @@ bool updateCmdVel(geometry_msgs::Twist & cmd_vel)
 	{
 		try
 		{
-			tl->waitForTransform(map_frame.c_str(), robot_frame.c_str(), ros::Time(0), ros::Duration(5.0));
-			tl->lookupTransform(map_frame.c_str(), robot_frame.c_str(), ros::Time(0), currentPose);
+			tl_->waitForTransform(map_frame_.c_str(), robot_frame.c_str(), ros::Time(0), ros::Duration(5.0));
+			tl_->lookupTransform(map_frame_.c_str(), robot_frame.c_str(), ros::Time(0), current_pose_);
 			//listener.lookupTransform("/turtle2", "/turtle1", ros::Time(0), transform);
 		}
 		catch (tf::TransformException ex)
@@ -114,24 +114,24 @@ bool updateCmdVel(geometry_msgs::Twist & cmd_vel)
 			ROS_ERROR("%s",ex.what());
 		}
 		
-		tf::Vector3 theTf = currentPose.getOrigin();
+		tf::Vector3 theTf = current_pose_.getOrigin();
 		cv::Point3d theOri;
-		currentPose.getBasis().getEulerYPR(theOri.x, theOri.y, theOri.z);
+		current_pose_.getBasis().getEulerYPR(theOri.x, theOri.y, theOri.z);
 		
 		ROS_INFO("tf x %f y %f z %f r %f p %f y %f", theTf.x(), theTf.y(), theTf.z(), theOri.x, theOri.y, theOri.z);
 		
 		//tl->lookupTransform(map_frame.c_str(), robot_frame.c_str(), ros::Time(0), currentPose);
 		
 		errorInPos = waypointXYZ;
-		errorInPos.x -= currentPose.getOrigin().x();
-		errorInPos.y -= currentPose.getOrigin().y();
-		errorInPos.z -= currentPose.getOrigin().z();
+		errorInPos.x -= current_pose_.getOrigin().x();
+		errorInPos.y -= current_pose_.getOrigin().y();
+		errorInPos.z -= current_pose_.getOrigin().z();
 		
 		ROS_INFO("error in pos x %f y %f z %f", errorInPos.x, errorInPos.y, errorInPos.z);
 		
 		errorInOri = navGoalRPY;
 		geometry_msgs::Vector3 currentOri;
-		currentPose.getBasis().getEulerYPR(currentOri.z, currentOri.y, currentOri.x);
+		current_pose_.getBasis().getEulerYPR(currentOri.z, currentOri.y, currentOri.x);
 		
 		currentOri.z = LocalizationUtil::radToDeg( currentOri.z );
 		currentOri.y = LocalizationUtil::radToDeg( currentOri.y );
@@ -235,26 +235,26 @@ bool SetDesiredXYZCallback(waypoint_controller::SetDesiredVec3::Request & req, w
 	//	desiredXYZ->y = req.DesiredXYZ.y + (req.Mode.y == 1.0f ? IMUDataCache->ori.y : 0);
 
 	if(req.mask.z > 0.0f)
-		desiredXYZ->z = req.desiredXYZ.z + (req.mode.z == 1.0f ? depthCache->value : 0);
+		desired_xyz_->z = req.desired_xyz_.z + (req.mode.z == 1.0f ? depthCache->value : 0);
 
-	resp.CurrentDesiredXYZ = *desiredXYZ;
-	resp.ErrorInXYZ = *errorInXYZ;
+	resp.CurrentDesiredXYZ = *desired_xyz_;
+	resp.ErrorInXYZ = *error_in_xyz_;
 	return true;
 }
 
 bool SetDesiredRPYCallback(waypoint_controller::SetDesiredVec3::Request & req, waypoint_controller::SetDesiredVec3::Response & resp)
 {
 	if(req.mask.x > 0.0f)
-		desiredRPY->x = req.DesiredRPY.x + (req.Mode.x == 1.0f ? IMUDataCache->ori.x : 0);
+		desired_rpy_->x = req.DesiredRPY.x + (req.Mode.x == 1.0f ? IMUDataCache->ori.x : 0);
 
 	if(req.mask.y > 0.0f)
-		desiredRPY->y = req.DesiredRPY.y + (req.Mode.y == 1.0f ? IMUDataCache->ori.y : 0);
+		desired_rpy_->y = req.DesiredRPY.y + (req.Mode.y == 1.0f ? IMUDataCache->ori.y : 0);
 
 	if(req.mask.z > 0.0f)
-		desiredRPY->z = req.DesiredRPY.z + (req.Mode.z == 1.0f ? IMUDataCache->ori.z : 0);
+		desired_rpy_->z = req.DesiredRPY.z + (req.Mode.z == 1.0f ? IMUDataCache->ori.z : 0);
 
-	resp.CurrentDesiredRPY = *desiredRPY;
-	resp.ErrorInRPY = *errorInRPY;
+	resp.CurrentDesiredRPY = *desired_rpy_;
+	resp.ErrorInRPY = *error_in_rpy_;
 	return true;
 }
 
@@ -269,7 +269,7 @@ int main( int argc, char * argv[] )
 	ros::NodeHandle n("~");
 	
 	n.param("robot_frame", robot_frame, std::string("/base_link") );
-	n.param("map_frame", map_frame, std::string("/landmark_map") );
+	n.param("map_frame", map_frame_, std::string("/landmark_map") );
 	
 	ros::Publisher cmd_vel_pub = n.advertise<geometry_msgs::Twist>("/seabee3/cmd_vel", 1);
 	ros::Publisher state_pub = n.advertise<waypoint_controller::CurrentState>("current_state", 1);
@@ -278,9 +278,9 @@ int main( int argc, char * argv[] )
 	ros::ServiceServer SetDesiredRPY_srv = n.advertiseService("/seabee3/setDesiredRPY", SetDesiredRPYCallback);
 	ros::ServiceServer ResetPose_srv = n.advertiseService("/seabee3/ResetPose", ResetPoseCallback);
 	
-	tl = new tf::TransformListener;
+	tl_ = new tf::TransformListener;
 	
-	lastPidUpdateTime = ros::Time(-1);
+	last_pid_update_time_ = ros::Time(-1);
 	
 	pid_X = new control_toolbox::Pid;
 	pid_Y = new control_toolbox::Pid;

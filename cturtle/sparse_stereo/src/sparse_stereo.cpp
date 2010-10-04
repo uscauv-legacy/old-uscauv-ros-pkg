@@ -10,14 +10,14 @@
 #include <string>
 #include <limits>
 
-boost::mutex img_mutex_l, img_mutex_r, info_mutex_l, info_mutex_r, flag_mutex;
+boost::mutex l_img_mutex_, r_img_mutex_, l_info_mutex_, r_info_mutex_, flag_mutex_;
 
-bool new_left_img = false;
+bool new_left_img_ = false;
 bool processed_left_img = false;
-bool new_right_img = false;
+bool new_right_img_ = false;
 bool processed_right_img = false;
-bool new_left_info = false;
-bool new_right_info = false;
+bool new_left_info_ = false;
+bool new_right_info_ = false;
 
 cv::SURF mSurf;
 std::vector<cv::KeyPoint> leftKeyPoints, rightKeyPoints;
@@ -25,8 +25,8 @@ std::vector<float> leftDescriptors, rightDescriptors;
 
 double norm_threshold, yspace_diff_threshold, gauss_mean, gauss_variance;
 
-sensor_msgs::ImagePtr img_left, img_right;
-sensor_msgs::CameraInfo info_left, info_right;
+sensor_msgs::ImagePtr left_img_, right_img_;
+sensor_msgs::CameraInfo left_info_, right_info_;
 image_transport::Publisher *disparity_pub;
 sensor_msgs::CvBridge bridge;
 
@@ -43,13 +43,13 @@ double gaussian( double x, double mean, double variance )
 void process_images()
 {
 	//ROS_INFO( "Trying to process available resources..." );
-	if ( !initialized && new_right_img && new_left_img )
+	if ( !initialized && new_right_img_ && new_left_img_ )
 	{
-		boost::lock_guard<boost::mutex> limgguard( img_mutex_l );
-		boost::lock_guard<boost::mutex> rimgguard( img_mutex_r );
+		boost::lock_guard<boost::mutex> limgguard( l_img_mutex_ );
+		boost::lock_guard<boost::mutex> rimgguard( r_img_mutex_ );
 
-		leftImage = cv::Mat( bridge.imgMsgToCv( img_left ) );
-		rightImage = cv::Mat( bridge.imgMsgToCv( img_right ) );
+		leftImage = cv::Mat( bridge.imgMsgToCv( left_img_ ) );
+		rightImage = cv::Mat( bridge.imgMsgToCv( right_img_ ) );
 
 		int width, height;
 
@@ -64,11 +64,11 @@ void process_images()
 	}
 	else if ( !initialized ) return;
 
-	if ( new_left_img && !processed_left_img )
+	if ( new_left_img_ && !processed_left_img )
 	{
 		//ROS_INFO( "processing left image..." );
-		boost::lock_guard<boost::mutex> limgguard( img_mutex_l );
-		leftImage = cv::Mat( bridge.imgMsgToCv( img_left ) );
+		boost::lock_guard<boost::mutex> limgguard( l_img_mutex_ );
+		leftImage = cv::Mat( bridge.imgMsgToCv( left_img_ ) );
 
 		for ( int y = 0; y < combined.size().height; y++ )
 		{
@@ -92,11 +92,11 @@ void process_images()
 		processed_left_img = true;
 	}
 
-	if ( new_right_img && !processed_right_img )
+	if ( new_right_img_ && !processed_right_img )
 	{
 		//ROS_INFO( "processing right image..." );
-		boost::lock_guard<boost::mutex> rimgguard( img_mutex_r );
-		rightImage = cv::Mat( bridge.imgMsgToCv( img_right ) );
+		boost::lock_guard<boost::mutex> rimgguard( r_img_mutex_ );
+		rightImage = cv::Mat( bridge.imgMsgToCv( right_img_ ) );
 
 		for ( int y = 0; y < combined.size().height; y++ )
 		{
@@ -122,13 +122,13 @@ void process_images()
 		processed_right_img = true;
 	}
 
-	if ( new_left_img && new_right_img && new_left_info && new_right_info )
+	if ( new_left_img_ && new_right_img_ && new_left_info_ && new_right_info_ )
 	{
 		//ROS_INFO( "Checking locks..." );
-		boost::lock_guard<boost::mutex> limgguard( img_mutex_l );
-		boost::lock_guard<boost::mutex> rimgguard( img_mutex_r );
-		boost::lock_guard<boost::mutex> linfoguard( info_mutex_l );
-		boost::lock_guard<boost::mutex> rinfoguard( info_mutex_r );
+		boost::lock_guard<boost::mutex> limgguard( l_img_mutex_ );
+		boost::lock_guard<boost::mutex> rimgguard( r_img_mutex_ );
+		boost::lock_guard<boost::mutex> linfoguard( l_info_mutex_ );
+		boost::lock_guard<boost::mutex> rinfoguard( r_info_mutex_ );
 
 
 		//ROS_INFO( "Matching points across images..." );
@@ -194,10 +194,10 @@ void process_images()
 
 
 		//Reset new flags
-		new_left_img = false;
-		new_right_img = false;
-		new_left_info = false;
-		new_right_info = false;
+		new_left_img_ = false;
+		new_right_img_ = false;
+		new_left_info_ = false;
+		new_right_info_ = false;
 		processed_left_img = false;
 		processed_right_img = false;
 		matches.clear();
@@ -209,14 +209,14 @@ void process_images()
 void img_cb_l( const sensor_msgs::ImageConstPtr& msg )
 {
 	ROS_INFO( "got left img" );
-	img_mutex_l.lock();
-	img_left = boost::const_pointer_cast<sensor_msgs::Image>( msg );
+	l_img_mutex_.lock();
+	left_img_ = boost::const_pointer_cast<sensor_msgs::Image>( msg );
 	//img_left = msg;
 
-	img_mutex_l.unlock();
+	l_img_mutex_.unlock();
 
-	boost::lock_guard<boost::mutex> guard( flag_mutex );
-	new_left_img = true;
+	boost::lock_guard<boost::mutex> guard( flag_mutex_ );
+	new_left_img_ = true;
 
 	process_images();
 }
@@ -224,14 +224,14 @@ void img_cb_l( const sensor_msgs::ImageConstPtr& msg )
 void img_cb_r( const sensor_msgs::ImageConstPtr& msg )
 {
 	ROS_INFO( "got right img" );
-	img_mutex_r.lock();
-	img_right = boost::const_pointer_cast<sensor_msgs::Image>( msg );
+	r_img_mutex_.lock();
+	right_img_ = boost::const_pointer_cast<sensor_msgs::Image>( msg );
 	//img_right = msg;
 
-	img_mutex_r.unlock();
+	r_img_mutex_.unlock();
 
-	boost::lock_guard<boost::mutex> guard( flag_mutex );
-	new_right_img = true;
+	boost::lock_guard<boost::mutex> guard( flag_mutex_ );
+	new_right_img_ = true;
 
 	process_images();
 }
@@ -239,14 +239,14 @@ void img_cb_r( const sensor_msgs::ImageConstPtr& msg )
 void info_cb_l( const sensor_msgs::CameraInfoConstPtr& msg )
 {
 	ROS_INFO( "got left info" );
-	info_mutex_l.lock();
-	info_left = *msg;
+	l_info_mutex_.lock();
+	left_info_ = *msg;
 	//info_left = boost::const_pointer_cast<sensor_msgs::CameraInfo>(msg);
 
-	info_mutex_l.unlock();
+	l_info_mutex_.unlock();
 
-	boost::lock_guard<boost::mutex> guard( flag_mutex );
-	new_left_info = true;
+	boost::lock_guard<boost::mutex> guard( flag_mutex_ );
+	new_left_info_ = true;
 
 	process_images();
 }
@@ -254,13 +254,13 @@ void info_cb_l( const sensor_msgs::CameraInfoConstPtr& msg )
 void info_cb_r( const sensor_msgs::CameraInfoConstPtr& msg )
 {
 	ROS_INFO( "got right info" );
-	info_mutex_r.lock();
-	info_right = *msg;
+	r_info_mutex_.lock();
+	right_info_ = *msg;
 
-	info_mutex_r.unlock();
+	r_info_mutex_.unlock();
 
-	boost::lock_guard<boost::mutex> guard( flag_mutex );
-	new_right_info = true;
+	boost::lock_guard<boost::mutex> guard( flag_mutex_ );
+	new_right_info_ = true;
 
 	process_images();
 }

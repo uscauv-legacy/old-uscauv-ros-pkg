@@ -33,39 +33,45 @@
  *
  *******************************************************************************/
 
+// tools
 #include <ros/ros.h>
+// for YAML::Parser, YAML::Node
 #include <yaml-cpp/yaml.h>
+// for cv::Point3d
 #include <opencv/cv.h>
 
 #include <string>
 #include <fstream>
 
+// for Landmark::LandmarkType, LandmarkTypes
 #include <landmark_map/LandmarkMap.h>
+
+// msgs
+// for LandmarkMapMsg
 #include <localization_defs/LandmarkMapMsg.h>
+// for MarkerArray
 #include <visualization_msgs/MarkerArray.h>
+
+// srvs
+// for FetchLandmarkMap
 #include <landmark_map_server/FetchLandmarkMap.h>
 
-std::string map_uri;
-const std::string map_frame = "/landmark_map";
-std::vector<Landmark> mLandmarks;
-localization_defs::LandmarkMapMsg mapMsg;
-
-void operator >> (const YAML::Node & node, cv::Point3d & p)
+void operator >>( const YAML::Node & node, cv::Point3d & p )
 {
 	node[0] >> p.x;
 	node[1] >> p.y;
 	node[2] >> p.z;
-	ROS_INFO("yaml -> cv::Point3d( %f, %f, %f )", p.x, p.y, p.z);
+	ROS_INFO( "yaml -> cv::Point3d( %f, %f, %f )", p.x, p.y, p.z );
 }
 
-void operator >> (const YAML::Node & node, cv::Point2d & p)
+void operator >>( const YAML::Node & node, cv::Point2d & p )
 {
 	node[0] >> p.x;
 	node[1] >> p.y;
-	ROS_INFO("yaml -> cv::Point2d( %f, %f )", p.x, p.y);
+	ROS_INFO( "yaml -> cv::Point2d( %f, %f )", p.x, p.y );
 }
 
-void operator >> (const YAML::Node & node, Landmark & l)
+void operator >>( const YAML::Node & node, Landmark & l )
 {
 	int landmarkType;
 	cv::Point3d center;
@@ -77,124 +83,155 @@ void operator >> (const YAML::Node & node, Landmark & l)
 	
 	Landmark * result = new Landmark;
 	
-	if(landmarkType == Landmark::LandmarkType::Buoy) //used 'if' instead of 'switch' so that variables could be defiend inside selection logic
+	if ( landmarkType == Landmark::LandmarkType::Buoy ) //used 'if' instead of 'switch' so that variables could be defiend inside selection logic
 	{
 		int color;
 		node["color"] >> color;
-		LandmarkTypes::Buoy buoy ( center, ori, color );
+		LandmarkTypes::Buoy buoy( center, ori, color );
 		
 		result = &buoy;
 	}
-	else if(landmarkType == Landmark::LandmarkType::Pinger)
+	else if ( landmarkType == Landmark::LandmarkType::Pinger )
 	{
 		int id;
 		node["id"] >> id;
-		LandmarkTypes::Pinger pinger (center, ori, id);
+		LandmarkTypes::Pinger pinger( center, ori, id );
 		
 		result = &pinger;
 	}
-	else if(landmarkType == Landmark::LandmarkType::Pipe)
+	else if ( landmarkType == Landmark::LandmarkType::Pipe )
 	{
-		LandmarkTypes::Pipe pipe (center, ori);
+		LandmarkTypes::Pipe pipe( center, ori );
 		result = &pipe;
 	}
-	else if(landmarkType == Landmark::LandmarkType::Bin)
+	else if ( landmarkType == Landmark::LandmarkType::Bin )
 	{
 		int id;
 		node["id"] >> id;
-		LandmarkTypes::Bin bin (center, ori, id);
+		LandmarkTypes::Bin bin( center, ori, id );
 		result = &bin;
 	}
-	else if(landmarkType == Landmark::LandmarkType::Window)
+	else if ( landmarkType == Landmark::LandmarkType::Window )
 	{
 		int color;
 		node["color"] >> color;
-		LandmarkTypes::Window window (center, ori, color);
+		LandmarkTypes::Window window( center, ori, color );
 		result = &window;
 	}
-	else if(landmarkType == Landmark::LandmarkType::Waypoint)
+	else if ( landmarkType == Landmark::LandmarkType::Waypoint )
 	{
 		int id;
 		node["id"] >> id;
-		LandmarkTypes::Waypoint waypoint (center, ori, id);
+		LandmarkTypes::Waypoint waypoint( center, ori, id );
 		result = &waypoint;
 	}
 	else
 	{
-		ROS_WARN("Landmark ID %d is not defined. Landmark not added to map.", landmarkType);
+		ROS_WARN( "Landmark ID %d is not defined. Landmark not added to map.", landmarkType );
 	}
-	
+
 	l = *result;
-	ROS_INFO("Landmark ID %d", result->mLandmarkType);
-	ROS_INFO("Landmark ID %d", l.mLandmarkType);
+	ROS_INFO( "Landmark ID %d", result->landmark_type_ );
+	ROS_INFO( "Landmark ID %d", l.landmark_type_ );
 }
 
-#define USAGE "Usage: \n" \
-              "  landmark_map_saver [-f <mapname>] [ROS remapping args]"
-
-bool FetchLandmarkMapCallback(landmark_map_server::FetchLandmarkMap::Request & req, landmark_map_server::FetchLandmarkMap::Response & resp)
+class LandmarkMapServer
 {
-	resp.Map = mapMsg;
-	return true;
-}
+private:
+	ros::NodeHandle nh_priv_;
+	ros::Publisher marker_pub_;
+	ros::ServiceServer map_server_;
+
+	std::string map_uri_;
+	std::string map_frame_;
+	std::vector<Landmark> landmarks_;
+	std::vector<visualization_msgs::Marker> markers_;
+	localization_defs::LandmarkMapMsg map_msg_;
+
+public:
+	bool success_;
+	LandmarkMapServer( ros::NodeHandle & nh ) :
+		nh_priv_( "~" )
+	{
+		success_ = false;
+		nh_priv_.param( "map_frame", map_frame_, std::string( "/landmark_map" ) );
+		nh_priv_.param( "map_uri", map_uri_, std::string( "null" ) );
+
+		ROS_DEBUG( "Attempting to open map file at %s", map_uri_.c_str() );
+
+		std::ifstream fin( map_uri_.c_str() );
+
+		if ( !fin.good() )
+		{
+			ROS_ERROR( "File not found." );
+			return;
+		}
+
+		marker_pub_ = nh_priv_.advertise<visualization_msgs::Marker> ( "landmarks", 5 );
+		map_server_ = nh_priv_.advertiseService( "fetch_landmark_map", &LandmarkMapServer::fetchLandmarkMapCB, this );
+
+		YAML::Parser parser( fin );
+		YAML::Node doc;
+
+		parser.GetNextDocument( doc );
+
+		LandmarkMap landmark_map;
+
+		doc["dim"] >> landmark_map.dim_;
+
+		const YAML::Node & landmarks = doc["landmarks"];
+
+
+		//populate the list of landmarks
+
+		for ( unsigned int i = 0; i < landmarks.size(); i++ )
+		{
+			Landmark temp;
+			landmarks[i] >> temp;
+			landmark_map.addLandmark( temp );
+		}
+
+		markers_ = landmark_map.createMarkerArray( map_frame_ );
+		map_msg_ = landmark_map.createMsg();
+		success_ = true;
+	}
+
+	bool fetchLandmarkMapCB( landmark_map_server::FetchLandmarkMap::Request & req, landmark_map_server::FetchLandmarkMap::Response & resp )
+	{
+		resp.Map = map_msg_;
+		return true;
+	}
+
+	void spin()
+	{
+		while ( ros::ok() )
+		{
+			// get a visualization_msgs/Marker representation of each landmark and publish it
+
+			for ( unsigned int i = 0; i < markers_.size(); i++ )
+			{
+				marker_pub_.publish( markers_[i] );
+			}
+
+			ros::spinOnce();
+			ros::Rate( 2 ).sleep();
+		}
+	}
+
+};
 
 int main( int argc, char* argv[] )
 {
-	ros::init(argc, argv, "landmark_map_server");
-	ros::NodeHandle n("~");
+	ros::init( argc, argv, "landmark_map_server" );
+	ros::NodeHandle nh;
 	
-	n.param("map_uri", map_uri, std::string("null") );
-	//n.param("map_frame", map_frame, std::string("/landmark_map") );
-	
-	ROS_INFO("Attempting to open map file at %s", map_uri.c_str());
-	
-	std::ifstream fin(map_uri.c_str());
-	
-	if(!fin.good())
-	{
-		ROS_ERROR("File not found.");
+	LandmarkMapServer landmark_map_server( nh );
+
+	// make sure the requested file was found
+	if( !landmark_map_server.success_ )
 		return 1;
-	}
+
+	landmark_map_server.spin();
 	
-	ros::Publisher marker_pub = n.advertise<visualization_msgs::Marker>("landmarks", 5);
-	ros::ServiceServer map_server = n.advertiseService("fetchLandmarkMap", FetchLandmarkMapCallback);
-	
-	YAML::Parser parser(fin);
-	YAML::Node doc;
-	
-	parser.GetNextDocument(doc);
-	
-	LandmarkMap mMap;
-	
-	doc["dim"] >> mMap.mDim;
-	
-	const YAML::Node & landmarks = doc["landmarks"];
-	
-	//populate the list of landmarks
-	
-	for( unsigned int i = 0; i < landmarks.size(); i ++ )
-	{
-		Landmark temp;
-		landmarks[i] >> temp;
-		mMap.addLandmark(temp);
-	}
-	
-	std::vector<visualization_msgs::Marker> markers = mMap.createMarkerArray( map_frame );
-	mapMsg = mMap.createMsg();
-	
-	while(ros::ok())
-	{
-		// get a visualization_msgs/Marker representation of each landmark and publish it
-	
-		for( unsigned int i = 0; i < markers.size(); i ++ )
-		{
-			marker_pub.publish(markers[i]);
-		}
-		
-		//map_pub.publish(mapMsg);
-	
-		ros::spinOnce();
-		ros::Rate(2).sleep();
-	}
-	return 1;
+	return 0;
 }

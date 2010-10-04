@@ -37,25 +37,25 @@
 
 LandmarkMap::LandmarkMap( cv::Point2d dim )
 {
-	mDim = dim;
+	dim_ = dim;
 }
 
 LandmarkMap::LandmarkMap( std::vector<Landmark> landmarks, cv::Point2d dim )
 {
-	mLandmarks = landmarks;
-	mDim = dim;
+	landmarks_ = landmarks;
+	dim_ = dim;
 }
 
 LandmarkMap::LandmarkMap( const localization_defs::LandmarkMapMsg & msg )
 {
-	mDim.x = msg.dim.x;
-	mDim.y = msg.dim.y;
+	dim_.x = msg.dim.x;
+	dim_.y = msg.dim.y;
 	
-	mLandmarks.resize( msg.map.landmarkArray.size() );
+	landmarks_.resize( msg.map.landmarkArray.size() );
 	
-	for(unsigned int i = 0; i < mLandmarks.size(); i ++)
+	for(unsigned int i = 0; i < landmarks_.size(); i ++)
 	{
-		mLandmarks[i] = Landmark::parseMessage( msg.map.landmarkArray[i] );
+		landmarks_[i] = Landmark::parseMessage( msg.map.landmarkArray[i] );
 	}
 }
 
@@ -74,17 +74,17 @@ LandmarkMap::LandmarkMap(std::vector<Landmark> l)
 
 void LandmarkMap::addLandmark(const Landmark l)
 {
-	mLandmarks.push_back(l);
+	landmarks_.push_back(l);
 }
 
 std::vector<Landmark> LandmarkMap::fetchLandmarksByType(const int type) const
 {
 	std::vector<Landmark> landmarks;
-	for(unsigned int i = 0; i < mLandmarks.size(); i ++)
+	for(unsigned int i = 0; i < landmarks_.size(); i ++)
 	{
-		if(mLandmarks[i].mLandmarkType == type)
+		if(landmarks_[i].landmark_type_ == type)
 		{
-			landmarks.push_back(mLandmarks[i]);
+			landmarks.push_back(landmarks_[i]);
 		}
 	}
 	return landmarks;
@@ -97,7 +97,7 @@ std::vector<Landmark> LandmarkMap::fetchWaypointsByType(const int type) const
 	
 	for(unsigned int i = 0; i < waypoints.size(); i ++)
 	{
-		if(waypoints[i].mId == type)
+		if(waypoints[i].id_ == type)
 		{
 			filteredWaypoints.push_back(waypoints[i]);
 		}
@@ -108,15 +108,15 @@ std::vector<Landmark> LandmarkMap::fetchWaypointsByType(const int type) const
 std::vector<visualization_msgs::Marker> LandmarkMap::createMarkerArray(const std::string & frame) const
 {
 	std::vector<visualization_msgs::Marker> markers;
-	markers.resize( mLandmarks.size() );
+	markers.resize( landmarks_.size() );
 	
 	std::vector<int> typeCount;
 	typeCount.resize(Landmark::LandmarkType::NumTypes);
 	
 	for(unsigned int i = 0; i < markers.size(); i ++)
 	{
-		markers[i] = mLandmarks[i].createMarker( frame, typeCount[mLandmarks[i].mLandmarkType] );
-		typeCount[ mLandmarks[i].mLandmarkType ] ++;
+		markers[i] = landmarks_[i].createMarker( frame, typeCount[landmarks_[i].landmark_type_] );
+		typeCount[ landmarks_[i].landmark_type_ ] ++;
 	}
 	
 	return markers;
@@ -125,9 +125,9 @@ std::vector<visualization_msgs::Marker> LandmarkMap::createMarkerArray(const std
 localization_defs::LandmarkMapMsg LandmarkMap::createMsg() const
 {
 	localization_defs::LandmarkMapMsg msg;
-	for(unsigned int i = 0; i < mLandmarks.size(); i ++)
+	for(unsigned int i = 0; i < landmarks_.size(); i ++)
 	{
-		msg.map.landmarkArray.push_back( mLandmarks[i].createMsg() );
+		msg.map.landmarkArray.push_back( landmarks_[i].createMsg() );
 	}
 	
 	return msg;

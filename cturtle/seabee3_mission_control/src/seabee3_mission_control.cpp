@@ -230,7 +230,7 @@ void initLandmarkMap()
 
 void setWaypoint(cv::Point3d point)
 {
-  waypoint_controller::SetDesiredPose set_pose;
+  waypoint_controller::setDesiredPose set_pose;
   
   set_pose.request.Pos.x = point.x;
   set_pose.request.Pos.y = point.y;
@@ -241,7 +241,7 @@ void setWaypoint(cv::Point3d point)
 
 void fineTuneWaypoint(geometry_msgs::Vector3 point)
 {
-  waypoint_controller::SetDesiredPose set_pose;
+  waypoint_controller::setDesiredPose set_pose;
   set_pose.request.Pos = point;
 
   ft_waypoint_controller_srv.call(set_pose);  
@@ -267,7 +267,7 @@ void state_do_gate()
  
   if(!mSetWaypoint)
     {
-      setWaypoint(mGateWaypoint.mCenter);
+      setWaypoint(mGateWaypoint.center_);
       mSetWaypoint = true;
     }
   else if(mWaypointComplete)
@@ -317,7 +317,7 @@ void state_first_buoy()
   // otherwise move towards estimated buoy waypoint on map
   else if(!mSetWaypoint)
     {
-      setWaypoint(mBuoyWaypoint.mCenter);
+      setWaypoint(mBuoyWaypoint.center_);
       mSetWaypoint = true;
     }
 }
@@ -360,7 +360,7 @@ void state_second_buoy()
   else if(!mSetWaypoint)
     {
       mSetWaypoint = true;
-      setWaypoint(mBuoyWaypoint.mCenter);
+      setWaypoint(mBuoyWaypoint.center_);
     }   
 }
 
@@ -406,7 +406,7 @@ void state_first_bin()
   else if(!mSetWaypoint)
     {
       mSetWaypoint = true;
-      setWaypoint(mBinWaypoint.mCenter);
+      setWaypoint(mBinWaypoint.center_);
     }
 }
 
@@ -444,7 +444,7 @@ void state_second_bin()
   else if(!mSetWaypoint)
     {
       mSetWaypoint = true;
-      setWaypoint(mBinWaypoint.mCenter);
+      setWaypoint(mBinWaypoint.center_);
     }
 }
 
@@ -482,7 +482,7 @@ void state_window()
   else if(!mSetWaypoint)
     {
       mSetWaypoint = true;
-      setWaypoint(mWindowWaypoint.mCenter);
+      setWaypoint(mWindowWaypoint.center_);
     }
 
 }
@@ -536,8 +536,8 @@ int main(int argc, char** argv)
   bin_finder_srv = n.serviceClient<landmark_finder::FindLandmarks>("landmark_finder/FindBins");
   window_finder_srv = n.serviceClient<landmark_finder::FindLandmarks>("landmark_finder/FindWindows");
   landmark_map_srv = n.serviceClient<landmark_map_server::FetchLandmarkMap>("landmark_map_server/fetchLandmarkMap");
-  waypoint_controller_srv = n.serviceClient<waypoint_controller::SetDesiredPose>("waypoint_controller/setDesiredPose");
-  ft_waypoint_controller_srv = n.serviceClient<waypoint_controller::SetDesiredPose>("waypoint_controller/fineTunePose");
+  waypoint_controller_srv = n.serviceClient<waypoint_controller::setDesiredPose>("waypoint_controller/setDesiredPose");
+  ft_waypoint_controller_srv = n.serviceClient<waypoint_controller::setDesiredPose>("waypoint_controller/fineTunePose");
   
   initLandmarkMap();
 

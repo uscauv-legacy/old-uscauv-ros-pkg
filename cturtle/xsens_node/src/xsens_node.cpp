@@ -85,7 +85,7 @@ private:
 	bool calibrated_, autocalibrate_, assume_calibrated_;
 	double orientation_stdev_, angular_velocity_stdev_, linear_acceleration_stdev_, max_drift_rate_;
 
-	ros::NodeHandle n_priv_;
+	ros::NodeHandle nh_priv_;
 	ros::Publisher imu_pub_;
 	ros::Publisher custom_imu_pub_;
 	ros::Publisher is_calibrated_pub_;
@@ -96,25 +96,25 @@ private:
 	const static unsigned int IMU_DATA_CACHE_SIZE = 2;
 
 public:
-	XSensNode( ros::NodeHandle & n ) :
-		n_priv_( "~" )
+	XSensNode( ros::NodeHandle & nh ) :
+		nh_priv_( "~" )
 	{
-		n_priv_.param( "port", port_, std::string( "/dev/ttyUSB0" ) );
-		n_priv_.param( "frame_id", frame_id_, std::string( "imu" ) );
-		n_priv_.param( "autocalibrate", autocalibrate_, true );
-		n_priv_.param( "orientation_stdev", orientation_stdev_, 0.035 );
-		n_priv_.param( "angular_velocity_stdev", angular_velocity_stdev_, 0.012 );
-		n_priv_.param( "linear_acceleration_stdev", linear_acceleration_stdev_, 0.098 );
-		n_priv_.param( "max_drift_rate", max_drift_rate_, 0.0001 );
-		n_priv_.param( "assume_calibrated", assume_calibrated_, false );
+		nh_priv_.param( "port", port_, std::string( "/dev/ttyUSB0" ) );
+		nh_priv_.param( "frame_id", frame_id_, std::string( "imu" ) );
+		nh_priv_.param( "autocalibrate", autocalibrate_, true );
+		nh_priv_.param( "orientation_stdev", orientation_stdev_, 0.035 );
+		nh_priv_.param( "angular_velocity_stdev", angular_velocity_stdev_, 0.012 );
+		nh_priv_.param( "linear_acceleration_stdev", linear_acceleration_stdev_, 0.098 );
+		nh_priv_.param( "max_drift_rate", max_drift_rate_, 0.0001 );
+		nh_priv_.param( "assume_calibrated", assume_calibrated_, false );
 
 		calibrated_ = false;
 
-		imu_pub_ = n.advertise<sensor_msgs::Imu> ( "data", 1 );
-		custom_imu_pub_ = n.advertise<sensor_msgs::Imu> ( "custom_data", 1 );
-		is_calibrated_pub_ = n.advertise<std_msgs::Bool> ( "is_calibrated", 1 );
-		calibrate_rpy_drift_srv_ = n.advertiseService( "calibrate_rpy_drift", &XSensNode::calibrateRPYDriftCB, this );
-		calibrate_rpy_ori_srv_ = n.advertiseService( "calibrate_rpy_ori", &XSensNode::calibrateRPYOriCB, this );
+		imu_pub_ = nh.advertise<sensor_msgs::Imu> ( "data", 1 );
+		custom_imu_pub_ = nh.advertise<sensor_msgs::Imu> ( "custom_data", 1 );
+		is_calibrated_pub_ = nh.advertise<std_msgs::Bool> ( "is_calibrated", 1 );
+		calibrate_rpy_drift_srv_ = nh.advertiseService( "calibrate_rpy_drift", &XSensNode::calibrateRPYDriftCB, this );
+		calibrate_rpy_ori_srv_ = nh.advertiseService( "calibrate_rpy_ori", &XSensNode::calibrateRPYOriCB, this );
 
 		imu_driver_ = new XSensDriver();
 		if ( !imu_driver_->initMe() )
@@ -166,9 +166,10 @@ public:
 		is_calibrated_pub_.publish( is_calibrated_msg );
 	}
 
-	void runRPYOriCalibration( int n = 50 )
+	void runRPYOriCalibration( unsigned int n = 100 )
 	{
-		ori_comp_ *= 0.0; //reset the vector to <0, 0, 0>
+		//reset the vector to <0, 0, 0>
+		ori_comp_ *= 0.0;
 		for ( int i = 0; i < n && ros::ok(); i++ )
 		{
 			updateIMUData();
@@ -180,7 +181,7 @@ public:
 		ori_comp_ /= (double) ( -n );
 	}
 
-	void runRPYDriftCalibration( int n = 50 )
+	void runRPYDriftCalibration( unsigned int n = 100 )
 	{
 		drift_comp_ *= 0.0; //reset the vector to <0, 0, 0>
 		updateIMUData();
@@ -273,9 +274,9 @@ public:
 int main( int argc, char** argv )
 {
 	ros::init( argc, argv, "xsens_node" );
-	ros::NodeHandle n;
+	ros::NodeHandle nh;
 
-	XSensNode xsens_node( n );
+	XSensNode xsens_node( nh );
 	xsens_node.spin();
 	
 	return 0;

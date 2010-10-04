@@ -1,153 +1,162 @@
 #include <ros/ros.h>
+//for ImageTransport, Publisher
 #include <image_transport/image_transport.h>
+// for a ton of boost-related shit
 #include <boost/thread.hpp>
+// for CameraInfo
 #include <sensor_msgs/CameraInfo.h>
 
-boost::mutex img_mutex_l, img_mutex_r, info_mutex_l, info_mutex_r, flag_mutex;
-
-bool new_left_img = false;
-bool new_right_img = false;
-bool new_left_info = false;
-bool new_right_info = false;
-
-sensor_msgs::ImagePtr img_left, img_right;
-sensor_msgs::CameraInfo info_left, info_right;
-image_transport::Publisher *l_img_pub, *r_img_pub;
-ros::Publisher *l_info_pub, *r_info_pub;
-
-void publish_syncd_imgs()
+class ImageSync
 {
-	if ( new_left_img && new_right_img && new_left_info && new_right_info )
+private:
+	ros::NodeHandle nh_priv_;
+	image_transport::ImageTransport it_;
+
+	sensor_msgs::ImagePtr left_img_, right_img_;
+	sensor_msgs::CameraInfo left_info_, right_info_;
+
+	image_transport::Subscriber l_img_sub_, r_img_sub_;
+	image_transport::Publisher l_img_pub_, r_img_pub_;
+
+	ros::Subscriber l_info_sub_, r_info_sub_;
+	ros::Publisher l_info_pub_, r_info_pub_;
+
+	boost::mutex l_img_mutex_, r_img_mutex_, l_info_mutex_, r_info_mutex_, flag_mutex_;
+
+	bool new_left_img_;
+	bool new_right_img_;
+	bool new_left_info_;
+	bool new_right_info_;
+
+public:
+	ImageSync( ros::NodeHandle & nh ) :
+		nh_priv_( "~" ), it_( nh_priv_ )
 	{
-		ROS_INFO( "publishing..." );
-		boost::lock_guard<boost::mutex> limgguard( img_mutex_l );
-		boost::lock_guard<boost::mutex> rimgguard( img_mutex_r );
-		boost::lock_guard<boost::mutex> linfoguard( info_mutex_l );
-		boost::lock_guard<boost::mutex> rinfoguard( info_mutex_r );
+		new_left_img_ = new_right_img_ = new_left_info_ = new_right_info_ = false;
 
-		ros::Time now = ros::Time::now();
+		l_img_sub_ = it_.subscribe( "image_l", 1, &ImageSync::imageLeftCB, this );
+		r_img_sub_ = it_.subscribe( "image_r", 1, &ImageSync::imageRightCB, this );
 
-//		ROS_INFO( "setting stamps" );
+		l_info_sub_ = nh_priv_.subscribe( "info_l", 1, &ImageSync::infoLeftCB, this );
+		r_info_sub_ = nh_priv_.subscribe( "info_r", 1, &ImageSync::infoRightCB, this );
 
-		img_left->header.stamp = now;
-		img_right->header.stamp = now;
-		info_left.header.stamp = now;
-		info_right.header.stamp = now;
+		l_img_pub_ = it_.advertise( "image_l_sync", 1 );
 
-//		ROS_INFO( "publishing data" );
+		r_img_pub_ = it_.advertise( "image_r_sync", 1 );
 
-		l_img_pub->publish( img_left );
-		r_img_pub->publish( img_right );
-		l_info_pub->publish( info_left );
-		r_info_pub->publish( info_right );
+		l_info_pub_ = nh_priv_.advertise<sensor_msgs::CameraInfo> ( "info_l_sync", 1 );
 
-//		ROS_INFO( "resetting flags" );
-
-		//Reset new flags
-		new_left_img = false;
-		new_right_img = false;
-		new_left_info = false;
-		new_right_info = false;
-
-		ROS_INFO( "done" );
+		r_info_pub_ = nh_priv_.advertise<sensor_msgs::CameraInfo> ( "info_r_sync", 1 );
 	}
-//	ROS_INFO( "still waiting on all data to be syncd... %d %d %d %d", new_left_img, new_right_img, new_left_info, new_right_info );
-}
 
-void img_cb_l( const sensor_msgs::ImageConstPtr& msg )
-{
-	ROS_INFO( "got left img" );
-	img_mutex_l.lock();
-	img_left = boost::const_pointer_cast<sensor_msgs::Image>( msg );
+	~ImageSync()
+	{
 
-	img_mutex_l.unlock();
+	}
 
-	boost::lock_guard<boost::mutex> guard( flag_mutex );
-	new_left_img = true;
+	void publishSyncdImgs()
+	{
+		if ( new_left_img_ && new_right_img_ && new_left_info_ && new_right_info_ )
+		{
+			ROS_DEBUG( "publishing..." );
+			boost::lock_guard<boost::mutex> limgguard( l_img_mutex_ );
+			boost::lock_guard<boost::mutex> rimgguard( r_img_mutex_ );
+			boost::lock_guard<boost::mutex> linfoguard( l_info_mutex_ );
+			boost::lock_guard<boost::mutex> rinfoguard( r_info_mutex_ );
 
-	publish_syncd_imgs();
-}
+			ros::Time now = ros::Time::now();
 
-void img_cb_r( const sensor_msgs::ImageConstPtr& msg )
-{
-	ROS_INFO( "got right img" );
-	img_mutex_r.lock();
-	img_right = boost::const_pointer_cast<sensor_msgs::Image>( msg );
+			left_img_->header.stamp = now;
+			right_img_->header.stamp = now;
+			left_info_.header.stamp = now;
+			right_info_.header.stamp = now;
 
-	img_mutex_r.unlock();
-
-	boost::lock_guard<boost::mutex> guard( flag_mutex );
-	new_right_img = true;
-
-	publish_syncd_imgs();
-}
-
-void info_cb_l( const sensor_msgs::CameraInfoConstPtr& msg )
-{
-	ROS_INFO( "got left info" );
-	info_mutex_l.lock();
-	info_left = *msg;
-	//info_left = boost::const_pointer_cast<sensor_msgs::CameraInfo>(msg);
-
-	info_mutex_l.unlock();
-
-	boost::lock_guard<boost::mutex> guard( flag_mutex );
-	new_left_info = true;
-
-	publish_syncd_imgs();
-}
-
-void info_cb_r( const sensor_msgs::CameraInfoConstPtr& msg )
-{
-	ROS_INFO( "got right info" );
-	info_mutex_r.lock();
-	info_right = *msg;
+			l_img_pub_.publish( left_img_ );
+			r_img_pub_.publish( right_img_ );
+			l_info_pub_.publish( left_info_ );
+			r_info_pub_.publish( right_info_ );
 
 
-	//ROS_INFO( "%s", msg->header.stamp );
-	//ROS_INFO( "%s", info_right.header.stamp );
+			//Reset new flags
+			new_left_img_ = false;
+			new_right_img_ = false;
+			new_left_info_ = false;
+			new_right_info_ = false;
 
-	//info_right = boost::const_pointer_cast<sensor_msgs::CameraInfo>(msg);
+			ROS_DEBUG( "done" );
+		}
+	}
 
-	info_mutex_r.unlock();
+	void imageLeftCB( const sensor_msgs::ImageConstPtr& msg )
+	{
+		ROS_DEBUG( "got left img" );
+		l_img_mutex_.lock();
+		left_img_ = boost::const_pointer_cast<sensor_msgs::Image>( msg );
 
-	boost::lock_guard<boost::mutex> guard( flag_mutex );
-	new_right_info = true;
+		l_img_mutex_.unlock();
 
-	publish_syncd_imgs();
-}
+		boost::lock_guard<boost::mutex> guard( flag_mutex_ );
+		new_left_img_ = true;
+
+		publishSyncdImgs();
+	}
+
+	void imageRightCB( const sensor_msgs::ImageConstPtr& msg )
+	{
+		ROS_DEBUG( "got right img" );
+		r_img_mutex_.lock();
+		right_img_ = boost::const_pointer_cast<sensor_msgs::Image>( msg );
+
+		r_img_mutex_.unlock();
+
+		boost::lock_guard<boost::mutex> guard( flag_mutex_ );
+		new_right_img_ = true;
+
+		publishSyncdImgs();
+	}
+
+	void infoLeftCB( const sensor_msgs::CameraInfoConstPtr& msg )
+	{
+		ROS_DEBUG( "got left info" );
+		l_info_mutex_.lock();
+		left_info_ = *msg;
+
+		l_info_mutex_.unlock();
+
+		boost::lock_guard<boost::mutex> guard( flag_mutex_ );
+		new_left_info_ = true;
+
+		publishSyncdImgs();
+	}
+
+	void infoRightCB( const sensor_msgs::CameraInfoConstPtr& msg )
+	{
+		ROS_DEBUG( "got right info" );
+		r_info_mutex_.lock();
+		right_info_ = *msg;
+
+		r_info_mutex_.unlock();
+
+		boost::lock_guard<boost::mutex> guard( flag_mutex_ );
+		new_right_info_ = true;
+
+		publishSyncdImgs();
+	}
+
+	void spin()
+	{
+		ros::spin();
+	}
+
+};
 
 int main( int argc, char * argv[] )
 {
 	ros::init( argc, argv, "image_sync" );
-	ros::NodeHandle n;
-	ros::NodeHandle n_priv( "~" );
+	ros::NodeHandle nh;
 
-	image_transport::Subscriber img_sub_l, img_sub_r;
-	ros::Subscriber info_sub_l, info_sub_r;
-	image_transport::ImageTransport it( n_priv );
+	ImageSync image_sync( nh );
+	image_sync.spin();
 
-	img_sub_l = it.subscribe( "image_l", 1, img_cb_l );
-	img_sub_r = it.subscribe( "image_r", 1, img_cb_r );
-
-	info_sub_l = n_priv.subscribe( "info_l", 1, info_cb_l );
-	info_sub_r = n_priv.subscribe( "info_r", 1, info_cb_r );
-
-	l_img_pub = new image_transport::Publisher;
-	*l_img_pub = it.advertise( "image_l_sync", 1 );
-
-	r_img_pub = new image_transport::Publisher;
-	*r_img_pub = it.advertise( "image_r_sync", 1 );
-
-	l_info_pub = new ros::Publisher;
-	*l_info_pub = n_priv.advertise<sensor_msgs::CameraInfo> ( "info_l_sync", 1 );
-
-	r_info_pub = new ros::Publisher;
-	*r_info_pub = n_priv.advertise<sensor_msgs::CameraInfo> ( "info_r_sync", 1 );
-
-
-	//	img_left = new sensor_msgs::Image;
-	//	img_right = new sensor_msgs::Image;
-
-	ros::spin();
+	return 0;
 }

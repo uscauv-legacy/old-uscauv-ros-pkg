@@ -119,14 +119,14 @@ public:
 	visualization_msgs::Marker createMarker(const std::string & frame, const int id, const std::string & ns_ext = "") const;
 	localization_defs::LandmarkMsg createMsg() const;
 
-	cv::Point3d mCenter; //position relative to the center of the map (which is always the origin, <0, 0, 0>)
-	double mOrientation;
-	cv::Point3d mDim;
-	int mColor;
+	cv::Point3d center_; //position relative to the center of the map (which is always the origin, <0, 0, 0>)
+	double orientation_;
+	cv::Point3d dim_;
+	int color_;
 
-	int mShapeType; //how to draw this object
-	int mLandmarkType;
-	int mId;
+	int shape_type_; //how to draw this object
+	int landmark_type_;
+	int id_;
 };
 
 namespace LandmarkTypes

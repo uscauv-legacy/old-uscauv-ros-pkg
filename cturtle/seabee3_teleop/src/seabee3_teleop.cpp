@@ -36,7 +36,7 @@
 #include <ros/ros.h>
 #include <geometry_msgs/Twist.h>
 #include <joy/Joy.h>
-#include <seabee3_beestem/BeeStem3_driver.h>
+#include <seabee3_beestem/BeeStem3Driver.h>
 #include <seabee3_driver_base/FiringDeviceAction.h>
 
 ros::Publisher * cmd_vel_pub;
@@ -56,7 +56,7 @@ double applyDeadZone (double value)
 void fireCurrentDevice (bool reset = false)
 {
 	int mode = reset ? 1 : 0;
-	device_action.request.Req = mode;
+	device_action.request.action = mode;
 	switch(currentDevice)
 	{
 	case BeeStem3Driver::FiringDeviceID::Shooter:

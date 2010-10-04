@@ -49,17 +49,17 @@
 #include <landmark_map_server/FetchLandmarkMap.h>
 #include <cmath>
 
-std::string map_frame, robot_frame;
+std::string map_frame_, robot_frame;
 //cv::Point3d mEstimatedPosition;
 tf::Transform mOdomCorrection;
-tf::TransformBroadcaster * tb;
-tf::TransformListener * tl;
+tf::TransformBroadcaster * tb_;
+tf::TransformListener * tl_;
 
 ros::ServiceClient fetch_landmark_map_srv;
 ros::ServiceClient pipe_finder_srv;
 landmark_map_server::FetchLandmarkMap fetchLandmarkMap;
 
-tf::StampedTransform currentPose;
+tf::StampedTransform current_pose_;
 
 float distance(tf::Vector3 p1, geometry_msgs::Vector3 p2)
 {
@@ -81,15 +81,15 @@ void updateLocation()
 	    
 	    try
 	      {
-		tl->waitForTransform(map_frame.c_str(), robot_frame.c_str(), ros::Time(0), ros::Duration(5.0));
-		tl->lookupTransform(map_frame.c_str(), robot_frame.c_str(), ros::Time(0), currentPose);
+		tl_->waitForTransform(map_frame_.c_str(), robot_frame.c_str(), ros::Time(0), ros::Duration(5.0));
+		tl_->lookupTransform(map_frame_.c_str(), robot_frame.c_str(), ros::Time(0), current_pose_);
 	      }
 	    catch (tf::TransformException ex)
 	      {
 		ROS_ERROR("%s",ex.what());
 	      }
 	    
-	    tf::Vector3 theTf = currentPose.getOrigin();
+	    tf::Vector3 theTf = current_pose_.getOrigin();
 	    
 	    float minDistance = -1.0;
 	    int minPipe = 0;
@@ -111,7 +111,7 @@ void updateLocation()
 	    mOdomCorrection.setRotation( tf::Quaternion( 0.0, 0.0, 0.0 ) );
 	  }
 	
-	tb->sendTransform( tf::StampedTransform( mOdomCorrection, ros::Time::now(), "/landmark_map", "/seabee3/odom" ) );
+	tb_->sendTransform( tf::StampedTransform( mOdomCorrection, ros::Time::now(), "/landmark_map", "/seabee3/odom" ) );
 	
 }
 
@@ -128,14 +128,14 @@ int main( int argc, char* argv[] )
 	ros::init(argc, argv, "flsl");
 	ros::NodeHandle n("~");
 	
-	n.param("map_frame", map_frame, std::string("/landmark_map") );
+	n.param("map_frame", map_frame_, std::string("/landmark_map") );
 	n.param("robot_frame", robot_frame, std::string("/base_link") );
 		
 	fetch_landmark_map_srv = n.serviceClient<landmark_map_server::FetchLandmarkMap>("/landmark_map_server/fetchLandmarkMap");
 	pipe_finder_srv = n.serviceClient<landmark_finder::FindLandmarks>("landmark_finder/FindPipes");
 
-	tl = new tf::TransformListener;
-	tb = new tf::TransformBroadcaster;
+	tl_ = new tf::TransformListener;
+	tb_ = new tf::TransformBroadcaster;
 	
 	while( ros::ok() )
 	{

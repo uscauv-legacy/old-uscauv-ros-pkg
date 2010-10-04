@@ -53,6 +53,6 @@ public:
 	std::vector<visualization_msgs::Marker> createMarkerArray(const std::string & frame) const;
 	localization_defs::LandmarkMapMsg createMsg() const;
 
-	std::vector<Landmark> mLandmarks;
-	cv::Point2d mDim;
+	std::vector<Landmark> landmarks_;
+	cv::Point2d dim_;
 };

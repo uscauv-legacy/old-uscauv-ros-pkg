@@ -35,7 +35,7 @@
  *
  *******************************************************************************/
 
-//tools
+// tools
 #include <control_toolbox/pid.h> // for Pid
 #include <localization_tools/Util.h>
 #include <ros/ros.h>
@@ -43,13 +43,13 @@
 #include <string>
 #include <tf/transform_broadcaster.h> // for TransformBroadcaster
 #include <tf/transform_listener.h> // for TransformListener
-//msgs
+// msgs
 #include <geometry_msgs/Twist.h> // for cmd_vel
 #include <geometry_msgs/Vector3.h> // for generic 3d vectors
 #include <seabee3_driver_base/MotorCntl.h> // for outgoing thruster commands
 // seabee3_driver/Vector3Masked.msg <-- seabee3_driver/SetDesiredPose.srv
 
-//srvs
+// srvs
 #include <seabee3_driver/SetDesiredPose.h> // for SetDesiredPose
 void operator >>( const geometry_msgs::Twist & the_pose, tf::Transform & the_pose_tf )
 {
@@ -200,14 +200,14 @@ private:
 
 	Pid3D xyz_pid_, rpy_pid_;
 
-	ros::NodeHandle n_priv_;
+	ros::NodeHandle nh_priv_;
 	ros::Subscriber cmd_vel_sub_;
 	ros::Publisher motor_cntl_pub_;
 	ros::ServiceServer set_desired_pose_srv_;
 
 public:
-	Seabee3Driver( ros::NodeHandle & n ) :
-		n_priv_( "~" )
+	Seabee3Driver( ros::NodeHandle & nh ) :
+		nh_priv_( "~" )
 	{
 		tl_ = new tf::TransformListener;
 		tb_ = new tf::TransformBroadcaster;
@@ -216,67 +216,67 @@ public:
 
 		depth_initialized_ = false;
 
-		n_priv_.param( "global_frame", global_frame_, std::string( "/landmark_map" ) );
+		nh_priv_.param( "global_frame", global_frame_, std::string( "/landmark_map" ) );
 
-		n_priv_.param( "speed_err_cap", max_error_in_xyz_.x, 100.0 );
-		n_priv_.param( "strafe_err_cap", max_error_in_xyz_.y, 100.0 );
-		n_priv_.param( "depth_err_cap", max_error_in_xyz_.z, 100.0 );
+		nh_priv_.param( "speed_err_cap", max_error_in_xyz_.x, 100.0 );
+		nh_priv_.param( "strafe_err_cap", max_error_in_xyz_.y, 100.0 );
+		nh_priv_.param( "depth_err_cap", max_error_in_xyz_.z, 100.0 );
 
-		n_priv_.param( "roll_err_cap", max_error_in_rpy_.x, 25.0 );
-		n_priv_.param( "pitch_err_cap", max_error_in_rpy_.y, 25.0 );
-		n_priv_.param( "yaw_err_cap", max_error_in_rpy_.z, 25.0 );
+		nh_priv_.param( "roll_err_cap", max_error_in_rpy_.x, 25.0 );
+		nh_priv_.param( "pitch_err_cap", max_error_in_rpy_.y, 25.0 );
+		nh_priv_.param( "yaw_err_cap", max_error_in_rpy_.z, 25.0 );
 
-		n_priv_.param( "pid/pos/X/p", xyz_pid_.x.cfg.p, 2.5 );
-		n_priv_.param( "pid/pos/X/i", xyz_pid_.x.cfg.i, 0.05 );
-		n_priv_.param( "pid/pos/X/d", xyz_pid_.x.cfg.d, 0.2 );
+		nh_priv_.param( "pid/pos/X/p", xyz_pid_.x.cfg.p, 2.5 );
+		nh_priv_.param( "pid/pos/X/i", xyz_pid_.x.cfg.i, 0.05 );
+		nh_priv_.param( "pid/pos/X/d", xyz_pid_.x.cfg.d, 0.2 );
 
-		n_priv_.param( "pid/pos/Y/p", xyz_pid_.y.cfg.p, 2.5 );
-		n_priv_.param( "pid/pos/Y/i", xyz_pid_.y.cfg.i, 0.05 );
-		n_priv_.param( "pid/pos/Y/d", xyz_pid_.y.cfg.d, 0.2 );
+		nh_priv_.param( "pid/pos/Y/p", xyz_pid_.y.cfg.p, 2.5 );
+		nh_priv_.param( "pid/pos/Y/i", xyz_pid_.y.cfg.i, 0.05 );
+		nh_priv_.param( "pid/pos/Y/d", xyz_pid_.y.cfg.d, 0.2 );
 
-		n_priv_.param( "pid/pos/Z/p", xyz_pid_.z.cfg.p, 2.5 );
-		n_priv_.param( "pid/pos/Z/i", xyz_pid_.z.cfg.i, 0.05 );
-		n_priv_.param( "pid/pos/Z/d", xyz_pid_.z.cfg.d, 0.2 );
+		nh_priv_.param( "pid/pos/Z/p", xyz_pid_.z.cfg.p, 2.5 );
+		nh_priv_.param( "pid/pos/Z/i", xyz_pid_.z.cfg.i, 0.05 );
+		nh_priv_.param( "pid/pos/Z/d", xyz_pid_.z.cfg.d, 0.2 );
 
-		n_priv_.param( "pid/ori/R/p", rpy_pid_.x.cfg.p, 2.5 );
-		n_priv_.param( "pid/ori/R/i", rpy_pid_.x.cfg.i, 0.05 );
-		n_priv_.param( "pid/ori/R/d", rpy_pid_.x.cfg.d, 0.2 );
+		nh_priv_.param( "pid/ori/R/p", rpy_pid_.x.cfg.p, 2.5 );
+		nh_priv_.param( "pid/ori/R/i", rpy_pid_.x.cfg.i, 0.05 );
+		nh_priv_.param( "pid/ori/R/d", rpy_pid_.x.cfg.d, 0.2 );
 
-		n_priv_.param( "pid/ori/P/p", rpy_pid_.y.cfg.p, 2.5 );
-		n_priv_.param( "pid/ori/P/i", rpy_pid_.y.cfg.i, 0.05 );
-		n_priv_.param( "pid/ori/P/d", rpy_pid_.y.cfg.d, 0.2 );
+		nh_priv_.param( "pid/ori/P/p", rpy_pid_.y.cfg.p, 2.5 );
+		nh_priv_.param( "pid/ori/P/i", rpy_pid_.y.cfg.i, 0.05 );
+		nh_priv_.param( "pid/ori/P/d", rpy_pid_.y.cfg.d, 0.2 );
 
-		n_priv_.param( "pid/ori/Y/p", rpy_pid_.z.cfg.p, 2.5 );
-		n_priv_.param( "pid/ori/Y/i", rpy_pid_.z.cfg.i, 0.05 );
-		n_priv_.param( "pid/ori/Y/d", rpy_pid_.z.cfg.d, 0.2 );
+		nh_priv_.param( "pid/ori/Y/p", rpy_pid_.z.cfg.p, 2.5 );
+		nh_priv_.param( "pid/ori/Y/i", rpy_pid_.z.cfg.i, 0.05 );
+		nh_priv_.param( "pid/ori/Y/d", rpy_pid_.z.cfg.d, 0.2 );
 
-		n_priv_.param( "pid/i_max", pid_i_max_, 1.0 );
-		n_priv_.param( "pid/i_min", pid_i_min_, -1.0 );
+		nh_priv_.param( "pid/i_max", pid_i_max_, 1.0 );
+		nh_priv_.param( "pid/i_min", pid_i_min_, -1.0 );
 
-		n_priv_.param( "speed_m1_dir", thruster_dir_cfg_[Axes::speed].at( 1 ), 1.0 );
-		n_priv_.param( "speed_m2_dir", thruster_dir_cfg_[Axes::speed].at( 2 ), 1.0 );
+		nh_priv_.param( "speed_m1_dir", thruster_dir_cfg_[Axes::speed].at( 1 ), 1.0 );
+		nh_priv_.param( "speed_m2_dir", thruster_dir_cfg_[Axes::speed].at( 2 ), 1.0 );
 
-		n_priv_.param( "strafe_m1_dir", thruster_dir_cfg_[Axes::strafe].at( 1 ), 1.0 );
-		n_priv_.param( "strafe_m2_dir", thruster_dir_cfg_[Axes::strafe].at( 2 ), 1.0 );
+		nh_priv_.param( "strafe_m1_dir", thruster_dir_cfg_[Axes::strafe].at( 1 ), 1.0 );
+		nh_priv_.param( "strafe_m2_dir", thruster_dir_cfg_[Axes::strafe].at( 2 ), 1.0 );
 
-		n_priv_.param( "depth_m1_dir", thruster_dir_cfg_[Axes::depth].at( 1 ), 1.0 );
-		n_priv_.param( "depth_m2_dir", thruster_dir_cfg_[Axes::depth].at( 2 ), 1.0 );
+		nh_priv_.param( "depth_m1_dir", thruster_dir_cfg_[Axes::depth].at( 1 ), 1.0 );
+		nh_priv_.param( "depth_m2_dir", thruster_dir_cfg_[Axes::depth].at( 2 ), 1.0 );
 
-		n_priv_.param( "roll_m1_dir", thruster_dir_cfg_[Axes::roll].at( 1 ), 1.0 );
-		n_priv_.param( "roll_m2_dir", thruster_dir_cfg_[Axes::roll].at( 2 ), 1.0 );
+		nh_priv_.param( "roll_m1_dir", thruster_dir_cfg_[Axes::roll].at( 1 ), 1.0 );
+		nh_priv_.param( "roll_m2_dir", thruster_dir_cfg_[Axes::roll].at( 2 ), 1.0 );
 
-		n_priv_.param( "pitch_m1_dir", thruster_dir_cfg_[Axes::pitch].at( 1 ), 1.0 );
-		n_priv_.param( "pitch_m2_dir", thruster_dir_cfg_[Axes::pitch].at( 2 ), 1.0 );
+		nh_priv_.param( "pitch_m1_dir", thruster_dir_cfg_[Axes::pitch].at( 1 ), 1.0 );
+		nh_priv_.param( "pitch_m2_dir", thruster_dir_cfg_[Axes::pitch].at( 2 ), 1.0 );
 
-		n_priv_.param( "yaw_m1_dir", thruster_dir_cfg_[Axes::yaw].at( 1 ), -1.0 );
-		n_priv_.param( "yaw_m2_dir", thruster_dir_cfg_[Axes::yaw].at( 2 ), 1.0 );
+		nh_priv_.param( "yaw_m1_dir", thruster_dir_cfg_[Axes::yaw].at( 1 ), -1.0 );
+		nh_priv_.param( "yaw_m2_dir", thruster_dir_cfg_[Axes::yaw].at( 2 ), 1.0 );
 
-		n_priv_.param( "speed_axis_dir", axis_dir_cfg_[Axes::speed], 1.0 );
-		n_priv_.param( "strafe_axis_dir", axis_dir_cfg_[Axes::strafe], 1.0 );
-		n_priv_.param( "depth_axis_dir", axis_dir_cfg_[Axes::depth], -1.0 );
-		n_priv_.param( "roll_axis_dir", axis_dir_cfg_[Axes::roll], -1.0 );
-		n_priv_.param( "pitch_axis_dir", axis_dir_cfg_[Axes::pitch], -1.0 );
-		n_priv_.param( "yaw_axis_dir", axis_dir_cfg_[Axes::yaw], -1.0 );
+		nh_priv_.param( "speed_axis_dir", axis_dir_cfg_[Axes::speed], 1.0 );
+		nh_priv_.param( "strafe_axis_dir", axis_dir_cfg_[Axes::strafe], 1.0 );
+		nh_priv_.param( "depth_axis_dir", axis_dir_cfg_[Axes::depth], -1.0 );
+		nh_priv_.param( "roll_axis_dir", axis_dir_cfg_[Axes::roll], -1.0 );
+		nh_priv_.param( "pitch_axis_dir", axis_dir_cfg_[Axes::pitch], -1.0 );
+		nh_priv_.param( "yaw_axis_dir", axis_dir_cfg_[Axes::yaw], -1.0 );
 
 		xyz_pid_.initPid( pid_i_min_, pid_i_max_ );
 		xyz_pid_.reset();
@@ -290,9 +290,9 @@ public:
 			motor_cntl_msg_.mask[i] = 0;
 		}
 
-		cmd_vel_sub_ = n.subscribe( "/seabee3/cmd_vel", 1, &Seabee3Driver::cmdVelCB, this );
-		motor_cntl_pub_ = n.advertise<seabee3_driver_base::MotorCntl> ( "/seabee3/motor_cntl", 1 );
-		set_desired_pose_srv_ = n.advertiseService( "/seabee3/set_desired_pose", &Seabee3Driver::setDesiredPoseCB, this );
+		cmd_vel_sub_ = nh.subscribe( "/seabee3/cmd_vel", 1, &Seabee3Driver::cmdVelCB, this );
+		motor_cntl_pub_ = nh.advertise<seabee3_driver_base::MotorCntl> ( "/seabee3/motor_cntl", 1 );
+		set_desired_pose_srv_ = nh.advertiseService( "/seabee3/set_desired_pose", &Seabee3Driver::setDesiredPoseCB, this );
 
 		setDesiredPose( geometry_msgs::Twist() ); //set current xyz to 0, desired RPY to current RPY
 	}
@@ -360,7 +360,7 @@ public:
 			break;
 		}
 
-		if( motor1 < 0 || motor2 < 0 ) return;
+		if ( motor1 < 0 || motor2 < 0 ) return;
 
 		int motor1_val = msg.motors[motor1];
 		int motor2_val = msg.motors[motor2];
@@ -524,6 +524,7 @@ public:
 			double strafeMotorVal = axis_dir_cfg_[Axes::strafe] * xyz_pid_.y.pid.updatePid( error_in_xyz_.y, dt );
 			double depthMotorVal = axis_dir_cfg_[Axes::depth] * xyz_pid_.z.pid.updatePid( error_in_xyz_.z, dt );
 
+
 			//double rollMotorVal = axis_dir_cfg_[Axes::roll] * rpy_pid_.x.pid.updatePid( error_in_rpy_.x, dt );
 			//double pitchMotorVal = axis_dir_cfg_[Axes::pitch] * rpy_pid_.y.pid.updatePid( error_in_rpy_.y, dt );
 			double yawMotorVal = axis_dir_cfg_[Axes::yaw] * rpy_pid_.z.pid.updatePid( error_in_rpy_.z, dt );
@@ -570,9 +571,9 @@ public:
 int main( int argc, char** argv )
 {
 	ros::init( argc, argv, "seabee3_driver" );
-	ros::NodeHandle n;
+	ros::NodeHandle nh;
 	
-	Seabee3Driver seabee3_driver( n );
+	Seabee3Driver seabee3_driver( nh );
 	seabee3_driver.spin();
 
 	return 0;

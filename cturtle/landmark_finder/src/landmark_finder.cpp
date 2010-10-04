@@ -59,7 +59,7 @@ int runBuoyDemo;
 
 //std::queue<localization_defs::LandmarkMsg> messageQueue;
 std::queue<visualization_msgs::Marker> markerQueue;
-tf::TransformListener * tl;
+tf::TransformListener * tl_;
 
 namespace Demo
 {
@@ -177,8 +177,8 @@ bool FindBuoysCallback(landmark_finder::FindLandmarks::Request & req, landmark_f
 			
 			try
 			{
-				tl->waitForTransform("/landmark_map", "/seabee3/front_lt_camera", ros::Time(0), ros::Duration(5.0));
-				tl->lookupTransform("/landmark_map", "/seabee3/front_lt_camera", ros::Time(0), mapOffset);
+				tl_->waitForTransform("/landmark_map", "/seabee3/front_lt_camera", ros::Time(0), ros::Duration(5.0));
+				tl_->lookupTransform("/landmark_map", "/seabee3/front_lt_camera", ros::Time(0), mapOffset);
 			}   
 			catch( tf::TransformException &ex )
 			{
@@ -190,9 +190,9 @@ bool FindBuoysCallback(landmark_finder::FindLandmarks::Request & req, landmark_f
 			
 			resp.Landmarks.LandmarkArray.push_back( theBuoy.createMsg() ); //for the fuckin' win; I knew those localization_defs would come in handy
 			
-			theBuoy.mCenter.x += mapOffset.getOrigin().x();
-			theBuoy.mCenter.y += mapOffset.getOrigin().y();
-			theBuoy.mCenter.z += mapOffset.getOrigin().z();
+			theBuoy.center_.x += mapOffset.getOrigin().x();
+			theBuoy.center_.y += mapOffset.getOrigin().y();
+			theBuoy.center_.z += mapOffset.getOrigin().z();
 			//we're assuming there's only one buoy of each color available at a given time, so we can use blob.Color as a uniqe ID
 			markerQueue.push(theBuoy.createMarker( "/landmark_map", req.Ids[i], "_finder" ) ); //append "_finder" to the namespace: <type>_finder<id>
 		}
@@ -285,8 +285,8 @@ bool FindPipesCallback(landmark_finder::FindLandmarks::Request & req, landmark_f
 		
 		try
 		{
-			tl->waitForTransform("/landmark_map", "/seabee3/down_lt_camera", ros::Time(0), ros::Duration(5.0));
-			tl->lookupTransform("/landmark_map", "/seabee3/down_lt_camera", ros::Time(0), mapOffset);
+			tl_->waitForTransform("/landmark_map", "/seabee3/down_lt_camera", ros::Time(0), ros::Duration(5.0));
+			tl_->lookupTransform("/landmark_map", "/seabee3/down_lt_camera", ros::Time(0), mapOffset);
 		}   
 		catch( tf::TransformException &ex )
 		{
@@ -297,8 +297,8 @@ bool FindPipesCallback(landmark_finder::FindLandmarks::Request & req, landmark_f
 		
 		resp.Landmarks.LandmarkArray.push_back( thePipe.createMsg() );
 			
-		thePipe.mCenter.x += mapOffset.getOrigin().x();
-		thePipe.mCenter.y += mapOffset.getOrigin().y();
+		thePipe.center_.x += mapOffset.getOrigin().x();
+		thePipe.center_.y += mapOffset.getOrigin().y();
 		//theBuoy.mCenter.z += mapOffset.getOrigin().z();
 
 		markerQueue.push(thePipe.createMarker( "/landmark_map", 0.0, "_finder" ) );
@@ -382,7 +382,7 @@ int main(int argc, char* argv[])
 	
 	ros::Publisher marker_pub = n.advertise<visualization_msgs::Marker>("landmarks", 1);
 	
-	tl = new tf::TransformListener;
+	tl_ = new tf::TransformListener;
 	
 	if(runBuoyDemo == 1)
 	{

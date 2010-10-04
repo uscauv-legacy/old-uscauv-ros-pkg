@@ -1,13 +1,13 @@
 <package>
-  <description brief="image_stream">
+  <description brief="image_server">
 
-     image_stream
+     image_server
 
   </description>
-  <author>USCART</author>
+  <author>Rand Voorhies, Edward T. Kaszubski</author>
   <license>BSD</license>
   <review status="unreviewed" notes=""/>
-  <url>http://ros.org/wiki/image_stream</url>
+  <url>http://ros.org/wiki/image_server</url>
 	<depend package="image_transport"/>
 	<depend package="opencv2"/>
 	<depend package="cv_bridge"/>

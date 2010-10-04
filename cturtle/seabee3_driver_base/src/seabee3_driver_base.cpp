@@ -49,7 +49,7 @@
 class Seabee3DriverBaseNode
 {
 private:
-	ros::NodeHandle n_priv_;
+	ros::NodeHandle nh_priv_;
 	ros::Subscriber motor_cntl_sub_;
 
 	ros::Publisher intl_pressure_pub_;
@@ -69,36 +69,36 @@ public:
 	//#define SURFACE_PRESSURE 908
 	const static int PRESSURE_DEPTH_SLOPE = 33;
 
-	Seabee3DriverBaseNode( ros::NodeHandle & n ) :
-		n_priv_( "~" )
+	Seabee3DriverBaseNode( ros::NodeHandle & nh ) :
+		nh_priv_( "~" )
 	{
 		pressure_calibrated_ = false;
 
-		n_priv_.param( "surface_pressure", surface_pressure_, 908 );
-		n_priv_.param( "port", port_, std::string("/dev/ttyUSB0") );
+		nh_priv_.param( "surface_pressure", surface_pressure_, 908 );
+		nh_priv_.param( "port", port_, std::string("/dev/ttyUSB0") );
 
 		ROS_INFO( "constructing new driver instance" );
 		bee_stem_3_driver_ = new BeeStem3Driver( port_ );
 
-		n_priv_.param( "shooter/trigger_time", bee_stem_3_driver_->shooter_params_.trigger_time_, 50 );
-		n_priv_.param( "shooter/trigger_value", bee_stem_3_driver_->shooter_params_.trigger_value_, 80 );
+		nh_priv_.param( "shooter/trigger_time", bee_stem_3_driver_->shooter_params_.trigger_time_, 50 );
+		nh_priv_.param( "shooter/trigger_value", bee_stem_3_driver_->shooter_params_.trigger_value_, 80 );
 
-		n_priv_.param( "dropper1/trigger_time", bee_stem_3_driver_->dropper1_params_.trigger_time_, 50 );
-		n_priv_.param( "dropper1/trigger_value", bee_stem_3_driver_->dropper1_params_.trigger_value_, 40 );
+		nh_priv_.param( "dropper1/trigger_time", bee_stem_3_driver_->dropper1_params_.trigger_time_, 50 );
+		nh_priv_.param( "dropper1/trigger_value", bee_stem_3_driver_->dropper1_params_.trigger_value_, 40 );
 
-		n_priv_.param( "dropper2/trigger_time", bee_stem_3_driver_->dropper2_params_.trigger_time_, 50 );
-		n_priv_.param( "dropper2/trigger_value", bee_stem_3_driver_->dropper2_params_.trigger_value_, 40 );
+		nh_priv_.param( "dropper2/trigger_time", bee_stem_3_driver_->dropper2_params_.trigger_time_, 50 );
+		nh_priv_.param( "dropper2/trigger_value", bee_stem_3_driver_->dropper2_params_.trigger_value_, 40 );
 
-		motor_cntl_sub_ = n.subscribe( "/seabee3/motor_cntl", 1, &Seabee3DriverBaseNode::motorCntlCB, this );
+		motor_cntl_sub_ = nh.subscribe( "/seabee3/motor_cntl", 1, &Seabee3DriverBaseNode::motorCntlCB, this );
 
-		intl_pressure_pub_ = n.advertise<seabee3_driver_base::Pressure> ( "/seabee3/intl_pressure", 1 );
-		extl_pressure_pub_ = n.advertise<seabee3_driver_base::Pressure> ( "/seabee3/extl_pressure", 1 );
-		depth_pub_ = n.advertise<seabee3_driver_base::Depth> ( "/seabee3/depth", 1 );
-		kill_switch_pub_ = n.advertise<seabee3_driver_base::KillSwitch> ( "/seabee3/kill_switch", 1 );
+		intl_pressure_pub_ = nh.advertise<seabee3_driver_base::Pressure> ( "/seabee3/intl_pressure", 1 );
+		extl_pressure_pub_ = nh.advertise<seabee3_driver_base::Pressure> ( "/seabee3/extl_pressure", 1 );
+		depth_pub_ = nh.advertise<seabee3_driver_base::Depth> ( "/seabee3/depth", 1 );
+		kill_switch_pub_ = nh.advertise<seabee3_driver_base::KillSwitch> ( "/seabee3/kill_switch", 1 );
 
-		dropper1_action_srv_ = n.advertiseService( "/seabee3/dropper1_action", &Seabee3DriverBaseNode::dropper1ActionCB, this );
-		dropper2_action_srv_ = n.advertiseService( "/seabee3/dropper2_action", &Seabee3DriverBaseNode::dropper2ActionCB, this );
-		shooter_action_srv_ = n.advertiseService( "/seabee3/shooter_action", &Seabee3DriverBaseNode::shooterActionCB, this );
+		dropper1_action_srv_ = nh.advertiseService( "/seabee3/dropper1_action", &Seabee3DriverBaseNode::dropper1ActionCB, this );
+		dropper2_action_srv_ = nh.advertiseService( "/seabee3/dropper2_action", &Seabee3DriverBaseNode::dropper2ActionCB, this );
+		shooter_action_srv_ = nh.advertiseService( "/seabee3/shooter_action", &Seabee3DriverBaseNode::shooterActionCB, this );
 	}
 
 	float getDepthFromPressure( int pressure )
@@ -182,9 +182,9 @@ public:
 int main( int argc, char** argv )
 {
 	ros::init( argc, argv, "seabee3_driver_base" );
-	ros::NodeHandle n;
+	ros::NodeHandle nh;
 	
-	Seabee3DriverBaseNode seabee3_driver_base_node( n );
+	Seabee3DriverBaseNode seabee3_driver_base_node( nh );
 	seabee3_driver_base_node.spin();
 
 	return 0;

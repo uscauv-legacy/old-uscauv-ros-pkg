@@ -75,7 +75,7 @@
 #include "convert.h" 
 #include <sys/time.h>
 #include <time.h>
-#include <xsens_node/IMUData.h>
+#include <xsens_node/Imu.h>
 #include <boost/thread/thread.hpp> 
 #include <boost/thread/mutex.hpp>
 
@@ -232,7 +232,7 @@ REPORT_SERVICES_MSG msg_service;
 float mYaw = 0.0;
 boost::mutex imu_mutex;
 
-void imuCallback(const xsens_node::IMUDataConstPtr & msg)
+void imuCallback(const xsens_node::ImuConstPtr & msg)
 {
   mYaw = msg->ori.z;
 }
