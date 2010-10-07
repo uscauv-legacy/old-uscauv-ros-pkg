@@ -60,7 +60,7 @@ double compareSURFDescriptors( const float* d1, const float* d2, double best, in
 	}
 
 	// Delete this eventually if (total_cost == 0.0)	complete++;
-	return total_cost;
+	 return total_cost;
 }
 
 
