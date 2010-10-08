@@ -11,6 +11,7 @@
 #include <iostream>
 #include <iomanip>
 #include <sstream>
+#include <vector>
 
 class ImageServer
 {
@@ -19,6 +20,7 @@ private:
 	sensor_msgs::CvBridge cv_bridge_;
 	image_transport::ImageTransport it_;
 	image_transport::Publisher * img_pub_;
+	std::vector<cv::Mat> image_cache_;
 
 	std::string file_prefix_;
 	std::string file_ext_;
@@ -53,12 +55,19 @@ public:
 		int current_frame = start_;
 		while ( ros::ok() && current_frame <= end_ )
 		{
-			std::stringstream filename;
-			filename << file_prefix_ << std::setfill( '0' ) << std::setw( digits_ ) << current_frame << file_ext_;
-			ROS_INFO( "Opening %s", filename.str().c_str() );
-
-			cv::Mat img = cv::imread( filename.str().c_str() );
-
+			cv::Mat img;
+			if ( image_cache_.size() > 0 && image_cache_.size() > current_frame - start_ )
+			{
+				img = image_cache_[current_frame - start_];
+			}
+			else
+			{
+				std::stringstream filename;
+				filename << file_prefix_ << std::setfill( '0' ) << std::setw( digits_ ) << current_frame << file_ext_;
+				ROS_INFO( "Opening %s", filename.str().c_str() );
+				img = cv::imread( filename.str().c_str() );
+				image_cache_.push_back( img );
+			}
 
 			//Memory leak? Probably.
 			IplImage ipl_img = img;
