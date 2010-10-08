@@ -59,17 +59,18 @@ private:
 	ros::NodeHandle nh_priv_;
 	ros::MultiThreadedSpinner spinner_;
 
-	//dynamic_reconfigure::Server<cv_it_template::CvItTemplateConfig> cfg_srv_;
-
 	sensor_msgs::ImagePtr img_;
 	sensor_msgs::CameraInfo info_;
 
-	image_transport::Publisher img_pub_;
+	/* TODO: uncomment this code if you need to publish an image
+	 * image_transport::Publisher img_pub_;
+	 */
 	image_transport::Subscriber img_sub_;
 	image_transport::ImageTransport it_;
 
 	ros::Subscriber info_sub_;
 	ros::ServiceServer do_something_srv_;
+	cv_it_template::DoSomething::Response last_response_;
 
 	sensor_msgs::CvBridge bridge_;
 
@@ -85,7 +86,9 @@ public:
 		img_sub_ = it_.subscribe( "image", 1, &CvItTemplate::imageCB, this );
 		info_sub_ = nh_priv_.subscribe( "camera_info", 1, &CvItTemplate::infoCB, this );
 
-		img_pub_ = it_.advertise( "output_image", 1 );
+		/* TODO: uncomment this code if you need to publish an image
+		 * img_pub_ = it_.advertise( "output_image", 1 );
+		 */
 		do_something_srv_ = nh_priv_.advertiseService( "do_something", &CvItTemplate::doSomethingCB, this );
 
 		dynamic_reconfigure::Server<cv_it_template::CvItTemplateConfig> srv;
@@ -135,29 +138,39 @@ public:
 	// TODO: Rename this method according to the actual service request that will be used
 	bool doSomethingCB( cv_it_template::DoSomething::Request & req, cv_it_template::DoSomething::Response & resp )
 	{
+		if( !new_img_ )
+		{
+			resp = last_response_;
+			return true;
+		}
+
+		new_img_ = false;
+
 		// **** do not edit below this line ****
 		boost::lock_guard<boost::mutex> img_guard( img_mutex_ );
 		cv_img_ = cv::Mat( bridge_.imgMsgToCv( img_ ) );
 		// *************************************
 
 
-		// process and optionally make changes to cv_img_
-		// access pixels via:
-		/*for ( int y = 0; y < cv_img_.size().height; y++ )
-		{
-			for ( int x = 0; x < cv_img_.size().width; x++ )
-			{
-				// get pixel data
-				cv::Vec3b data = cv_img_.at<cv::Vec3b> ( cv::Point( x, y ) );
-				// set pixel data
-				cv_img_.at<cv::Vec3b> ( cv::Point( x, y ) ) = data;
-			}
-		}*/
+		// TODO: process and optionally make changes to cv_img_
 
-		// **** do not edit below this line ****
-		IplImage * ipl_img = & ( (IplImage) cv_img_ );
-		img_pub_.publish( bridge_.cvToImgMsg( ipl_img ) );
-		// *************************************
+		/* example: iterate through all pixels in the image;
+		 *	for ( int y = 0; y < cv_img_.size().height; y++ )
+		 * 	{
+		 * 		for ( int x = 0; x < cv_img_.size().width; x++ )
+		 * 		{
+		 * 			// get pixel data
+		 * 			cv::Vec3b data = cv_img_.at<cv::Vec3b> ( cv::Point( x, y ) );
+		 * 			// set pixel data
+		 * 			cv_img_.at<cv::Vec3b> ( cv::Point( x, y ) ) = data;
+		 * 		}
+		 * 	}
+		 */
+
+		/* TODO: uncomment this code if you need to publish an image
+		 * IplImage * ipl_img = & ( (IplImage) cv_img_ );
+		 * img_pub_.publish( bridge_.cvToImgMsg( ipl_img ) );
+		 */
 
 		// notify ROS whether or not everything executed properly
 		return true;
