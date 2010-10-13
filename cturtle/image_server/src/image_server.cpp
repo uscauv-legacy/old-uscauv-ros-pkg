@@ -27,7 +27,7 @@ private:
 	int start_;
 	int end_;
 	int digits_;
-	int rate_;
+	double rate_;
 	bool loop_;
 
 public:
@@ -39,10 +39,10 @@ public:
 		nh_priv_.param( "end", end_, 0 );
 		nh_priv_.param( "digits", digits_, 0 );
 		nh_priv_.param( "ext", file_ext_, std::string( "" ) );
-		nh_priv_.param( "rate", rate_, 15 );
+		nh_priv_.param( "rate", rate_, 15.0 );
 		nh_priv_.param( "loop", loop_, false );
 
-		img_pub_ = new image_transport::Publisher( it_.advertise( "image_color", 1 ) );
+		img_pub_ = new image_transport::Publisher( it_.advertise( "output_image", 1 ) );
 	}
 
 	~ImageServer()
@@ -66,7 +66,18 @@ public:
 				filename << file_prefix_ << std::setfill( '0' ) << std::setw( digits_ ) << current_frame << file_ext_;
 				ROS_INFO( "Opening %s", filename.str().c_str() );
 				img = cv::imread( filename.str().c_str() );
-				image_cache_.push_back( img );
+
+				if( img.data != NULL )
+				{
+					image_cache_.push_back( img );
+				}
+				else
+				{
+					ROS_WARN("Ignoring %s; does not exist in filesystem", filename.str().c_str() );
+					end_ --;
+					current_frame --;
+					continue;
+				}
 			}
 
 			//Memory leak? Probably.
@@ -82,8 +93,29 @@ public:
 	}
 };
 
+void printUsage()
+{
+	printf( "\nUsage: image_server [ prefix start end digits ext rate loop ]\n" );
+}
+
 int main( int argc, char* argv[] )
 {
+	printf( "argc: %d", argc );
+	if ( argc < 2 )
+	{
+		printUsage();
+		return 0;
+	}
+
+	for ( int i = 1; i < argc; i++ )
+	{
+		if ( strcmp( argv[i], "-h" ) == 0 || strcmp( argv[i], "--help" ) == 0 )
+		{
+			printUsage();
+			return 0;
+		}
+	}
+
 	ros::init( argc, argv, "image_server" );
 	ros::NodeHandle nh;
 

@@ -59,7 +59,7 @@
 				</dictionary>
 				<dictionary>
 					<key>org.eclipse.cdt.make.core.fullBuildTarget</key>
-					<value>--foreach --command roscd $ --command make --target ${selected_resource_name}</value>
+					<value>--command rosmake @ --target ${selected_resource_name}</value>
 				</dictionary>
 				<dictionary>
 					<key>org.eclipse.cdt.make.core.stopOnError</key>
