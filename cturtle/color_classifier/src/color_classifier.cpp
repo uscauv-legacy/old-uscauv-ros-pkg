@@ -33,26 +33,19 @@
  *
  *******************************************************************************/
 
-#include <ros/ros.h>
-// for ImageTransport, Publisher
-#include <image_transport/image_transport.h>
 // for Mat
 #include <opencv/cv.h>
-//for CvBridge
-#include <cv_bridge/CvBridge.h>
-// for a ton of boost-related shit
-#include <boost/thread.hpp>
-// for CameraInfo
-#include <sensor_msgs/CameraInfo.h>
-// for pinhole camera model
-#include <image_geometry/pinhole_camera_model.h>
-// for dynamic reconfigure server
-#include <dynamic_reconfigure/server.h>
+#include <opencv/cxcore.h>
+#include "highgui.h"
+// for BaseImageProc
+#include <base_image_proc/base_image_proc.h>
 // for cfg code
 #include <color_classifier/ColorClassifierConfig.h>
 
-class ColorClassifier
+typedef color_classifier::ColorClassifierConfig _ReconfigureType;
+class ColorClassifier: public BaseImageProc<_ReconfigureType>
 {
+
 public:
 	struct OutputColorRGB
 	{
@@ -79,50 +72,27 @@ public:
 	struct ColorSpectrumHSV
 	{
 		DataRange<double> red, orange, yellow, green, blue;
-		double black_v_threshold, white_combined_sv_threshold, black_combined_sv_threshold;
+		double black_l_threshold, white_l_threshold, unknown_s_threshold;
 	};
 private:
-	ros::NodeHandle nh_priv_;
-	ros::MultiThreadedSpinner spinner_;
-
-	sensor_msgs::ImagePtr img_;
-	sensor_msgs::CameraInfo info_;
-
-	image_transport::Publisher img_pub_;
-
-	image_transport::Subscriber img_sub_;
-	image_transport::ImageTransport it_;
-
-	ros::Subscriber info_sub_;
-
-	sensor_msgs::CvBridge bridge_;
-
-	dynamic_reconfigure::Server<color_classifier::ColorClassifierConfig> reconfigure_srv_;
-	dynamic_reconfigure::Server<color_classifier::ColorClassifierConfig>::CallbackType reconfigure_callback_;
-
-	cv::Mat cv_img_;
-
-	boost::mutex img_mutex_, info_mutex_, flag_mutex_;
-	bool new_img_;
-	std::string image_transport_;
 
 	ColorClassifier::ColorSpectrumHSV spectrum_hsv_;
+
+	double ms_spatial_radius_;
+	double ms_color_ratius_;
+	int ms_max_level_;
+	int ms_max_iter_;
+	double ms_min_epsilon_;
+	bool enable_thresholding_;
+	bool enable_meanshift_;
+	bool enable_color_filter_;
 
 public:
 
 	ColorClassifier( ros::NodeHandle & nh ) :
-		nh_priv_( "~" ), spinner_( 3 ), it_( nh ), new_img_( false )
+		BaseImageProc<_ReconfigureType> ( nh )
 	{
-		ROS_INFO( "Constructing..." );
-		nh_priv_.param( "image_transport", image_transport_, std::string( "raw" ) );
-
-		img_sub_ = it_.subscribe( nh.resolveName( "image" ), 1, &ColorClassifier::imageCB, this );
-		info_sub_ = nh_priv_.subscribe( "camera_info", 1, &ColorClassifier::infoCB, this );
-
-		img_pub_ = it_.advertise( "output_image", 1 );
-
-		reconfigure_callback_ = boost::bind( &ColorClassifier::reconfigureCB, this, _1, _2 );
-		reconfigure_srv_.setCallback( reconfigure_callback_ );
+		//
 	}
 
 	~ColorClassifier()
@@ -143,10 +113,10 @@ public:
 		return value;
 	}
 
-	void reconfigureCB( color_classifier::ColorClassifierConfig &config, uint32_t level )
-	{
-		ROS_INFO( "Reconfigure successful" );
 
+	//using BaseImageProc<_ReconfigureType>::reconfigureCB;
+	void reconfigureCB( _ReconfigureType &config, uint32_t level )
+	{
 		spectrum_hsv_.red.min = wrapValue( config.red_h_c - config.red_h_r, 0.0, 360.0 );
 		spectrum_hsv_.red.max = wrapValue( config.red_h_c + config.red_h_r, 0.0, 360.0 );
 
@@ -161,6 +131,16 @@ public:
 
 		spectrum_hsv_.blue.min = wrapValue( config.blue_h_c - config.blue_h_r, 0.0, 360.0 );
 		spectrum_hsv_.blue.max = wrapValue( config.blue_h_c + config.blue_h_r, 0.0, 360.0 );
+
+		ms_spatial_radius_ = config.ms_spatial_radius;
+		ms_color_ratius_ = config.ms_color_ratius;
+		ms_max_level_ = config.ms_max_level;
+		ms_max_iter_ = config.ms_max_iter;
+		ms_min_epsilon_ = config.ms_min_epsilon;
+
+		enable_color_filter_ = config.enable_color_filter;
+		enable_meanshift_ = config.enable_meanshift;
+		enable_thresholding_ = config.enable_thresholding;
 
 
 		/*spectrum_hsv_.red.min = config.red_h_min;
@@ -178,37 +158,56 @@ public:
 		 spectrum_hsv_.blue.min = config.blue_h_min;
 		 spectrum_hsv_.blue.max = config.blue_h_max;*/
 
-		spectrum_hsv_.black_v_threshold = config.black_v_threshold;
-		spectrum_hsv_.white_combined_sv_threshold = config.white_combined_sv_threshold;
-		spectrum_hsv_.black_combined_sv_threshold = config.black_combined_sv_threshold;
+		spectrum_hsv_.black_l_threshold = config.black_l_threshold;
+		spectrum_hsv_.white_l_threshold = config.white_l_threshold;
+		spectrum_hsv_.unknown_s_threshold = config.unknown_s_threshold;
+
+		reconfigure_initialized_ = true;
 	}
 
-	void imageCB( const sensor_msgs::ImageConstPtr& msg )
+	virtual cv::Mat processImage( IplImage * ipl_img )
 	{
-		ROS_INFO( "got image" );
-		img_mutex_.lock();
+		IplImage * mean_shifted_img = ipl_img;
+		if ( enable_meanshift_ )
+		{
+			cvPyrMeanShiftFiltering( ipl_img, mean_shifted_img, ms_spatial_radius_, ms_color_ratius_, ms_max_level_, cvTermCriteria( CV_TERMCRIT_ITER + CV_TERMCRIT_EPS, ms_max_iter_, ms_min_epsilon_ ) );
+		}
+		cv_img_ = cv::Mat( mean_shifted_img );
+		cv::Mat hsv_img;
 
-		img_ = boost::const_pointer_cast<sensor_msgs::Image>( msg );
+		if ( enable_color_filter_ )
+		{
+			for ( int y = 0; y < cv_img_.size().height; y++ )
+			{
+				for ( int x = 0; x < cv_img_.size().width; x++ )
+				{
+					// get pixel data
+					cv::Vec3b pixel = cv_img_.at<cv::Vec3b> ( cv::Point( x, y ) );
+					// set pixel data
+					cv_img_.at<cv::Vec3b> ( cv::Point( x, y ) ) = filterColor( pixel );
+				}
+			}
+		}
 
-		img_mutex_.unlock();
+		if ( enable_thresholding_ )
+		{
+			cv::cvtColor( cv_img_, hsv_img, CV_BGR2HLS);
+			for ( int y = 0; y < hsv_img.size().height; y++ )
+			{
+				for ( int x = 0; x < hsv_img.size().width; x++ )
+				{
+					// get pixel data
+					cv::Vec3b pixel = hsv_img.at<cv::Vec3b> ( cv::Point( x, y ) );
+					// set pixel data
+					cv_img_.at<cv::Vec3b> ( cv::Point( x, y ) ) = classifyPixel( pixel );
+				}
+			}
+		}
 
-		boost::lock_guard<boost::mutex> guard( flag_mutex_ );
-		new_img_ = true;
-
-		classifyImage();
+		return cv_img_;
 	}
 
-	void infoCB( const sensor_msgs::CameraInfoConstPtr& msg )
-	{
-		ROS_INFO( "got camera info" );
-		info_mutex_.lock();
-
-		info_ = *msg;
-
-		info_mutex_.unlock();
-	}
-
-	cv::Vec3b filterColor( cv::Vec3b & pixel )
+	inline cv::Vec3b filterColor( cv::Vec3b & pixel )
 	{
 		cv::Vec3b result;
 		//result[2] = (int) round( (double) pixel[2] * 0.937254902 );
@@ -220,14 +219,16 @@ public:
 		return result;
 	}
 
-	cv::Vec3b classifyPixel( cv::Vec3b & pixel )
+	inline cv::Vec3b classifyPixel( cv::Vec3b & pixel )
 	{
 		double h = 360.0 * (double) pixel[0] / 255.0;
 		double l = 100.0 * (double) pixel[1] / 255.0;
 		double s = 100.0 * (double) pixel[2] / 255.0;
 
-		if ( l < spectrum_hsv_.black_v_threshold ) return OutputColorRGB::black;
-		if ( l > spectrum_hsv_.white_combined_sv_threshold ) return OutputColorRGB::white;
+		if ( s < spectrum_hsv_.unknown_s_threshold ) return OutputColorRGB::unknown;
+
+		if ( l < spectrum_hsv_.black_l_threshold ) return OutputColorRGB::black;
+		if ( l > spectrum_hsv_.white_l_threshold ) return OutputColorRGB::white;
 
 		// any color with a value less than this is considered black
 		//if ( v < spectrum_hsv_.black_v_threshold ) return OutputColorRGB::black;
@@ -245,59 +246,6 @@ public:
 		if ( spectrum_hsv_.blue.isInRange( h, true ) ) return OutputColorRGB::blue;
 		return OutputColorRGB::unknown;
 	}
-
-	void classifyImage()
-	{
-		// if the image has changed (or if the last response has yet to be generated), generate and then save a new response (and potentially a new output image)
-		if ( new_img_ )
-		{
-			new_img_ = false;
-
-			boost::lock_guard<boost::mutex> img_guard( img_mutex_ );
-			cv_img_ = cv::Mat( bridge_.imgMsgToCv( img_ ) );
-			cv::Mat hsv_img;
-
-			for ( int y = 0; y < cv_img_.size().height; y++ )
-			{
-				for ( int x = 0; x < cv_img_.size().width; x++ )
-				{
-					// get pixel data
-					cv::Vec3b pixel = cv_img_.at<cv::Vec3b> ( cv::Point( x, y ) );
-					// set pixel data
-					cv_img_.at<cv::Vec3b> ( cv::Point( x, y ) ) = filterColor( pixel );
-				}
-			}
-
-			cv::cvtColor( cv_img_, hsv_img, CV_BGR2HLS);
-
-			for ( int y = 0; y < hsv_img.size().height; y++ )
-			{
-				for ( int x = 0; x < hsv_img.size().width; x++ )
-				{
-					// get pixel data
-					cv::Vec3b pixel = hsv_img.at<cv::Vec3b> ( cv::Point( x, y ) );
-					// set pixel data
-					cv_img_.at<cv::Vec3b> ( cv::Point( x, y ) ) = classifyPixel( pixel );
-				}
-			}
-		}
-
-		publishCvImage( cv_img_ );
-	}
-
-	void publishCvImage( cv::Mat & img )
-	{
-		ROS_INFO( "Publshed image" );
-		IplImage * ipl_img = & ( (IplImage) img );
-		img_pub_.publish( bridge_.cvToImgMsg( ipl_img ) );
-	}
-
-	void spin()
-	{
-		ROS_INFO( "Spinning..." );
-		spinner_.spin();
-	}
-
 };
 
 // bgr

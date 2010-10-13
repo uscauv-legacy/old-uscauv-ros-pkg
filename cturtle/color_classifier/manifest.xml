@@ -16,6 +16,7 @@
   <depend package="image_transport"/>
   <depend package="dynamic_reconfigure"/>
   <depend package="driver_base"/>
+  <depend package="base_image_proc"/>
 
 </package>
 
