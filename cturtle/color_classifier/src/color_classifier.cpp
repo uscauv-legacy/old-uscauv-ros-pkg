@@ -92,7 +92,7 @@ public:
 	ColorClassifier( ros::NodeHandle & nh ) :
 		BaseImageProc<_ReconfigureType> ( nh )
 	{
-		//
+		initCfgParams();
 	}
 
 	~ColorClassifier()
@@ -114,9 +114,10 @@ public:
 	}
 
 
-	//using BaseImageProc<_ReconfigureType>::reconfigureCB;
+	// virtual
 	void reconfigureCB( _ReconfigureType &config, uint32_t level )
 	{
+		ROS_DEBUG( "Reconfigure successful" );
 		spectrum_hsv_.red.min = wrapValue( config.red_h_c - config.red_h_r, 0.0, 360.0 );
 		spectrum_hsv_.red.max = wrapValue( config.red_h_c + config.red_h_r, 0.0, 360.0 );
 
@@ -167,6 +168,7 @@ public:
 
 	virtual cv::Mat processImage( IplImage * ipl_img )
 	{
+		ROS_DEBUG("Image processed");
 		IplImage * mean_shifted_img = ipl_img;
 		if ( enable_meanshift_ )
 		{
