@@ -56,6 +56,24 @@
 // for cfg code
 #include <base_image_proc/../../cfg/cpp/base_image_proc/EmptyConfig.h>
 
+template<typename _ReconfigureType>
+struct ReconfigureSettings
+{
+	static bool enableReconfigure()
+	{
+		return true;
+	}
+};
+
+template<>
+struct ReconfigureSettings<base_image_proc::EmptyConfig>
+{
+	static bool enableReconfigure()
+	{
+		return false;
+	}
+};
+
 template<typename _ReconfigureType, typename _ServiceType>
 class BaseImageProcCore
 {
@@ -133,7 +151,7 @@ bool BaseImageProcCore<base_image_proc::EmptyConfig, _ServiceType>::hasReconfigu
 
 template<typename _ReconfigureType, typename _ServiceType>
 BaseImageProcCore<_ReconfigureType, _ServiceType>::BaseImageProcCore( ros::NodeHandle & nh, uint threads ) :
-	nh_priv_( "~" ), spinner_( threads ), it_( nh_priv_ ), new_img_( false ), reconfigure_initialized_( false ), ignore_reconfigure_( true )
+	nh_priv_( "~" ), spinner_( threads ), it_( nh_priv_ ), new_img_( false ), ignore_reconfigure_( ReconfigureSettings<_ReconfigureType>::enableReconfigure() )
 {
 	nh_priv_.param( "image_transport", image_transport_, std::string( "raw" ) );
 	nh_priv_.param( "publish_image", publish_image_, true );
@@ -143,6 +161,7 @@ BaseImageProcCore<_ReconfigureType, _ServiceType>::BaseImageProcCore( ros::NodeH
 
 	if ( publish_image_ ) img_pub_ = it_.advertise( "output_image", 1 );
 
+	reconfigure_initialized_ = ignore_reconfigure_;
 	reconfigure_callback_ = boost::bind( &BaseImageProcCore::reconfigureCB_0, this, _1, _2 );
 	reconfigure_srv_.setCallback( reconfigure_callback_ );
 }
