@@ -54,7 +54,7 @@
 // for the DoSomething service
 #include <std_srvs/Empty.h>
 // for cfg code
-#include "../../cfg/cpp/base_image_proc/EmptyConfig.h"
+#include <base_image_proc/../../cfg/cpp/base_image_proc/EmptyConfig.h>
 
 template<typename _ReconfigureType, typename _ServiceType>
 class BaseImageProcCore
@@ -96,7 +96,7 @@ public:
 	BaseImageProcCore( ros::NodeHandle & nh, uint threads = 3 );
 	~BaseImageProcCore();
 	void spin();
-	static bool hasReconfigure();
+//	static bool hasReconfigure();
 
 protected:
 	virtual void reconfigureCB( _ReconfigureType &config, uint32_t level );
@@ -111,7 +111,7 @@ private:
 
 };
 
-template<typename _ServiceType> class BaseImageProcCore<base_image_proc::EmptyConfig, _ServiceType>
+/*template<typename _ServiceType> class BaseImageProcCore<base_image_proc::EmptyConfig, _ServiceType>
 {
 	static bool hasReconfigure();
 };
@@ -129,11 +129,11 @@ template<typename _ServiceType>
 bool BaseImageProcCore<base_image_proc::EmptyConfig, _ServiceType>::hasReconfigure()
 {
 	return true;
-}
+}*/
 
 template<typename _ReconfigureType, typename _ServiceType>
 BaseImageProcCore<_ReconfigureType, _ServiceType>::BaseImageProcCore( ros::NodeHandle & nh, uint threads ) :
-	nh_priv_( "~" ), spinner_( threads ), it_( nh_priv_ ), new_img_( false ), reconfigure_initialized_( false ), ignore_reconfigure_( hasReconfigure() )
+	nh_priv_( "~" ), spinner_( threads ), it_( nh_priv_ ), new_img_( false ), reconfigure_initialized_( false ), ignore_reconfigure_( true )
 {
 	nh_priv_.param( "image_transport", image_transport_, std::string( "raw" ) );
 	nh_priv_.param( "publish_image", publish_image_, true );
