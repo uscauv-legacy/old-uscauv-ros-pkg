@@ -1,0 +1,14 @@
+<package>
+  <description brief="demo1_kaszubski">
+
+     demo1_kaszubski
+
+  </description>
+  <author>Edward T. Kaszubski</author>
+  <license>BSD</license>
+  <review status="unreviewed" notes=""/>
+  <url>http://ros.org/wiki/demo1_kaszubski</url>
+  <depend package="base_image_proc"/>
+</package>
+
+
