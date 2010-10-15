@@ -8,13 +8,8 @@
   <license>BSD</license>
   <review status="unreviewed" notes=""/>
   <url>http://ros.org/wiki/rectangle_finder</url>
-  <depend package="roscpp"/>
-  <depend package="sensor_msgs"/>
   <depend package="geometry_msgs"/>
-  <depend package="image_transport"/>
-  <depend package="opencv2"/>
-  <depend package="cv_bridge"/>
-  <depend package="std_msgs"/>
+  <depend package="base_image_proc"/>
   <export>
     <cpp cflags="-I${prefix}/include -I${prefix}/msg/cpp -I${prefix}/srv/cpp" lflags="-L/{prefix}/lib"/>
   </export>

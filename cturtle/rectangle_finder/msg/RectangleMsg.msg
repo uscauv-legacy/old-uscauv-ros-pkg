@@ -1,3 +1,3 @@
-geometry_msgs/Point Center
-geometry_msgs/Point Dim
-float64 Ori
+geometry_msgs/Point center
+geometry_msgs/Point dim
+float64 ori

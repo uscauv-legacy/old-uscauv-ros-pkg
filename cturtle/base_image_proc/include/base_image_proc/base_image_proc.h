@@ -46,15 +46,16 @@ struct BaseImageProcSettings
 template<typename _ReconfigureType, typename _ServiceType = std_srvs::Empty>
 class BaseImageProc: public BaseImageProcCore<_ReconfigureType, _ServiceType>
 {
+public:
 	typedef typename _ServiceType::Request _ServiceRequest;
 	typedef typename _ServiceType::Response _ServiceResponse;
-protected:
 
+protected:
 	ros::ServiceServer service_srv_;
 	_ServiceResponse last_response_;
 
 public:
-	BaseImageProc( ros::NodeHandle & nh, uint threads = 3 );
+	BaseImageProc( ros::NodeHandle & nh, std::string service_name = "service", uint threads = 3 );
 	~BaseImageProc();
 
 protected:
@@ -79,10 +80,10 @@ protected:
 };
 
 template<typename _ReconfigureType, typename _ServiceType>
-BaseImageProc<_ReconfigureType, _ServiceType>::BaseImageProc( ros::NodeHandle & nh, uint threads ) :
+BaseImageProc<_ReconfigureType, _ServiceType>::BaseImageProc( ros::NodeHandle & nh, std::string service_name, uint threads ) :
 	BaseImageProcCore<_ReconfigureType, _ServiceType> ( nh, threads )
 {
-	service_srv_ = this->nh_priv_.advertiseService( "service", &BaseImageProc::serviceCB, this );
+	service_srv_ = this->nh_priv_.advertiseService( service_name, &BaseImageProc::serviceCB, this );
 }
 
 template<typename _ReconfigureType>

@@ -1,1 +1,1 @@
-rectangle_finder/RectangleMsg[] RectangleArray
+rectangle_finder/RectangleMsg[] rectangle_array

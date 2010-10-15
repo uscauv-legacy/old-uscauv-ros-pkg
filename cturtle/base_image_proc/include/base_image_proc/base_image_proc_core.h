@@ -77,8 +77,6 @@ struct ReconfigureSettings<base_image_proc::EmptyConfig>
 template<typename _ReconfigureType, typename _ServiceType>
 class BaseImageProcCore
 {
-	typedef typename _ServiceType::Request _ServiceRequest;
-	typedef typename _ServiceType::Response _ServiceResponse;
 
 protected:
 	ros::NodeHandle nh_priv_;
@@ -114,7 +112,7 @@ public:
 	BaseImageProcCore( ros::NodeHandle & nh, uint threads = 3 );
 	~BaseImageProcCore();
 	void spin();
-//	static bool hasReconfigure();
+	//	static bool hasReconfigure();
 
 protected:
 	virtual void reconfigureCB( _ReconfigureType &config, uint32_t level );
@@ -130,24 +128,24 @@ private:
 };
 
 /*template<typename _ServiceType> class BaseImageProcCore<base_image_proc::EmptyConfig, _ServiceType>
-{
-	static bool hasReconfigure();
-};
+ {
+ static bool hasReconfigure();
+ };
 
-// static
-template<typename _ReconfigureType, typename _ServiceType>
-bool BaseImageProcCore<_ReconfigureType, _ServiceType>::hasReconfigure()
-{
-	return false;
-}
+ // static
+ template<typename _ReconfigureType, typename _ServiceType>
+ bool BaseImageProcCore<_ReconfigureType, _ServiceType>::hasReconfigure()
+ {
+ return false;
+ }
 
-// if we're using EmptyConfig, set reconfigure_initialized to be true
-// static
-template<typename _ServiceType>
-bool BaseImageProcCore<base_image_proc::EmptyConfig, _ServiceType>::hasReconfigure()
-{
-	return true;
-}*/
+ // if we're using EmptyConfig, set reconfigure_initialized to be true
+ // static
+ template<typename _ServiceType>
+ bool BaseImageProcCore<base_image_proc::EmptyConfig, _ServiceType>::hasReconfigure()
+ {
+ return true;
+ }*/
 
 template<typename _ReconfigureType, typename _ServiceType>
 BaseImageProcCore<_ReconfigureType, _ServiceType>::BaseImageProcCore( ros::NodeHandle & nh, uint threads ) :
@@ -198,9 +196,9 @@ void BaseImageProcCore<_ReconfigureType, _ServiceType>::reconfigureCB_0( _Reconf
 {
 	//config_dst_->reconfigureCB( config, level );
 	/*if( !reconfigure_initialized_ )
-		initial_config_params_ = config;
+	 initial_config_params_ = config;
 
-	reconfigure_initialized_ = true;*/
+	 reconfigure_initialized_ = true;*/
 
 	initial_config_params_ = config;
 	initial_config_level_ = level;
@@ -244,8 +242,11 @@ void BaseImageProcCore<_ReconfigureType, _ServiceType>::imageCB()
 template<typename _ReconfigureType, typename _ServiceType>
 void BaseImageProcCore<_ReconfigureType, _ServiceType>::initCfgParams()
 {
-	if( !ignore_reconfigure_ )
+	if ( !ignore_reconfigure_ )
+	{
 		reconfigureCB( initial_config_params_, initial_config_level_ );
+		reconfigure_initialized_ = true;
+	}
 }
 
 #endif /* BASE_IMAGE_PROC_CORE_H_ */
