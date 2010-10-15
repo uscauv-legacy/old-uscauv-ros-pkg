@@ -2,7 +2,7 @@
  *
  *      base_image_proc_core
  * 
- *      Copyright (c) 2010, edward
+ *      Copyright (c) 2010, Edward T. Kaszubski (ekaszubski@gmail.com)
  *      All rights reserved.
  *
  *      Redistribution and use in source and binary forms, with or without
@@ -112,7 +112,6 @@ public:
 	BaseImageProcCore( ros::NodeHandle & nh, uint threads = 3 );
 	~BaseImageProcCore();
 	void spin();
-	//	static bool hasReconfigure();
 
 protected:
 	virtual void reconfigureCB( _ReconfigureType &config, uint32_t level );
@@ -126,26 +125,6 @@ private:
 	void infoCB( const sensor_msgs::CameraInfoConstPtr& msg );
 
 };
-
-/*template<typename _ServiceType> class BaseImageProcCore<base_image_proc::EmptyConfig, _ServiceType>
- {
- static bool hasReconfigure();
- };
-
- // static
- template<typename _ReconfigureType, typename _ServiceType>
- bool BaseImageProcCore<_ReconfigureType, _ServiceType>::hasReconfigure()
- {
- return false;
- }
-
- // if we're using EmptyConfig, set reconfigure_initialized to be true
- // static
- template<typename _ServiceType>
- bool BaseImageProcCore<base_image_proc::EmptyConfig, _ServiceType>::hasReconfigure()
- {
- return true;
- }*/
 
 template<typename _ReconfigureType, typename _ServiceType>
 BaseImageProcCore<_ReconfigureType, _ServiceType>::BaseImageProcCore( ros::NodeHandle & nh, uint threads ) :
@@ -194,12 +173,6 @@ void BaseImageProcCore<_ReconfigureType, _ServiceType>::publishCvImage( cv::Mat 
 template<typename _ReconfigureType, typename _ServiceType>
 void BaseImageProcCore<_ReconfigureType, _ServiceType>::reconfigureCB_0( _ReconfigureType &config, uint32_t level )
 {
-	//config_dst_->reconfigureCB( config, level );
-	/*if( !reconfigure_initialized_ )
-	 initial_config_params_ = config;
-
-	 reconfigure_initialized_ = true;*/
-
 	initial_config_params_ = config;
 	initial_config_level_ = level;
 	reconfigureCB( config, level );
