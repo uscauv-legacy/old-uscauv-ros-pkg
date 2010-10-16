@@ -4,6 +4,7 @@ typedef BaseImageProcSettings::_DefaultReconfigureType _ConfigType;
 
 class Demo1 : public BaseImageProc<_ConfigType>
 {
+public:
 	Demo1( ros::NodeHandle & nh ) :  BaseImageProc<base_image_proc::EmptyConfig>(nh)
 	{
 		//
