@@ -128,7 +128,7 @@ private:
 
 template<typename _ReconfigureType, typename _ServiceType>
 BaseImageProcCore<_ReconfigureType, _ServiceType>::BaseImageProcCore( ros::NodeHandle & nh, uint threads ) :
-	nh_priv_( "~" ), spinner_( threads ), it_( nh_priv_ ), new_img_( false ), ignore_reconfigure_( ReconfigureSettings<_ReconfigureType>::enableReconfigure() )
+	nh_priv_( "~" ), spinner_( threads ), it_( nh_priv_ ), new_img_( false ), ignore_reconfigure_( !ReconfigureSettings<_ReconfigureType>::enableReconfigure() )
 {
 	nh_priv_.param( "image_transport", image_transport_, std::string( "raw" ) );
 	nh_priv_.param( "publish_image", publish_image_, true );
