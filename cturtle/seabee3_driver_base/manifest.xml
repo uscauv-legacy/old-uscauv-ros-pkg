@@ -8,8 +8,8 @@
   <license>BSD</license>
   <review status="unreviewed" notes=""/>
   <url>http://ros.org/wiki/seabee3_driver_base</url>
-  <depend package="roscpp" />
   <depend package="libseabee3_beestem" />
+  <depend package="base_libs"/>
   <export>
     <cpp cflags="-I${prefix}/include -I${prefix}/msg/cpp -I${prefix}/srv/cpp" lflags="-L/{prefix}/lib"/>
   </export>

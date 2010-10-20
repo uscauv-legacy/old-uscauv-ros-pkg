@@ -1,13 +1,8 @@
 /*******************************************************************************
  *
- *      BeeStem3Driver
+ *      base_tf_tranceiver
  * 
- *      Copyright (c) 2010,
- *
- *      Edward T. Kaszubski (ekaszubski@gmail.com),
- *      Rand Voorhies,
- *      Michael Montalbo
- *
+ *      Copyright (c) 2010, Edward T. Kaszubski (ekaszubski@gmail.com)
  *      All rights reserved.
  *
  *      Redistribution and use in source and binary forms, with or without
@@ -20,7 +15,7 @@
  *        copyright notice, this list of conditions and the following disclaimer
  *        in the documentation and/or other materials provided with the
  *        distribution.
- *      * Neither the name of the USC Underwater Robotics Team nor the names of its
+ *      * Neither the name of "seabee3-ros-pkg" nor the names of its
  *        contributors may be used to endorse or promote products derived from
  *        this software without specific prior written permission.
  *      
@@ -38,83 +33,48 @@
  *
  *******************************************************************************/
 
-#include <seabee3_beestem/BeeStem3.h>
-#include <vector>
-#include <map>
+#include <base_tf_tranceiver/base_tf_tranceiver.h>
 
-#define HEADING_K 0
-#define HEADING_P 15
-#define HEADING_I 0
-#define HEADING_D 0
-
-#define DEPTH_K 0
-#define DEPTH_P 33
-#define DEPTH_I 0
-#define DEPTH_D 0
-
-namespace Actions
+BaseTfTranceiver::BaseTfTranceiver( ros::NodeHandle & nh, uint threads ) :
+	BaseNode( nh, threads )
 {
-	const static int NONE = -1;
-	const static int AXIS_INVERT = 0;
-	const static int DIVE = 1;
-	const static int SURFACE = 2;
-	const static int STRAFE = 3;
-	const static int SPEED = 4;
-	const static int HEADING = 5;
-	const static int ARM_NEXT_DEV = 6;
-	const static int FIRE_DEV = 7;
+	tl_ = new tf::TransformListener;
+	tb_ = new tf::TransformBroadcaster;
 }
 
-class BeeStem3Driver
+BaseTfTranceiver::~BaseTfTranceiver()
 {
-public:
+	delete tl_;
+	delete tb_;
+}
 
-	struct FiringDeviceID
+void BaseTfTranceiver::fetchTfFrame( tf::Transform & transform, const std::string & frame1, const std::string & frame2 )
+{
+	tf::StampedTransform temp;
+	try
 	{
-		const static int shooter = 0;
-		const static int dropper_stage1 = 1;
-		const static int dropper_stage2 = 2;
-	};
+		tl_->lookupTransform( frame1, frame2, ros::Time( 0 ), temp );
 
-	struct FiringDeviceParams
+		transform.setOrigin( temp.getOrigin() );
+		transform.setRotation( temp.getRotation() );
+	}
+	catch ( tf::TransformException ex )
 	{
-		int trigger_time_;
-		int trigger_value_;
-	};
+		ROS_ERROR( "%s", ex.what() );
+	}
+}
 
-	struct BeeStemFlags
-	{
-		bool init_flag_;
+void operator >>( const geometry_msgs::Twist & the_pose, tf::Transform & the_pose_tf )
+{
+	the_pose_tf.setOrigin( tf::Vector3( the_pose.linear.x, the_pose.linear.y, the_pose.linear.z ) );
+	the_pose_tf.setRotation( tf::Quaternion( the_pose.angular.z, the_pose.angular.y, the_pose.angular.x ) );
+}
 
-		BeeStemFlags()
-		{
-			init_flag_ = false;
-		}
-	};
+void operator >>( const tf::Transform & the_pose_tf, geometry_msgs::Twist & the_pose )
+{
+	the_pose.linear.x = the_pose_tf.getOrigin().x();
+	the_pose.linear.y = the_pose_tf.getOrigin().y();
+	the_pose.linear.z = the_pose_tf.getOrigin().z();
 
-	BeeStem3Driver( std::string port );
-
-	~BeeStem3Driver();
-
-	void readPressure( int & intl_pressure, int & extl_pressure );
-	void readKillSwitch( int8_t & kill_switch );
-
-	bool & getDeviceStatus( int device_id );
-	void fireDevice( int device_id );
-
-	void setThruster( int id, int value );
-
-	bool dropper1_ready_;
-	bool dropper2_ready_;
-	bool shooter_ready_;
-
-	FiringDeviceParams shooter_params_, dropper1_params_, dropper2_params_;
-
-private:
-	BeeStem3 * bee_stem_3_;
-	void initPose();
-
-	std::string port_;
-
-	BeeStemFlags flags_;
-};
+	the_pose_tf.getBasis().getEulerZYX( the_pose.angular.z, the_pose.angular.y, the_pose.angular.x );
+}

@@ -1,13 +1,8 @@
 /*******************************************************************************
  *
- *      BeeStem3Driver
+ *      base_teleop
  * 
- *      Copyright (c) 2010,
- *
- *      Edward T. Kaszubski (ekaszubski@gmail.com),
- *      Rand Voorhies,
- *      Michael Montalbo
- *
+ *      Copyright (c) 2010, Edward T. Kaszubski (ekaszubski@gmail.com)
  *      All rights reserved.
  *
  *      Redistribution and use in source and binary forms, with or without
@@ -20,7 +15,7 @@
  *        copyright notice, this list of conditions and the following disclaimer
  *        in the documentation and/or other materials provided with the
  *        distribution.
- *      * Neither the name of the USC Underwater Robotics Team nor the names of its
+ *      * Neither the name of "seabee3-ros-pkg" nor the names of its
  *        contributors may be used to endorse or promote products derived from
  *        this software without specific prior written permission.
  *      
@@ -38,83 +33,60 @@
  *
  *******************************************************************************/
 
-#include <seabee3_beestem/BeeStem3.h>
-#include <vector>
-#include <map>
+#ifndef BASE_TELEOP_H_
+#define BASE_TELEOP_H_
 
-#define HEADING_K 0
-#define HEADING_P 15
-#define HEADING_I 0
-#define HEADING_D 0
+#include <base_node/base_node.h>
+#include <geometry_msgs/Twist.h>
+#include <joy/Joy.h>
 
-#define DEPTH_K 0
-#define DEPTH_P 33
-#define DEPTH_I 0
-#define DEPTH_D 0
-
-namespace Actions
+class BaseTeleop: public BaseNode
 {
-	const static int NONE = -1;
-	const static int AXIS_INVERT = 0;
-	const static int DIVE = 1;
-	const static int SURFACE = 2;
-	const static int STRAFE = 3;
-	const static int SPEED = 4;
-	const static int HEADING = 5;
-	const static int ARM_NEXT_DEV = 6;
-	const static int FIRE_DEV = 7;
-}
 
-class BeeStem3Driver
-{
+protected:
+	geometry_msgs::Twist cmd_vel_;
+	ros::Publisher cmd_vel_pub_;
+	ros::Subscriber joy_sub_;
+
 public:
+	BaseTeleop( ros::NodeHandle & nh, std::string topic_name = "cmd_vel" );
+	~BaseTeleop();
 
-	struct FiringDeviceID
-	{
-		const static int shooter = 0;
-		const static int dropper_stage1 = 1;
-		const static int dropper_stage2 = 2;
-	};
-
-	struct FiringDeviceParams
-	{
-		int trigger_time_;
-		int trigger_value_;
-	};
-
-	struct BeeStemFlags
-	{
-		bool init_flag_;
-
-		BeeStemFlags()
-		{
-			init_flag_ = false;
-		}
-	};
-
-	BeeStem3Driver( std::string port );
-
-	~BeeStem3Driver();
-
-	void readPressure( int & intl_pressure, int & extl_pressure );
-	void readKillSwitch( int8_t & kill_switch );
-
-	bool & getDeviceStatus( int device_id );
-	void fireDevice( int device_id );
-
-	void setThruster( int id, int value );
-
-	bool dropper1_ready_;
-	bool dropper2_ready_;
-	bool shooter_ready_;
-
-	FiringDeviceParams shooter_params_, dropper1_params_, dropper2_params_;
+protected:
+	virtual void joyCB( const joy::Joy::ConstPtr& joy );
+	double applyDeadZone( double value, double dead_radius_max = 0.15 );
 
 private:
-	BeeStem3 * bee_stem_3_;
-	void initPose();
+	void joyCB_0( const joy::Joy::ConstPtr& joy );
 
-	std::string port_;
-
-	BeeStemFlags flags_;
 };
+
+BaseTeleop::BaseTeleop( ros::NodeHandle & nh, std::string topic_name ) :
+	BaseNode( nh, 1 )
+{
+	joy_sub_ = nh.subscribe( nh.resolveName( "/joy" ), 1, &BaseTeleop::joyCB_0, this );
+	cmd_vel_pub_ = nh.advertise<geometry_msgs::Twist> ( topic_name, 1 );
+}
+
+BaseTeleop::~BaseTeleop()
+{
+	//
+}
+
+// virtual
+void BaseTeleop::joyCB( const joy::Joy::ConstPtr& joy )
+{
+	//
+}
+
+void BaseTeleop::joyCB_0( const joy::Joy::ConstPtr& joy )
+{
+	joyCB( joy );
+}
+
+double BaseTeleop::applyDeadZone( double value, double dead_radius_max )
+{
+	return fabs( value ) < dead_radius_max ? 0.0 : value;
+}
+
+#endif /* BASE_TELEOP_H_ */

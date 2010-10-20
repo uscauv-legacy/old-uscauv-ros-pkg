@@ -8,9 +8,7 @@
   <license>BSD</license>
   <review status="unreviewed" notes=""/>
   <url>http://ros.org/wiki/image_server</url>
-	<depend package="image_transport"/>
-	<depend package="opencv2"/>
-	<depend package="cv_bridge"/>
+	<depend package="base_libs"/>
 </package>
 
 

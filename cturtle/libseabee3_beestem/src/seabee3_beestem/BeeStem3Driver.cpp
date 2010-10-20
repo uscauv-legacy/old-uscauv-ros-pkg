@@ -107,11 +107,11 @@ bool & BeeStem3Driver::getDeviceStatus( int device_id )
 	static bool result = false;
 	switch ( device_id )
 	{
-	case FiringDeviceID::DropperStage1:
+	case FiringDeviceID::dropper_stage1:
 		return dropper1_ready_;
-	case FiringDeviceID::DropperStage2:
+	case FiringDeviceID::dropper_stage2:
 		return dropper2_ready_;
-	case FiringDeviceID::Shooter:
+	case FiringDeviceID::shooter:
 		return shooter_ready_;
 	}
 	return result;
@@ -121,21 +121,21 @@ void BeeStem3Driver::fireDevice( int device_id )
 {
 	switch ( device_id )
 	{
-	case FiringDeviceID::Shooter:
+	case FiringDeviceID::shooter:
 		std::cout << "Firing torpedo!" << std::endl;
 		bee_stem_3_->setThruster( BeeStem3::MotorControllerIDs::SHOOTER, shooter_params_.trigger_value_ );
 		usleep( shooter_params_.trigger_time_ * 1000 );
 		bee_stem_3_->setThruster( BeeStem3::MotorControllerIDs::SHOOTER, 0 );
 		shooter_ready_= false;
 		break;
-	case FiringDeviceID::DropperStage1:
+	case FiringDeviceID::dropper_stage1:
 		std::cout << "Dropping first marker!" << std::endl;
 		bee_stem_3_->setThruster( BeeStem3::MotorControllerIDs::DROPPER_STAGE1, dropper1_params_.trigger_value_ );
 		usleep( dropper1_params_.trigger_time_ * 1000 );
 		bee_stem_3_->setThruster( BeeStem3::MotorControllerIDs::DROPPER_STAGE1, 0 );
 		dropper1_ready_ = false;
 		break;
-	case FiringDeviceID::DropperStage2:
+	case FiringDeviceID::dropper_stage2:
 		std::cout << "Dropping second marker!" << std::endl;
 		bee_stem_3_->setThruster( BeeStem3::MotorControllerIDs::DROPPER_STAGE2, dropper2_params_.trigger_value_ );
 		usleep( dropper2_params_.trigger_time_ * 1000 );
@@ -143,4 +143,9 @@ void BeeStem3Driver::fireDevice( int device_id )
 		dropper2_ready_ = false;
 		break;
 	}
+}
+
+void BeeStem3Driver::setThruster( int id, int value )
+{
+	bee_stem_3_->setThruster( id, value );
 }

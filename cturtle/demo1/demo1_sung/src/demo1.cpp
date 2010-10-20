@@ -1,11 +1,10 @@
 #include <base_image_proc/base_image_proc.h>
 
-typedef BaseImageProcSettings::_DefaultReconfigureType _ConfigType;
-class Demo1: public BaseImageProc<base_image_proc::EmptyConfig>
+class Demo1: public BaseImageProc<>
 {
 public:
 	Demo1( ros::NodeHandle & nh ) :
-		BaseImageProc<_ConfigType> ( nh )
+		BaseImageProc<> ( nh )
 	{
 
 	}

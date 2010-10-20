@@ -34,11 +34,10 @@
  *******************************************************************************/
 
 // tools
-#include <ros/ros.h>
+#include <base_node/base_node.h>
 // for YAML::Parser, YAML::Node
 #include <yaml-cpp/yaml.h>
 // for cv::Point3d
-#include <opencv/cv.h>
 
 #include <string>
 #include <fstream>
@@ -135,10 +134,9 @@ void operator >>( const YAML::Node & node, Landmark & l )
 	ROS_INFO( "Landmark ID %d", l.landmark_type_ );
 }
 
-class LandmarkMapServer
+class LandmarkMapServer: public BaseNode
 {
 private:
-	ros::NodeHandle nh_priv_;
 	ros::Publisher marker_pub_;
 	ros::ServiceServer map_server_;
 
@@ -151,7 +149,7 @@ private:
 public:
 	bool success_;
 	LandmarkMapServer( ros::NodeHandle & nh ) :
-		nh_priv_( "~" )
+		BaseNode( nh )
 	{
 		success_ = false;
 		nh_priv_.param( "map_frame", map_frame_, std::string( "/landmark_map" ) );
@@ -202,20 +200,16 @@ public:
 		return true;
 	}
 
-	void spin()
+	virtual void spinOnce()
 	{
-		while ( ros::ok() )
+		// get a visualization_msgs/Marker representation of each landmark and publish it
+
+		for ( unsigned int i = 0; i < markers_.size(); i++ )
 		{
-			// get a visualization_msgs/Marker representation of each landmark and publish it
-
-			for ( unsigned int i = 0; i < markers_.size(); i++ )
-			{
-				marker_pub_.publish( markers_[i] );
-			}
-
-			ros::spinOnce();
-			ros::Rate( 2 ).sleep();
+			marker_pub_.publish( markers_[i] );
 		}
+
+		ros::Rate( 2 ).sleep();
 	}
 
 };
@@ -227,11 +221,11 @@ int main( int argc, char* argv[] )
 	
 	LandmarkMapServer landmark_map_server( nh );
 
-	// make sure the requested file was found
-	if( !landmark_map_server.success_ )
-		return 1;
 
-	landmark_map_server.spin();
+	// make sure the requested file was found
+	if ( !landmark_map_server.success_ ) return 1;
+
+	landmark_map_server.spin( BaseNode::SpinModeId::loop_spin_once );
 	
 	return 0;
 }

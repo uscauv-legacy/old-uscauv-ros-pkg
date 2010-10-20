@@ -9,12 +9,13 @@
   <review status="unreviewed" notes=""/>
   <url>http://ros.org/wiki/xsens_node</url>
   <depend package="roscpp"/>
-  <depend package="geometry_msgs" />
-  <depend package="sensor_msgs" />
-  <depend package="std_msgs" />
-  <depend package="std_srvs" />
-  <depend package="tf" />
-  <depend package="libxsens" />
+  <depend package="geometry_msgs"/>
+  <depend package="sensor_msgs"/>
+  <depend package="std_msgs"/>
+  <depend package="std_srvs"/>
+  <depend package="tf"/>
+  <depend package="libxsens"/>
+  <depend package="base_libs"/>
   <export>
     <cpp cflags="-I${prefix}/include -I${prefix}/msg/cpp -I${prefix}/srv/cpp" lflags="-L/{prefix}/lib"/>
   </export>

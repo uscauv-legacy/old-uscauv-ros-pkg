@@ -11,9 +11,9 @@
   <depend package="roscpp"/>
   <depend package="nav_msgs"/>
   <depend package="seabee3_driver_base" />
-  <depend package="tf" />
   <depend package="xsens_node" />
   <depend package="geometry_msgs" />
+  <depend package="base_libs"/>
 
 </package>
 

@@ -9,7 +9,7 @@
   <review status="unreviewed" notes=""/>
   <url>http://ros.org/wiki/demo1_gerow</url>
   <depend package="roscpp"/>
-  <depend package="base_image_proc"/>
+  <depend package="base_libs"/>
 
 </package>
 

@@ -34,8 +34,8 @@
  *******************************************************************************/
 
 //tools
+#include <base_node/base_node.h>
 #include <queue> // for queue
-#include <ros/ros.h>
 #include <tf/tf.h> // for tf::Vector3
 #include <xsens/XSensDriver.h> // for XSensDriver
 #include <geometry_msgs/Vector3.h>
@@ -75,7 +75,7 @@ void operator >>( tf::Vector3 & v1, geometry_msgs::Vector3 & v2 )
 	v2.z = v1.getZ();
 }
 
-class XSensNode
+class XSensNode: public BaseNode
 {
 private:
 	std::queue<tf::Vector3> ori_data_cache_;
@@ -97,7 +97,7 @@ private:
 
 public:
 	XSensNode( ros::NodeHandle & nh ) :
-		nh_priv_( "~" )
+		BaseNode( nh )
 	{
 		nh_priv_.param( "port", port_, std::string( "/dev/ttyUSB0" ) );
 		nh_priv_.param( "frame_id", frame_id_, std::string( "imu" ) );
@@ -223,51 +223,48 @@ public:
 		runFullCalibration();
 	}
 
-	void spin()
+	virtual void spinOnce()
 	{
-		while ( ros::ok() )
-		{
-			if ( autocalibrate_ && !calibrated_ ) runFullCalibration();
+		if ( autocalibrate_ && !calibrated_ ) runFullCalibration();
 
-			sensor_msgs::Imu imu_msg;
-			xsens_node::Imu custom_imu_msg;
+		sensor_msgs::Imu imu_msg;
+		xsens_node::Imu custom_imu_msg;
 
-			updateIMUData();
+		updateIMUData();
 
-			imu_driver_->accel_ >> imu_msg.linear_acceleration;
-			imu_driver_->gyro_ >> imu_msg.angular_velocity;
+		imu_driver_->accel_ >> imu_msg.linear_acceleration;
+		imu_driver_->gyro_ >> imu_msg.angular_velocity;
 
-			imu_driver_->accel_ >> custom_imu_msg.accel;
-			imu_driver_->gyro_ >> custom_imu_msg.gyro;
-			imu_driver_->mag_ >> custom_imu_msg.mag;
+		imu_driver_->accel_ >> custom_imu_msg.accel;
+		imu_driver_->gyro_ >> custom_imu_msg.gyro;
+		imu_driver_->mag_ >> custom_imu_msg.mag;
 
-			drift_comp_total_ += drift_comp_;
+		drift_comp_total_ += drift_comp_;
 
-			imu_driver_->ori_ += drift_comp_total_;
+		imu_driver_->ori_ += drift_comp_total_;
 
-			tf::Vector3 temp;
-			imu_driver_->ori_ >> temp;
-			temp += ori_comp_;
+		tf::Vector3 temp;
+		imu_driver_->ori_ >> temp;
+		temp += ori_comp_;
 
-			temp >> custom_imu_msg.ori;
+		temp >> custom_imu_msg.ori;
 
-			tf::Quaternion ori( temp.z(), temp.y(), temp.x() );
+		tf::Quaternion ori( temp.z(), temp.y(), temp.x() );
 
-			imu_msg.orientation.w = ori.w();
-			imu_msg.orientation.x = ori.x();
-			imu_msg.orientation.y = ori.y();
-			imu_msg.orientation.z = ori.z();
+		imu_msg.orientation.w = ori.w();
+		imu_msg.orientation.x = ori.x();
+		imu_msg.orientation.y = ori.y();
+		imu_msg.orientation.z = ori.z();
 
-			imu_msg.angular_velocity_covariance[0] = imu_msg.angular_velocity_covariance[4] = imu_msg.angular_velocity_covariance[8] = angular_velocity_stdev_ * angular_velocity_stdev_;
-			imu_msg.linear_acceleration_covariance[0] = imu_msg.linear_acceleration_covariance[4] = imu_msg.linear_acceleration_covariance[8] = linear_acceleration_stdev_ * linear_acceleration_stdev_;
-			imu_msg.orientation_covariance[0] = imu_msg.orientation_covariance[4] = imu_msg.orientation_covariance[8] = orientation_stdev_ * orientation_stdev_;
+		imu_msg.angular_velocity_covariance[0] = imu_msg.angular_velocity_covariance[4] = imu_msg.angular_velocity_covariance[8] = angular_velocity_stdev_ * angular_velocity_stdev_;
+		imu_msg.linear_acceleration_covariance[0] = imu_msg.linear_acceleration_covariance[4] = imu_msg.linear_acceleration_covariance[8] = linear_acceleration_stdev_ * linear_acceleration_stdev_;
+		imu_msg.orientation_covariance[0] = imu_msg.orientation_covariance[4] = imu_msg.orientation_covariance[8] = orientation_stdev_ * orientation_stdev_;
 
-			imu_pub_.publish( imu_msg );
-			custom_imu_pub_.publish( custom_imu_msg );
-			//imu_pub_raw_.publish( msg_raw );
-			ros::spinOnce();
-			ros::Rate( 110 ).sleep();
-		}
+		imu_pub_.publish( imu_msg );
+		custom_imu_pub_.publish( custom_imu_msg );
+		//imu_pub_raw_.publish( msg_raw );
+
+		ros::Rate( 110 ).sleep();
 	}
 };
 
@@ -277,7 +274,7 @@ int main( int argc, char** argv )
 	ros::NodeHandle nh;
 
 	XSensNode xsens_node( nh );
-	xsens_node.spin();
+	xsens_node.spin( BaseNode::SpinModeId::loop_spin_once );
 	
 	return 0;
 }

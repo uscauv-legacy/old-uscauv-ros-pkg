@@ -8,7 +8,7 @@
   <license>BSD</license>
   <review status="unreviewed" notes=""/>
   <url>http://ros.org/wiki/demo1_kaszubski</url>
-  <depend package="base_image_proc"/>
+  <depend package="base_libs"/>
 </package>
 
 

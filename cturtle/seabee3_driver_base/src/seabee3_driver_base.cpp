@@ -35,7 +35,7 @@
  *******************************************************************************/
 
 //tools
-#include <ros/ros.h>
+#include <base_node/base_node.h>
 #include <seabee3_beestem/BeeStem3Driver.h> //for BeeStem3Driver
 #include <string>
 //msgs
@@ -45,11 +45,9 @@
 #include <seabee3_driver_base/Pressure.h> // for outgoing Pressure
 //srvs
 #include <seabee3_driver_base/FiringDeviceAction.h> // for FiringDeviceAction
-
-class Seabee3DriverBaseNode
+class Seabee3DriverBase: public BaseNode
 {
 private:
-	ros::NodeHandle nh_priv_;
 	ros::Subscriber motor_cntl_sub_;
 
 	ros::Publisher intl_pressure_pub_;
@@ -65,17 +63,18 @@ private:
 	std::string port_;
 	int surface_pressure_;
 	bool pressure_calibrated_;
+	double motor_val_min_, motor_val_max_;
 public:
 	//#define SURFACE_PRESSURE 908
 	const static int PRESSURE_DEPTH_SLOPE = 33;
 
-	Seabee3DriverBaseNode( ros::NodeHandle & nh ) :
-		nh_priv_( "~" )
+	Seabee3DriverBase( ros::NodeHandle & nh ) :
+		BaseNode( nh )
 	{
 		pressure_calibrated_ = false;
 
 		nh_priv_.param( "surface_pressure", surface_pressure_, 908 );
-		nh_priv_.param( "port", port_, std::string("/dev/ttyUSB0") );
+		nh_priv_.param( "port", port_, std::string( "/dev/ttyUSB0" ) );
 
 		ROS_INFO( "constructing new driver instance" );
 		bee_stem_3_driver_ = new BeeStem3Driver( port_ );
@@ -89,16 +88,21 @@ public:
 		nh_priv_.param( "dropper2/trigger_time", bee_stem_3_driver_->dropper2_params_.trigger_time_, 50 );
 		nh_priv_.param( "dropper2/trigger_value", bee_stem_3_driver_->dropper2_params_.trigger_value_, 40 );
 
-		motor_cntl_sub_ = nh.subscribe( "/seabee3/motor_cntl", 1, &Seabee3DriverBaseNode::motorCntlCB, this );
+		// scale motor values to be within the following min+max value such that
+		// |D'| = [ motor_val_min, motor_val_max ]
+		nh_priv_.param( "motor_val_min", motor_val_min_, 20.0 );
+		nh_priv_.param( "motor_val_max", motor_val_max_, 100.0 );
+
+		motor_cntl_sub_ = nh.subscribe( "/seabee3/motor_cntl", 1, &Seabee3DriverBase::motorCntlCB, this );
 
 		intl_pressure_pub_ = nh.advertise<seabee3_driver_base::Pressure> ( "/seabee3/intl_pressure", 1 );
 		extl_pressure_pub_ = nh.advertise<seabee3_driver_base::Pressure> ( "/seabee3/extl_pressure", 1 );
 		depth_pub_ = nh.advertise<seabee3_driver_base::Depth> ( "/seabee3/depth", 1 );
 		kill_switch_pub_ = nh.advertise<seabee3_driver_base::KillSwitch> ( "/seabee3/kill_switch", 1 );
 
-		dropper1_action_srv_ = nh.advertiseService( "/seabee3/dropper1_action", &Seabee3DriverBaseNode::dropper1ActionCB, this );
-		dropper2_action_srv_ = nh.advertiseService( "/seabee3/dropper2_action", &Seabee3DriverBaseNode::dropper2ActionCB, this );
-		shooter_action_srv_ = nh.advertiseService( "/seabee3/shooter_action", &Seabee3DriverBaseNode::shooterActionCB, this );
+		dropper1_action_srv_ = nh.advertiseService( "/seabee3/dropper1_action", &Seabee3DriverBase::dropper1ActionCB, this );
+		dropper2_action_srv_ = nh.advertiseService( "/seabee3/dropper2_action", &Seabee3DriverBase::dropper2ActionCB, this );
+		shooter_action_srv_ = nh.advertiseService( "/seabee3/shooter_action", &Seabee3DriverBase::shooterActionCB, this );
 	}
 
 	float getDepthFromPressure( int pressure )
@@ -110,8 +114,17 @@ public:
 	{
 		for ( unsigned int i = 0; i < msg->motors.size(); i++ )
 		{
-			if ( msg->mask[i] == 1 ) bee_stem_3_driver_->bee_stem_3_->setThruster( i, msg->motors[i] );
+			if ( msg->mask[i] == 1 ) bee_stem_3_driver_->setThruster( i, scaleMotorValue( msg->motors[i] ) );
 		}
+	}
+
+	int scaleMotorValue( int value )
+	{
+		double value_d = (double) value;
+
+		value_d = motor_val_min_ + value_d * (motor_val_max_ - motor_val_min_) / 100.0;
+
+		return (int) round( value_d );
 	}
 
 	bool executeFiringDeviceAction( seabee3_driver_base::FiringDeviceAction::Request &req, seabee3_driver_base::FiringDeviceAction::Response &res, int device_id )
@@ -134,47 +147,43 @@ public:
 
 	bool dropper1ActionCB( seabee3_driver_base::FiringDeviceAction::Request &req, seabee3_driver_base::FiringDeviceAction::Response &res )
 	{
-		return executeFiringDeviceAction( req, res, BeeStem3Driver::FiringDeviceID::DropperStage1 );
+		return executeFiringDeviceAction( req, res, BeeStem3Driver::FiringDeviceID::dropper_stage1 );
 	}
 
 	bool dropper2ActionCB( seabee3_driver_base::FiringDeviceAction::Request &req, seabee3_driver_base::FiringDeviceAction::Response &res )
 	{
-		return executeFiringDeviceAction( req, res, BeeStem3Driver::FiringDeviceID::DropperStage2 );
+		return executeFiringDeviceAction( req, res, BeeStem3Driver::FiringDeviceID::dropper_stage2 );
 	}
 
 	bool shooterActionCB( seabee3_driver_base::FiringDeviceAction::Request &req, seabee3_driver_base::FiringDeviceAction::Response &res )
 	{
-		return executeFiringDeviceAction( req, res, BeeStem3Driver::FiringDeviceID::Shooter );
+		return executeFiringDeviceAction( req, res, BeeStem3Driver::FiringDeviceID::shooter );
 	}
 
-	void spin()
+	virtual void spinOnce()
 	{
-		while ( ros::ok() )
+		seabee3_driver_base::Pressure intl_pressure_msg;
+		seabee3_driver_base::Pressure extl_pressure_msg;
+		seabee3_driver_base::Depth depth_msg;
+		seabee3_driver_base::KillSwitch kill_switch_msg;
+
+		bee_stem_3_driver_->readPressure( intl_pressure_msg.value, extl_pressure_msg.value );
+
+		if ( !pressure_calibrated_ )
 		{
-			seabee3_driver_base::Pressure intl_pressure_msg;
-			seabee3_driver_base::Pressure extl_pressure_msg;
-			seabee3_driver_base::Depth depth_msg;
-			seabee3_driver_base::KillSwitch kill_switch_msg;
-
-			bee_stem_3_driver_->readPressure( intl_pressure_msg.value, extl_pressure_msg.value );
-
-			if ( !pressure_calibrated_ )
-			{
-				surface_pressure_ = extl_pressure_msg.value;
-				pressure_calibrated_ = true;
-			}
-
-			bee_stem_3_driver_->readKillSwitch( kill_switch_msg.is_killed );
-			depth_msg.value = getDepthFromPressure( extl_pressure_msg.value );
-
-			intl_pressure_pub_.publish( intl_pressure_msg );
-			extl_pressure_pub_.publish( extl_pressure_msg );
-			depth_pub_.publish( depth_msg );
-			kill_switch_pub_.publish( kill_switch_msg );
-
-			ros::spinOnce();
-			ros::Rate( 20 ).sleep();
+			surface_pressure_ = extl_pressure_msg.value;
+			pressure_calibrated_ = true;
 		}
+
+		bee_stem_3_driver_->readKillSwitch( kill_switch_msg.is_killed );
+		depth_msg.value = getDepthFromPressure( extl_pressure_msg.value );
+
+		intl_pressure_pub_.publish( intl_pressure_msg );
+		extl_pressure_pub_.publish( extl_pressure_msg );
+		depth_pub_.publish( depth_msg );
+		kill_switch_pub_.publish( kill_switch_msg );
+
+		ros::Rate( 20 ).sleep();
 	}
 
 };
@@ -184,8 +193,8 @@ int main( int argc, char** argv )
 	ros::init( argc, argv, "seabee3_driver_base" );
 	ros::NodeHandle nh;
 	
-	Seabee3DriverBaseNode seabee3_driver_base_node( nh );
-	seabee3_driver_base_node.spin();
+	Seabee3DriverBase seabee3_driver_base( nh );
+	seabee3_driver_base.spin( BaseNode::SpinModeId::loop_spin_once );
 
 	return 0;
 }

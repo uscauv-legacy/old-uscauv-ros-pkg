@@ -1,17 +1,17 @@
 #include <base_image_proc/base_image_proc.h>
 
-typedef BaseImageProcSettings::_DefaultReconfigureType _ConfigType;
-class Demo1 : public BaseImageProc<_ConfigType>
+class Demo1: public BaseImageProc<>
 {
 public:
-	Demo1( ros::NodeHandle & nh ) : BaseImageProc<_ConfigType>( nh )
+	Demo1( ros::NodeHandle & nh ) :
+		BaseImageProc<> ( nh )
 	{
 		//
 	}
 	
 	virtual cv::Mat processImage( IplImage * ipl_img )
 	{
-		ROS_INFO("Processed Image");
+		ROS_INFO( "Processed image" );
 		cv_img_ = cv::Mat( ipl_img );
 		
 		cv::line( cv_img_, cv::Point( 0, 0 ), cv::Point( 50, 50 ), cv::Scalar( 255, 0, 0 ) );

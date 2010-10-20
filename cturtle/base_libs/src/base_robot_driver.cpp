@@ -1,13 +1,8 @@
 /*******************************************************************************
  *
- *      BeeStem3Driver
+ *      base_robot_driver
  * 
- *      Copyright (c) 2010,
- *
- *      Edward T. Kaszubski (ekaszubski@gmail.com),
- *      Rand Voorhies,
- *      Michael Montalbo
- *
+ *      Copyright (c) 2010, Edward T. Kaszubski (ekaszubski@gmail.com)
  *      All rights reserved.
  *
  *      Redistribution and use in source and binary forms, with or without
@@ -20,7 +15,7 @@
  *        copyright notice, this list of conditions and the following disclaimer
  *        in the documentation and/or other materials provided with the
  *        distribution.
- *      * Neither the name of the USC Underwater Robotics Team nor the names of its
+ *      * Neither the name of "seabee3-ros-pkg" nor the names of its
  *        contributors may be used to endorse or promote products derived from
  *        this software without specific prior written permission.
  *      
@@ -38,83 +33,51 @@
  *
  *******************************************************************************/
 
-#include <seabee3_beestem/BeeStem3.h>
-#include <vector>
-#include <map>
+#include <base_robot_driver/base_robot_driver.h>
 
-#define HEADING_K 0
-#define HEADING_P 15
-#define HEADING_I 0
-#define HEADING_D 0
-
-#define DEPTH_K 0
-#define DEPTH_P 33
-#define DEPTH_I 0
-#define DEPTH_D 0
-
-namespace Actions
+BaseRobotDriver::BaseRobotDriver( ros::NodeHandle & nh, std::string topic_name, uint threads ) :
+	BaseTfTranceiver( nh, threads )
 {
-	const static int NONE = -1;
-	const static int AXIS_INVERT = 0;
-	const static int DIVE = 1;
-	const static int SURFACE = 2;
-	const static int STRAFE = 3;
-	const static int SPEED = 4;
-	const static int HEADING = 5;
-	const static int ARM_NEXT_DEV = 6;
-	const static int FIRE_DEV = 7;
+	cmd_vel_sub_ = nh.subscribe( nh.resolveName( topic_name ), 1, &BaseRobotDriver::cmdVelCB_0, this );
 }
 
-class BeeStem3Driver
+BaseRobotDriver::~BaseRobotDriver()
 {
-public:
+	//
+}
 
-	struct FiringDeviceID
-	{
-		const static int shooter = 0;
-		const static int dropper_stage1 = 1;
-		const static int dropper_stage2 = 2;
-	};
+// virtual
+void BaseRobotDriver::cmdVelCB( const geometry_msgs::TwistConstPtr & twist )
+{
+	twist_cache_ = *twist;
+}
 
-	struct FiringDeviceParams
-	{
-		int trigger_time_;
-		int trigger_value_;
-	};
+void BaseRobotDriver::cmdVelCB_0( const geometry_msgs::TwistConstPtr & twist )
+{
+	cmdVelCB( twist );
+}
 
-	struct BeeStemFlags
-	{
-		bool init_flag_;
+void operator *=( geometry_msgs::Vector3 & v, const double & scale )
+{
+	v.x = v.x * scale;
+	v.y = v.y * scale;
+	v.z = v.z * scale;
+}
 
-		BeeStemFlags()
-		{
-			init_flag_ = false;
-		}
-	};
+// copy @v and scale the result
+geometry_msgs::Vector3 operator *( const geometry_msgs::Vector3 & v, const double & scale )
+{
+	geometry_msgs::Vector3 result( v );
+	result *= scale;
+	return result;
+}
 
-	BeeStem3Driver( std::string port );
+// copy @twist and scale its components
+geometry_msgs::Twist operator *( const geometry_msgs::Twist & twist, const double & scale )
+{
+	geometry_msgs::Twist result;
+	result.linear = twist.linear * scale;
+	result.angular = twist.angular * scale;
 
-	~BeeStem3Driver();
-
-	void readPressure( int & intl_pressure, int & extl_pressure );
-	void readKillSwitch( int8_t & kill_switch );
-
-	bool & getDeviceStatus( int device_id );
-	void fireDevice( int device_id );
-
-	void setThruster( int id, int value );
-
-	bool dropper1_ready_;
-	bool dropper2_ready_;
-	bool shooter_ready_;
-
-	FiringDeviceParams shooter_params_, dropper1_params_, dropper2_params_;
-
-private:
-	BeeStem3 * bee_stem_3_;
-	void initPose();
-
-	std::string port_;
-
-	BeeStemFlags flags_;
-};
+	return result;
+}

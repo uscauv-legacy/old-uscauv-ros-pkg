@@ -36,65 +36,22 @@
  *******************************************************************************/
 
 // tools
+#include <base_robot_driver/base_robot_driver.h>
 #include <control_toolbox/pid.h> // for Pid
 #include <localization_tools/Util.h>
-#include <ros/ros.h>
 #include <seabee3_beestem/BeeStem3.h> // for MotorControllerIDs
 #include <string>
-#include <tf/transform_broadcaster.h> // for TransformBroadcaster
-#include <tf/transform_listener.h> // for TransformListener
 // msgs
-#include <geometry_msgs/Twist.h> // for cmd_vel
-#include <geometry_msgs/Vector3.h> // for generic 3d vectors
 #include <seabee3_driver_base/MotorCntl.h> // for outgoing thruster commands
 // seabee3_driver/Vector3Masked.msg <-- seabee3_driver/SetDesiredPose.srv
 
 // srvs
 #include <seabee3_driver/SetDesiredPose.h> // for SetDesiredPose
-void operator >>( const geometry_msgs::Twist & the_pose, tf::Transform & the_pose_tf )
-{
-	the_pose_tf.setOrigin( tf::Vector3( the_pose.linear.x, the_pose.linear.y, the_pose.linear.z ) );
-	the_pose_tf.setRotation( tf::Quaternion( the_pose.angular.z, the_pose.angular.y, the_pose.angular.x ) );
-}
-
-void operator >>( const tf::Transform & the_pose_tf, geometry_msgs::Twist & the_pose )
-{
-	the_pose.linear.x = the_pose_tf.getOrigin().x();
-	the_pose.linear.y = the_pose_tf.getOrigin().y();
-	the_pose.linear.z = the_pose_tf.getOrigin().z();
-
-	the_pose_tf.getBasis().getEulerZYX( the_pose.angular.z, the_pose.angular.y, the_pose.angular.x );
-}
-
-void operator *=( geometry_msgs::Vector3 & v, const double & scale )
-{
-	v.x = v.x * scale;
-	v.y = v.y * scale;
-	v.z = v.z * scale;
-}
-
-// copy @v and scale the result
-geometry_msgs::Vector3 operator *( const geometry_msgs::Vector3 & v, const double & scale )
-{
-	geometry_msgs::Vector3 result( v );
-	result *= scale;
-	return result;
-}
-
-// copy @twist and scale its components
-geometry_msgs::Twist operator *( const geometry_msgs::Twist & twist, const double & scale )
-{
-	geometry_msgs::Twist result;
-	result.linear = twist.linear * scale;
-	result.angular = twist.angular * scale;
-
-	return result;
-}
-
-class Seabee3Driver
+class Seabee3Driver: public BaseRobotDriver
 {
 public:
-	struct ThrusterArrayCfg // define the direction of each thruster in an array that is responsible for controlling a single axis of movement
+	// define the direction of each thruster in an array that is responsible for controlling a single axis of movement
+	struct ThrusterArrayCfg
 	{
 		std::vector<double> thrusters;
 		double & at( const unsigned int & i )
@@ -173,8 +130,6 @@ public:
 private:
 	std::string global_frame_;
 
-	geometry_msgs::Twist twist_cache_;
-
 	seabee3_driver_base::MotorCntl motor_cntl_msg_;
 
 	geometry_msgs::Vector3 desired_rpy_, error_in_rpy_, desired_change_in_rpy_per_sec_, desired_xyz_, error_in_xyz_, desired_change_in_xyz_per_sec_;
@@ -188,9 +143,6 @@ private:
 	geometry_msgs::Twist desired_pose_;
 	geometry_msgs::Twist current_pose_;
 
-	tf::TransformListener * tl_;
-	tf::TransformBroadcaster * tb_;
-
 	bool depth_initialized_;
 
 	std::vector<ThrusterArrayCfg> thruster_dir_cfg_;
@@ -200,18 +152,13 @@ private:
 
 	Pid3D xyz_pid_, rpy_pid_;
 
-	ros::NodeHandle nh_priv_;
-	ros::Subscriber cmd_vel_sub_;
 	ros::Publisher motor_cntl_pub_;
 	ros::ServiceServer set_desired_pose_srv_;
 
 public:
 	Seabee3Driver( ros::NodeHandle & nh ) :
-		nh_priv_( "~" )
+		BaseRobotDriver( nh )
 	{
-		tl_ = new tf::TransformListener;
-		tb_ = new tf::TransformBroadcaster;
-
 		last_pid_update_time_ = ros::Time( -1 );
 
 		depth_initialized_ = false;
@@ -284,24 +231,14 @@ public:
 		rpy_pid_.initPid( pid_i_min_, pid_i_max_ );
 		rpy_pid_.reset();
 
-		for ( int i = 0; i < BeeStem3::NUM_MOTOR_CONTROLLERS; i++ )
-		{
-			motor_cntl_msg_.motors[i] = 0;
-			motor_cntl_msg_.mask[i] = 0;
-		}
+		resetMotorCntlMsg();
 
-		cmd_vel_sub_ = nh.subscribe( "/seabee3/cmd_vel", 1, &Seabee3Driver::cmdVelCB, this );
 		motor_cntl_pub_ = nh.advertise<seabee3_driver_base::MotorCntl> ( "/seabee3/motor_cntl", 1 );
 		set_desired_pose_srv_ = nh.advertiseService( "/seabee3/set_desired_pose", &Seabee3Driver::setDesiredPoseCB, this );
 
-		setDesiredPose( geometry_msgs::Twist() ); //set current xyz to 0, desired RPY to current RPY
+		requestChangeInDesiredPose( geometry_msgs::Twist() ); //set current xyz to 0, desired RPY to current RPY
 	}
 
-	~Seabee3Driver()
-	{
-		delete tl_;
-		delete tb_;
-	}
 	void updateMotorCntlMsg( seabee3_driver_base::MotorCntl & msg, int axis, int p_value )
 	{
 		int value = p_value;
@@ -424,24 +361,29 @@ public:
 	 lastUpdateTime = ros::Time::now();
 	 }*/
 
+	void setDesiredPoseComponent( double & mask, double & desired, double & value, double & mode )
+	{
+		// mode = 0 -> desired = value
+		// mode = 1 -> desired += value
+		if ( mask != 0.0 ) desired = value + ( mode == 1.0 ? desired : 0.0 );
+	}
+
+	void setDesiredPose( geometry_msgs::Vector3 & mask, geometry_msgs::Vector3 & desired, geometry_msgs::Vector3 & value, geometry_msgs::Vector3 & mode )
+	{
+		setDesiredPoseComponent( mask.x, desired.x, value.x, mode.x );
+		setDesiredPoseComponent( mask.y, desired.y, value.y, mode.y );
+		setDesiredPoseComponent( mask.z, desired.z, value.z, mode.z );
+	}
+
 	bool setDesiredPoseCB( seabee3_driver::SetDesiredPose::Request & req, seabee3_driver::SetDesiredPose::Response & resp )
 	{
-		//desiredPoseTf >> desiredPose;
+		setDesiredPose( req.pos.mask, desired_pose_.linear, req.pos.values, req.pos.mode );
+		setDesiredPose( req.ori.mask, desired_pose_.angular, req.ori.values, req.ori.mode );
 
-		if ( req.pos.mask.x != 0.0 ) desired_pose_.linear.x = req.pos.values.x + ( req.pos.mode.x == 1.0 ? desired_pose_.linear.x : 0.0 );
-		if ( req.pos.mask.y != 0.0 ) desired_pose_.linear.y = req.pos.values.y + ( req.pos.mode.y == 1.0 ? desired_pose_.linear.y : 0.0 );
-		if ( req.pos.mask.z != 0.0 ) desired_pose_.linear.z = req.pos.values.z + ( req.pos.mode.z == 1.0 ? desired_pose_.linear.z : 0.0 );
-
-		if ( req.ori.mask.x != 0.0 ) desired_pose_.angular.x = req.ori.values.x + ( req.ori.mode.x == 1.0 ? desired_pose_.angular.x : 0.0 );
-		if ( req.ori.mask.y != 0.0 ) desired_pose_.angular.y = req.ori.values.y + ( req.ori.mode.y == 1.0 ? desired_pose_.angular.y : 0.0 );
-		if ( req.ori.mask.z != 0.0 ) desired_pose_.angular.z = req.ori.values.z + ( req.ori.mode.z == 1.0 ? desired_pose_.angular.z : 0.0 );
-
-
-		//desiredPose >> desiredPoseTf;
 		return true;
 	}
 
-	void setDesiredPose( const geometry_msgs::Twist & msg )
+	void requestChangeInDesiredPose( const geometry_msgs::Twist & msg )
 	{
 		seabee3_driver::SetDesiredPose::Request req;
 		seabee3_driver::SetDesiredPose::Response resp;
@@ -458,19 +400,12 @@ public:
 		setDesiredPoseCB( req, resp );
 	}
 
-	void fetchTfFrame( tf::Transform transform, const std::string & frame1, const std::string & frame2 )
+	void resetMotorCntlMsg()
 	{
-		tf::StampedTransform temp;
-		try
+		for ( int i = 0; i < BeeStem3::NUM_MOTOR_CONTROLLERS; i++ )
 		{
-			tl_->lookupTransform( frame1, frame2, ros::Time( 0 ), temp );
-
-			transform.setOrigin( temp.getOrigin() );
-			transform.setRotation( temp.getRotation() );
-		}
-		catch ( tf::TransformException ex )
-		{
-			ROS_ERROR( "%s", ex.what() );
+			motor_cntl_msg_.mask[i] = 0;
+			motor_cntl_msg_.motors[i] = 0;
 		}
 	}
 
@@ -479,26 +414,24 @@ public:
 		fetchTfFrame( desired_pose_tf_, "seabee3/landmark_map", "seabee3/desired_pose" );
 		fetchTfFrame( current_pose_tf_, "seabee3/landmark_map", "seabee3/base_link" );
 
+
+		// convert tf frames to Twist messages; fuck quaternions
 		desired_pose_tf_ >> desired_pose_;
 		current_pose_tf_ >> current_pose_;
 
 		if ( last_pid_update_time_ != ros::Time( -1 ) )
 		{
-			for ( int i = 0; i < BeeStem3::NUM_MOTOR_CONTROLLERS; i++ )
-			{
-				motor_cntl_msg_.mask[i] = 0;
-				motor_cntl_msg_.motors[i] = 0;
-			}
+			resetMotorCntlMsg();
 
 			ros::Duration dt = ros::Time::now() - last_pid_update_time_;
 
 
-			//twistCache is essentially the linear and angular change in desired pose
-			//we multiply by the change in time and an arbitrary constant to obtain the desired change in pose per second
+			//twistCache is essentially the linear and angular change in desired pose per second (linear + angular velocity)
+			//we multiply by the change in time and an arbitrary constant to obtain the desired change in pose
 			//this change in pose is then added to the current pose; the result is desiredPose
 			const double t1 = dt.toSec() * -100.0;
 			geometry_msgs::Twist changeInDesiredPose = twist_cache_ * t1;
-			setDesiredPose( changeInDesiredPose );
+			requestChangeInDesiredPose( changeInDesiredPose );
 
 			LocalizationUtil::normalizeAngle( desired_pose_.angular.x );
 			LocalizationUtil::normalizeAngle( desired_pose_.angular.y );
@@ -548,23 +481,21 @@ public:
 		last_pid_update_time_ = ros::Time::now();
 	}
 
-	void cmdVelCB( const geometry_msgs::TwistConstPtr & twist )
+
+	// using inherited
+	/*void cmdVelCB( const geometry_msgs::TwistConstPtr & twist )
+	 {
+	 twist_cache_ = *twist;
+	 }*/
+
+	virtual void spinOnce()
 	{
-		twist_cache_ = *twist;
-	}
+		//this also grabs and publishes tf frames
+		pidStep();
 
-	void spin()
-	{
-		while ( ros::ok() )
-		{
-			//this also grabs and publishes tf frames
-			pidStep();
+		motor_cntl_pub_.publish( motor_cntl_msg_ );
 
-			motor_cntl_pub_.publish( motor_cntl_msg_ );
-
-			ros::spinOnce();
-			ros::Rate( 20 ).sleep();
-		}
+		ros::Rate( 20 ).sleep();
 	}
 };
 
@@ -574,7 +505,7 @@ int main( int argc, char** argv )
 	ros::NodeHandle nh;
 	
 	Seabee3Driver seabee3_driver( nh );
-	seabee3_driver.spin();
+	seabee3_driver.spin( BaseNode::SpinModeId::loop_spin_once );
 
 	return 0;
 }
