@@ -40,7 +40,7 @@
 
 struct BaseImageProcSettings
 {
-	typedef base_image_proc::EmptyConfig _DefaultReconfigureType;
+	typedef base_libs::EmptyConfig _DefaultReconfigureType;
 };
 
 template<typename _ReconfigureType = BaseImageProcSettings::_DefaultReconfigureType, typename _ServiceType = std_srvs::Empty>

@@ -43,7 +43,7 @@ private:
 	int speed_, strafe_, surface_, dive_, heading_, roll_, f_dev_inc_, f_dev_dec_, fire_dev_, current_device_;
 	double speed_scale_, strafe_scale_, surface_scale_, dive_scale_, heading_scale_, roll_scale_;
 
-	ros::ServiceClient shooter_srv_, dropper1_srv_, dropper2_srv_;
+	ros::ServiceClient shooter_cli_, dropper1_cli_, dropper2_cli_;
 	seabee3_driver_base::FiringDeviceAction device_action_;
 	bool button_action_busy_ = false;
 	int button_action_id_ = -1;
@@ -69,9 +69,9 @@ public:
 		nh_priv_.param( "heading_scale", heading_scale_, 1.0 );
 		nh_priv_.param( "roll_scale", roll_scale_, 1.0 );
 
-		shooter_srv_ = nh_priv_.serviceClient<seabee3_driver_base::FiringDeviceAction> ( "/seabee3/shooter1_action" );
-		dropper1_srv_ = nh_priv_.serviceClient<seabee3_driver_base::FiringDeviceAction> ( "/seabee3/dropper1_action" );
-		dropper2_srv_ = nh_priv_.serviceClient<seabee3_driver_base::FiringDeviceAction> ( "/seabee3/dropper2_action" );
+		shooter_cli_ = nh_priv_.serviceClient<seabee3_driver_base::FiringDeviceAction> ( "/seabee3/shooter1_action" );
+		dropper1_cli_ = nh_priv_.serviceClient<seabee3_driver_base::FiringDeviceAction> ( "/seabee3/dropper1_action" );
+		dropper2_cli_ = nh_priv_.serviceClient<seabee3_driver_base::FiringDeviceAction> ( "/seabee3/dropper2_action" );
 	}
 
 	void fireCurrentDevice( bool reset = false )
@@ -81,13 +81,13 @@ public:
 		switch ( current_device_ )
 		{
 		case BeeStem3Driver::FiringDeviceID::shooter:
-			shooter_srv_.call( device_action_ );
+			shooter_cli_.call( device_action_ );
 			break;
 		case BeeStem3Driver::FiringDeviceID::dropper_stage1:
-			dropper1_srv_.call( device_action_ );
+			dropper1_cli_.call( device_action_ );
 			break;
 		case BeeStem3Driver::FiringDeviceID::dropper_stage2:
-			dropper2_srv_.call( device_action_ );
+			dropper2_cli_.call( device_action_ );
 			break;
 		}
 	}

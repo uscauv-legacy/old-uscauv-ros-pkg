@@ -13,9 +13,10 @@
   <depend package="seabee3_driver_base" /> <!-- for Depth.msg, KillSwitch.msg, MotorCntl.msg, Pressure.msg -->
   <depend package="geometry_msgs" /> <!-- for Twist.msg, Vector3.msg -->
   <depend package="std_msgs" /> <!-- for Empty.msg -->
-  <depend package="tf"/> <!-- for TransformBroadcaster, TransformListener -->
   <depend package="localization_defs" /> <!-- for localization_tools/Util.h -->
   <depend package="base_libs" />
+  <depend package="std_srvs"/>
+  <depend package="seabee3_msgs"/>
   <export>
     <cpp cflags="-I${prefix}/include -I${prefix}/msg/cpp -I${prefix}/srv/cpp" lflags="-Wl,-rpath,${prefix}/lib -L${prefix}/lib -lseabee3_driver"/>
   </export>

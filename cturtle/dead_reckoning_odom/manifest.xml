@@ -1,19 +1,22 @@
 <package>
-  <description brief="dead_reckoning">
+  <description brief="dead_reckoning_odom">
 
-     dead_reckoning
+     dead_reckoning_odom
 
   </description>
-  <author>USCART</author>
+  <author>Edward T. Kaszubski</author>
   <license>BSD</license>
   <review status="unreviewed" notes=""/>
-  <url>http://ros.org/wiki/dead_reckoning</url>
+  <url>http://ros.org/wiki/dead_reckoning_odom</url>
   <depend package="roscpp"/>
   <depend package="nav_msgs"/>
   <depend package="seabee3_driver_base" />
   <depend package="xsens_node" />
   <depend package="geometry_msgs" />
   <depend package="base_libs"/>
+  <depend package="std_srvs"/>
+  <depend package="seabee3_msgs"/>
+  <depend package="libseabee3_beestem"/>
 
 </package>
 

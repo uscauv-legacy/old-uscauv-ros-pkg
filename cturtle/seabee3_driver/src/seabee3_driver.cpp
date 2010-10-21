@@ -36,7 +36,7 @@
  *******************************************************************************/
 
 // tools
-#include <base_robot_driver/base_robot_driver.h>
+#include <base_tf_tranceiver/base_tf_tranceiver.h>
 #include <control_toolbox/pid.h> // for Pid
 #include <localization_tools/Util.h>
 #include <seabee3_beestem/BeeStem3.h> // for MotorControllerIDs
@@ -46,8 +46,11 @@
 // seabee3_driver/Vector3Masked.msg <-- seabee3_driver/SetDesiredPose.srv
 
 // srvs
-#include <seabee3_driver/SetDesiredPose.h> // for SetDesiredPose
-class Seabee3Driver: public BaseRobotDriver
+#include <seabee3_msgs/SetDesiredPose.h> // for SetDesiredPose
+#include <std_srvs/Empty.h>
+
+
+class Seabee3Driver: public BaseTfTranceiver
 {
 public:
 	// define the direction of each thruster in an array that is responsible for controlling a single axis of movement
@@ -132,7 +135,7 @@ private:
 
 	seabee3_driver_base::MotorCntl motor_cntl_msg_;
 
-	geometry_msgs::Vector3 desired_rpy_, error_in_rpy_, desired_change_in_rpy_per_sec_, desired_xyz_, error_in_xyz_, desired_change_in_xyz_per_sec_;
+	geometry_msgs::Vector3 error_in_rpy_, error_in_xyz_;
 	geometry_msgs::Vector3 max_error_in_rpy_, max_error_in_xyz_;
 
 	ros::Time last_pid_update_time_;
@@ -143,8 +146,6 @@ private:
 	geometry_msgs::Twist desired_pose_;
 	geometry_msgs::Twist current_pose_;
 
-	bool depth_initialized_;
-
 	std::vector<ThrusterArrayCfg> thruster_dir_cfg_;
 
 	double axis_dir_cfg_[6];
@@ -153,15 +154,13 @@ private:
 	Pid3D xyz_pid_, rpy_pid_;
 
 	ros::Publisher motor_cntl_pub_;
-	ros::ServiceServer set_desired_pose_srv_;
+	ros::ServiceClient reset_pose_cli_;
 
 public:
 	Seabee3Driver( ros::NodeHandle & nh ) :
-		BaseRobotDriver( nh )
+		BaseTfTranceiver( nh )
 	{
 		last_pid_update_time_ = ros::Time( -1 );
-
-		depth_initialized_ = false;
 
 		nh_priv_.param( "global_frame", global_frame_, std::string( "/landmark_map" ) );
 
@@ -232,11 +231,21 @@ public:
 		rpy_pid_.reset();
 
 		resetMotorCntlMsg();
+		reset_pose_cli_ = nh.serviceClient<std_srvs::Empty> ( "/seabee3/reset_pose" );
 
 		motor_cntl_pub_ = nh.advertise<seabee3_driver_base::MotorCntl> ( "/seabee3/motor_cntl", 1 );
-		set_desired_pose_srv_ = nh.advertiseService( "/seabee3/set_desired_pose", &Seabee3Driver::setDesiredPoseCB, this );
 
-		requestChangeInDesiredPose( geometry_msgs::Twist() ); //set current xyz to 0, desired RPY to current RPY
+
+		//set current xyz to 0, desired RPY to current RPY
+		resetPose();
+	}
+
+	void resetPose()
+	{
+		std_srvs::Empty::Request req;
+		std_srvs::Empty::Response resp;
+
+		reset_pose_cli_.call( req, resp );
 	}
 
 	void updateMotorCntlMsg( seabee3_driver_base::MotorCntl & msg, int axis, int p_value )
@@ -314,6 +323,15 @@ public:
 		msg.mask[motor2] = 1;
 	}
 
+	void resetMotorCntlMsg()
+	{
+		for ( int i = 0; i < BeeStem3::NUM_MOTOR_CONTROLLERS; i++ )
+		{
+			motor_cntl_msg_.mask[i] = 0;
+			motor_cntl_msg_.motors[i] = 0;
+		}
+	}
+
 
 	/*void updateMotorCntlFromTwist( const geometry_msgs::TwistConstPtr & twist )
 	 {
@@ -361,54 +379,6 @@ public:
 	 lastUpdateTime = ros::Time::now();
 	 }*/
 
-	void setDesiredPoseComponent( double & mask, double & desired, double & value, double & mode )
-	{
-		// mode = 0 -> desired = value
-		// mode = 1 -> desired += value
-		if ( mask != 0.0 ) desired = value + ( mode == 1.0 ? desired : 0.0 );
-	}
-
-	void setDesiredPose( geometry_msgs::Vector3 & mask, geometry_msgs::Vector3 & desired, geometry_msgs::Vector3 & value, geometry_msgs::Vector3 & mode )
-	{
-		setDesiredPoseComponent( mask.x, desired.x, value.x, mode.x );
-		setDesiredPoseComponent( mask.y, desired.y, value.y, mode.y );
-		setDesiredPoseComponent( mask.z, desired.z, value.z, mode.z );
-	}
-
-	bool setDesiredPoseCB( seabee3_driver::SetDesiredPose::Request & req, seabee3_driver::SetDesiredPose::Response & resp )
-	{
-		setDesiredPose( req.pos.mask, desired_pose_.linear, req.pos.values, req.pos.mode );
-		setDesiredPose( req.ori.mask, desired_pose_.angular, req.ori.values, req.ori.mode );
-
-		return true;
-	}
-
-	void requestChangeInDesiredPose( const geometry_msgs::Twist & msg )
-	{
-		seabee3_driver::SetDesiredPose::Request req;
-		seabee3_driver::SetDesiredPose::Response resp;
-		seabee3_driver::Vector3Masked change_in_desired_pose;
-
-		change_in_desired_pose.mask.x = change_in_desired_pose.mask.y = change_in_desired_pose.mask.z = 1; //enable all values
-		change_in_desired_pose.mode.x = change_in_desired_pose.mode.y = change_in_desired_pose.mode.z = 1; //set mode to incremental
-
-		req.pos = req.ori = change_in_desired_pose;
-
-		req.pos.values = msg.linear;
-		req.ori.values = msg.angular;
-
-		setDesiredPoseCB( req, resp );
-	}
-
-	void resetMotorCntlMsg()
-	{
-		for ( int i = 0; i < BeeStem3::NUM_MOTOR_CONTROLLERS; i++ )
-		{
-			motor_cntl_msg_.mask[i] = 0;
-			motor_cntl_msg_.motors[i] = 0;
-		}
-	}
-
 	void pidStep()
 	{
 		fetchTfFrame( desired_pose_tf_, "seabee3/landmark_map", "seabee3/desired_pose" );
@@ -424,14 +394,6 @@ public:
 			resetMotorCntlMsg();
 
 			ros::Duration dt = ros::Time::now() - last_pid_update_time_;
-
-
-			//twistCache is essentially the linear and angular change in desired pose per second (linear + angular velocity)
-			//we multiply by the change in time and an arbitrary constant to obtain the desired change in pose
-			//this change in pose is then added to the current pose; the result is desiredPose
-			const double t1 = dt.toSec() * -100.0;
-			geometry_msgs::Twist changeInDesiredPose = twist_cache_ * t1;
-			requestChangeInDesiredPose( changeInDesiredPose );
 
 			LocalizationUtil::normalizeAngle( desired_pose_.angular.x );
 			LocalizationUtil::normalizeAngle( desired_pose_.angular.y );
@@ -474,9 +436,6 @@ public:
 			//updateMotorCntlMsg( motorCntlMsg, Axes::roll, rollMotorVal );
 			//updateMotorCntlMsg( motorCntlMsg, Axes::pitch, pitchMotorVal );
 			updateMotorCntlMsg( motor_cntl_msg_, Axes::yaw, yawMotorVal );
-
-			desired_pose_ >> desired_pose_tf_;
-			tb_->sendTransform( tf::StampedTransform( desired_pose_tf_, ros::Time::now(), global_frame_, "seabee3/desired_pose" ) );
 		}
 		last_pid_update_time_ = ros::Time::now();
 	}

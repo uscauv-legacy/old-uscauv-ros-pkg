@@ -1,4 +1,3 @@
-seabee3_driver/Vector3Masked pos
-seabee3_driver/Vector3Masked ori
+seabee3_msgs/Vector3Masked pos
+seabee3_msgs/Vector3Masked ori
 ----
-std_msgs/Empty response

@@ -55,7 +55,7 @@
 // for the DoSomething service
 #include <std_srvs/Empty.h>
 // for cfg code
-#include <base_image_proc/../../cfg/cpp/base_image_proc/EmptyConfig.h>
+#include <base_image_proc/../../cfg/cpp/base_libs/EmptyConfig.h>
 #include <base_node/base_node.h>
 
 template<typename _ReconfigureType>
@@ -68,7 +68,7 @@ struct ReconfigureSettings
 };
 
 template<>
-struct ReconfigureSettings<base_image_proc::EmptyConfig>
+struct ReconfigureSettings<base_libs::EmptyConfig>
 {
 	static bool enableReconfigure()
 	{
