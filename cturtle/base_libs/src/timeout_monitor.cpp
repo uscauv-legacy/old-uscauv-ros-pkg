@@ -1,8 +1,10 @@
 /*******************************************************************************
  *
- *      base_teleop
+ *      timeout_monitor
  * 
- *      Copyright (c) 2010, Edward T. Kaszubski (ekaszubski@gmail.com)
+ *      Copyright (c) 2010,
+ *      Edward T. Kaszubski (ekaszubski@gmail.com)
+ *
  *      All rights reserved.
  *
  *      Redistribution and use in source and binary forms, with or without
@@ -33,60 +35,30 @@
  *
  *******************************************************************************/
 
-#ifndef BASE_TELEOP_H_
-#define BASE_TELEOP_H_
+#include <timeout_monitor/timeout_monitor.h>
 
-#include <base_node/base_node.h>
-#include <geometry_msgs/Twist.h>
-#include <joy/Joy.h>
-
-class BaseTeleop: public BaseNode
-{
-
-protected:
-	geometry_msgs::Twist cmd_vel_;
-	ros::Publisher cmd_vel_pub_;
-	ros::Subscriber joy_sub_;
-
-public:
-	BaseTeleop( ros::NodeHandle & nh, std::string topic_name = "cmd_vel" );
-	~BaseTeleop();
-
-protected:
-	virtual void joyCB( const joy::Joy::ConstPtr& joy );
-	double applyDeadZone( float value, float dead_radius_max = 0.15 );
-
-private:
-	void joyCB_0( const joy::Joy::ConstPtr& joy );
-
-};
-
-BaseTeleop::BaseTeleop( ros::NodeHandle & nh, std::string topic_name ) :
-	BaseNode( nh, 1 )
-{
-	joy_sub_ = nh.subscribe( nh.resolveName( "/joy" ), 1, &BaseTeleop::joyCB_0, this );
-	cmd_vel_pub_ = nh.advertise<geometry_msgs::Twist> ( topic_name, 1 );
-}
-
-BaseTeleop::~BaseTeleop()
+TimeoutMonitor::TimeoutMonitor()
 {
 	//
 }
 
-// virtual
-void BaseTeleop::joyCB( const joy::Joy::ConstPtr& joy )
+void TimeoutMonitor::keepAlive()
 {
-	//
+	active_ = true;
+	timer_.stop();
+	timer_.start();
 }
 
-void BaseTeleop::joyCB_0( const joy::Joy::ConstPtr& joy )
+/*template<typename _T>
+void TimeoutMonitor::registerCallback( ros::NodeHandle & nh, void(_T::*callback)( const ros::TimerEvent & event ), _T* obj, double timeout_delay )
 {
-	joyCB( joy );
-}
+	timer_ = nh.createTimer( ros::Duration( timeout_delay ), callback, obj );
+	timer_.stop();
+	active_ = true;
+}*/
 
-double BaseTeleop::applyDeadZone( float value, float dead_radius_max )
+void TimeoutMonitor::stop()
 {
-	return fabs( value ) < dead_radius_max ? 0.0 : (double) value;
+	timer_.stop();
+	active_ = false;
 }
-
-#endif /* BASE_TELEOP_H_ */

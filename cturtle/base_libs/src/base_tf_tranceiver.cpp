@@ -36,7 +36,7 @@
 #include <base_tf_tranceiver/base_tf_tranceiver.h>
 
 BaseTfTranceiver::BaseTfTranceiver( ros::NodeHandle & nh, uint threads ) :
-	BaseNode( nh, threads )
+	BaseNode( nh, threads ), error_count_( 0 )
 {
 	tl_ = new tf::TransformListener;
 	tb_ = new tf::TransformBroadcaster;
@@ -53,15 +53,28 @@ void BaseTfTranceiver::fetchTfFrame( tf::Transform & transform, const std::strin
 	tf::StampedTransform temp;
 	try
 	{
+		tl_->waitForTransform( frame1, frame2, ros::Time( 0 ), ros::Duration( 0.0 ) );
 		tl_->lookupTransform( frame1, frame2, ros::Time( 0 ), temp );
 
 		transform.setOrigin( temp.getOrigin() );
 		transform.setRotation( temp.getRotation() );
+
+		error_count_ = 0;
 	}
 	catch ( tf::TransformException ex )
 	{
-		ROS_ERROR( "%s", ex.what() );
+		if( error_count_ < 10 )
+		{
+			ROS_ERROR( "%s", ex.what() );
+			error_count_ ++;
+		}
+
 	}
+}
+
+void BaseTfTranceiver::publishTfFrame( tf::Transform & transform, const std::string & frame1, const std::string & frame2 )
+{
+	tb_->sendTransform( tf::StampedTransform( transform, ros::Time::now(), frame1, frame2 ) );
 }
 
 void operator >>( const geometry_msgs::Twist & the_pose, tf::Transform & the_pose_tf )

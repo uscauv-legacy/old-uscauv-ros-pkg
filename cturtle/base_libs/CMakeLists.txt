@@ -29,6 +29,8 @@ rosbuild_add_library(${PROJECT_NAME} src/base_node.cpp
 									 src/base_image_proc.cpp
 									 src/base_tf_tranceiver.cpp
 									 src/base_robot_driver.cpp
-									 src/base_teleop.cpp)
+									 src/base_teleop.cpp
+									 src/mathy_math.cpp
+									 src/timeout_monitor.cpp)
 
 #rosbuild_add_executable( test_base_image_proc src/test_base_image_proc.cpp )

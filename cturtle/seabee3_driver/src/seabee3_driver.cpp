@@ -36,10 +36,10 @@
  *******************************************************************************/
 
 // tools
-#include <base_tf_tranceiver/base_tf_tranceiver.h>
+#include <base_robot_driver/base_robot_driver.h>
 #include <control_toolbox/pid.h> // for Pid
-#include <localization_tools/Util.h>
 #include <seabee3_beestem/BeeStem3.h> // for MotorControllerIDs
+#include <mathy_math/mathy_math.h>
 #include <string>
 // msgs
 #include <seabee3_driver_base/MotorCntl.h> // for outgoing thruster commands
@@ -74,8 +74,7 @@ geometry_msgs::Twist operator *( const geometry_msgs::Twist & twist, const doubl
 	return result;
 }
 
-
-class Seabee3Driver: public BaseTfTranceiver
+class Seabee3Driver: public BaseRobotDriver
 {
 public:
 	// define the direction of each thruster in an array that is responsible for controlling a single axis of movement
@@ -179,16 +178,15 @@ private:
 	Pid3D xyz_pid_, rpy_pid_;
 
 	ros::Publisher motor_cntl_pub_;
-	ros::ServiceClient reset_pose_cli_;
 
-	ros::Subscriber cmd_vel_sub_;
-	geometry_msgs::Twist twist_cache_;
+	ros::ServiceServer reset_pose_srv_;
+	ros::ServiceServer set_desired_pose_srv_;
 
 public:
 	Seabee3Driver( ros::NodeHandle & nh ) :
-		BaseTfTranceiver( nh )
+		BaseRobotDriver( nh, "/seabee3/cmd_vel" )
 	{
-		cmd_vel_sub_ = nh.subscribe( nh.resolveName( "/seabee3/cmd_vel" ), 1, &Seabee3Driver::cmdVelCB, this );
+		thruster_dir_cfg_.resize( 6 );
 
 		last_pid_update_time_ = ros::Time( -1 );
 
@@ -261,26 +259,14 @@ public:
 		rpy_pid_.reset();
 
 		resetMotorCntlMsg();
-		reset_pose_cli_ = nh.serviceClient<std_srvs::Empty> ( "/seabee3/reset_pose" );
 
 		motor_cntl_pub_ = nh.advertise<seabee3_driver_base::MotorCntl> ( "/seabee3/motor_cntl", 1 );
 
+		reset_pose_srv_ = nh.advertiseService( "/seabee3/reset_pose", &Seabee3Driver::resetPoseCB, this );
+		set_desired_pose_srv_ = nh.advertiseService( "/seabee3/set_desired_pose", &Seabee3Driver::setDesiredPoseCB, this );
 
 		//set current xyz to 0, desired RPY to current RPY
 		resetPose();
-	}
-
-	virtual void cmdVelCB( const geometry_msgs::TwistConstPtr & twist )
-	{
-		twist_cache_ = *twist;
-	}
-
-	void resetPose()
-	{
-		std_srvs::Empty::Request req;
-		std_srvs::Empty::Response resp;
-
-		reset_pose_cli_.call( req, resp );
 	}
 
 	void updateMotorCntlMsg( seabee3_driver_base::MotorCntl & msg, int axis, int p_value )
@@ -349,7 +335,7 @@ public:
 		motor1_val += motor1_scale * value;
 		motor2_val += motor2_scale * value;
 
-		LocalizationUtil::capValueProp( motor1_val, motor2_val, 100 );
+		MathyMath::capValueProp( motor1_val, motor2_val, 100 );
 
 		msg.motors[motor1] = motor1_val;
 		msg.motors[motor2] = motor2_val;
@@ -367,63 +353,73 @@ public:
 		}
 	}
 
+	void setDesiredPoseComponent( double & mask, double & desired, double & value, double & mode )
+	{
+		// mode = 0 -> desired = value
+		// mode = 1 -> desired += value
+		if ( mask != 0.0 ) desired = value + ( mode == 1.0 ? desired : 0.0 );
+	}
 
-	/*void updateMotorCntlFromTwist( const geometry_msgs::TwistConstPtr & twist )
-	 {
-	 //ROS_INFO("udpateMotorCntlFromTwist()");
-	 tf::Vector3 vel_desired_lin( twist->linear.x, twist->linear.y, twist->linear.z );
-	 tf::Vector3 vel_desired_ang( twist->angular.x, twist->angular.y, twist->angular.z );
-	 //tf::Vector3 vel_diff_lin (vel_desired_lin - *vel_est_lin);
-	 //tf::Vector3 vel_diff_ang (vel_desired_ang - *vel_est_ang);
+	void setDesiredPose( geometry_msgs::Vector3 & mask, geometry_msgs::Vector3 & desired, geometry_msgs::Vector3 & value, geometry_msgs::Vector3 & mode )
+	{
+		setDesiredPoseComponent( mask.x, desired.x, value.x, mode.x );
+		setDesiredPoseComponent( mask.y, desired.y, value.y, mode.y );
+		setDesiredPoseComponent( mask.z, desired.z, value.z, mode.z );
+	}
 
-	 //	ROS_INFO("-----------------------------------------------------");
-	 //
-	 //	ROS_INFO("linear x %f y %f z %f", vel_desired_lin.getX(), vel_desired_lin.getY(), vel_desired_lin.getZ());
-	 //	ROS_INFO("angular x %f y %f z %f", vel_desired_ang.getX(), vel_desired_ang.getY(), vel_desired_ang.getZ());
+	bool resetPoseCB( std_srvs::Empty::Request & req, std_srvs::Empty::Response & resp )
+	{
+		resetPose();
 
-	 desiredSpeed = vel_desired_lin.getX() * 100.0;
-	 desiredStrafe = vel_desired_lin.getY() * 100.0;
-	 // *desiredDepth = vel_diff_lin.getZ() * 100.0;
+		return true;
+	}
 
-	 //updateMotorCntlMsg(*motorCntlMsg, Axes::speed, vel_diff_lin.getX() * 100.0);
-	 //updateMotorCntlMsg(*motorCntlMsg, Axes::strafe, vel_diff_lin.getY() * 50.0);
-	 //updateMotorCntlMsg(*motorCntlMsg, Axes::depth, vel_diff_lin.getZ() * 100.0);
-	 //updateMotorCntlMsg(*motorCntlMsg, Axes::roll, vel_diff_ang.getX() * 100.0);
-	 //updateMotorCntlMsg(*motorCntlMsg, Axes::yaw, vel_diff_ang.getZ() * 100.0);
+	void resetPose()
+	{
+		desired_pose_ = geometry_msgs::Twist();
+		current_pose_ = geometry_msgs::Twist();
+	}
 
-	 if ( lastUpdateTime != ros::Time( -1 ) )
-	 {
-	 //ros::Duration dt = ros::Time::now() - *lastYawUpdateTime;
+	bool setDesiredPoseCB( seabee3_msgs::SetDesiredPose::Request & req, seabee3_msgs::SetDesiredPose::Response & resp )
+	{
+		setDesiredPose( req.ori.mask, desired_pose_.angular, req.ori.values, req.ori.mode );
 
-	 //desiredChangeInXYZPerSec->x = 100.0 * twist->linear.x;
-	 //desiredChangeInXYZPerSec->y = 100.0 * twist->linear.y;
-	 desiredChangeInXYZPerSec->z = 100.0 * twist->linear.z;
+		geometry_msgs::Vector3 velocity = req.pos.values;
 
+		req.pos.values.x = velocity.x * cos( desired_pose_.angular.z ) - velocity.y * sin( desired_pose_.angular.z );
+		req.pos.values.y = velocity.x * sin( desired_pose_.angular.z ) + velocity.y * cos( desired_pose_.angular.z );
 
-	 //desiredChangeInRPYPerSec->x = 100.0 * twist->angular.x;
-	 //desiredChangeInRPYPerSec->y = 100.0 * twist->angular.y;
-	 desiredChangeInRPYPerSec->z = 100.0 * twist->angular.z;
+		setDesiredPose( req.pos.mask, desired_pose_.linear, req.pos.values, req.pos.mode );
 
+		return true;
+	}
 
-	 //ROS_INFO("yaw: %f desired yaw: %f dt: %f", IMUDataCache->ori.z, *desiredRPY.z, dt.toSec());
+	void requestChangeInDesiredPose( const geometry_msgs::Twist & msg )
+	{
+		seabee3_msgs::SetDesiredPose::Request req;
+		seabee3_msgs::SetDesiredPose::Response resp;
+		seabee3_msgs::Vector3Masked change_in_desired_pose;
 
-	 //		if(!IMUDataCache->empty())
-	 //			ROS_INFO("desired yaw: %f actualYaw: %f dt: %f", *desiredRPY.z, IMUDataCache->front().ori.z, dt.toSec());
-	 }
+		change_in_desired_pose.mask.x = change_in_desired_pose.mask.y = change_in_desired_pose.mask.z = 1; //enable all values
+		change_in_desired_pose.mode.x = change_in_desired_pose.mode.y = change_in_desired_pose.mode.z = 1; //set mode to incremental
 
-	 lastUpdateTime = ros::Time::now();
-	 }*/
+		req.pos = req.ori = change_in_desired_pose;
+
+		req.pos.values = msg.linear;
+		req.ori.values = msg.angular;
+
+		setDesiredPoseCB( req, resp );
+	}
 
 	void pidStep()
 	{
-		//fetchTfFrame( desired_pose_tf_, "seabee3/landmark_map", "seabee3/desired_pose" );
-		//fetchTfFrame( current_pose_tf_, "seabee3/landmark_map", "seabee3/base_link" );
+		//fetchTfFrame( desired_pose_tf_, "landmark_map", "seabee3/desired_pose" );
+		fetchTfFrame( current_pose_tf_, global_frame_, "seabee3/base_link" );
 
-		//desired_pose_ = dt * twist_cache_;
 
-		// convert tf frames to Twist messages; fuck quaternions
+		//convert tf frames to Twist messages; fuck quaternions
 		//desired_pose_tf_ >> desired_pose_;
-		//current_pose_tf_ >> current_pose_;
+		current_pose_tf_ >> current_pose_;
 
 		if ( last_pid_update_time_ != ros::Time( -1 ) )
 		{
@@ -431,47 +427,67 @@ public:
 
 			ros::Duration dt = ros::Time::now() - last_pid_update_time_;
 
-			//LocalizationUtil::normalizeAngle( desired_pose_.angular.x );
-			//LocalizationUtil::normalizeAngle( desired_pose_.angular.y );
-			//LocalizationUtil::normalizeAngle( desired_pose_.angular.z );
 
-			desired_pose_ = twist_cache_;
+			//twistCache is essentially the linear and angular change in desired pose per second (linear + angular velocity)
+			//we multiply by the change in time to obtain the desired change in pose
+			//this change in pose is then added to the current pose; the result is desiredPose
+			const double t1 = dt.toSec();
+			geometry_msgs::Twist changeInDesiredPose = twist_cache_ * t1;
+			requestChangeInDesiredPose( changeInDesiredPose );
 
-			/*error_in_xyz_.x = desired_pose_.linear.x - current_pose_.linear.x;
+			desired_pose_ >> desired_pose_tf_;
+			publishTfFrame( desired_pose_tf_, global_frame_, "/seabee3/desired_pose" );
+
+			MathyMath::normalizeAngle( desired_pose_.angular.x );
+			MathyMath::normalizeAngle( desired_pose_.angular.y );
+			MathyMath::normalizeAngle( desired_pose_.angular.z );
+
+			MathyMath::normalizeAngle( current_pose_.angular.x );
+			MathyMath::normalizeAngle( current_pose_.angular.x );
+			MathyMath::normalizeAngle( current_pose_.angular.x );
+
+			error_in_xyz_.x = desired_pose_.linear.x - current_pose_.linear.x;
 			error_in_xyz_.y = desired_pose_.linear.y - current_pose_.linear.y;
 			error_in_xyz_.z = desired_pose_.linear.z - current_pose_.linear.z;
 
-			error_in_rpy_.x = LocalizationUtil::angleDistRel( desired_pose_.angular.x, current_pose_.angular.x );
-			error_in_rpy_.y = LocalizationUtil::angleDistRel( desired_pose_.angular.y, current_pose_.angular.y );
-			error_in_rpy_.z = LocalizationUtil::angleDistRel( desired_pose_.angular.z, current_pose_.angular.z );
+			error_in_rpy_.x = MathyMath::angleDistRel(
+					MathyMath::radToDeg( desired_pose_.angular.x ),
+					MathyMath::radToDeg( current_pose_.angular.x )
+			);
+			error_in_rpy_.y = MathyMath::angleDistRel(
+					MathyMath::radToDeg( desired_pose_.angular.y ),
+					MathyMath::radToDeg( current_pose_.angular.y )
+			);
+			error_in_rpy_.z = MathyMath::angleDistRel(
+					MathyMath::radToDeg( desired_pose_.angular.z ),
+					MathyMath::radToDeg( current_pose_.angular.z )
+			);
 
-			LocalizationUtil::capValue( error_in_xyz_.x, max_error_in_xyz_.x );
-			LocalizationUtil::capValue( error_in_xyz_.y, max_error_in_xyz_.y );
-			LocalizationUtil::capValue( error_in_xyz_.z, max_error_in_xyz_.z );
+			//ROS_INFO("error x %f y %f z %f r %f p %f y %f", error_in_xyz_.x, error_in_xyz_.y, error_in_xyz_.z, error_in_rpy_.x, error_in_rpy_.y, error_in_rpy_.z );
 
-			LocalizationUtil::capValue( error_in_rpy_.x, max_error_in_rpy_.x );
-			LocalizationUtil::capValue( error_in_rpy_.y, max_error_in_rpy_.y );
-			LocalizationUtil::capValue( error_in_rpy_.z, max_error_in_rpy_.z );*/
+			MathyMath::capValue( error_in_xyz_.x, max_error_in_xyz_.x );
+			MathyMath::capValue( error_in_xyz_.y, max_error_in_xyz_.y );
+			MathyMath::capValue( error_in_xyz_.z, max_error_in_xyz_.z );
 
-			double speedMotorVal = axis_dir_cfg_[Axes::speed] * desired_pose_.linear.x;
-			double strafeMotorVal = axis_dir_cfg_[Axes::strafe] * desired_pose_.linear.y;
-			double depthMotorVal = axis_dir_cfg_[Axes::depth] * desired_pose_.linear.z;
-			double yawMotorVal = axis_dir_cfg_[Axes::yaw] * desired_pose_.angular.z;
+			MathyMath::capValue( error_in_rpy_.x, max_error_in_rpy_.x );
+			MathyMath::capValue( error_in_rpy_.y, max_error_in_rpy_.y );
+			MathyMath::capValue( error_in_rpy_.z, max_error_in_rpy_.z );
 
-			///double speedMotorVal = axis_dir_cfg_[Axes::speed] * xyz_pid_.x.pid.updatePid( error_in_xyz_.x, dt );
-			///double strafeMotorVal = axis_dir_cfg_[Axes::strafe] * xyz_pid_.y.pid.updatePid( error_in_xyz_.y, dt );
-			///double depthMotorVal = axis_dir_cfg_[Axes::depth] * xyz_pid_.z.pid.updatePid( error_in_xyz_.z, dt );
+			double speedMotorVal = axis_dir_cfg_[Axes::speed] * xyz_pid_.x.pid.updatePid( error_in_xyz_.x, dt );
+			double strafeMotorVal = axis_dir_cfg_[Axes::strafe] * xyz_pid_.y.pid.updatePid( error_in_xyz_.y, dt );
+			double depthMotorVal = axis_dir_cfg_[Axes::depth] * xyz_pid_.z.pid.updatePid( error_in_xyz_.z, dt );
 
 
 			//double rollMotorVal = axis_dir_cfg_[Axes::roll] * rpy_pid_.x.pid.updatePid( error_in_rpy_.x, dt );
 			//double pitchMotorVal = axis_dir_cfg_[Axes::pitch] * rpy_pid_.y.pid.updatePid( error_in_rpy_.y, dt );
-			///double yawMotorVal = axis_dir_cfg_[Axes::yaw] * rpy_pid_.z.pid.updatePid( error_in_rpy_.z, dt );
+			double yawMotorVal = axis_dir_cfg_[Axes::yaw] * rpy_pid_.z.pid.updatePid( error_in_rpy_.z, dt );
 
 
-			/*LocalizationUtil::capValue(rollMotorVal, 50.0);
-			 LocalizationUtil::capValue(pitchMotorVal, 50.0);
-			 LocalizationUtil::capValue(yawMotorVal, 50.0);
-			 LocalizationUtil::capValue(depthMotorVal, 50.0);*/
+			//MathyMath::capValue( rollMotorVal, 50.0 );
+			//MathyMath::capValue( pitchMotorVal, 50.0 );
+
+			MathyMath::capValue( yawMotorVal, 50.0 );
+			MathyMath::capValue( depthMotorVal, 50.0 );
 
 			updateMotorCntlMsg( motor_cntl_msg_, Axes::speed, speedMotorVal );
 			updateMotorCntlMsg( motor_cntl_msg_, Axes::strafe, strafeMotorVal );
@@ -482,13 +498,6 @@ public:
 		}
 		last_pid_update_time_ = ros::Time::now();
 	}
-
-
-	// using inherited
-	/*void cmdVelCB( const geometry_msgs::TwistConstPtr & twist )
-	 {
-	 twist_cache_ = *twist;
-	 }*/
 
 	virtual void spinOnce()
 	{

@@ -12,6 +12,8 @@ source $SOURCE_PATH
 mode=0
 n=0
 num_commands=0
+rel_target=""
+abs_target=""
 
 parseTargets()
 {
@@ -31,6 +33,19 @@ parseCommands()
 	echo "parseCommands"
 	echo ">$commands_raw[1]"
 	commands="$@"
+}
+
+findRosTarget()
+{
+#parse path into folders
+#	while [  ]; do
+#		
+#	done
+#	if [ ($(bash -c ls | grep manifest.xml)) == "manifest.xml" ]; then
+#		offset=`expr index $HTML $OK`
+#		token_len=`expr length $OK`
+#	fi
+	rel_target=$abs_target
 }
 
 usage()
@@ -84,7 +99,9 @@ while [ "$1" != "" ]; do
 							done
 						else
 							while [ "$1" != "" ] && [ "$1" != "--foreach" ] && [ "$1" != "--command" ] && [ "$1" != "--target" ]; do
-								targets[$n]=$1
+								abs_target=$1
+								findRosTarget
+								targets[$n]=$rel_target
 								n=$(($n + 1))
 								shift
 							done

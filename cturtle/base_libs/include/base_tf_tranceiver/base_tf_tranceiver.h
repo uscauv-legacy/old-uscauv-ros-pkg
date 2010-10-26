@@ -50,12 +50,16 @@ protected:
 	tf::TransformListener * tl_;
 	tf::TransformBroadcaster * tb_;
 
+private:
+	int error_count_;
+
 public:
 	BaseTfTranceiver( ros::NodeHandle & nh, uint threads = 3 );
 	~BaseTfTranceiver();
 
 protected:
 	void fetchTfFrame( tf::Transform & transform, const std::string & frame1, const std::string & frame2 );
+	void publishTfFrame( tf::Transform & transform, const std::string & frame1, const std::string & frame2 );
 };
 
 #endif /* BASE_TF_TRANCEIVER_H_ */

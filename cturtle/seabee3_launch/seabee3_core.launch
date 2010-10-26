@@ -2,9 +2,12 @@
 	<group ns="/seabee3">
 		<include file="$(find seabee3_launch)/seabee3_driver_base.launch" />
 	</group>
+	
+	<node pkg="dead_reckoning_odom" type="odom_node" name="odom_node" output="screen" />
+	
 	<include file="$(find seabee3_launch)/seabee3_driver_tuned.launch" />
 
-	<group ns="/xsens">
+	<!-- <group ns="/xsens">
 		<include file="$(find seabee3_launch)/xsens_node.launch" />
-	</group>
+	</group> -->
 </launch>

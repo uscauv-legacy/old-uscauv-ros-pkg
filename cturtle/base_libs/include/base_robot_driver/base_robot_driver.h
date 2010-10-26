@@ -37,6 +37,7 @@
 #define BASE_ROBOT_DRIVER_H_
 
 #include <base_tf_tranceiver/base_tf_tranceiver.h>
+#include <timeout_monitor/timeout_monitor.h>
 
 void operator *=( geometry_msgs::Vector3 & v, const double & scale );
 
@@ -51,6 +52,8 @@ class BaseRobotDriver: public BaseTfTranceiver
 protected:
 	ros::Subscriber cmd_vel_sub_;
 	geometry_msgs::Twist twist_cache_;
+	double cmd_vel_timeout_;
+	TimeoutMonitor cmd_vel_tm_;
 
 public:
 	BaseRobotDriver( ros::NodeHandle & nh, std::string topic_name = "cmd_vel", uint threads = 3 );
@@ -58,9 +61,11 @@ public:
 
 protected:
 	virtual void cmdVelCB( const geometry_msgs::TwistConstPtr & twist );
+	virtual void timeout();
 
 private:
 	void cmdVelCB_0( const geometry_msgs::TwistConstPtr & twist );
+	void timeout_0( const ros::TimerEvent & evt );
 };
 
 #endif /* BASE_ROBOT_DRIVER_H_ */
