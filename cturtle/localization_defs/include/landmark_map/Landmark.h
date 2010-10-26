@@ -1,8 +1,11 @@
 /*******************************************************************************
  *
- *      Landmark
+ *      landmark
  * 
- *      Copyright (c) 2010, Edward T. Kaszubski (ekaszubski@gmail.com)
+ *      Copyright (c) 2010,
+ *
+ *      Edward T. Kaszubski (ekaszubski@gmail.com)
+ *
  *      All rights reserved.
  *
  *      Redistribution and use in source and binary forms, with or without
@@ -33,10 +36,16 @@
  *
  *******************************************************************************/
 
+#ifndef LANDMARK_H_
+#define LANDMARK_H_
+
 #include <opencv/cv.h>
 #include <visualization_msgs/Marker.h>
 #include <localization_defs/LandmarkMsg.h>
+#include <mathy_math/mathy_math.h>
 #include <string>
+#include <tf/tf.h>
+#include <sstream>
 
 class Landmark
 {
@@ -44,79 +53,95 @@ public:
 	
 	struct LandmarkType
 	{
-		const static int NumTypes =	5;
-		
-		const static int None =		-1;
-		const static int Buoy = 	0;
-		const static int Pinger = 	1;
-		const static int Pipe = 	2;
-		const static int Bin = 		3;
-		const static int Window = 	4;
+		const static int NumTypes = 5;
+
+		const static int None = -1;
+		const static int Buoy = 0;
+		const static int Pinger = 1;
+		const static int Pipe = 2;
+		const static int Bin = 3;
+		const static int Window = 4;
 		const static int Waypoint = 5;
-		const static int Gate = 	6;
+		const static int Gate = 6;
 	};
-	
+
 	struct ImageIds
 	{
-		const static int axe		= 0 ;
-		const static int clippers	= 1 ;
-		const static int hammer		= 2 ;
-		const static int machete	= 3 ;
+		const static int axe = 0;
+		const static int clippers = 1;
+		const static int hammer = 2;
+		const static int machete = 3;
 	};
 
 	struct ColorIds
 	{
-		const static int red		= 0 ;
-		const static int orange		= 1 ;
-		const static int yellow		= 2 ;
-		const static int green		= 3 ;
-		const static int blue		= 4;
-		
-		const static int lred		= 5 ;
-		const static int lrgreen	= 6 ;
-		const static int lgreen		= 7 ;
-		const static int lbgreen	= 8 ;
-		const static int blugreen	= 9 ;
-		const static int lgblue		= 10 ;
-		const static int lblue		= 11;
-		const static int lrblue		= 12;
-		const static int purple		= 13;
-		const static int pink		= 14;
-		const static int black		= 15;
+		const static int red = 0;
+		const static int orange = 1;
+		const static int yellow = 2;
+		const static int green = 3;
+		const static int blue = 4;
+
+		const static int lred = 5;
+		const static int lrgreen = 6;
+		const static int lgreen = 7;
+		const static int lbgreen = 8;
+		const static int blugreen = 9;
+		const static int lgblue = 10;
+		const static int lblue = 11;
+		const static int lrblue = 12;
+		const static int purple = 13;
+		const static int pink = 14;
+		const static int black = 15;
 	};
-	
+
 	struct ColorDefs
-	{	
-		static cv::Vec3b getColor(int colorId)
+	{
+		static cv::Vec3b getColor( int colorId )
 		{
-			switch(colorId)
+			switch ( colorId )
 			{
-			case ColorIds::red :		return cv::Vec3b (255, 0  , 0  );
-			case ColorIds::lred :		return cv::Vec3b (255, 127, 127);
-			case ColorIds::orange :		return cv::Vec3b (255, 127, 0  );
-			case ColorIds::yellow :		return cv::Vec3b (255, 255, 0  );
-			case ColorIds::lrgreen :	return cv::Vec3b (127, 255, 0  );
-			case ColorIds::green :		return cv::Vec3b (0  , 255, 0  );
-			case ColorIds::lgreen :		return cv::Vec3b (127, 255, 127);
-			case ColorIds::lbgreen :	return cv::Vec3b (0  , 255, 127);
-			case ColorIds::blugreen :	return cv::Vec3b (0  , 255, 255);
-			case ColorIds::lgblue :		return cv::Vec3b (0  , 127, 255);
-			case ColorIds::blue :		return cv::Vec3b (0  , 0  , 255);
-			case ColorIds::lblue :		return cv::Vec3b (127, 127, 255);
-			case ColorIds::lrblue :		return cv::Vec3b (127, 0  , 255);
-			case ColorIds::purple :		return cv::Vec3b (255, 0  , 255);
-			case ColorIds::pink :		return cv::Vec3b (255, 0  , 127);
-			case ColorIds::black : 		return cv::Vec3b (0  , 0  , 0  );
+			case ColorIds::red:
+				return cv::Vec3b( 255, 0, 0 );
+			case ColorIds::lred:
+				return cv::Vec3b( 255, 127, 127 );
+			case ColorIds::orange:
+				return cv::Vec3b( 255, 127, 0 );
+			case ColorIds::yellow:
+				return cv::Vec3b( 255, 255, 0 );
+			case ColorIds::lrgreen:
+				return cv::Vec3b( 127, 255, 0 );
+			case ColorIds::green:
+				return cv::Vec3b( 0, 255, 0 );
+			case ColorIds::lgreen:
+				return cv::Vec3b( 127, 255, 127 );
+			case ColorIds::lbgreen:
+				return cv::Vec3b( 0, 255, 127 );
+			case ColorIds::blugreen:
+				return cv::Vec3b( 0, 255, 255 );
+			case ColorIds::lgblue:
+				return cv::Vec3b( 0, 127, 255 );
+			case ColorIds::blue:
+				return cv::Vec3b( 0, 0, 255 );
+			case ColorIds::lblue:
+				return cv::Vec3b( 127, 127, 255 );
+			case ColorIds::lrblue:
+				return cv::Vec3b( 127, 0, 255 );
+			case ColorIds::purple:
+				return cv::Vec3b( 255, 0, 255 );
+			case ColorIds::pink:
+				return cv::Vec3b( 255, 0, 127 );
+			case ColorIds::black:
+				return cv::Vec3b( 0, 0, 0 );
 			}
-			return cv::Vec3b (0, 0, 0);
+			return cv::Vec3b( 0, 0, 0 );
 		}
 	};
 
-	Landmark(cv::Point3d center = cv::Point3d(0.0, 0.0, 0.0), double orientation = 0.0, cv::Point3d dim = cv::Point3d(1.0, 1.0, 1.0), int shapeType = visualization_msgs::Marker::ARROW);
-	
+	Landmark( cv::Point3d center = cv::Point3d( 0.0, 0.0, 0.0 ), double orientation = 0.0, cv::Point3d dim = cv::Point3d( 1.0, 1.0, 1.0 ), int shapeType = visualization_msgs::Marker::ARROW );
+
 	static Landmark parseMessage( const localization_defs::LandmarkMsg & msg );
-	
-	visualization_msgs::Marker createMarker(const std::string & frame, const int id, const std::string & ns_ext = "") const;
+
+	visualization_msgs::Marker createMarker( const std::string & frame, const int id, const std::string & ns_ext = "" ) const;
 	localization_defs::LandmarkMsg createMsg() const;
 
 	cv::Point3d center_; //position relative to the center of the map (which is always the origin, <0, 0, 0>)
@@ -131,43 +156,45 @@ public:
 
 namespace LandmarkTypes
 {
-	class Buoy : public Landmark
+	class Buoy: public Landmark
 	{
 	public:
-		Buoy(cv::Point3d center, double orientation, int color);
-//		visualization_msgs::Marker createMarker(std::string ns, std::string frame);
+		Buoy( cv::Point3d center, double orientation, int color );
+		//		visualization_msgs::Marker createMarker(std::string ns, std::string frame);
 	};
 
-	class Pinger : public Landmark
+	class Pinger: public Landmark
 	{
 	public:
-		Pinger(cv::Point3d center, double orientation, int id);
-//		visualization_msgs::Marker createMarker(std::string ns, std::string frame);
+		Pinger( cv::Point3d center, double orientation, int id );
+		//		visualization_msgs::Marker createMarker(std::string ns, std::string frame);
 	};
 
-	class Bin : public Landmark
+	class Bin: public Landmark
 	{
 	public:
-		Bin(cv::Point3d center, double orientation, int id);
-//		visualization_msgs::Marker createMarker(std::string ns, std::string frame);
+		Bin( cv::Point3d center, double orientation, int id );
+		//		visualization_msgs::Marker createMarker(std::string ns, std::string frame);
 	};
 
-	class Pipe : public Landmark
+	class Pipe: public Landmark
 	{
 	public:
-		Pipe(cv::Point3d center, double orientation);
-//		visualization_msgs::Marker createMarker(std::string ns, std::string frame);
+		Pipe( cv::Point3d center, double orientation );
+		//		visualization_msgs::Marker createMarker(std::string ns, std::string frame);
 	};
 	
-	class Window : public Landmark
+	class Window: public Landmark
 	{
 	public:
-		Window(cv::Point3d center, double orientation, int color);
+		Window( cv::Point3d center, double orientation, int color );
 	};
 	
-	class Waypoint : public Landmark
+	class Waypoint: public Landmark
 	{
 	public:
-		Waypoint(cv::Point3d center, double orientation, int id);
+		Waypoint( cv::Point3d center, double orientation, int id );
 	};
 }
+
+#endif /* LANDMARK_H_ */

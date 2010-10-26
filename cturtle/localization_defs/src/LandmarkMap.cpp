@@ -1,8 +1,11 @@
 /*******************************************************************************
  *
- *      seabee3_driver
+ *      landmark_map
  * 
- *      Copyright (c) 2010, Edward T. Kaszubski (ekaszubski@gmail.com)
+ *      Copyright (c) 2010,
+ *
+ *      Edward T. Kaszubski (ekaszubski@gmail.com)
+ *
  *      All rights reserved.
  *
  *      Redistribution and use in source and binary forms, with or without
@@ -53,70 +56,70 @@ LandmarkMap::LandmarkMap( const localization_defs::LandmarkMapMsg & msg )
 	
 	landmarks_.resize( msg.map.landmarkArray.size() );
 	
-	for(unsigned int i = 0; i < landmarks_.size(); i ++)
+	for ( unsigned int i = 0; i < landmarks_.size(); i++ )
 	{
 		landmarks_[i] = Landmark::parseMessage( msg.map.landmarkArray[i] );
 	}
 }
 
-LandmarkMap::LandmarkMap(Landmark l)
+LandmarkMap::LandmarkMap( Landmark l )
 {
-	addLandmark(l);
+	addLandmark( l );
 }
 
-LandmarkMap::LandmarkMap(std::vector<Landmark> l)
+LandmarkMap::LandmarkMap( std::vector<Landmark> l )
 {
-	for(unsigned int i = 0; i < l.size(); i ++)
+	for ( unsigned int i = 0; i < l.size(); i++ )
 	{
-		addLandmark(l[i]);
+		addLandmark( l[i] );
 	}
 }
 
-void LandmarkMap::addLandmark(const Landmark l)
+void LandmarkMap::addLandmark( const Landmark l )
 {
-	landmarks_.push_back(l);
+	landmarks_.push_back( l );
 }
 
-std::vector<Landmark> LandmarkMap::fetchLandmarksByType(const int type) const
+std::vector<Landmark> LandmarkMap::fetchLandmarksByType( const int type ) const
 {
 	std::vector<Landmark> landmarks;
-	for(unsigned int i = 0; i < landmarks_.size(); i ++)
+	for ( unsigned int i = 0; i < landmarks_.size(); i++ )
 	{
-		if(landmarks_[i].landmark_type_ == type)
+		if ( landmarks_[i].landmark_type_ == type )
 		{
-			landmarks.push_back(landmarks_[i]);
+			landmarks.push_back( landmarks_[i] );
 		}
 	}
 	return landmarks;
 }
 
-std::vector<Landmark> LandmarkMap::fetchWaypointsByType(const int type) const
+std::vector<Landmark> LandmarkMap::fetchWaypointsByType( const int type ) const
 {
-	std::vector<Landmark> waypoints = fetchLandmarksByType(Landmark::LandmarkType::Waypoint);
+	std::vector<Landmark> waypoints = fetchLandmarksByType( Landmark::LandmarkType::Waypoint );
 	std::vector<Landmark> filteredWaypoints;
 	
-	for(unsigned int i = 0; i < waypoints.size(); i ++)
+	for ( unsigned int i = 0; i < waypoints.size(); i++ )
 	{
-		if(waypoints[i].id_ == type)
+		if ( waypoints[i].id_ == type )
 		{
-			filteredWaypoints.push_back(waypoints[i]);
+			filteredWaypoints.push_back( waypoints[i] );
 		}
 	}
 	return filteredWaypoints;
 }
 
-std::vector<visualization_msgs::Marker> LandmarkMap::createMarkerArray(const std::string & frame) const
+std::vector<visualization_msgs::Marker> LandmarkMap::createMarkerArray( const std::string & frame ) const
 {
 	std::vector<visualization_msgs::Marker> markers;
 	markers.resize( landmarks_.size() );
 	
 	std::vector<int> typeCount;
-	typeCount.resize(Landmark::LandmarkType::NumTypes);
+	typeCount.resize( Landmark::LandmarkType::NumTypes );
 	
-	for(unsigned int i = 0; i < markers.size(); i ++)
+	for ( unsigned int i = 0; i < markers.size(); i++ )
 	{
 		markers[i] = landmarks_[i].createMarker( frame, typeCount[landmarks_[i].landmark_type_] );
-		typeCount[ landmarks_[i].landmark_type_ ] ++;
+		typeCount[landmarks_[i].landmark_type_]++;
 	}
 	
 	return markers;
@@ -125,11 +128,11 @@ std::vector<visualization_msgs::Marker> LandmarkMap::createMarkerArray(const std
 localization_defs::LandmarkMapMsg LandmarkMap::createMsg() const
 {
 	localization_defs::LandmarkMapMsg msg;
-	for(unsigned int i = 0; i < landmarks_.size(); i ++)
+	for ( unsigned int i = 0; i < landmarks_.size(); i++ )
 	{
 		msg.map.landmarkArray.push_back( landmarks_[i].createMsg() );
 	}
 	
 	return msg;
 }
-	
+

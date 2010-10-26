@@ -1,7 +1,7 @@
 /*******************************************************************************
  *
- *      localization_particle
- * 
+ *      landmark_sensor
+ *
  *      Copyright (c) 2010,
  *
  *      Edward T. Kaszubski (ekaszubski@gmail.com)
@@ -11,7 +11,7 @@
  *      Redistribution and use in source and binary forms, with or without
  *      modification, are permitted provided that the following conditions are
  *      met:
- *      
+ *
  *      * Redistributions of source code must retain the above copyright
  *        notice, this list of conditions and the following disclaimer.
  *      * Redistributions in binary form must reproduce the above
@@ -21,7 +21,7 @@
  *      * Neither the name of the USC Underwater Robotics Team nor the names of its
  *        contributors may be used to endorse or promote products derived from
  *        this software without specific prior written permission.
- *      
+ *
  *      THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
  *      "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
  *      LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
@@ -36,40 +36,4 @@
  *
  *******************************************************************************/
 
-#ifndef LOCALIZATION_PARTICLE_H_
-#define LOCALIZATION_PARTICLE_H_
-
-#include <opencv/cv.h>
-
-class LocalizationParticle
-{
-public:
-
-	struct State
-	{
-		cv::Point3d mCenter;
-		double mHeading;
-		double mWeight;
-
-		State( cv::Point3d center = cv::Point3d( 0.0, 0.0, 0.0 ), double heading = 0.0, double weight = 0.0 )
-		{
-			mCenter = center;
-			mHeading = heading;
-			mWeight = weight;
-		}
-	};
-
-	LocalizationParticle()
-	{
-		//
-	}
-	
-	LocalizationParticle( State state )
-	{
-		mState = state;
-	}
-	
-	State mState;
-};
-
-#endif /* LOCALIZATION_PARTICLE_H_ */
+#include <localization_tools/LandmarkSensor.h>

@@ -33,6 +33,9 @@
  *
  *******************************************************************************/
 
+#ifndef LANDMARK_MAP_H_
+#define LANDMARK_MAP_H_
+
 #include <vector>
 #include <landmark_map/Landmark.h>
 #include <localization_defs/LandmarkMapMsg.h>
@@ -41,18 +44,20 @@
 class LandmarkMap
 {
 public:
-	LandmarkMap( cv::Point2d dim = cv::Point2d(0.0, 0.0) );
+	LandmarkMap( cv::Point2d dim = cv::Point2d( 0.0, 0.0 ) );
 	LandmarkMap( std::vector<Landmark> landmarks, cv::Point2d dim );
 	LandmarkMap( const localization_defs::LandmarkMapMsg & msg );
-	LandmarkMap(Landmark l);
-	LandmarkMap(std::vector<Landmark> l);
+	LandmarkMap( Landmark l );
+	LandmarkMap( std::vector<Landmark> l );
 
-	void addLandmark(const Landmark l);
-	std::vector<Landmark> fetchLandmarksByType(const int type) const;
-	std::vector<Landmark> fetchWaypointsByType(const int type) const;
-	std::vector<visualization_msgs::Marker> createMarkerArray(const std::string & frame) const;
+	void addLandmark( const Landmark l );
+	std::vector<Landmark> fetchLandmarksByType( const int type ) const;
+	std::vector<Landmark> fetchWaypointsByType( const int type ) const;
+	std::vector<visualization_msgs::Marker> createMarkerArray( const std::string & frame ) const;
 	localization_defs::LandmarkMapMsg createMsg() const;
 
 	std::vector<Landmark> landmarks_;
 	cv::Point2d dim_;
 };
+
+#endif /* LANDMARK_MAP_H_ */
