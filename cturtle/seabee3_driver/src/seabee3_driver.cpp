@@ -74,7 +74,7 @@ geometry_msgs::Twist operator *( const geometry_msgs::Twist & twist, const doubl
 	return result;
 }
 
-class Seabee3Driver: public BaseRobotDriver
+class Seabee3Driver: public BaseRobotDriver<>
 {
 public:
 	// define the direction of each thruster in an array that is responsible for controlling a single axis of movement
@@ -184,7 +184,7 @@ private:
 
 public:
 	Seabee3Driver( ros::NodeHandle & nh ) :
-		BaseRobotDriver( nh, "/seabee3/cmd_vel" )
+		BaseRobotDriver<>( nh, "/seabee3/cmd_vel" )
 	{
 		thruster_dir_cfg_.resize( 6 );
 
@@ -264,6 +264,7 @@ public:
 
 		reset_pose_srv_ = nh.advertiseService( "/seabee3/reset_pose", &Seabee3Driver::resetPoseCB, this );
 		set_desired_pose_srv_ = nh.advertiseService( "/seabee3/set_desired_pose", &Seabee3Driver::setDesiredPoseCB, this );
+
 
 		//set current xyz to 0, desired RPY to current RPY
 		resetPose();
@@ -450,20 +451,12 @@ public:
 			error_in_xyz_.y = desired_pose_.linear.y - current_pose_.linear.y;
 			error_in_xyz_.z = desired_pose_.linear.z - current_pose_.linear.z;
 
-			error_in_rpy_.x = MathyMath::angleDistRel(
-					MathyMath::radToDeg( desired_pose_.angular.x ),
-					MathyMath::radToDeg( current_pose_.angular.x )
-			);
-			error_in_rpy_.y = MathyMath::angleDistRel(
-					MathyMath::radToDeg( desired_pose_.angular.y ),
-					MathyMath::radToDeg( current_pose_.angular.y )
-			);
-			error_in_rpy_.z = MathyMath::angleDistRel(
-					MathyMath::radToDeg( desired_pose_.angular.z ),
-					MathyMath::radToDeg( current_pose_.angular.z )
-			);
+			error_in_rpy_.x = MathyMath::angleDistRel( MathyMath::radToDeg( desired_pose_.angular.x ), MathyMath::radToDeg( current_pose_.angular.x ) );
+			error_in_rpy_.y = MathyMath::angleDistRel( MathyMath::radToDeg( desired_pose_.angular.y ), MathyMath::radToDeg( current_pose_.angular.y ) );
+			error_in_rpy_.z = MathyMath::angleDistRel( MathyMath::radToDeg( desired_pose_.angular.z ), MathyMath::radToDeg( current_pose_.angular.z ) );
 
-			//ROS_INFO("error x %f y %f z %f r %f p %f y %f", error_in_xyz_.x, error_in_xyz_.y, error_in_xyz_.z, error_in_rpy_.x, error_in_rpy_.y, error_in_rpy_.z );
+
+			//printf("error x %f y %f z %f r %f p %f y %f\n", error_in_xyz_.x, error_in_xyz_.y, error_in_xyz_.z, error_in_rpy_.x, error_in_rpy_.y, error_in_rpy_.z );
 
 			MathyMath::capValue( error_in_xyz_.x, max_error_in_xyz_.x );
 			MathyMath::capValue( error_in_xyz_.y, max_error_in_xyz_.y );
@@ -473,28 +466,32 @@ public:
 			MathyMath::capValue( error_in_rpy_.y, max_error_in_rpy_.y );
 			MathyMath::capValue( error_in_rpy_.z, max_error_in_rpy_.z );
 
-			double speedMotorVal = axis_dir_cfg_[Axes::speed] * xyz_pid_.x.pid.updatePid( error_in_xyz_.x, dt );
-			double strafeMotorVal = axis_dir_cfg_[Axes::strafe] * xyz_pid_.y.pid.updatePid( error_in_xyz_.y, dt );
-			double depthMotorVal = axis_dir_cfg_[Axes::depth] * xyz_pid_.z.pid.updatePid( error_in_xyz_.z, dt );
+//			printf( "error x %f y %f z %f r %f p %f y %f\n", error_in_xyz_.x, error_in_xyz_.y, error_in_xyz_.z, error_in_rpy_.x, error_in_rpy_.y, error_in_rpy_.z );
+
+			double speed_motor_val = axis_dir_cfg_[Axes::speed] * xyz_pid_.x.pid.updatePid( error_in_xyz_.x, dt );
+			double strafe_motor_val = axis_dir_cfg_[Axes::strafe] * xyz_pid_.y.pid.updatePid( error_in_xyz_.y, dt );
+			double depth_motor_val = axis_dir_cfg_[Axes::depth] * xyz_pid_.z.pid.updatePid( error_in_xyz_.z, dt );
 
 
 			//double rollMotorVal = axis_dir_cfg_[Axes::roll] * rpy_pid_.x.pid.updatePid( error_in_rpy_.x, dt );
 			//double pitchMotorVal = axis_dir_cfg_[Axes::pitch] * rpy_pid_.y.pid.updatePid( error_in_rpy_.y, dt );
-			double yawMotorVal = axis_dir_cfg_[Axes::yaw] * rpy_pid_.z.pid.updatePid( error_in_rpy_.z, dt );
+			double yaw_motor_val = axis_dir_cfg_[Axes::yaw] * rpy_pid_.z.pid.updatePid( error_in_rpy_.z, dt );
+
+			printf( "speed %f strafe %f depth %f yaw %f\n", speed_motor_val, strafe_motor_val, depth_motor_val, yaw_motor_val );
 
 
 			//MathyMath::capValue( rollMotorVal, 50.0 );
 			//MathyMath::capValue( pitchMotorVal, 50.0 );
 
-			MathyMath::capValue( yawMotorVal, 50.0 );
-			MathyMath::capValue( depthMotorVal, 50.0 );
+			MathyMath::capValue( yaw_motor_val, 50.0 );
+			MathyMath::capValue( depth_motor_val, 50.0 );
 
-			updateMotorCntlMsg( motor_cntl_msg_, Axes::speed, speedMotorVal );
-			updateMotorCntlMsg( motor_cntl_msg_, Axes::strafe, strafeMotorVal );
-			updateMotorCntlMsg( motor_cntl_msg_, Axes::depth, depthMotorVal );
+			updateMotorCntlMsg( motor_cntl_msg_, Axes::speed, speed_motor_val );
+			updateMotorCntlMsg( motor_cntl_msg_, Axes::strafe, strafe_motor_val );
+			updateMotorCntlMsg( motor_cntl_msg_, Axes::depth, depth_motor_val );
 			//updateMotorCntlMsg( motorCntlMsg, Axes::roll, rollMotorVal );
 			//updateMotorCntlMsg( motorCntlMsg, Axes::pitch, pitchMotorVal );
-			updateMotorCntlMsg( motor_cntl_msg_, Axes::yaw, yawMotorVal );
+			updateMotorCntlMsg( motor_cntl_msg_, Axes::yaw, yaw_motor_val );
 		}
 		last_pid_update_time_ = ros::Time::now();
 	}
@@ -516,7 +513,7 @@ int main( int argc, char** argv )
 	ros::NodeHandle nh;
 	
 	Seabee3Driver seabee3_driver( nh );
-	seabee3_driver.spin( BaseNode::SpinModeId::loop_spin_once );
+	seabee3_driver.spin( SpinModeId::loop_spin_once );
 
 	return 0;
 }

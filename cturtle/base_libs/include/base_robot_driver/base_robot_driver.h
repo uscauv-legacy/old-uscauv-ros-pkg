@@ -47,7 +47,8 @@ geometry_msgs::Vector3 operator *( const geometry_msgs::Vector3 & v, const doubl
 // copy @twist and scale its components
 geometry_msgs::Twist operator *( const geometry_msgs::Twist & twist, const double & scale );
 
-class BaseRobotDriver: public BaseTfTranceiver
+template<typename _ReconfigureType = BaseNodeTypes::_DefaultReconfigureType>
+class BaseRobotDriver: public BaseTfTranceiver<_ReconfigureType>
 {
 protected:
 	ros::Subscriber cmd_vel_sub_;
@@ -67,5 +68,49 @@ private:
 	void cmdVelCB_0( const geometry_msgs::TwistConstPtr & twist );
 	void timeout_0( const ros::TimerEvent & evt );
 };
+
+template<typename _ReconfigureType>
+BaseRobotDriver<_ReconfigureType>::BaseRobotDriver( ros::NodeHandle & nh, std::string topic_name, uint threads ) :
+	BaseTfTranceiver<_ReconfigureType> ( nh, threads )
+{
+	this->nh_priv_.param( "cmd_vel_timeout", cmd_vel_timeout_, 0.5 );
+
+	cmd_vel_sub_ = nh.subscribe( nh.resolveName( topic_name ), 1, &BaseRobotDriver::cmdVelCB_0, this );
+	cmd_vel_tm_.registerCallback( nh, &BaseRobotDriver::timeout_0, this, cmd_vel_timeout_ );
+}
+
+template<typename _ReconfigureType>
+BaseRobotDriver<_ReconfigureType>::~BaseRobotDriver()
+{
+	//
+}
+
+//virtual
+template<typename _ReconfigureType>
+void BaseRobotDriver<_ReconfigureType>::timeout()
+{
+	twist_cache_ = geometry_msgs::Twist();
+}
+
+template<typename _ReconfigureType>
+void BaseRobotDriver<_ReconfigureType>::timeout_0( const ros::TimerEvent & evt )
+{
+	cmd_vel_tm_.stop();
+	timeout();
+}
+
+// virtual
+template<typename _ReconfigureType>
+void BaseRobotDriver<_ReconfigureType>::cmdVelCB( const geometry_msgs::TwistConstPtr & twist )
+{
+	cmd_vel_tm_.keepAlive();
+	twist_cache_ = *twist;
+}
+
+template<typename _ReconfigureType>
+void BaseRobotDriver<_ReconfigureType>::cmdVelCB_0( const geometry_msgs::TwistConstPtr & twist )
+{
+	cmdVelCB( twist );
+}
 
 #endif /* BASE_ROBOT_DRIVER_H_ */

@@ -40,7 +40,8 @@
 #include <geometry_msgs/Twist.h>
 #include <joy/Joy.h>
 
-class BaseTeleop: public BaseNode
+template<typename _ReconfigureType = BaseNodeTypes::_DefaultReconfigureType>
+class BaseTeleop: public BaseNode<_ReconfigureType>
 {
 
 protected:
@@ -61,30 +62,35 @@ private:
 
 };
 
-BaseTeleop::BaseTeleop( ros::NodeHandle & nh, std::string topic_name ) :
-	BaseNode( nh, 1 )
+template<typename _ReconfigureType>
+BaseTeleop<_ReconfigureType>::BaseTeleop( ros::NodeHandle & nh, std::string topic_name ) :
+	BaseNode<_ReconfigureType>( nh, 1 )
 {
 	joy_sub_ = nh.subscribe( nh.resolveName( "/joy" ), 1, &BaseTeleop::joyCB_0, this );
 	cmd_vel_pub_ = nh.advertise<geometry_msgs::Twist> ( topic_name, 1 );
 }
 
-BaseTeleop::~BaseTeleop()
+template<typename _ReconfigureType>
+BaseTeleop<_ReconfigureType>::~BaseTeleop()
 {
 	//
 }
 
 // virtual
-void BaseTeleop::joyCB( const joy::Joy::ConstPtr& joy )
+template<typename _ReconfigureType>
+void BaseTeleop<_ReconfigureType>::joyCB( const joy::Joy::ConstPtr& joy )
 {
 	//
 }
 
-void BaseTeleop::joyCB_0( const joy::Joy::ConstPtr& joy )
+template<typename _ReconfigureType>
+void BaseTeleop<_ReconfigureType>::joyCB_0( const joy::Joy::ConstPtr& joy )
 {
 	joyCB( joy );
 }
 
-double BaseTeleop::applyDeadZone( float value, float dead_radius_max )
+template<typename _ReconfigureType>
+double BaseTeleop<_ReconfigureType>::applyDeadZone( float value, float dead_radius_max )
 {
 	return fabs( value ) < dead_radius_max ? 0.0 : (double) value;
 }

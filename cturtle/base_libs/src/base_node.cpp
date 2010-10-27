@@ -34,37 +34,3 @@
  *******************************************************************************/
 
 #include <base_node/base_node.h>
-
-BaseNode::BaseNode( ros::NodeHandle & nh, uint threads ) :
-	nh_priv_( "~" ), spinner_( threads )
-{
-	//
-}
-
-BaseNode::~BaseNode()
-{
-	//
-}
-
-// virtual
-void BaseNode::spin( int mode )
-{
-	if( mode == SpinModeId::spin )
-		spinner_.spin();
-	else if( mode == SpinModeId::loop_spin_once )
-	{
-		while( ros::ok() )
-		{
-			spinOnce();
-			ros::spinOnce();
-		}
-	}
-	else
-		spin( SpinModeId::spin );
-}
-
-// virtual
-void BaseNode::spinOnce()
-{
-	//
-}

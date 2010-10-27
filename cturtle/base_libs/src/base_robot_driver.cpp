@@ -35,44 +35,6 @@
 
 #include <base_robot_driver/base_robot_driver.h>
 
-BaseRobotDriver::BaseRobotDriver( ros::NodeHandle & nh, std::string topic_name, uint threads ) :
-	BaseTfTranceiver( nh, threads )
-{
-	nh_priv_.param( "cmd_vel_timeout", cmd_vel_timeout_, 0.5 );
-
-	cmd_vel_sub_ = nh.subscribe( nh.resolveName( topic_name ), 1, &BaseRobotDriver::cmdVelCB_0, this );
-	cmd_vel_tm_.registerCallback( nh, &BaseRobotDriver::timeout_0, this, cmd_vel_timeout_ );
-}
-
-BaseRobotDriver::~BaseRobotDriver()
-{
-	//
-}
-
-//virtual
-void BaseRobotDriver::timeout()
-{
-	twist_cache_ = geometry_msgs::Twist();
-}
-
-void BaseRobotDriver::timeout_0( const ros::TimerEvent & evt )
-{
-	cmd_vel_tm_.stop();
-	timeout();
-}
-
-// virtual
-void BaseRobotDriver::cmdVelCB( const geometry_msgs::TwistConstPtr & twist )
-{
-	cmd_vel_tm_.keepAlive();
-	twist_cache_ = *twist;
-}
-
-void BaseRobotDriver::cmdVelCB_0( const geometry_msgs::TwistConstPtr & twist )
-{
-	cmdVelCB( twist );
-}
-
 void operator *=( geometry_msgs::Vector3 & v, const double & scale )
 {
 	v.x = v.x * scale;

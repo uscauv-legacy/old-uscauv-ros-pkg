@@ -134,7 +134,7 @@ void operator >>( const YAML::Node & node, Landmark & l )
 	ROS_INFO( "Landmark ID %d", l.landmark_type_ );
 }
 
-class LandmarkMapServer: public BaseNode
+class LandmarkMapServer: public BaseNode<>
 {
 private:
 	ros::Publisher marker_pub_;
@@ -149,7 +149,7 @@ private:
 public:
 	bool success_;
 	LandmarkMapServer( ros::NodeHandle & nh ) :
-		BaseNode( nh )
+		BaseNode<>( nh )
 	{
 		success_ = false;
 		nh_priv_.param( "map_frame", map_frame_, std::string( "/landmark_map" ) );
@@ -225,7 +225,7 @@ int main( int argc, char* argv[] )
 	// make sure the requested file was found
 	if ( !landmark_map_server.success_ ) return 1;
 
-	landmark_map_server.spin( BaseNode::SpinModeId::loop_spin_once );
+	landmark_map_server.spin( SpinModeId::loop_spin_once );
 	
 	return 0;
 }

@@ -44,7 +44,8 @@
 void operator >>( const geometry_msgs::Twist & the_pose, tf::Transform & the_pose_tf );
 void operator >>( const tf::Transform & the_pose_tf, geometry_msgs::Twist & the_pose );
 
-class BaseTfTranceiver: public BaseNode
+template<typename _ReconfigureType = BaseNodeTypes::_DefaultReconfigureType>
+class BaseTfTranceiver: public BaseNode<_ReconfigureType>
 {
 protected:
 	tf::TransformListener * tl_;
@@ -61,5 +62,51 @@ protected:
 	void fetchTfFrame( tf::Transform & transform, const std::string & frame1, const std::string & frame2 );
 	void publishTfFrame( tf::Transform & transform, const std::string & frame1, const std::string & frame2 );
 };
+
+template<typename _ReconfigureType>
+BaseTfTranceiver<_ReconfigureType>::BaseTfTranceiver( ros::NodeHandle & nh, uint threads ) :
+	BaseNode<_ReconfigureType> ( nh, threads ), error_count_( 0 )
+{
+	tl_ = new tf::TransformListener;
+	tb_ = new tf::TransformBroadcaster;
+}
+
+template<typename _ReconfigureType>
+BaseTfTranceiver<_ReconfigureType>::~BaseTfTranceiver()
+{
+	delete tl_;
+	delete tb_;
+}
+
+template<typename _ReconfigureType>
+void BaseTfTranceiver<_ReconfigureType>::fetchTfFrame( tf::Transform & transform, const std::string & frame1, const std::string & frame2 )
+{
+	tf::StampedTransform temp;
+	try
+	{
+		tl_->waitForTransform( frame1, frame2, ros::Time( 0 ), ros::Duration( 0.0 ) );
+		tl_->lookupTransform( frame1, frame2, ros::Time( 0 ), temp );
+
+		transform.setOrigin( temp.getOrigin() );
+		transform.setRotation( temp.getRotation() );
+
+		error_count_ = 0;
+	}
+	catch ( tf::TransformException ex )
+	{
+		if ( error_count_ < 10 )
+		{
+			ROS_ERROR( "%s", ex.what() );
+			error_count_++;
+		}
+
+	}
+}
+
+template<typename _ReconfigureType>
+void BaseTfTranceiver<_ReconfigureType>::publishTfFrame( tf::Transform & transform, const std::string & frame1, const std::string & frame2 )
+{
+	tb_->sendTransform( tf::StampedTransform( transform, ros::Time::now(), frame1, frame2 ) );
+}
 
 #endif /* BASE_TF_TRANCEIVER_H_ */

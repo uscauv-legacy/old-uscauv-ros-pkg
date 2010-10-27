@@ -45,7 +45,7 @@
 #include <seabee3_driver_base/Pressure.h> // for outgoing Pressure
 //srvs
 #include <seabee3_driver_base/FiringDeviceAction.h> // for FiringDeviceAction
-class Seabee3DriverBase: public BaseNode
+class Seabee3DriverBase: public BaseNode<>
 {
 private:
 	ros::Subscriber motor_cntl_sub_;
@@ -69,7 +69,7 @@ public:
 	const static int PRESSURE_DEPTH_SLOPE = 33;
 
 	Seabee3DriverBase( ros::NodeHandle & nh ) :
-		BaseNode( nh )
+		BaseNode<>( nh )
 	{
 		pressure_calibrated_ = false;
 
@@ -87,6 +87,7 @@ public:
 
 		nh_priv_.param( "dropper2/trigger_time", bee_stem_3_driver_->dropper2_params_.trigger_time_, 50 );
 		nh_priv_.param( "dropper2/trigger_value", bee_stem_3_driver_->dropper2_params_.trigger_value_, 40 );
+
 
 		// scale motor values to be within the following min+max value such that
 		// |D'| = [ motor_val_min, motor_val_max ]
@@ -120,9 +121,12 @@ public:
 
 	int scaleMotorValue( int value )
 	{
+		ROS_INFO( "value: %d", value );
+		if ( value == 0 ) return value;
+
 		double value_d = (double) value;
 
-		value_d = motor_val_min_ + value_d * (motor_val_max_ - motor_val_min_) / 100.0;
+		value_d = motor_val_min_ + value_d * ( motor_val_max_ - motor_val_min_ ) / 100.0;
 
 		return (int) round( value_d );
 	}
@@ -194,7 +198,7 @@ int main( int argc, char** argv )
 	ros::NodeHandle nh;
 	
 	Seabee3DriverBase seabee3_driver_base( nh );
-	seabee3_driver_base.spin( BaseNode::SpinModeId::loop_spin_once );
+	seabee3_driver_base.spin( SpinModeId::loop_spin_once );
 
 	return 0;
 }

@@ -52,7 +52,7 @@ double angle_thresh = 0.4;
 uint itsWidth = 320;
 uint itsHeight = 240;
 
-typedef BaseImageProcSettings::_DefaultReconfigureType _ReconfigureType;
+typedef BaseNodeTypes::_DefaultReconfigureType _ReconfigureType;
 typedef rectangle_finder::FindRectangles _ServiceType;
 
 class RectangleFinder: public BaseImageProc<_ReconfigureType, _ServiceType>

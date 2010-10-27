@@ -75,7 +75,7 @@ void operator >>( tf::Vector3 & v1, geometry_msgs::Vector3 & v2 )
 	v2.z = v1.getZ();
 }
 
-class XSensNode: public BaseNode
+class XSensNode: public BaseNode<>
 {
 private:
 	std::queue<tf::Vector3> ori_data_cache_;
@@ -97,7 +97,7 @@ private:
 
 public:
 	XSensNode( ros::NodeHandle & nh ) :
-		BaseNode( nh )
+		BaseNode<>( nh )
 	{
 		nh_priv_.param( "port", port_, std::string( "/dev/ttyUSB0" ) );
 		nh_priv_.param( "frame_id", frame_id_, std::string( "imu" ) );
@@ -274,7 +274,7 @@ int main( int argc, char** argv )
 	ros::NodeHandle nh;
 
 	XSensNode xsens_node( nh );
-	xsens_node.spin( BaseNode::SpinModeId::loop_spin_once );
+	xsens_node.spin( SpinModeId::loop_spin_once );
 	
 	return 0;
 }

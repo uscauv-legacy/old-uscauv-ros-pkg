@@ -38,12 +38,7 @@
 
 #include <base_image_proc/base_image_proc_core.h>
 
-struct BaseImageProcSettings
-{
-	typedef base_libs::EmptyConfig _DefaultReconfigureType;
-};
-
-template<typename _ReconfigureType = BaseImageProcSettings::_DefaultReconfigureType, typename _ServiceType = std_srvs::Empty>
+template<typename _ReconfigureType = BaseNodeTypes::_DefaultReconfigureType, typename _ServiceType = std_srvs::Empty>
 class BaseImageProc: public BaseImageProcCore<_ReconfigureType, _ServiceType>
 {
 public:

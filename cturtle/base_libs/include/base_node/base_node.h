@@ -37,25 +37,135 @@
 #define BASE_NODE_H_
 
 #include <ros/ros.h>
+// for dynamic reconfigure server
+#include <dynamic_reconfigure/server.h>
+// for cfg code
+#include <base_node/../../cfg/cpp/base_libs/EmptyConfig.h>
 
+template<typename _ReconfigureType>
+struct ReconfigureSettings
+{
+	static bool enableReconfigure()
+	{
+		return true;
+	}
+};
+
+template<>
+struct ReconfigureSettings<base_libs::EmptyConfig>
+{
+	static bool enableReconfigure()
+	{
+		return false;
+	}
+};
+
+struct BaseNodeTypes
+{
+	typedef base_libs::EmptyConfig _DefaultReconfigureType;
+};
+
+struct SpinModeId
+{
+	const static int spin = 0;
+	const static int loop_spin_once = 1;
+};
+
+template<typename _ReconfigureType = BaseNodeTypes::_DefaultReconfigureType>
 class BaseNode
 {
-public:
-	struct SpinModeId
-	{
-		const static int spin = 0;
-		const static int loop_spin_once = 1;
-	};
 
 protected:
 	ros::NodeHandle nh_priv_;
 	ros::MultiThreadedSpinner spinner_;
+
+	dynamic_reconfigure::Server<_ReconfigureType> reconfigure_srv_;
+	typename dynamic_reconfigure::Server<_ReconfigureType>::CallbackType reconfigure_callback_;
+
+	// workaround for reconfigure ussues
+	bool reconfigure_initialized_, ignore_reconfigure_;
+	_ReconfigureType initial_config_params_;
+	uint32_t initial_config_level_;
 
 public:
 	BaseNode( ros::NodeHandle & nh, uint threads = 3 );
 	~BaseNode();
 	virtual void spin( int mode = SpinModeId::spin );
 	virtual void spinOnce();
+
+protected:
+	virtual void reconfigureCB( _ReconfigureType &config, uint32_t level );
+	void initCfgParams();
+
+private:
+	void reconfigureCB_0( _ReconfigureType &config, uint32_t level );
 };
+
+template<typename _ReconfigureType>
+BaseNode<_ReconfigureType>::BaseNode( ros::NodeHandle & nh, uint threads ) :
+	nh_priv_( "~" ), spinner_( threads ), ignore_reconfigure_( !ReconfigureSettings<_ReconfigureType>::enableReconfigure() )
+{
+	reconfigure_initialized_ = ignore_reconfigure_;
+	if ( !ignore_reconfigure_ )
+	{
+		reconfigure_callback_ = boost::bind( &BaseNode::reconfigureCB_0, this, _1, _2 );
+		reconfigure_srv_.setCallback( reconfigure_callback_ );
+	}
+}
+
+template<typename _ReconfigureType>
+BaseNode<_ReconfigureType>::~BaseNode()
+{
+	//
+}
+
+// virtual
+template<typename _ReconfigureType>
+void BaseNode<_ReconfigureType>::spin( int mode )
+{
+	if ( mode == SpinModeId::spin ) spinner_.spin();
+	else if ( mode == SpinModeId::loop_spin_once )
+	{
+		while ( ros::ok() )
+		{
+			spinOnce();
+			ros::spinOnce();
+		}
+	}
+	else spin( SpinModeId::spin );
+}
+
+// virtual
+template<typename _ReconfigureType>
+void BaseNode<_ReconfigureType>::spinOnce()
+{
+	//
+}
+
+//virtual
+template<typename _ReconfigureType>
+void BaseNode<_ReconfigureType>::reconfigureCB( _ReconfigureType &config, uint32_t level )
+{
+	ROS_DEBUG( "Reconfigure successful in base class" );
+}
+
+template<typename _ReconfigureType>
+void BaseNode<_ReconfigureType>::reconfigureCB_0( _ReconfigureType &config, uint32_t level )
+{
+	initial_config_params_ = config;
+	initial_config_level_ = level;
+	reconfigureCB( config, level );
+}
+
+// virtual
+template<typename _ReconfigureType>
+void BaseNode<_ReconfigureType>::initCfgParams()
+{
+	if ( !ignore_reconfigure_ )
+	{
+		reconfigureCB( initial_config_params_, initial_config_level_ );
+		reconfigure_initialized_ = true;
+	}
+}
 
 #endif /* BASE_NODE_H_ */

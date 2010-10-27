@@ -50,7 +50,7 @@
 #define POS_STRAFE_COEFF      0.002
 #define NEG_STRAFE_COEFF      0.002
 
-class OdomNode: public BaseTfTranceiver
+class OdomNode: public BaseTfTranceiver<>
 {
 private:
 	ros::Time last_update_time_;
@@ -70,7 +70,7 @@ private:
 
 public:
 	OdomNode( ros::NodeHandle & nh ) :
-		BaseTfTranceiver( nh )
+		BaseTfTranceiver<>( nh )
 	{
 		last_update_time_ = ros::Time( -1 );
 
@@ -193,7 +193,7 @@ int main( int argc, char** argv )
 	ros::NodeHandle nh;
 
 	OdomNode odom_node( nh );
-	odom_node.spin( BaseNode::SpinModeId::loop_spin_once );
+	odom_node.spin( SpinModeId::loop_spin_once );
 
 	return 0;
 }

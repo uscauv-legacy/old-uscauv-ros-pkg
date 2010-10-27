@@ -50,34 +50,12 @@
 #include <sensor_msgs/CameraInfo.h>
 // for pinhole camera model
 #include <image_geometry/pinhole_camera_model.h>
-// for dynamic reconfigure server
-#include <dynamic_reconfigure/server.h>
 // for the DoSomething service
 #include <std_srvs/Empty.h>
-// for cfg code
-#include <base_image_proc/../../cfg/cpp/base_libs/EmptyConfig.h>
 #include <base_node/base_node.h>
 
-template<typename _ReconfigureType>
-struct ReconfigureSettings
-{
-	static bool enableReconfigure()
-	{
-		return true;
-	}
-};
-
-template<>
-struct ReconfigureSettings<base_libs::EmptyConfig>
-{
-	static bool enableReconfigure()
-	{
-		return false;
-	}
-};
-
 template<typename _ReconfigureType, typename _ServiceType>
-class BaseImageProcCore: public BaseNode
+class BaseImageProcCore: public BaseNode<_ReconfigureType>
 {
 
 protected:
@@ -93,33 +71,22 @@ protected:
 
 	sensor_msgs::CvBridge bridge_;
 
-	dynamic_reconfigure::Server<_ReconfigureType> reconfigure_srv_;
-	typename dynamic_reconfigure::Server<_ReconfigureType>::CallbackType reconfigure_callback_;
-
 	cv::Mat cv_img_;
 
 	boost::mutex img_mutex_, info_mutex_, flag_mutex_;
 	bool new_img_;
 	std::string image_transport_;
-	bool publish_image_, reconfigure_initialized_, ignore_reconfigure_;
-
-	// workaround for reconfigure ussues
-	_ReconfigureType initial_config_params_;
-	uint32_t initial_config_level_;
-
+	bool publish_image_;
 public:
 	BaseImageProcCore( ros::NodeHandle & nh, uint threads = 3 );
 	~BaseImageProcCore();
 
 protected:
-	virtual void reconfigureCB( _ReconfigureType &config, uint32_t level );
-	void initCfgParams();
 	virtual void imageCB();
 	void publishCvImage( cv::Mat & img );
 	void publishCvImage( IplImage * ipl_img );
 
 private:
-	void reconfigureCB_0( _ReconfigureType &config, uint32_t level );
 	void imageCB_0( const sensor_msgs::ImageConstPtr& msg );
 	void infoCB( const sensor_msgs::CameraInfoConstPtr& msg );
 
@@ -127,35 +94,21 @@ private:
 
 template<typename _ReconfigureType, typename _ServiceType>
 BaseImageProcCore<_ReconfigureType, _ServiceType>::BaseImageProcCore( ros::NodeHandle & nh, uint threads ) :
-	BaseNode( nh, threads ), it_( nh_priv_ ), new_img_( false ), ignore_reconfigure_( !ReconfigureSettings<_ReconfigureType>::enableReconfigure() )
+	BaseNode<_ReconfigureType>( nh, threads ), it_( this->nh_priv_ ), new_img_( false )
 {
-	nh_priv_.param( "image_transport", image_transport_, std::string( "raw" ) );
-	nh_priv_.param( "publish_image", publish_image_, true );
+	this->nh_priv_.param( "image_transport", image_transport_, std::string( "raw" ) );
+	this->nh_priv_.param( "publish_image", publish_image_, true );
 
 	img_sub_ = it_.subscribe( nh.resolveName( "image" ), 1, &BaseImageProcCore::imageCB_0, this, image_transport_ );
-	info_sub_ = nh_priv_.subscribe( nh.resolveName( "camera_info" ), 1, &BaseImageProcCore::infoCB, this );
+	info_sub_ = this->nh_priv_.subscribe( nh.resolveName( "camera_info" ), 1, &BaseImageProcCore::infoCB, this );
 
 	if ( publish_image_ ) img_pub_ = it_.advertise( "output_image", 1 );
-
-	reconfigure_initialized_ = ignore_reconfigure_;
-	if ( !ignore_reconfigure_ )
-	{
-		reconfigure_callback_ = boost::bind( &BaseImageProcCore::reconfigureCB_0, this, _1, _2 );
-		reconfigure_srv_.setCallback( reconfigure_callback_ );
-	}
 }
 
 template<typename _ReconfigureType, typename _ServiceType>
 BaseImageProcCore<_ReconfigureType, _ServiceType>::~BaseImageProcCore()
 {
 	//
-}
-
-//virtual
-template<typename _ReconfigureType, typename _ServiceType>
-void BaseImageProcCore<_ReconfigureType, _ServiceType>::reconfigureCB( _ReconfigureType &config, uint32_t level )
-{
-	ROS_DEBUG( "Reconfigure successful in base class" );
 }
 
 template<typename _ReconfigureType, typename _ServiceType>
@@ -170,14 +123,6 @@ void BaseImageProcCore<_ReconfigureType, _ServiceType>::publishCvImage( cv::Mat 
 {
 	IplImage * ipl_img = & ( (IplImage) img );
 	publishCvImage( ipl_img );
-}
-
-template<typename _ReconfigureType, typename _ServiceType>
-void BaseImageProcCore<_ReconfigureType, _ServiceType>::reconfigureCB_0( _ReconfigureType &config, uint32_t level )
-{
-	initial_config_params_ = config;
-	initial_config_level_ = level;
-	reconfigureCB( config, level );
 }
 
 template<typename _ReconfigureType, typename _ServiceType>
@@ -211,17 +156,6 @@ template<typename _ReconfigureType, typename _ServiceType>
 void BaseImageProcCore<_ReconfigureType, _ServiceType>::imageCB()
 {
 	//
-}
-
-// virtual
-template<typename _ReconfigureType, typename _ServiceType>
-void BaseImageProcCore<_ReconfigureType, _ServiceType>::initCfgParams()
-{
-	if ( !ignore_reconfigure_ )
-	{
-		reconfigureCB( initial_config_params_, initial_config_level_ );
-		reconfigure_initialized_ = true;
-	}
 }
 
 #endif /* BASE_IMAGE_PROC_CORE_H_ */

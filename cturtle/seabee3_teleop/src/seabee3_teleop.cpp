@@ -39,7 +39,7 @@
 #include <mathy_math/mathy_math.h>
 #include <std_srvs/Empty.h>
 
-class Seabee3Teleop: public BaseTeleop
+class Seabee3Teleop: public BaseTeleop<>
 {
 private:
 	// button indices
@@ -61,7 +61,7 @@ private:
 
 public:
 	Seabee3Teleop( ros::NodeHandle & nh ) :
-		BaseTeleop( nh, "/seabee3/cmd_vel" ), current_device_( 0 ), button_action_busy_( false ), button_action_id_( -1 ), axis_action_id_( -1 )
+		BaseTeleop<>( nh, "/seabee3/cmd_vel" ), current_device_( 0 ), button_action_busy_( false ), button_action_id_( -1 ), axis_action_id_( -1 )
 	{
 		nh_priv_.param( "speed", speed_, 1 );
 		nh_priv_.param( "strafe", strafe_, 0 );

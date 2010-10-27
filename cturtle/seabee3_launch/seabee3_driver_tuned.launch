@@ -11,15 +11,15 @@
 		<param name="heading_err_cap" type="double" value="25.0" />
 		
 		<param name="pid/pos/X/p" type="double" value="100.0" />
-		<param name="pid/pos/X/i" type="double" value="0.00" />
+		<param name="pid/pos/X/i" type="double" value="0.01" />
 		<param name="pid/pos/X/d" type="double" value="0.6" />
 		
 		<param name="pid/pos/Y/p" type="double" value="100.0" />
-		<param name="pid/pos/Y/i" type="double" value="0.00" />
+		<param name="pid/pos/Y/i" type="double" value="0.01" />
 		<param name="pid/pos/Y/d" type="double" value="0.6" />
 		
 		<param name="pid/pos/Z/p" type="double" value="50" />
-		<param name="pid/pos/Z/i" type="double" value="0.00" />
+		<param name="pid/pos/Z/i" type="double" value="0.01" />
 		<param name="pid/pos/Z/d" type="double" value="0.6" />
 		
 		<param name="pid/ori/R/p" type="double" value="2.5" />
