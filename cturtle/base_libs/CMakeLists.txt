@@ -19,18 +19,14 @@ set(LIBRARY_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/lib)
 rosbuild_genmsg()
 rosbuild_gensrv()
 
+
+# Auto-generated files for this package are under version control.
+# To make changes to these files, uncomment the following section,
+# build, then re-comment and commit the changes.
+#
 # add dynamic reconfigure api
-rosbuild_find_ros_package(dynamic_reconfigure)
-include(${dynamic_reconfigure_PACKAGE_PATH}/cmake/cfgbuild.cmake)
-gencfg()
+#rosbuild_find_ros_package(dynamic_reconfigure)
+#include(${dynamic_reconfigure_PACKAGE_PATH}/cmake/cfgbuild.cmake)
+#gencfg()
 
-rosbuild_add_library(${PROJECT_NAME} src/base_node.cpp
-									 src/base_image_proc_core.cpp
-									 src/base_image_proc.cpp
-									 src/base_tf_tranceiver.cpp
-									 src/base_robot_driver.cpp
-									 src/base_teleop.cpp
-									 src/mathy_math.cpp
-									 src/timeout_monitor.cpp)
-
-#rosbuild_add_executable( test_base_image_proc src/test_base_image_proc.cpp )
+add_subdirectory( src )
