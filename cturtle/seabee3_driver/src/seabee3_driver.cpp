@@ -182,15 +182,23 @@ private:
 	ros::ServiceServer reset_pose_srv_;
 	ros::ServiceServer set_desired_pose_srv_;
 
+	double motor_val_min_, motor_val_max_;
+
 public:
 	Seabee3Driver( ros::NodeHandle & nh ) :
-		BaseRobotDriver<>( nh, "/seabee3/cmd_vel" )
+		BaseRobotDriver<> ( nh, "/seabee3/cmd_vel" )
 	{
 		thruster_dir_cfg_.resize( 6 );
 
 		last_pid_update_time_ = ros::Time( -1 );
 
 		nh_priv_.param( "global_frame", global_frame_, std::string( "/landmark_map" ) );
+
+
+		// scale motor values to be within the following min+max value such that
+		// |D'| = [ motor_val_min, motor_val_max ]
+		nh_priv_.param( "motor_val_min", motor_val_min_, 20.0 );
+		nh_priv_.param( "motor_val_max", motor_val_max_, 100.0 );
 
 		nh_priv_.param( "speed_err_cap", max_error_in_xyz_.x, 100.0 );
 		nh_priv_.param( "strafe_err_cap", max_error_in_xyz_.y, 100.0 );
@@ -345,6 +353,18 @@ public:
 		msg.mask[motor2] = 1;
 	}
 
+	int scaleMotorValue( int value )
+	{
+		ROS_INFO( "value: %d", value );
+		if ( value == 0 ) return value;
+
+		double value_d = (double) value;
+
+		value_d = motor_val_min_ + value_d * ( motor_val_max_ - motor_val_min_ ) / 100.0;
+
+		return (int) round( value_d );
+	}
+
 	void resetMotorCntlMsg()
 	{
 		for ( int i = 0; i < BeeStem3::NUM_MOTOR_CONTROLLERS; i++ )
@@ -466,7 +486,8 @@ public:
 			MathyMath::capValue( error_in_rpy_.y, max_error_in_rpy_.y );
 			MathyMath::capValue( error_in_rpy_.z, max_error_in_rpy_.z );
 
-//			printf( "error x %f y %f z %f r %f p %f y %f\n", error_in_xyz_.x, error_in_xyz_.y, error_in_xyz_.z, error_in_rpy_.x, error_in_rpy_.y, error_in_rpy_.z );
+
+			//			printf( "error x %f y %f z %f r %f p %f y %f\n", error_in_xyz_.x, error_in_xyz_.y, error_in_xyz_.z, error_in_rpy_.x, error_in_rpy_.y, error_in_rpy_.z );
 
 			double speed_motor_val = axis_dir_cfg_[Axes::speed] * xyz_pid_.x.pid.updatePid( error_in_xyz_.x, dt );
 			double strafe_motor_val = axis_dir_cfg_[Axes::strafe] * xyz_pid_.y.pid.updatePid( error_in_xyz_.y, dt );
@@ -500,6 +521,11 @@ public:
 	{
 		//this also grabs and publishes tf frames
 		pidStep();
+
+		for ( size_t i; i < motor_cntl_msg_.motors.size(); i++ )
+		{
+			motor_cntl_msg_.motors[i] = scaleMotorValue( motor_cntl_msg_.motors[i] );
+		}
 
 		motor_cntl_pub_.publish( motor_cntl_msg_ );
 

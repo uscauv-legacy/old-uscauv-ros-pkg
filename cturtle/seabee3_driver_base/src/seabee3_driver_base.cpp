@@ -63,13 +63,12 @@ private:
 	std::string port_;
 	int surface_pressure_;
 	bool pressure_calibrated_;
-	double motor_val_min_, motor_val_max_;
 public:
 	//#define SURFACE_PRESSURE 908
 	const static int PRESSURE_DEPTH_SLOPE = 33;
 
 	Seabee3DriverBase( ros::NodeHandle & nh ) :
-		BaseNode<>( nh )
+		BaseNode<> ( nh )
 	{
 		pressure_calibrated_ = false;
 
@@ -87,12 +86,6 @@ public:
 
 		nh_priv_.param( "dropper2/trigger_time", bee_stem_3_driver_->dropper2_params_.trigger_time_, 50 );
 		nh_priv_.param( "dropper2/trigger_value", bee_stem_3_driver_->dropper2_params_.trigger_value_, 40 );
-
-
-		// scale motor values to be within the following min+max value such that
-		// |D'| = [ motor_val_min, motor_val_max ]
-		nh_priv_.param( "motor_val_min", motor_val_min_, 20.0 );
-		nh_priv_.param( "motor_val_max", motor_val_max_, 100.0 );
 
 		motor_cntl_sub_ = nh.subscribe( "/seabee3/motor_cntl", 1, &Seabee3DriverBase::motorCntlCB, this );
 
@@ -115,20 +108,8 @@ public:
 	{
 		for ( unsigned int i = 0; i < msg->motors.size(); i++ )
 		{
-			if ( msg->mask[i] == 1 ) bee_stem_3_driver_->setThruster( i, scaleMotorValue( msg->motors[i] ) );
+			if ( msg->mask[i] == 1 ) bee_stem_3_driver_->setThruster( i, msg->motors[i] );
 		}
-	}
-
-	int scaleMotorValue( int value )
-	{
-		ROS_INFO( "value: %d", value );
-		if ( value == 0 ) return value;
-
-		double value_d = (double) value;
-
-		value_d = motor_val_min_ + value_d * ( motor_val_max_ - motor_val_min_ ) / 100.0;
-
-		return (int) round( value_d );
 	}
 
 	bool executeFiringDeviceAction( seabee3_driver_base::FiringDeviceAction::Request &req, seabee3_driver_base::FiringDeviceAction::Response &res, int device_id )

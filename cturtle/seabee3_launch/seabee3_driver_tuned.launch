@@ -3,6 +3,9 @@
 		
 		<param name="cmd_vel_timeout" type="double" value="0.5" />
 		
+		<param name="motor_val_min" type="int" value="20.0" />
+		<param name="motor_val_max" type="int" value="100.0" />
+		
 		<!-- ========== PID tuning ========== -->
 		
 		<param name="depth_err_cap" type="int" value="100" />
