@@ -74,7 +74,7 @@ class Seabee3Physics : public BaseTfTranceiver<>
     // The world
     dynamics_world_ =
       new btDiscreteDynamicsWorld(dispatcher_,broadphase_,solver_,collision_configuration_);
-    dynamics_world_->setGravity(btVector3(0,0,-9.81));
+    dynamics_world_->setGravity(btVector3(0,0,0));
 
     // Seabee's Body
     seabee_shape_ = new btCylinderShape(btVector3(.5, .2, .2));
@@ -107,13 +107,32 @@ class Seabee3Physics : public BaseTfTranceiver<>
     void spinOnce()
     {
 
+      for(size_t motorIdx=0; motorIdx<num_thrusters_; ++motorIdx)
+      {
+        float thrust = thruster_vals_[motorIdx];
+        geometry_msgs::Vector3 pos = thruster_transforms_[motorIdx].linear;
+        geometry_msgs::Vector3 ori = thruster_transforms_[motorIdx].linear;
+
+        btVector3 force;
+        force.setX(ori.x*thrust);
+        force.setY(ori.y*thrust);
+        force.setZ(ori.z*thrust);
+
+        btVector3 rel_pos;
+        rel_pos.setX(pos.x);
+        rel_pos.setY(pos.y);
+        rel_pos.setZ(pos.z);
+
+        seabee_body_->applyForce(force, rel_pos);
+      }
+
       // Step the physics simulation
       dynamics_world_->stepSimulation(1.0/rate_, 10);
 
       btTransform trans;
       seabee_body_->getMotionState()->getWorldTransform(trans);
 
-      ROS_INFO("Body Height: %f", trans.getOrigin().getY());
+      ROS_INFO("Body Pos: %f %f %f",trans.getOrigin().getX(),trans.getOrigin().getY(), trans.getOrigin().getZ());
 
       publishTfFrame(trans, "/landmark_map", "/seabee3/base_link");
       ros::Rate(rate_).sleep();
