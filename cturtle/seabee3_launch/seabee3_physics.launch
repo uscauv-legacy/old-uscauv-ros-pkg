@@ -1,0 +1,19 @@
+<launch>
+	<!-- args="x y z y p r frame1 frame2 hz" -->
+	<!-- front strafe -->
+	<node pkg="tf" type="static_transform_publisher" name="thruster0_tf" args="0.25 0 0 3.14159265 0 0 /seabee3/base_link /seabee3/thruster0 100" />
+	<!-- fwd left -->
+	<node pkg="tf" type="static_transform_publisher" name="thruster1_tf" args="0 0.15 0 -1.57079633 0 0 /seabee3/base_link /seabee3/thruster1 100" />
+	
+	<!-- depth left -->
+	<node pkg="tf" type="static_transform_publisher" name="thruster2_tf" args="0 0.1 0 0 0 1.57079633 /seabee3/base_link /seabee3/thruster2 100" />
+	<!-- fwd right -->
+	<node pkg="tf" type="static_transform_publisher" name="thruster3_tf" args="0 -0.15 0 -1.57079633 0 0 /seabee3/base_link /seabee3/thruster3 100" />
+	
+	<!-- depth right -->
+	<node pkg="tf" type="static_transform_publisher" name="thruster4_tf" args="0 -0.1 0 0 0 1.57079633 /seabee3/base_link /seabee3/thruster4 100" />
+	<!-- back strafe -->
+	<node pkg="tf" type="static_transform_publisher" name="thruster5_tf" args="-0.25 0 0 0 0 0 /seabee3/base_link /seabee3/thruster5 100" />
+	
+	<node pkg="seabee3_physics" type="seabee3_physics" name="seabee3_physics" output="screen" />
+</launch>
