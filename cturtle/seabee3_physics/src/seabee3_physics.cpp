@@ -104,7 +104,7 @@ class Seabee3Physics : public BaseTfTranceiver<>
     {
 
       // Step the physics simulation
-      dynamics_world_->stepSimulation(1/rate_, 10);
+      dynamics_world_->stepSimulation(1.0/rate_, 10);
 
       btTransform trans;
       seabee_body_->getMotionState()->getWorldTransform(trans);
