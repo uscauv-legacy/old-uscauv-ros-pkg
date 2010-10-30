@@ -109,7 +109,7 @@ class Seabee3Physics : public BaseTfTranceiver<>
 
       for(size_t motorIdx=0; motorIdx<num_thrusters_; ++motorIdx)
       {
-        float thrust = thruster_vals_[motorIdx];
+        float thrust = thruster_vals_[motorIdx] * 10;
         geometry_msgs::Vector3 pos = thruster_transforms_[motorIdx].linear;
         geometry_msgs::Vector3 ori = thruster_transforms_[motorIdx].linear;
 
@@ -122,6 +122,8 @@ class Seabee3Physics : public BaseTfTranceiver<>
         rel_pos.setX(pos.x);
         rel_pos.setY(pos.y);
         rel_pos.setZ(pos.z);
+
+        ROS_INFO("THRUST%Zu (%f,%f,%f) @ (%f,%f,%f)", motorIdx, force.x(), force.y(), force.z(), rel_pos.x(), rel_pos.y(), rel_pos.z());
 
         seabee_body_->applyForce(force, rel_pos);
       }
