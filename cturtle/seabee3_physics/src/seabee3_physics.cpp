@@ -41,6 +41,7 @@
 #include <vector>
 #include <sstream>
 #include <seabee3_beestem/BeeStem3.h>
+#include <seabee3_driver_base/MotorCntl.h>
 
 
 
@@ -49,10 +50,15 @@ class Seabee3Physics : public BaseTfTranceiver<>
   public:
     Seabee3Physics(ros::NodeHandle &nh) :
       BaseTfTranceiver<>(nh),
-      thruster_transforms_(6),
+      num_thrusters_(6),
+      thruster_transforms_(num_thrusters_),
       thruster_transform_name_prefix_("/seabee3/thruster"),
-      rate_(60)
+      rate_(60),
+      thruster_vals_(num_thrusters_)
   {
+
+    motor_cntl_sub_ = nh.subscribe( "/seabee3/motor_cntl", 1, &Seabee3Physics::motorCntlCB, this);
+
     updateThrusterTransforms();
 
     // Build the broadphase
@@ -68,7 +74,7 @@ class Seabee3Physics : public BaseTfTranceiver<>
     // The world
     dynamics_world_ =
       new btDiscreteDynamicsWorld(dispatcher_,broadphase_,solver_,collision_configuration_);
-    dynamics_world_->setGravity(btVector3(0,-9.81,0));
+    dynamics_world_->setGravity(btVector3(0,0,-9.81));
 
     // Seabee's Body
     seabee_shape_ = new btCylinderShape(btVector3(.5, .2, .2));
@@ -85,8 +91,6 @@ class Seabee3Physics : public BaseTfTranceiver<>
         seabee_mass, seabee_motion_state_, seabee_shape_, seabee_inertia);
     seabee_body_ = new btRigidBody(seabee_body_ci);
     dynamics_world_->addRigidBody(seabee_body_);
-
-
   }
 
     ~Seabee3Physics()
@@ -128,7 +132,16 @@ class Seabee3Physics : public BaseTfTranceiver<>
       }
     }
 
+    void motorCntlCB(const seabee3_driver_base::MotorCntlConstPtr &msg)
+    {
+      for(size_t i=0; i<msg->motors.size(); ++i)
+        if(msg->mask[i])
+          thruster_vals_[i] = msg->motors[i];
+    }
+
   private:
+    size_t num_thrusters_;
+
     std::vector<geometry_msgs::Twist> thruster_transforms_;
     std::string thruster_transform_name_prefix_;
 
@@ -144,6 +157,9 @@ class Seabee3Physics : public BaseTfTranceiver<>
     btCollisionShape                      *seabee_shape_;
     btDefaultMotionState                  *seabee_motion_state_;
     btRigidBody                           *seabee_body_;
+
+    ros::Subscriber motor_cntl_sub_;
+    std::vector<int> thruster_vals_;
 
 };
 
