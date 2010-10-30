@@ -60,7 +60,7 @@ public:
 
 protected:
 	void fetchTfFrame( tf::Transform & transform, const std::string & frame1, const std::string & frame2 );
-	void publishTfFrame( tf::Transform & transform, const std::string & frame1, const std::string & frame2 );
+	void publishTfFrame( const tf::Transform & transform, const std::string & frame1, const std::string & frame2 );
 };
 
 template<typename _ReconfigureType>
@@ -104,7 +104,7 @@ void BaseTfTranceiver<_ReconfigureType>::fetchTfFrame( tf::Transform & transform
 }
 
 template<typename _ReconfigureType>
-void BaseTfTranceiver<_ReconfigureType>::publishTfFrame( tf::Transform & transform, const std::string & frame1, const std::string & frame2 )
+void BaseTfTranceiver<_ReconfigureType>::publishTfFrame( const tf::Transform & transform, const std::string & frame1, const std::string & frame2 )
 {
 	tb_->sendTransform( tf::StampedTransform( transform, ros::Time::now(), frame1, frame2 ) );
 }

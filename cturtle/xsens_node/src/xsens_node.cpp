@@ -2,7 +2,10 @@
  *
  *      xsens_node
  * 
- *      Copyright (c) 2010, Edward T. Kaszubski (ekaszubski@gmail.com)
+ *      Copyright (c) 2010,
+ *
+ *      Edward T. Kaszubski (ekaszubski@gmail.com)
+ *
  *      All rights reserved.
  *
  *      Redistribution and use in source and binary forms, with or without
@@ -111,7 +114,7 @@ public:
 		calibrated_ = false;
 
 		imu_pub_ = nh.advertise<sensor_msgs::Imu> ( "data", 1 );
-		custom_imu_pub_ = nh.advertise<sensor_msgs::Imu> ( "custom_data", 1 );
+		custom_imu_pub_ = nh.advertise<xsens_node::Imu> ( "/xsens/custom_data", 1 );
 		is_calibrated_pub_ = nh.advertise<std_msgs::Bool> ( "is_calibrated", 1 );
 		calibrate_rpy_drift_srv_ = nh.advertiseService( "calibrate_rpy_drift", &XSensNode::calibrateRPYDriftCB, this );
 		calibrate_rpy_ori_srv_ = nh.advertiseService( "calibrate_rpy_ori", &XSensNode::calibrateRPYOriCB, this );
@@ -225,7 +228,7 @@ public:
 
 	virtual void spinOnce()
 	{
-		if ( autocalibrate_ && !calibrated_ ) runFullCalibration();
+		//if ( autocalibrate_ && !calibrated_ ) runFullCalibration();
 
 		sensor_msgs::Imu imu_msg;
 		xsens_node::Imu custom_imu_msg;
@@ -248,6 +251,8 @@ public:
 		temp += ori_comp_;
 
 		temp >> custom_imu_msg.ori;
+
+		custom_imu_msg.ori.z *= M_PI / 180.0;
 
 		tf::Quaternion ori( temp.z(), temp.y(), temp.x() );
 

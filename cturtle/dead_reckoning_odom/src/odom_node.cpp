@@ -3,8 +3,10 @@
  *      odom_node
  *
  *      Copyright (c) 2010,
+ *
  *      Edward T. Kaszubski (ekaszubski@gmail.com),
  *      Michael Montalbo (mmontalbo@gmail.com)
+ *
  *      All rights reserved.
  *
  *      Redistribution and use in source and binary forms, with or without
@@ -77,7 +79,7 @@ public:
 		nh_priv_.param( "global_frame", global_frame_, std::string( "/landmark_map" ) );
 
 		motor_cntl_sub_ = nh.subscribe( "/seabee3/motor_cntl", 1, &OdomNode::motorCntlCB, this );
-		imu_sub_ = nh.subscribe( "/xsens/data_calibrated", 1, &OdomNode::imuCB, this );
+		imu_sub_ = nh.subscribe( "/xsens/custom_data", 1, &OdomNode::imuCB, this );
 		depth_sub_ = nh.subscribe( "/seabee3/depth", 1, &OdomNode::depthCB, this );
 	}
 
