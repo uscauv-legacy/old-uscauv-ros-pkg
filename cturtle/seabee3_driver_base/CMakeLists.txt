@@ -17,11 +17,19 @@ set(EXECUTABLE_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/bin)
 #set the default path for built libraries to the "lib" directory
 set(LIBRARY_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/lib)
 
+# Auto-generated files for this package are under version control.
+# To make changes to these files, uncomment the following section,
+# build, then re-comment and commit the changes. Depending on the
+# state of this package, it may also be necessary to temporarily
+# rename the 'ROS_NOBUILD' file before the package will build.
+#
 rosbuild_genmsg()
 rosbuild_gensrv()
 
+add_subdirectory( src )
+
 #link_directories("${PROJECT_SOURCE_DIR}/../libseabee3_beestem/lib")
-rosbuild_add_executable(seabee3_driver_base src/seabee3_driver_base.cpp)
+
 #if (UNIX AND NOT WIN32)
 #  if (CMAKE_SIZEOF_VOID_P MATCHES "8")
 #    target_link_libraries(seabee3_driver_base seabee3_beestem_x64)
