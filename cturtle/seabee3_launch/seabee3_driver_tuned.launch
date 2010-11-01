@@ -13,15 +13,15 @@
 		<param name="pitch_err_cap" type="double" value="25.0" />
 		<param name="heading_err_cap" type="double" value="25.0" />
 		
-		<param name="pid/pos/X/p" type="double" value="100.0" />
+		<param name="pid/pos/X/p" type="double" value="500.0" />
 		<param name="pid/pos/X/i" type="double" value="0.01" />
 		<param name="pid/pos/X/d" type="double" value="0.6" />
 		
-		<param name="pid/pos/Y/p" type="double" value="100.0" />
+		<param name="pid/pos/Y/p" type="double" value="500.0" />
 		<param name="pid/pos/Y/i" type="double" value="0.01" />
 		<param name="pid/pos/Y/d" type="double" value="0.6" />
 		
-		<param name="pid/pos/Z/p" type="double" value="50" />
+		<param name="pid/pos/Z/p" type="double" value="500.0" />
 		<param name="pid/pos/Z/i" type="double" value="0.01" />
 		<param name="pid/pos/Z/d" type="double" value="0.6" />
 		
@@ -33,12 +33,12 @@
 		<param name="pid/ori/P/i" type="double" value="0.05" />
 		<param name="pid/ori/P/d" type="double" value="0.2" />
 		
-		<param name="pid/ori/Y/p" type="double" value="2.2" />
+		<param name="pid/ori/Y/p" type="double" value="1000.0" />
 		<param name="pid/ori/Y/i" type="double" value="0.05" />
 		<param name="pid/ori/Y/d" type="double" value="0.6" />
 		
-		<param name="pid_i_max" type="double" value="0.5" />
-		<param name="pid_i_min" type="double" value="-0.5" />
+		<param name="pid_i_max" type="double" value="1.0" />
+		<param name="pid_i_min" type="double" value="-1.0" />
 		
 		<!-- ========== Motor/Behavior Tuning ========== -->
 		
@@ -46,16 +46,16 @@
 		<param name="speed_m2_dir" type="double" value="1.0" />
 		
 		<param name="strafe_m1_dir" type="double" value="1.0" />
-		<param name="strafe_m2_dir" type="double" value="1.0" />
+		<param name="strafe_m2_dir" type="double" value="-1.0" />
 		
-		<param name="depth_m1_dir" type="double" value="1.0" />
-		<param name="depth_m2_dir" type="double" value="1.0" />
+		<param name="depth_m1_dir" type="double" value="-1.0" />
+		<param name="depth_m2_dir" type="double" value="-1.0" />
 		
 		<param name="roll_m1_dir" type="double" value="-1.0" />
 		<param name="roll_m2_dir" type="double" value="1.0" />
 		
-		<param name="heading_m1_dir" type="double" value="-1.0" />
-		<param name="heading_m2_dir" type="double" value="1.0" />
+		<param name="yaw_m1_dir" type="double" value="1.0" />
+		<param name="yaw_m2_dir" type="double" value="1.0" />
 		
 		<param name="speed_axis_dir" type="double" value="-1.0" />
 		<param name="strafe_axis_dir" type="double" value="1.0" />
