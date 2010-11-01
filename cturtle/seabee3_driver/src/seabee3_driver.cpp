@@ -3,8 +3,10 @@
  *      seabee3_driver
  * 
  *      Copyright (c) 2010,
+ *
  *      Edward T. Kaszubski (ekaszubski@gmail.com),
  *      Michael Montalbo (mmontalbo@gmail.com)
+ *
  *      All rights reserved.
  *
  *      Redistribution and use in source and binary forms, with or without
@@ -43,6 +45,7 @@
 #include <string>
 // msgs
 #include <seabee3_driver_base/MotorCntl.h> // for outgoing thruster commands
+#include <seabee3_msgs/PhysicsState.h>
 // seabee3_driver/Vector3Masked.msg <-- seabee3_driver/SetDesiredPose.srv
 
 // srvs
@@ -158,6 +161,7 @@ private:
 	std::string global_frame_;
 
 	seabee3_driver_base::MotorCntl motor_cntl_msg_;
+	seabee3_msgs::PhysicsState physics_state_msg_;
 
 	geometry_msgs::Vector3 error_in_rpy_, error_in_xyz_;
 	geometry_msgs::Vector3 max_error_in_rpy_, max_error_in_xyz_;
@@ -168,6 +172,7 @@ private:
 	tf::Transform current_pose_tf_;
 
 	geometry_msgs::Twist desired_pose_;
+	geometry_msgs::Twist desired_pose_velocity_;
 	geometry_msgs::Twist current_pose_;
 
 	std::vector<ThrusterArrayCfg> thruster_dir_cfg_;
@@ -181,6 +186,7 @@ private:
 
 	ros::ServiceServer reset_pose_srv_;
 	ros::ServiceServer set_desired_pose_srv_;
+	ros::Subscriber physics_state_sub_;
 
 	double motor_val_min_, motor_val_max_;
 
@@ -269,6 +275,7 @@ public:
 		resetMotorCntlMsg();
 
 		motor_cntl_pub_ = nh.advertise<seabee3_driver_base::MotorCntl> ( "/seabee3/motor_cntl", 1 );
+		physics_state_sub_ = nh.subscribe( "/seabee3/physics_state", 1, &Seabee3Driver::physicsStateCB, this );
 
 		reset_pose_srv_ = nh.advertiseService( "/seabee3/reset_pose", &Seabee3Driver::resetPoseCB, this );
 		set_desired_pose_srv_ = nh.advertiseService( "/seabee3/set_desired_pose", &Seabee3Driver::setDesiredPoseCB, this );
@@ -276,6 +283,11 @@ public:
 
 		//set current xyz to 0, desired RPY to current RPY
 		resetPose();
+	}
+
+	void physicsStateCB( const seabee3_msgs::PhysicsStateConstPtr & msg )
+	{
+		physics_state_msg_ = *msg;
 	}
 
 	void updateMotorCntlMsg( seabee3_driver_base::MotorCntl & msg, int axis, int p_value )
@@ -355,12 +367,12 @@ public:
 
 	int scaleMotorValue( int value )
 	{
-		ROS_INFO( "value: %d", value );
+		//ROS_INFO( "value: %d", value );
 		if ( value == 0 ) return value;
 
 		double value_d = (double) value;
 
-		value_d = motor_val_min_ + value_d * ( motor_val_max_ - motor_val_min_ ) / 100.0;
+		value_d = motor_val_min_ * ( value < 0 ? -1.0 : 1.0 ) + value_d * ( motor_val_max_ - motor_val_min_ ) / 100.0;
 
 		return (int) round( value_d );
 	}
@@ -434,6 +446,9 @@ public:
 
 	void pidStep()
 	{
+		desired_pose_velocity_ = twist_cache_;
+
+
 		//fetchTfFrame( desired_pose_tf_, "landmark_map", "seabee3/desired_pose" );
 		fetchTfFrame( current_pose_tf_, global_frame_, "seabee3/base_link" );
 
@@ -453,8 +468,8 @@ public:
 			//we multiply by the change in time to obtain the desired change in pose
 			//this change in pose is then added to the current pose; the result is desiredPose
 			const double t1 = dt.toSec();
-			geometry_msgs::Twist changeInDesiredPose = twist_cache_ * t1;
-			requestChangeInDesiredPose( changeInDesiredPose );
+			geometry_msgs::Twist change_in_desired_pose = twist_cache_ * t1;
+			requestChangeInDesiredPose( change_in_desired_pose );
 
 			desired_pose_ >> desired_pose_tf_;
 			publishTfFrame( desired_pose_tf_, global_frame_, "/seabee3/desired_pose" );
@@ -489,16 +504,52 @@ public:
 
 			//			printf( "error x %f y %f z %f r %f p %f y %f\n", error_in_xyz_.x, error_in_xyz_.y, error_in_xyz_.z, error_in_rpy_.x, error_in_rpy_.y, error_in_rpy_.z );
 
-			double speed_motor_val = axis_dir_cfg_[Axes::speed] * xyz_pid_.x.pid.updatePid( error_in_xyz_.x, dt );
-			double strafe_motor_val = axis_dir_cfg_[Axes::strafe] * xyz_pid_.y.pid.updatePid( error_in_xyz_.y, dt );
-			double depth_motor_val = axis_dir_cfg_[Axes::depth] * xyz_pid_.z.pid.updatePid( error_in_xyz_.z, dt );
+			geometry_msgs::Twist error_in_velocity;
+			error_in_velocity.linear.x = physics_state_msg_.velocity.linear.x - desired_pose_velocity_.linear.x;
+			error_in_velocity.linear.y = physics_state_msg_.velocity.linear.y - desired_pose_velocity_.linear.y;
+			error_in_velocity.linear.z = physics_state_msg_.velocity.linear.z - desired_pose_velocity_.linear.z;
+
+			error_in_velocity.angular.x = physics_state_msg_.velocity.angular.x - desired_pose_velocity_.angular.x;
+			error_in_velocity.angular.y = physics_state_msg_.velocity.angular.y - desired_pose_velocity_.angular.y;
+			error_in_velocity.angular.z = physics_state_msg_.velocity.angular.z - desired_pose_velocity_.angular.z;
+
+
+			// error in work is the total work able to be done over the available distance minus the work required to stop the robot at the desired location
+			// W=Fx=mv^2/2
+			geometry_msgs::Vector3 error_in_work;
+			error_in_work.x = 10.0 * error_in_xyz_.x - physics_state_msg_.mass.linear.x * ( error_in_velocity.linear.x < 0 ? -1.0 : 1.0 ) * pow( error_in_velocity.linear.x, 2 ) / 2.0;
+			error_in_work.y = 10.0 * error_in_xyz_.y - physics_state_msg_.mass.linear.x * ( error_in_velocity.linear.y < 0 ? -1.0 : 1.0 ) * pow( error_in_velocity.linear.y, 2 ) / 2.0;
+			error_in_work.z = 5.0 * error_in_xyz_.z - physics_state_msg_.mass.linear.x * ( error_in_velocity.linear.z < 0 ? -1.0 : 1.0 ) * pow( error_in_velocity.linear.z, 2 ) / 2.0;
+
+
+			// Fx_min=mv^2/2; minimum stopping distnace x_min=mv^2/2F
+			// error in distance x_err=x-x_min
+			/*geometry_msgs::Vector3 error_in_distance;
+			 error_in_distance.x = error_in_xyz_.x - physics_state_msg_.mass.linear.x * ( error_in_velocity.linear.x < 0 ? -1.0 : 1.0 ) * pow( error_in_velocity.linear.x, 2 ) / ( 2.0 * 10.0 );
+			 error_in_distance.y = error_in_xyz_.y - physics_state_msg_.mass.linear.x * ( error_in_velocity.linear.y < 0 ? -1.0 : 1.0 ) * pow( error_in_velocity.linear.y, 2 ) / ( 2.0 * 10.0 );
+			 error_in_distance.z = error_in_xyz_.z - physics_state_msg_.mass.linear.x * ( error_in_velocity.linear.z < 0 ? -1.0 : 1.0 ) * pow( error_in_velocity.linear.z, 2 ) / ( 2.0 * 5.0 );*/
+
+			double speed_motor_val = axis_dir_cfg_[Axes::speed] * xyz_pid_.x.pid.updatePid( error_in_work.x, dt );
+			double strafe_motor_val = axis_dir_cfg_[Axes::strafe] * xyz_pid_.y.pid.updatePid( error_in_work.y, dt );
+			double depth_motor_val = axis_dir_cfg_[Axes::depth] * xyz_pid_.z.pid.updatePid( error_in_work.z, dt );
 
 
 			//double rollMotorVal = axis_dir_cfg_[Axes::roll] * rpy_pid_.x.pid.updatePid( error_in_rpy_.x, dt );
 			//double pitchMotorVal = axis_dir_cfg_[Axes::pitch] * rpy_pid_.y.pid.updatePid( error_in_rpy_.y, dt );
-			double yaw_motor_val = axis_dir_cfg_[Axes::yaw] * rpy_pid_.z.pid.updatePid( error_in_rpy_.z, dt );
 
-			printf( "speed %f strafe %f depth %f yaw %f\n", speed_motor_val, strafe_motor_val, depth_motor_val, yaw_motor_val );
+			//printf("error_in_velocity.angular.z %f\n", error_in_velocity.angular.z);
+			//printf("error_in_rpy.z %f\n", MathyMath::degToRad( error_in_rpy_.z ) );
+
+			//printf("w1 %f\n", 5.0 * 0.3 * MathyMath::degToRad( error_in_rpy_.z ));
+			//printf("w2 %f\n", 100.0 * physics_state_msg_.mass.angular.z * ( error_in_velocity.angular.z < 0 ? -1.0 : 1.0 ) * pow( error_in_velocity.angular.z, 2 ) / 2.0);
+
+			// W=Fx=mv^2/2
+			double error_in_work_yaw = 5.0 * 0.3 * MathyMath::degToRad( error_in_rpy_.z ) - 100.0 * physics_state_msg_.mass.angular.z * ( error_in_velocity.angular.z < 0 ? 1.0 : -1.0 ) * pow(
+					error_in_velocity.angular.z, 2 ) / 2.0;
+			double yaw_motor_val = axis_dir_cfg_[Axes::yaw] * rpy_pid_.z.pid.updatePid( error_in_work_yaw, dt );
+
+
+			//printf( "speed %f strafe %f depth %f yaw %f\n", speed_motor_val, strafe_motor_val, depth_motor_val, yaw_motor_val );
 
 
 			//MathyMath::capValue( rollMotorVal, 50.0 );
@@ -522,10 +573,11 @@ public:
 		//this also grabs and publishes tf frames
 		pidStep();
 
-		for ( size_t i; i < motor_cntl_msg_.motors.size(); i++ )
-		{
-			motor_cntl_msg_.motors[i] = scaleMotorValue( motor_cntl_msg_.motors[i] );
-		}
+
+		/*for ( size_t i; i < motor_cntl_msg_.motors.size(); i++ )
+		 {
+		 motor_cntl_msg_.motors[i] = scaleMotorValue( motor_cntl_msg_.motors[i] );
+		 }*/
 
 		motor_cntl_pub_.publish( motor_cntl_msg_ );
 

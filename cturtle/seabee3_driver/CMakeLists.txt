@@ -17,7 +17,13 @@ set(EXECUTABLE_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/bin)
 #set the default path for built libraries to the "lib" directory
 set(LIBRARY_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/lib)
 
-rosbuild_genmsg()
-rosbuild_gensrv()
+# Auto-generated files for this package are under version control.
+# To make changes to these files, uncomment the following section,
+# build, then re-comment and commit the changes. Depending on the
+# state of this package, it may also be necessary to temporarily
+# rename the 'ROS_NOBUILD' file before the package will build.
+#
+#rosbuild_genmsg()
+#rosbuild_gensrv()
 
-rosbuild_add_executable(seabee3_driver src/seabee3_driver.cpp)
+add_subdirectory( src )
