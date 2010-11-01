@@ -43,6 +43,7 @@
 #include <xsens/XSensDriver.h> // for XSensDriver
 #include <geometry_msgs/Vector3.h>
 #include <math.h> //for pow, sqrt
+#include <mathy_math/mathy_math.h>
 //msgs
 #include <sensor_msgs/Imu.h> // for outgoing IMU data; quaternions? srsly? fuckin bullshit
 #include <xsens_node/Imu.h> // for backwards-compatibility; also gives euler angles (because fuck quaternions)
@@ -88,6 +89,8 @@ private:
 	bool calibrated_, autocalibrate_, assume_calibrated_;
 	double orientation_stdev_, angular_velocity_stdev_, linear_acceleration_stdev_, max_drift_rate_;
 
+	int drift_calibration_steps_, ori_calibration_steps_;
+
 	ros::NodeHandle nh_priv_;
 	ros::Publisher imu_pub_;
 	ros::Publisher custom_imu_pub_;
@@ -100,7 +103,7 @@ private:
 
 public:
 	XSensNode( ros::NodeHandle & nh ) :
-		BaseNode<>( nh )
+		BaseNode<> ( nh )
 	{
 		nh_priv_.param( "port", port_, std::string( "/dev/ttyUSB0" ) );
 		nh_priv_.param( "frame_id", frame_id_, std::string( "imu" ) );
@@ -108,8 +111,10 @@ public:
 		nh_priv_.param( "orientation_stdev", orientation_stdev_, 0.035 );
 		nh_priv_.param( "angular_velocity_stdev", angular_velocity_stdev_, 0.012 );
 		nh_priv_.param( "linear_acceleration_stdev", linear_acceleration_stdev_, 0.098 );
-		nh_priv_.param( "max_drift_rate", max_drift_rate_, 0.0001 );
+		nh_priv_.param( "max_drift_rate", max_drift_rate_, 0.001 );
 		nh_priv_.param( "assume_calibrated", assume_calibrated_, false );
+		nh_priv_.param( "drift_calibration_steps", drift_calibration_steps_, 550 );
+		nh_priv_.param( "ori_calibration_steps", ori_calibration_steps_, 110 );
 
 		calibrated_ = false;
 
@@ -161,16 +166,26 @@ public:
 
 	void checkCalibration()
 	{
+		ROS_INFO( "Checking calibration..." );
+
 		double drift_rate = sqrt( pow( drift_comp_.x(), 2 ) + pow( drift_comp_.y(), 2 ) + pow( drift_comp_.z(), 2 ) );
-		calibrated_ = drift_rate > max_drift_rate_;
+		calibrated_ = drift_rate <= max_drift_rate_;
+
+		ROS_INFO( "Drift rate: %f Max drift rate: %f", drift_rate, max_drift_rate_ );
 
 		std_msgs::Bool is_calibrated_msg;
 		is_calibrated_msg.data = calibrated_;
 		is_calibrated_pub_.publish( is_calibrated_msg );
 	}
 
-	void runRPYOriCalibration( unsigned int n = 100 )
+	void runRPYOriCalibration()
 	{
+		runRPYOriCalibration( (uint) ori_calibration_steps_ );
+	}
+
+	void runRPYOriCalibration( uint n )
+	{
+		ROS_INFO( "Running ori calibration..." );
 		//reset the vector to <0, 0, 0>
 		ori_comp_ *= 0.0;
 		for ( int i = 0; i < n && ros::ok(); i++ )
@@ -184,9 +199,16 @@ public:
 		ori_comp_ /= (double) ( -n );
 	}
 
-	void runRPYDriftCalibration( unsigned int n = 100 )
+	void runRPYDriftCalibration()
 	{
-		drift_comp_ *= 0.0; //reset the vector to <0, 0, 0>
+		runRPYDriftCalibration( (uint) drift_calibration_steps_ );
+	}
+
+	void runRPYDriftCalibration( uint n )
+	{
+		ROS_INFO( "Running drift calibration..." );
+		//reset the vector to <0, 0, 0>
+		drift_comp_ *= 0.0;
 		updateIMUData();
 		drift_comp_ = ori_data_cache_.front();
 		for ( int i = 0; i < n && ros::ok(); i++ )
@@ -224,11 +246,12 @@ public:
 	bool calibrateCB( std_srvs::Empty::Request & req, std_srvs::Empty::Response & res )
 	{
 		runFullCalibration();
+		return true;
 	}
 
 	virtual void spinOnce()
 	{
-		//if ( autocalibrate_ && !calibrated_ ) runFullCalibration();
+		if ( autocalibrate_ && !calibrated_ ) runFullCalibration();
 
 		sensor_msgs::Imu imu_msg;
 		xsens_node::Imu custom_imu_msg;
@@ -252,7 +275,9 @@ public:
 
 		temp >> custom_imu_msg.ori;
 
-		custom_imu_msg.ori.z *= M_PI / 180.0;
+		custom_imu_msg.ori.x = MathyMath::degToRad( custom_imu_msg.ori.x );
+		custom_imu_msg.ori.y = MathyMath::degToRad( custom_imu_msg.ori.y );
+		custom_imu_msg.ori.z = MathyMath::degToRad( custom_imu_msg.ori.z );
 
 		tf::Quaternion ori( temp.z(), temp.y(), temp.x() );
 
