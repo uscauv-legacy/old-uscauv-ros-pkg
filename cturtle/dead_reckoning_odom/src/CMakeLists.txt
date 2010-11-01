@@ -1,0 +1,1 @@
+rosbuild_add_executable(odom_node odom_node.cpp)

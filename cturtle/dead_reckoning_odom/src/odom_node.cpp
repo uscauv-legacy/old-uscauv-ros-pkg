@@ -94,6 +94,8 @@ public:
 
 	void imuCB( const xsens_node::ImuConstPtr & msg )
 	{
+		current_pose_.angular.x = msg->ori.x;
+		current_pose_.angular.y = msg->ori.y;
 		current_pose_.angular.z = msg->ori.z;
 	}
 
