@@ -24,4 +24,4 @@ rosbuild_find_ros_package(dynamic_reconfigure)
 include(${dynamic_reconfigure_PACKAGE_PATH}/cmake/cfgbuild.cmake)
 gencfg()
 
-rosbuild_add_executable(color_classifier src/color_classifier.cpp)
+add_subdirectory( src )

@@ -21,7 +21,4 @@ rosbuild_genmsg()
 #uncomment if you have defined services
 rosbuild_gensrv()
 
-rosbuild_add_library(${PROJECT_NAME} src/LandmarkMap.cpp
-									 src/Landmark.cpp
-									 src/LandmarkSensor.cpp
-									 src/LocalizationParticle.cpp)
+add_subdirectory( src )

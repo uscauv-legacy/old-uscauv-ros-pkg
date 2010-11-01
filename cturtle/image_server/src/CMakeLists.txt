@@ -1,0 +1,1 @@
+rosbuild_add_executable(image_server image_server.cpp)

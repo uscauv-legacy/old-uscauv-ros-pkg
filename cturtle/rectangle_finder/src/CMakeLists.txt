@@ -1,0 +1,1 @@
+rosbuild_add_executable(rectangle_finder rectangle_finder.cpp)

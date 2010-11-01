@@ -1,0 +1,1 @@
+rosbuild_add_executable(xsens_node xsens_node.cpp)

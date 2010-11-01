@@ -14,8 +14,7 @@ rosbuild_init()
 #set(EXECUTABLE_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/bin)
 set(LIBRARY_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/lib)
 
-#rosbuild_add_library(seabee3_beestem_x64 src/seabee3_beestem/BeeStem3.cpp src/seabee3_beestem/Serial.cpp src/seabee3_beestem/BeeStem3_driver.cpp)
-rosbuild_add_library(${PROJECT_NAME} src/seabee3_beestem/BeeStem3.cpp src/seabee3_beestem/Serial.cpp src/seabee3_beestem/BeeStem3Driver.cpp)
+add_subdirectory( src/seabee3_beestem )
 
 #if (UNIX AND NOT WIN32)
 #  if (CMAKE_SIZEOF_VOID_P MATCHES "8")

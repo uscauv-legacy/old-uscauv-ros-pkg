@@ -1,0 +1,1 @@
+rosbuild_add_executable(color_classifier color_classifier.cpp)

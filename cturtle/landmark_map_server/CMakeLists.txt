@@ -16,10 +16,10 @@ set(EXECUTABLE_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/bin)
 #set the default path for built libraries to the "lib" directory
 set(LIBRARY_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/lib)
 
-#uncomment if you have defined messages
 rosbuild_genmsg()
-#uncomment if you have defined services
 rosbuild_gensrv()
+
+add_subdirectory( src )
 
 #common commands for building c++ executables and libraries
 #rosbuild_add_library(${PROJECT_NAME} src/example.cpp)
@@ -27,5 +27,5 @@ rosbuild_gensrv()
 #rosbuild_add_boost_directories()
 #rosbuild_link_boost(${PROJECT_NAME} thread)
 #link_directories("${PROJECT_SOURCE_DIR}/../localization_defs/lib") #this is retarded; I shouldn't have to fucking do this to get the fucking thing to link
-rosbuild_add_executable(landmark_map_server src/landmark_map_server.cpp)
+
 #target_link_libraries(landmark_map_server localization_defs)
