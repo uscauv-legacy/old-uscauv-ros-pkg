@@ -59,7 +59,7 @@ public:
 	~BaseTfTranceiver();
 
 protected:
-	void fetchTfFrame( tf::Transform & transform, const std::string & frame1, const std::string & frame2 );
+	void fetchTfFrame( tf::Transform & transform, const std::string & frame1, const std::string & frame2, double wait_time = 0.0 );
 	void publishTfFrame( const tf::Transform & transform, const std::string & frame1, const std::string & frame2 );
 };
 
@@ -79,12 +79,12 @@ BaseTfTranceiver<_ReconfigureType>::~BaseTfTranceiver()
 }
 
 template<typename _ReconfigureType>
-void BaseTfTranceiver<_ReconfigureType>::fetchTfFrame( tf::Transform & transform, const std::string & frame1, const std::string & frame2 )
+void BaseTfTranceiver<_ReconfigureType>::fetchTfFrame( tf::Transform & transform, const std::string & frame1, const std::string & frame2, double wait_time )
 {
 	tf::StampedTransform temp;
 	try
 	{
-		tl_->waitForTransform( frame1, frame2, ros::Time( 0 ), ros::Duration( 0.0 ) );
+		tl_->waitForTransform( frame1, frame2, ros::Time( 0 ), ros::Duration( wait_time ) );
 		tl_->lookupTransform( frame1, frame2, ros::Time( 0 ), temp );
 
 		transform.setOrigin( temp.getOrigin() );
