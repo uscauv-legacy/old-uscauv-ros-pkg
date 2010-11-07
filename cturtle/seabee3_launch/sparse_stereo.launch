@@ -1,0 +1,8 @@
+<launch>
+	<node pkg="sparse_stereo" type="sparse_stereo" name="sparse_stereo" output="screen" >
+		<param name="left" type="string" value="camera3" />
+		<param name="right" type="string" value="camera4" />
+		<param name="stereo" type="string" value="/stereo" />
+		<param name="image" type="string" value="image_rect_color" />
+	</node>
+</launch>
