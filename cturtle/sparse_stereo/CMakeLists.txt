@@ -21,9 +21,7 @@ include(${dynamic_reconfigure_PACKAGE_PATH}/cmake/cfgbuild.cmake)
 
 gencfg()
 
-#uncomment if you have defined messages
 #rosbuild_genmsg()
-#uncomment if you have defined services
 #rosbuild_gensrv()
 
-rosbuild_add_executable(sparse_stereo src/sparse_stereo.cpp)
+add_subdirectory( src )

@@ -1,4 +1,6 @@
 <launch>
-	<!-- <include file="$(find seabee3_launch)/down_lt_camera.launch" /> -->
-	<include file="$(find seabee3_launch)/down_rt_camera.launch" />
+	<!-- left -->
+	<include file="$(find seabee3_launch)/camera3.launch" />
+	<!-- right -->
+	<include file="$(find seabee3_launch)/camera4.launch" />
 </launch>

@@ -1,11 +1,6 @@
 <launch>
 	<group ns="stereo">
-		<node pkg="stereo_image_proc" type="stereo_image_proc" name="proc" output="screen" >
-			<param name="left" type="string" value="/stereo/left" />
-			<param name="right" type="string" value="/stereo/right" />
-		
-			<remap from="/stereo/left/camera_info" to="left/camera_info" />
-			<remap from="/stereo/right/camera_info" to="right/camera_info" />
-		</node>
+		<include file="$(find seabee3_launch)/down_cameras.launch" />
+		<include file="$(find seabee3_launch)/sparse_stereo.launch" />
 	</group>
 </launch>

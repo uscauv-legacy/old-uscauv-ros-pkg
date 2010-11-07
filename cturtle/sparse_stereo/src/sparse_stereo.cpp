@@ -19,10 +19,6 @@ bool processed_right_img = false;
 bool new_left_info_ = false;
 bool new_right_info_ = false;
 
-cv::SURF mSurf;
-std::vector<cv::KeyPoint> leftKeyPoints, rightKeyPoints;
-std::vector<float> leftDescriptors, rightDescriptors;
-
 double norm_threshold, yspace_diff_threshold, gauss_mean, gauss_variance;
 
 sensor_msgs::ImagePtr left_img_, right_img_;
@@ -30,14 +26,76 @@ sensor_msgs::CameraInfo left_info_, right_info_;
 image_transport::Publisher *disparity_pub;
 sensor_msgs::CvBridge bridge;
 
-cv::Mat rightImage, leftImage, imageMask, combined;
+IplImage *rightImage, *leftImage;
+cv::Mat imageMask, combined;
 std::vector<std::pair<size_t, size_t> > matches;
 
 bool initialized = false;
 
-double gaussian( double x, double mean, double variance )
+template<class _DescriptorDataType = float>
+struct Feature
+{
+	std::vector<_DescriptorDataType> descriptor_;
+	cv::Point pos_;
+};
+
+typedef Feature<> _Feature;
+
+/*double gaussian( dfdsa )
 {
 	return variance != 0.0 ? ( 1.0 / sqrt( 2.0 * M_PI * variance ) ) * pow( M_E, -pow( x - mean, 2.0 ) / ( 2.0 * variance ) ) : 0;
+}*/
+
+template<class _DescriptorDataType>
+std::vector<_DescriptorDataType> calculateDescriptor( IplImage * image, cv::Point keypoint )
+{
+	std::vector<_DescriptorDataType> descriptor;
+
+
+
+	return descriptor;
+}
+
+std::vector<_Feature> calculateFeatures( IplImage * image, IplImage * image_bw, int corner_count = 300 )
+{
+	static IplImage * eig_image = cvCreateImage( cvSize( image_bw->width, image_bw->height ), IPL_DEPTH_32F, 1 );
+	static IplImage * tmp_image = cvCreateImage( cvSize( image_bw->width, image_bw->height ), IPL_DEPTH_32F, 1 );
+	CvPoint2D32f corners[corner_count];
+
+	cvGoodFeaturesToTrack( image_bw, eig_image, tmp_image, corners, &corner_count, 0.1, 10.0 );
+
+	std::vector<_Feature> features( corner_count );
+	for ( int i = 0; i < corner_count; i++ )
+	{
+		features[i].pos_.x = corners[i].x;
+		features[i].pos_.y = corners[i].y;
+		features[i].descriptor_ = calculateDescriptor<float>( image, features[i].pos_ );
+	}
+
+	return features;
+}
+
+std::vector<_Feature> processImage( IplImage * image, int x_draw_offset = 0 )
+{
+	cv::Mat img_tmp = cv::Mat( image );
+
+	for ( int y = 0; y < combined.size().height; y++ )
+	{
+		for ( int x = 0; x < image->width; x++ )
+		{
+			cv::Vec3b data = img_tmp.at<cv::Vec3b> ( cv::Point( x, y ) );
+			combined.at<cv::Vec3b> ( cv::Point( x + x_draw_offset, y ) ) = data;
+		}
+	}
+
+	IplImage * image_bw = cvCreateImage( cvSize( image->width, image->height ), IPL_DEPTH_8U, 1 );
+	cvCvtColor( image, image_bw, CV_BGR2GRAY );
+
+	std::vector<_Feature> result = calculateFeatures( image, image_bw );
+
+	cvFree_( image_bw );
+
+	return result;
 }
 
 void process_images()
@@ -48,16 +106,17 @@ void process_images()
 		boost::lock_guard<boost::mutex> limgguard( l_img_mutex_ );
 		boost::lock_guard<boost::mutex> rimgguard( r_img_mutex_ );
 
-		leftImage = cv::Mat( bridge.imgMsgToCv( left_img_ ) );
-		rightImage = cv::Mat( bridge.imgMsgToCv( right_img_ ) );
+		leftImage = bridge.imgMsgToCv( left_img_ );
+		rightImage = bridge.imgMsgToCv( right_img_ );
+		cv::Mat left_tmp = cv::Mat( leftImage );
 
 		int width, height;
 
-		width = rightImage.size().width;
-		height = std::max( rightImage.size().height, leftImage.size().height );
+		width = rightImage->width;
+		height = std::max( rightImage->height, leftImage->height );
 
 		imageMask = cv::Mat::ones( height, width, CV_8U);
-		combined = cv::Mat( cv::Size( 2 * width, height ), leftImage.type(), cv::Scalar( 0 ) );
+		combined = cv::Mat( cv::Size( 2 * width, height ), left_tmp.type(), cv::Scalar( 0 ) );
 
 		ROS_INFO( "Initialized." );
 		initialized = true;
@@ -68,27 +127,16 @@ void process_images()
 	{
 		//ROS_INFO( "processing left image..." );
 		boost::lock_guard<boost::mutex> limgguard( l_img_mutex_ );
-		leftImage = cv::Mat( bridge.imgMsgToCv( left_img_ ) );
+		leftImage = bridge.imgMsgToCv( left_img_ );
 
-		for ( int y = 0; y < combined.size().height; y++ )
+		std::vector<_Feature> features = processImage( leftImage );
+		printf( "r_features: %zu\n", features.size() );
+
+		for ( size_t i = 0; i < features.size(); i++ )
 		{
-			for ( int x = 0; x < leftImage.size().width; x++ )
-			{
-				cv::Vec3b data = leftImage.at<cv::Vec3b> ( cv::Point( x, y ) );
-				combined.at<cv::Vec3b> ( cv::Point( x, y ) ) = data;
-			}
+			cv::circle( combined, features[i].pos_, 3, cv::Scalar( 255, 0, 0 ) );
 		}
 
-		cv::Mat leftImageBw;
-		cv::cvtColor( leftImage, leftImageBw, CV_BGR2GRAY);
-
-		mSurf( leftImageBw, imageMask, leftKeyPoints, leftDescriptors );
-
-		for ( size_t i = 0; i < leftKeyPoints.size(); i++ )
-		{
-			cv::circle( combined, leftKeyPoints[i].pt, 3, cv::Scalar( 255, 0, 0 ) );
-		}
-		//ROS_INFO( "found %d keypoints in left image; %d descriptors", leftKeyPoints.size(), leftDescriptors.size() );
 		processed_left_img = true;
 	}
 
@@ -96,29 +144,18 @@ void process_images()
 	{
 		//ROS_INFO( "processing right image..." );
 		boost::lock_guard<boost::mutex> rimgguard( r_img_mutex_ );
-		rightImage = cv::Mat( bridge.imgMsgToCv( right_img_ ) );
+		rightImage = bridge.imgMsgToCv( right_img_ );
 
-		for ( int y = 0; y < combined.size().height; y++ )
+		std::vector<_Feature> features = processImage( rightImage, rightImage->width );
+
+		printf( "l_features: %zu\n", features.size() );
+
+		for ( size_t i = 0; i < features.size(); i++ )
 		{
-			for ( int x = 0; x < rightImage.size().width; x++ )
-			{
-				cv::Vec3b data = rightImage.at<cv::Vec3b> ( cv::Point( x, y ) );
-				combined.at<cv::Vec3b> ( cv::Point( x + leftImage.size().width, y ) ) = data;
-			}
-		}
-
-		cv::Mat rightImageBw;
-		cv::cvtColor( rightImage, rightImageBw, CV_BGR2GRAY);
-		mSurf( rightImageBw, imageMask, rightKeyPoints, rightDescriptors );
-
-		for ( size_t i = 0; i < rightKeyPoints.size(); i++ )
-		{
-			cv::Point temp = cv::Point( rightImage.size().width + rightKeyPoints[i].pt.x, rightKeyPoints[i].pt.y );
+			cv::Point temp = cv::Point( rightImage->width + features[i].pos_.x, features[i].pos_.y );
 			cv::circle( combined, temp, 3, cv::Scalar( 255, 0, 0 ) );
 		}
 
-
-		//ROS_INFO( "found %d keypoints in right image; %d descriptors", rightKeyPoints.size(), rightDescriptors.size() );
 		processed_right_img = true;
 	}
 
@@ -133,54 +170,54 @@ void process_images()
 
 		//ROS_INFO( "Matching points across images..." );
 
-		for ( size_t lIdx = 0; lIdx < leftKeyPoints.size(); lIdx++ )
-		{
-			bool foundFirst = false;
-			double bestValue = 0;
-			size_t bestIdx = 0;
+		/*for ( size_t lIdx = 0; lIdx < leftKeyPoints.size(); lIdx++ )
+		 {
+		 bool foundFirst = false;
+		 double bestValue = 0;
+		 size_t bestIdx = 0;
 
-			for ( size_t rIdx = 0; rIdx < rightKeyPoints.size(); rIdx++ )
-			{
-				double norm = 0;
-				double yspace_diff = fabs( leftKeyPoints[lIdx].pt.y - rightKeyPoints[rIdx].pt.y );
+		 for ( size_t rIdx = 0; rIdx < rightKeyPoints.size(); rIdx++ )
+		 {
+		 double norm = 0;
+		 double yspace_diff = fabs( leftKeyPoints[lIdx].pt.y - rightKeyPoints[rIdx].pt.y );
 
-				if ( yspace_diff > yspace_diff_threshold ) continue;
+		 if ( yspace_diff > yspace_diff_threshold ) continue;
 
-				for ( int i = 0; i < 128; i++ )
-				{
-					norm += pow( leftDescriptors[lIdx * 128 + i] - rightDescriptors[rIdx * 128 + i], 2 );
-				}
+		 for ( int i = 0; i < 128; i++ )
+		 {
+		 norm += pow( leftDescriptors[lIdx * 128 + i] - rightDescriptors[rIdx * 128 + i], 2 );
+		 }
 
-				//ROS_INFO( "norm %f", norm );
+		 //ROS_INFO( "norm %f", norm );
 
-				norm /= gaussian( yspace_diff, gauss_mean, gauss_variance );
+		 norm /= gaussian( yspace_diff, gauss_mean, gauss_variance );
 
-				//ROS_INFO( "norm w/ gauss %f", norm );
+		 //ROS_INFO( "norm w/ gauss %f", norm );
 
-				if ( norm < bestValue || !foundFirst )
-				{
-					foundFirst = true;
-					bestValue = norm;
-					bestIdx = rIdx;
-				}
-			}
+		 if ( norm < bestValue || !foundFirst )
+		 {
+		 foundFirst = true;
+		 bestValue = norm;
+		 bestIdx = rIdx;
+		 }
+		 }
 
-			if ( foundFirst ) ROS_INFO( "best value: %f", bestValue );
+		 if ( foundFirst ) ROS_INFO( "best value: %f", bestValue );
 
-			if ( bestValue < norm_threshold && foundFirst )
-			{
-				matches.push_back( std::make_pair( lIdx, bestIdx ) );
-			}
-			//std::cout << "Best Match for L"<<lIdx/128<< " = R"<<leftMatches[lIdx/128] << std::endl;
-		}
+		 if ( bestValue < norm_threshold && foundFirst )
+		 {
+		 matches.push_back( std::make_pair( lIdx, bestIdx ) );
+		 }
+		 //std::cout << "Best Match for L"<<lIdx/128<< " = R"<<leftMatches[lIdx/128] << std::endl;
+		 }
 
-		for ( size_t i = 0; i < matches.size(); i++ )
-		{
-			cv::Point lPoint = leftKeyPoints[matches[i].first].pt;
-			cv::Point rPoint = rightKeyPoints[matches[i].second].pt;
-			rPoint.x += leftImage.size().width;
-			cv::line( combined, lPoint, rPoint, cv::Scalar( 0, 0, 255 ) );
-		}
+		 for ( size_t i = 0; i < matches.size(); i++ )
+		 {
+		 cv::Point lPoint = leftKeyPoints[matches[i].first].pt;
+		 cv::Point rPoint = rightKeyPoints[matches[i].second].pt;
+		 rPoint.x += leftImage.size().width;
+		 cv::line( combined, lPoint, rPoint, cv::Scalar( 0, 0, 255 ) );
+		 }*/
 
 		//ROS_INFO( "Publishing disparity image" );
 

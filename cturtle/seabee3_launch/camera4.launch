@@ -1,0 +1,16 @@
+<launch>
+	<node name="camera4" pkg="camera1394" type="camera1394_node">
+		<param name="frame_id" type="string" value="camera4" />
+		<param name="bayer_pattern" type="string" value="rggb"/>
+		<param name="guid" type="string" value="00b09d010090f9d6"/>
+		
+		<remap from="camera/camera_info" to="~/camera_info" />
+		<remap from="camera/image_raw" to="~/image_raw" />
+		<remap from="camera/set_camera_info" to="~/set_camera_info" />
+		
+		<param name="camera_info_url" type="string" value="file://$(find seabee3_launch)/cfg/camera4.yaml" />
+	</node>
+	<group ns="camera4">
+		<node name="image_proc" pkg="image_proc" type="image_proc" />
+	</group>	
+</launch>
