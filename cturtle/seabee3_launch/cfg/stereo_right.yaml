@@ -1,6 +1,6 @@
 image_width: 640
 image_height: 480
-camera_name: 00b09d010090f9d6
+camera_name: narrow_stereo/right
 camera_matrix:
   rows: 3
   cols: 3
@@ -8,11 +8,11 @@ camera_matrix:
 distortion_coefficients:
   rows: 1
   cols: 5
-  data: [-0.374948, 0.164386, 0.000697689, 0.00070045, 0]
+  data: [-0.374948, 0.164386, 0.000698, 0.0007, 0]
 rectification_matrix:
   rows: 3
   cols: 3
-  data: [0.999252, -0.00801662, -0.0378388, 0.00847557, 0.999892, 0.0119842, 0.0377386, -0.0122959, 0.999212]
+  data: [0.999252, -0.008017, -0.037839, 0.008476, 0.999892, 0.011984, 0.037739, -0.012296, 0.999212]
 projection_matrix:
   rows: 3
   cols: 4
