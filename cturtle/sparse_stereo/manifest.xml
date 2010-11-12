@@ -15,6 +15,7 @@
   <depend package="cv_bridge" />
   <depend package="dynamic_reconfigure" />
   <depend package="driver_base" />
+  <depend package="image_geometry" />
   <export>
     <cpp cflags="-I${prefix}/include -I${prefix}/msg/cpp -I${prefix}/srv/cpp" lflags="-Wl,-rpath,${prefix}/lib -L${prefix}/lib -lsparse_stereo"/>
   </export>
