@@ -98,13 +98,13 @@ _Feature calculateFeature( const std::vector<cv::Mat> & pyramid, cv::Point pos )
 		//		+ 1 ) > feature_patch_size_ / 2 ) && ( (float) pos.y / float ( i + 1 ) < image_mat.size().height - feature_patch_size_ / 2 ) )
 		//{
 		//ROS_INFO( "Calculating feature" );
-		cv::Vec3b center = image_mat.at<cv::Vec3b> ( pos );
+		cv::Vec3b center = image_mat.at<cv::Vec3b> ( cv::Point(image_mat.size().width/2, image_mat.size().height/2) );
 
-		for ( int x = -feature_patch_size_ / 2; x < feature_patch_size_ / 2; x++ )
+		for ( int x = 0; x < image_mat.size().width; x++ )
 		{
-			for ( int y = -feature_patch_size_ / 2; y < feature_patch_size_ / 2; y++ )
+			for ( int y = 0; y < image_mat.size().height; y++ )
 			{
-				cv::Vec3b pix = image_mat.at<cv::Vec3b> ( cv::Point( pos.x + x, pos.y + y ) );
+				cv::Vec3b pix = image_mat.at<cv::Vec3b> ( cv::Point( x, y ) );
 				feature.descriptor_.push_back( center[0] - pix[0] );
 				feature.descriptor_.push_back( center[1] - pix[1] );
 				feature.descriptor_.push_back( center[2] - pix[2] );
@@ -166,7 +166,7 @@ _MatchedFeatureDistanceDataType calculateFeatureDistance( _Feature left_feature,
 	{
 		result += pow( left_feature.descriptor_[i] - right_feature.descriptor_[i], 2 );
 	}
-	return sqrt( result );
+	return sqrt( result ) / ( (double) pow( feature_patch_size_, 2) * (double)num_pyramid_levels_) ;
 }
 
 std::vector<_MatchedFeature> matchFeatures( std::vector<_Feature> left_features, std::vector<_Feature> right_features, _MatchedFeatureDistanceDataType threshold =
