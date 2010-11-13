@@ -26,8 +26,10 @@ bool processed_right_img = false;
 bool new_left_info_ = false;
 bool new_right_info_ = false;
 
+// variables modified by dynamic_reconfigure
 double yspace_diff_threshold;
-int blur_kernel_radius_;
+int blur_kernel_radius_, num_pyramid_levels_, feature_patch_size_;
+//
 
 sensor_msgs::ImagePtr left_img_, right_img_;
 sensor_msgs::CameraInfo left_info_, right_info_;
@@ -74,20 +76,33 @@ std::vector<_Feature> left_features_, right_features_;
 std::vector<_MatchedFeature> matched_features_;
 
 template<class _DescriptorDataType>
-_Feature calculateFeature( cv::Mat image_mat, cv::Point pos )
+_Feature calculateFeature( const std::vector<cv::Mat> & pyramid, cv::Point pos )
 {
 	_Feature feature;
-	int keySize = 9;
-
 	feature.pos_ = pos;
 
-	cv::Vec3b center = image_mat.at<cv::Vec3b> ( pos );
+	cv::Mat image_mat;
 
-	if ( ( pos.x > keySize / 2 ) && ( pos.x < image_mat.size().width - keySize / 2 ) && ( pos.y > keySize / 2 ) && ( pos.y < image_mat.size().height - keySize / 2 ) )
+
+	// for every level in the pyramid
+	for ( size_t i = 0; i < pyramid.size(); i++ )
 	{
-		for ( int x = -keySize / 2; x < keySize / 2; x++ )
+		// get the sub-patch of the original image (and scale the keypoint pos to match the shrinking sub-patch)
+		cv::getRectSubPix( pyramid[i], cv::Size( feature_patch_size_, feature_patch_size_ ), cv::Point2f( (float) pos.x / float ( i + 1 ), (float) pos.y / float ( i + 1 ) ), image_mat );
+
+		//ROS_INFO( "level %zu size %d %d", i, image_mat.size().width, image_mat.size().height );
+
+
+		// if the feature patch is within the bounds of the scaled image
+		//if ( ( (float) pos.x / float ( i + 1 ) > feature_patch_size_ / 2 ) && ( (float) pos.x / float ( i + 1 ) < image_mat.size().width - feature_patch_size_ / 2 ) && ( (float) pos.y / float ( i
+		//		+ 1 ) > feature_patch_size_ / 2 ) && ( (float) pos.y / float ( i + 1 ) < image_mat.size().height - feature_patch_size_ / 2 ) )
+		//{
+		//ROS_INFO( "Calculating feature" );
+		cv::Vec3b center = image_mat.at<cv::Vec3b> ( pos );
+
+		for ( int x = -feature_patch_size_ / 2; x < feature_patch_size_ / 2; x++ )
 		{
-			for ( int y = -keySize / 2; y < keySize / 2; y++ )
+			for ( int y = -feature_patch_size_ / 2; y < feature_patch_size_ / 2; y++ )
 			{
 				cv::Vec3b pix = image_mat.at<cv::Vec3b> ( cv::Point( pos.x + x, pos.y + y ) );
 				feature.descriptor_.push_back( center[0] - pix[0] );
@@ -100,9 +115,10 @@ _Feature calculateFeature( cv::Mat image_mat, cv::Point pos )
 			}
 		}
 
-		feature.color_[0] /= keySize * keySize;
-		feature.color_[1] /= keySize * keySize;
-		feature.color_[2] /= keySize * keySize;
+		feature.color_[0] /= feature_patch_size_ * feature_patch_size_;
+		feature.color_[1] /= feature_patch_size_ * feature_patch_size_;
+		feature.color_[2] /= feature_patch_size_ * feature_patch_size_;
+		//}
 	}
 
 	return feature;
@@ -128,11 +144,15 @@ std::vector<_Feature> calculateFeatures( cv::Mat image_mat, int corner_count = 3
 
 	cv::GaussianBlur( image_mat, image_mat_blur, cv::Size( 5, 5 ), 0.0 );
 
+	std::vector<cv::Mat> pyramid( num_pyramid_levels_ + 1 );
+
+	cv::buildPyramid( image_mat, pyramid, num_pyramid_levels_ );
+
 	std::vector<_Feature> features;
 	//features.reserve( corner_count );
 	for ( int i = 0; i < corner_count; i++ )
 	{
-		_Feature feature = calculateFeature<_FeatureDescriptorDataType> ( image_mat_blur, corners[i] );
+		_Feature feature = calculateFeature<_FeatureDescriptorDataType> ( pyramid, corners[i] );
 		if ( feature.descriptor_.size() > 0 ) features.push_back( feature );
 	}
 
@@ -221,6 +241,7 @@ sensor_msgs::PointCloud projectKeypoints( std::vector<_MatchedFeature> features 
 	points.channels.resize( features.size() );
 	points.points.resize( features.size() );
 
+
 	// project points
 	for ( size_t i = 0; i < features.size(); i++ )
 	{
@@ -242,7 +263,7 @@ sensor_msgs::PointCloud projectKeypoints( std::vector<_MatchedFeature> features 
 
 void process_images()
 {
-	//ROS_INFO( "Trying to process available resources..." );
+	//ROS_DEBUG( "Trying to process available resources..." );
 	if ( !initialized && new_right_img_ && new_left_img_ )
 	{
 		boost::lock_guard<boost::mutex> limgguard( l_img_mutex_ );
@@ -260,14 +281,14 @@ void process_images()
 		imageMask = cv::Mat::ones( height, width, CV_8U);
 		combined = cv::Mat( cv::Size( width, 2 * height ), left_tmp.type(), cv::Scalar( 0 ) );
 
-		ROS_INFO( "Initialized." );
+		ROS_DEBUG( "Initialized." );
 		initialized = true;
 	}
 	else if ( !initialized ) return;
 
 	if ( new_left_img_ && !processed_left_img )
 	{
-		//ROS_INFO( "processing left image..." );
+		//ROS_DEBUG( "processing left image..." );
 		boost::lock_guard<boost::mutex> limgguard( l_img_mutex_ );
 		leftImage = bridge.imgMsgToCv( left_img_ );
 
@@ -280,7 +301,7 @@ void process_images()
 
 	if ( new_right_img_ && !processed_right_img )
 	{
-		//ROS_INFO( "processing right image..." );
+		//ROS_DEBUG( "processing right image..." );
 		boost::lock_guard<boost::mutex> rimgguard( r_img_mutex_ );
 		rightImage = bridge.imgMsgToCv( right_img_ );
 
@@ -293,7 +314,7 @@ void process_images()
 
 	if ( new_left_img_ && new_right_img_ && new_left_info_ && new_right_info_ )
 	{
-		//ROS_INFO( "Checking locks..." );
+		//ROS_DEBUG( "Checking locks..." );
 		boost::lock_guard<boost::mutex> limgguard( l_img_mutex_ );
 		boost::lock_guard<boost::mutex> rimgguard( r_img_mutex_ );
 		boost::lock_guard<boost::mutex> linfoguard( l_info_mutex_ );
@@ -327,13 +348,13 @@ void process_images()
 		processed_left_img = false;
 		processed_right_img = false;
 
-		ROS_INFO( "done" );
+		ROS_DEBUG( "done" );
 	}
 }
 
 void img_cb_l( const sensor_msgs::ImageConstPtr& msg )
 {
-	ROS_INFO( "got left img" );
+	ROS_DEBUG( "got left img" );
 	l_img_mutex_.lock();
 	left_img_ = boost::const_pointer_cast<sensor_msgs::Image>( msg );
 	//img_left = msg;
@@ -348,7 +369,7 @@ void img_cb_l( const sensor_msgs::ImageConstPtr& msg )
 
 void img_cb_r( const sensor_msgs::ImageConstPtr& msg )
 {
-	ROS_INFO( "got right img" );
+	ROS_DEBUG( "got right img" );
 	r_img_mutex_.lock();
 	right_img_ = boost::const_pointer_cast<sensor_msgs::Image>( msg );
 	//img_right = msg;
@@ -363,7 +384,7 @@ void img_cb_r( const sensor_msgs::ImageConstPtr& msg )
 
 void info_cb_l( const sensor_msgs::CameraInfoConstPtr& msg )
 {
-	ROS_INFO( "got left info" );
+	ROS_DEBUG( "got left info" );
 	l_info_mutex_.lock();
 	left_info_ = *msg;
 	//info_left = boost::const_pointer_cast<sensor_msgs::CameraInfo>(msg);
@@ -378,7 +399,7 @@ void info_cb_l( const sensor_msgs::CameraInfoConstPtr& msg )
 
 void info_cb_r( const sensor_msgs::CameraInfoConstPtr& msg )
 {
-	ROS_INFO( "got right info" );
+	ROS_DEBUG( "got right info" );
 	r_info_mutex_.lock();
 	right_info_ = *msg;
 
@@ -392,11 +413,13 @@ void info_cb_r( const sensor_msgs::CameraInfoConstPtr& msg )
 
 void reconfigureCallback( sparse_stereo::SparseStereoConfig &config, uint32_t level )
 {
-	//ROS_INFO( "Setting norm_threshold to %f", config.norm_threshold );
-	//ROS_INFO( "Setting norm_threshold to %f", config.norm_threshold );
+	//ROS_DEBUG( "Setting norm_threshold to %f", config.norm_threshold );
+	//ROS_DEBUG( "Setting norm_threshold to %f", config.norm_threshold );
 	//norm_threshold = config.norm_threshold;
-	blur_kernel_radius_ = config.blur_kernel_radius * 2 + 1;
 	yspace_diff_threshold = (double) config.yspace_diff_threshold;
+	blur_kernel_radius_ = config.blur_kernel_radius * 2 + 1;
+	num_pyramid_levels_ = config.num_pyramid_levels;
+	feature_patch_size_ = config.feature_patch_size * 2 + 1;
 	feature_space_min_distance_threshold_ = (_MatchedFeatureDistanceDataType) config.feature_space_min_distance_threshold;
 	//gauss_mean = config.gauss_mean;
 	//gauss_variance = config.gauss_variance;
