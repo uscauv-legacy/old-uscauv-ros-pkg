@@ -113,6 +113,13 @@ public:
 		const static int yaw_rel = 11;
 	};
 
+	// how to interpret incoming CmdVel messages; any type except for 'pid' sets thruster values directly
+	struct CmdVelConversionType
+	{
+		const static int pid = 0;
+		const static int linear = 1;
+	};
+
 	struct PidConfig
 	{
 		double p;
@@ -125,6 +132,11 @@ public:
 		control_toolbox::Pid pid;
 		PidConfig cfg;
 
+		inline double updatePid( double error, ros::Duration dt )
+		{
+			return pid.updatePid( error, dt );
+		}
+		;
 		inline void initPid( double i_min, double i_max )
 		{
 			pid.initPid( cfg.p, cfg.i, cfg.d, i_min, i_max );
@@ -157,6 +169,11 @@ public:
 		;
 	};
 
+	struct Pid6D
+	{
+		Pid3D linear, angular;
+	};
+
 private:
 	std::string global_frame_;
 
@@ -180,7 +197,7 @@ private:
 	double axis_dir_cfg_[6];
 	double pid_i_min_, pid_i_max_;
 
-	Pid3D xyz_pid_, rpy_pid_;
+	Pid6D pid_controller_;
 
 	ros::Publisher motor_cntl_pub_;
 
@@ -189,6 +206,10 @@ private:
 	ros::Subscriber physics_state_sub_;
 
 	double motor_val_min_, motor_val_max_;
+
+	int cmd_vel_conversion_mode_;
+
+	std::map<int, double> cmd_vel_conversions;
 
 public:
 	Seabee3Driver( ros::NodeHandle & nh ) :
@@ -199,6 +220,13 @@ public:
 		last_pid_update_time_ = ros::Time( -1 );
 
 		nh_priv_.param( "global_frame", global_frame_, std::string( "/landmark_map" ) );
+
+		nh_priv_.param( "cmd_vel_conversion", cmd_vel_conversion_mode_, CmdVelConversionType::pid );
+
+		if( !nh.getParam("/seabee3_teleop/speed_scale", cmd_vel_conversions[Axes::speed]) ) cmd_vel_conversions[Axes::speed] = 1.0;
+		if( !nh.getParam("/seabee3_teleop/strafe_scale", cmd_vel_conversions[Axes::strafe]) ) cmd_vel_conversions[Axes::strafe] = 1.0;
+		if( !nh.getParam("/seabee3_teleop/depth_scale", cmd_vel_conversions[Axes::depth]) ) cmd_vel_conversions[Axes::depth] = 1.0;
+		if( !nh.getParam("/seabee3_teleop/yaw_scale", cmd_vel_conversions[Axes::yaw]) ) cmd_vel_conversions[Axes::yaw] = 1.0;
 
 
 		// scale motor values to be within the following min+max value such that
@@ -214,29 +242,29 @@ public:
 		nh_priv_.param( "pitch_err_cap", max_error_in_rpy_.y, 25.0 );
 		nh_priv_.param( "yaw_err_cap", max_error_in_rpy_.z, 25.0 );
 
-		nh_priv_.param( "pid/pos/X/p", xyz_pid_.x.cfg.p, 2.5 );
-		nh_priv_.param( "pid/pos/X/i", xyz_pid_.x.cfg.i, 0.05 );
-		nh_priv_.param( "pid/pos/X/d", xyz_pid_.x.cfg.d, 0.2 );
+		nh_priv_.param( "pid/pos/X/p", pid_controller_.linear.x.cfg.p, 2.5 );
+		nh_priv_.param( "pid/pos/X/i", pid_controller_.linear.x.cfg.i, 0.05 );
+		nh_priv_.param( "pid/pos/X/d", pid_controller_.linear.x.cfg.d, 0.2 );
 
-		nh_priv_.param( "pid/pos/Y/p", xyz_pid_.y.cfg.p, 2.5 );
-		nh_priv_.param( "pid/pos/Y/i", xyz_pid_.y.cfg.i, 0.05 );
-		nh_priv_.param( "pid/pos/Y/d", xyz_pid_.y.cfg.d, 0.2 );
+		nh_priv_.param( "pid/pos/Y/p", pid_controller_.linear.y.cfg.p, 2.5 );
+		nh_priv_.param( "pid/pos/Y/i", pid_controller_.linear.y.cfg.i, 0.05 );
+		nh_priv_.param( "pid/pos/Y/d", pid_controller_.linear.y.cfg.d, 0.2 );
 
-		nh_priv_.param( "pid/pos/Z/p", xyz_pid_.z.cfg.p, 2.5 );
-		nh_priv_.param( "pid/pos/Z/i", xyz_pid_.z.cfg.i, 0.05 );
-		nh_priv_.param( "pid/pos/Z/d", xyz_pid_.z.cfg.d, 0.2 );
+		nh_priv_.param( "pid/pos/Z/p", pid_controller_.linear.z.cfg.p, 2.5 );
+		nh_priv_.param( "pid/pos/Z/i", pid_controller_.linear.z.cfg.i, 0.05 );
+		nh_priv_.param( "pid/pos/Z/d", pid_controller_.linear.z.cfg.d, 0.2 );
 
-		nh_priv_.param( "pid/ori/R/p", rpy_pid_.x.cfg.p, 2.5 );
-		nh_priv_.param( "pid/ori/R/i", rpy_pid_.x.cfg.i, 0.05 );
-		nh_priv_.param( "pid/ori/R/d", rpy_pid_.x.cfg.d, 0.2 );
+		nh_priv_.param( "pid/ori/R/p", pid_controller_.angular.x.cfg.p, 2.5 );
+		nh_priv_.param( "pid/ori/R/i", pid_controller_.angular.x.cfg.i, 0.05 );
+		nh_priv_.param( "pid/ori/R/d", pid_controller_.angular.x.cfg.d, 0.2 );
 
-		nh_priv_.param( "pid/ori/P/p", rpy_pid_.y.cfg.p, 2.5 );
-		nh_priv_.param( "pid/ori/P/i", rpy_pid_.y.cfg.i, 0.05 );
-		nh_priv_.param( "pid/ori/P/d", rpy_pid_.y.cfg.d, 0.2 );
+		nh_priv_.param( "pid/ori/P/p", pid_controller_.angular.y.cfg.p, 2.5 );
+		nh_priv_.param( "pid/ori/P/i", pid_controller_.angular.y.cfg.i, 0.05 );
+		nh_priv_.param( "pid/ori/P/d", pid_controller_.angular.y.cfg.d, 0.2 );
 
-		nh_priv_.param( "pid/ori/Y/p", rpy_pid_.z.cfg.p, 2.5 );
-		nh_priv_.param( "pid/ori/Y/i", rpy_pid_.z.cfg.i, 0.05 );
-		nh_priv_.param( "pid/ori/Y/d", rpy_pid_.z.cfg.d, 0.2 );
+		nh_priv_.param( "pid/ori/Y/p", pid_controller_.angular.z.cfg.p, 2.5 );
+		nh_priv_.param( "pid/ori/Y/i", pid_controller_.angular.z.cfg.i, 0.05 );
+		nh_priv_.param( "pid/ori/Y/d", pid_controller_.angular.z.cfg.d, 0.2 );
 
 		nh_priv_.param( "pid/i_max", pid_i_max_, 1.0 );
 		nh_priv_.param( "pid/i_min", pid_i_min_, -1.0 );
@@ -266,11 +294,11 @@ public:
 		nh_priv_.param( "pitch_axis_dir", axis_dir_cfg_[Axes::pitch], -1.0 );
 		nh_priv_.param( "yaw_axis_dir", axis_dir_cfg_[Axes::yaw], -1.0 );
 
-		xyz_pid_.initPid( pid_i_min_, pid_i_max_ );
-		xyz_pid_.reset();
+		pid_controller_.linear.initPid( pid_i_min_, pid_i_max_ );
+		pid_controller_.linear.reset();
 
-		rpy_pid_.initPid( pid_i_min_, pid_i_max_ );
-		rpy_pid_.reset();
+		pid_controller_.angular.initPid( pid_i_min_, pid_i_max_ );
+		pid_controller_.angular.reset();
 
 		resetMotorCntlMsg();
 
@@ -444,6 +472,19 @@ public:
 		setDesiredPoseCB( req, resp );
 	}
 
+	void generateMotorCntlMsg( std::map<int, double> motor_values )
+	{
+		//MathyMath::capValue( values[Axes::yaw], 100.0 );
+		//MathyMath::capValue( values[Axes::depth], 100.0 );
+
+		updateMotorCntlMsg( motor_cntl_msg_, Axes::speed, motor_values[Axes::speed] );
+		updateMotorCntlMsg( motor_cntl_msg_, Axes::strafe, motor_values[Axes::strafe] );
+		updateMotorCntlMsg( motor_cntl_msg_, Axes::depth, motor_values[Axes::depth] );
+		//updateMotorCntlMsg( motorCntlMsg, Axes::roll, rollMotorVal );
+		//updateMotorCntlMsg( motorCntlMsg, Axes::pitch, pitchMotorVal );
+		updateMotorCntlMsg( motor_cntl_msg_, Axes::yaw, motor_values[Axes::yaw] );
+	}
+
 	void pidStep()
 	{
 		desired_pose_velocity_ = twist_cache_;
@@ -529,13 +570,15 @@ public:
 			 error_in_distance.y = error_in_xyz_.y - physics_state_msg_.mass.linear.x * ( error_in_velocity.linear.y < 0 ? -1.0 : 1.0 ) * pow( error_in_velocity.linear.y, 2 ) / ( 2.0 * 10.0 );
 			 error_in_distance.z = error_in_xyz_.z - physics_state_msg_.mass.linear.x * ( error_in_velocity.linear.z < 0 ? -1.0 : 1.0 ) * pow( error_in_velocity.linear.z, 2 ) / ( 2.0 * 5.0 );*/
 
-			double speed_motor_val = axis_dir_cfg_[Axes::speed] * xyz_pid_.x.pid.updatePid( error_in_work.x, dt );
-			double strafe_motor_val = axis_dir_cfg_[Axes::strafe] * xyz_pid_.y.pid.updatePid( error_in_work.y, dt );
-			double depth_motor_val = axis_dir_cfg_[Axes::depth] * xyz_pid_.z.pid.updatePid( error_in_work.z, dt );
+			std::map<int, double> motor_values;
+
+			motor_values[Axes::speed] = axis_dir_cfg_[Axes::speed] * pid_controller_.linear.x.updatePid( error_in_work.x, dt );
+			motor_values[Axes::strafe] = axis_dir_cfg_[Axes::strafe] * pid_controller_.linear.y.updatePid( error_in_work.y, dt );
+			motor_values[Axes::depth] = axis_dir_cfg_[Axes::depth] * pid_controller_.linear.z.updatePid( error_in_work.z, dt );
 
 
-			//double rollMotorVal = axis_dir_cfg_[Axes::roll] * rpy_pid_.x.pid.updatePid( error_in_rpy_.x, dt );
-			//double pitchMotorVal = axis_dir_cfg_[Axes::pitch] * rpy_pid_.y.pid.updatePid( error_in_rpy_.y, dt );
+			//double rollMotorVal = axis_dir_cfg_[Axes::roll] * pid_controller_.angular.x.updatePid( error_in_rpy_.x, dt );
+			//double pitchMotorVal = axis_dir_cfg_[Axes::pitch] * pid_controller_.angular.y.updatePid( error_in_rpy_.y, dt );
 
 			//printf("error_in_velocity.angular.z %f\n", error_in_velocity.angular.z);
 			//printf("error_in_rpy.z %f\n", MathyMath::degToRad( error_in_rpy_.z ) );
@@ -546,7 +589,7 @@ public:
 			// W=Fx=mv^2/2
 			double error_in_work_yaw = 5.0 * 0.3 * MathyMath::degToRad( error_in_rpy_.z ) - 100.0 * physics_state_msg_.mass.angular.z * ( error_in_velocity.angular.z < 0 ? 1.0 : -1.0 ) * pow(
 					error_in_velocity.angular.z, 2 ) / 2.0;
-			double yaw_motor_val = axis_dir_cfg_[Axes::yaw] * rpy_pid_.z.pid.updatePid( error_in_work_yaw, dt );
+			motor_values[Axes::yaw] = axis_dir_cfg_[Axes::yaw] * pid_controller_.angular.z.updatePid( error_in_work_yaw, dt );
 
 
 			//printf( "speed %f strafe %f depth %f yaw %f\n", speed_motor_val, strafe_motor_val, depth_motor_val, yaw_motor_val );
@@ -555,23 +598,37 @@ public:
 			//MathyMath::capValue( rollMotorVal, 50.0 );
 			//MathyMath::capValue( pitchMotorVal, 50.0 );
 
-			MathyMath::capValue( yaw_motor_val, 50.0 );
-			MathyMath::capValue( depth_motor_val, 50.0 );
-
-			updateMotorCntlMsg( motor_cntl_msg_, Axes::speed, speed_motor_val );
-			updateMotorCntlMsg( motor_cntl_msg_, Axes::strafe, strafe_motor_val );
-			updateMotorCntlMsg( motor_cntl_msg_, Axes::depth, depth_motor_val );
-			//updateMotorCntlMsg( motorCntlMsg, Axes::roll, rollMotorVal );
-			//updateMotorCntlMsg( motorCntlMsg, Axes::pitch, pitchMotorVal );
-			updateMotorCntlMsg( motor_cntl_msg_, Axes::yaw, yaw_motor_val );
+			generateMotorCntlMsg( motor_values );
 		}
 		last_pid_update_time_ = ros::Time::now();
 	}
 
-	virtual void spinOnce()
+	void setMotorValsFromCmdVel()
+	{
+		resetMotorCntlMsg();
+
+		std::map<int, double> motor_values;
+
+		int speed = Axes::speed;
+		int strafe = Axes::strafe;
+		int depth = Axes::depth;
+		int yaw = Axes::yaw;
+
+		motor_values[speed] = -100 * axis_dir_cfg_[speed] * twist_cache_.linear.x / cmd_vel_conversions[speed];
+		motor_values[strafe] = -100 * axis_dir_cfg_[strafe] * twist_cache_.linear.y / cmd_vel_conversions[strafe];
+		motor_values[depth] = -100 * axis_dir_cfg_[depth] * twist_cache_.linear.z / cmd_vel_conversions[depth];
+
+		motor_values[yaw] = 100 * axis_dir_cfg_[yaw] * twist_cache_.angular.z / cmd_vel_conversions[yaw];
+
+		generateMotorCntlMsg( motor_values );
+	}
+
+	void spinOnce()
 	{
 		//this also grabs and publishes tf frames
-		pidStep();
+
+		if ( cmd_vel_conversion_mode_ == CmdVelConversionType::pid ) pidStep();
+		else if ( cmd_vel_conversion_mode_ == CmdVelConversionType::linear ) setMotorValsFromCmdVel();
 
 
 		/*for ( size_t i; i < motor_cntl_msg_.motors.size(); i++ )
