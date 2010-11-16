@@ -130,7 +130,8 @@ private:
 
 public:
 	SparseStereo( ros::NodeHandle & nh ) :
-		BaseNode<_ReconfigureType> ( nh ), it_( nh_priv_ )
+		BaseNode<_ReconfigureType> ( nh ), it_( nh_priv_ ), new_left_img_( false ), new_left_info_( false ), new_right_img_( false ), new_right_info_( false ), processed_left_img_( false ),
+				processed_right_img_( false ), combined_image_initialized_( false ), stereo_model_initialized_( false )
 	{
 		point_cloud_pub_ = nh_priv_.advertise<sensor_msgs::PointCloud> ( "points", 1 );
 
@@ -156,13 +157,15 @@ public:
 		_Feature feature;
 		feature.pos_ = pos;
 
-		cv::Mat image_mat; // = pyramid[0];
+		//cv::Point3d feature_color;
 
-		/*const cv::Vec3b & feature_pix = image_mat.at<cv::Vec3b> ( pos );
+		cv::Mat image_mat = pyramid[0];
 
-		feature.color_[0] = feature_pix[0];
-		feature.color_[1] = feature_pix[1];
-		feature.color_[2] = feature_pix[2];*/
+		 const cv::Vec3b & feature_pix = image_mat.at<cv::Vec3b> ( pos );
+
+		 feature.color_[0] = feature_pix[0];
+		 feature.color_[1] = feature_pix[1];
+		 feature.color_[2] = feature_pix[2];
 
 
 		// for every level in the pyramid
@@ -177,27 +180,30 @@ public:
 			{
 				for ( int y = 0; y < image_mat.size().height; y++ )
 				{
-					cv::Vec3b pix = image_mat.at<cv::Vec3b> ( cv::Point( x, y ) );
+					const cv::Vec3b & pix = image_mat.at<cv::Vec3b> ( cv::Point( x, y ) );
 					feature.descriptor_.push_back( center[0] - pix[0] );
 					feature.descriptor_.push_back( center[1] - pix[1] );
 					feature.descriptor_.push_back( center[2] - pix[2] );
 
 
 					// the color of the feature is the average color of the feature's top-level neighborhood
-					if ( i == 0 )
+					/*if ( i == 0 )
 					{
-						feature.color_[0] += pix[0];
-						feature.color_[1] += pix[1];
-						feature.color_[2] += pix[2];
-					}
+						feature_color.x += pix[0];
+						feature_color.y += pix[1];
+						feature_color.z += pix[2];
+					}*/
 				}
 			}
 
-
-			feature.color_[0] /= feature_patch_size_;
-			feature.color_[1] /= feature_patch_size_;
-			feature.color_[2] /= feature_patch_size_;
 		}
+
+		/*feature.color_[0] = feature_color.x / ( feature_patch_size_ * feature_patch_size_ );
+		feature.color_[1] = feature_color.y / ( feature_patch_size_ * feature_patch_size_ );
+		feature.color_[2] = feature_color.z / ( feature_patch_size_ * feature_patch_size_ );*/
+
+
+		//printf( "%d %d %d\n", feature.color_[0], feature.color_[1], feature.color_[2] );
 
 		return feature;
 	}

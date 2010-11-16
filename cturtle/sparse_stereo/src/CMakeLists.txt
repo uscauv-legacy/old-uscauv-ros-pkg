@@ -1,4 +1,4 @@
 rosbuild_add_executable(sparse_stereo sparse_stereo.cpp)
 rosbuild_add_compile_flags(sparse_stereo "-g")
 
-#rosbuild_add_executable(point_cloud_tester point_cloud_tester.cpp)
+rosbuild_add_executable(point_cloud_tester point_cloud_tester.cpp)
