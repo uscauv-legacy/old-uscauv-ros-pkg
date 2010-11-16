@@ -3,6 +3,26 @@
 		<param name="bayer_pattern" type="string" value="rggb"/>
 		<param name="guid" type="string" value="00b09d010090f9de"/>
 		
+		<param name="frame_rate" type="double" value="15.0"/>
+		
+		<param name="auto_brighness" type="int" value="3" />
+		<param name="brightness" type="double" value="255.0" />
+		
+		<param name="auto_exposure" type="int" value="0" />
+		
+		<param name="auto_gain" type="int" value="3" />
+		<param name="gain" type="double" value="40.0" />
+		
+		<param name="auto_gamma" type="int" value="0" />
+		
+		<param name="auto_shutter" type="int" value="3" />
+		<param name="shutter" type="double" value="30" />
+		
+		<param name="audo_white_balance" type="int" value="3" />
+		<param name="white_balance_BU" type="double" value="512" />
+		<param name="white_balance_RV" type="double" value="512" />
+		
+		
 		<remap from="camera/camera_info" to="~/camera_info" />
 		<remap from="camera/image_raw" to="~/image_raw" />
 		<remap from="camera/set_camera_info" to="~/set_camera_info" />
