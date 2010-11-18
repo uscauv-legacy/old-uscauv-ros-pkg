@@ -36,45 +36,60 @@ public:
 		delete img_pub_;
 	}
 
-	virtual void spinOnce()
+	void spinOnce()
 	{
-		int current_frame = start_;
-		while ( ros::ok() && current_frame <= end_ )
+		static int current_frame = start_;
+
+		/*if ( current_frame > end_ )
 		{
-			cv::Mat img;
-			if ( image_cache_.size() > 0 && image_cache_.size() > current_frame - start_ )
+			if ( loop_ )
 			{
-				img = image_cache_[current_frame - start_];
+				current_frame = start_;
 			}
 			else
 			{
-				std::stringstream filename;
-				filename << file_prefix_ << std::setfill( '0' ) << std::setw( digits_ ) << current_frame << file_ext_;
-				ROS_INFO( "Opening %s", filename.str().c_str() );
-				img = cv::imread( filename.str().c_str() );
-
-				if ( img.data != NULL )
-				{
-					image_cache_.push_back( img );
-				}
-				else
-				{
-					ROS_WARN( "Ignoring %s; does not exist in filesystem", filename.str().c_str() );
-					end_--;
-					current_frame--;
-					continue;
-				}
+				ROS_INFO( "returning; current_frame %d", current_frame );
+				ros::Rate( rate_ ).sleep();
+				return;
 			}
+		}*/
 
-			//Memory leak? Probably.
-			IplImage ipl_img = img;
-			publishCvImage( &ipl_img );
+		if( current_frame > end_ )
+			return;
 
-			ros::Rate( rate_ ).sleep();
-			current_frame++;
-
-			if ( current_frame > end_ && loop_ ) current_frame = start_;
+		cv::Mat img;
+		if ( image_cache_.size() > 0 && image_cache_.size() > current_frame - start_ )
+		{
+			img = image_cache_[current_frame - start_];
 		}
+		else
+		{
+			std::stringstream filename;
+			filename << file_prefix_ << std::setfill( '0' ) << std::setw( digits_ ) << current_frame << file_ext_;
+			ROS_INFO( "Opening %s", filename.str().c_str() );
+			img = cv::imread( filename.str().c_str() );
+
+			if ( img.data != NULL )
+			{
+				image_cache_.push_back( img );
+			}
+			else
+			{
+				ROS_WARN( "Ignoring %s; does not exist in filesystem", filename.str().c_str() );
+				end_--;
+				current_frame--;
+			}
+		}
+
+		//Memory leak? Probably.
+		ROS_INFO( "Publishing image %d", current_frame );
+		IplImage ipl_img = img;
+		publishCvImage( &ipl_img );
+
+		ros::Rate( rate_ ).sleep();
+		current_frame++;
+
+		if( current_frame > end_ && loop_ ) current_frame = start_;
 	}
 };
 
