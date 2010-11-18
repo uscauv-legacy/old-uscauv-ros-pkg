@@ -53,7 +53,7 @@ BeeStem3::BeeStem3( std::string default_device = "/dev/ttyUSB0" )
 
 	itsPort->connect();
 
-	mMotorControllerState.resize( NUM_MOTOR_CONTROLLERS );
+	mMotorControllerState.resize( movement_common::NUM_MOTOR_CONTROLLERS );
 
 	for ( int i = 0; i < mMotorControllerState.size(); i++ )
 	{

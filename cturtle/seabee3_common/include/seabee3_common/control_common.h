@@ -36,5 +36,63 @@
 #ifndef CONTROL_COMMON_H_
 #define CONTROL_COMMON_H_
 
+#include <control_toolbox/pid.h> // for Pid
+
+namespace control_common
+{
+	struct PidConfig
+	{
+		double p;
+		double i;
+		double d;
+	};
+
+	struct ConfiguredPid
+	{
+		control_toolbox::Pid pid;
+		PidConfig cfg;
+
+		inline double updatePid( double error, ros::Duration dt )
+		{
+			return pid.updatePid( error, dt );
+		}
+		;
+		inline void initPid( double i_min, double i_max )
+		{
+			pid.initPid( cfg.p, cfg.i, cfg.d, i_min, i_max );
+		}
+		;
+		inline void reset()
+		{
+			pid.reset();
+		}
+		;
+	};
+
+	struct Pid3D
+	{
+		ConfiguredPid x, y, z;
+
+		inline void initPid( double i_min, double i_max )
+		{
+			x.initPid( i_min, i_max );
+			y.initPid( i_min, i_max );
+			z.initPid( i_min, i_max );
+		}
+		;
+		inline void reset()
+		{
+			x.reset();
+			y.reset();
+			z.reset();
+		}
+		;
+	};
+
+	struct Pid6D
+	{
+		Pid3D linear, angular;
+	};
+}
 
 #endif /* CONTROL_COMMON_H_ */

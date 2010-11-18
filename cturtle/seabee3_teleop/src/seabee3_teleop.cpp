@@ -37,13 +37,16 @@
  *******************************************************************************/
 
 #include <base_teleop/base_teleop.h>
-#include <seabee3_beestem/BeeStem3Driver.h>
+#include <seabee3_common/movement_common.h>
 #include <seabee3_driver_base/FiringDeviceAction.h>
 #include <mathy_math/mathy_math.h>
 #include <std_srvs/Empty.h>
 
 class Seabee3Teleop: public BaseTeleop<>
 {
+public:
+	typedef movement_common::FiringDeviceIDs _FiringDeviceIDs;
+
 private:
 	// button indices
 	int dead_man_, f_dev_inc_, f_dev_dec_, reset_pose_, current_device_;
@@ -98,13 +101,13 @@ public:
 		device_action_.request.action = seabee3_driver_base::FiringDeviceAction::Request::FIRE;
 		switch ( current_device_ )
 		{
-		case BeeStem3Driver::FiringDeviceID::shooter:
+		case _FiringDeviceIDs::shooter:
 			shooter_cli_.call( device_action_ );
 			break;
-		case BeeStem3Driver::FiringDeviceID::dropper_stage1:
+		case _FiringDeviceIDs::dropper_stage1:
 			dropper1_cli_.call( device_action_ );
 			break;
-		case BeeStem3Driver::FiringDeviceID::dropper_stage2:
+		case _FiringDeviceIDs::dropper_stage2:
 			dropper2_cli_.call( device_action_ );
 			break;
 		}
@@ -126,7 +129,7 @@ public:
 			break;
 		}
 
-		current_device_ = current_device_ > BeeStem3Driver::FiringDeviceID::dropper_stage2 ? 0 : current_device_ < 0 ? BeeStem3Driver::FiringDeviceID::dropper_stage2 : current_device_;
+		current_device_ = current_device_ > movement_common::NUM_FIRING_DEVICES - 1 ? 0 : current_device_ < 0 ? movement_common::NUM_FIRING_DEVICES - 1 : current_device_;
 
 		ROS_INFO( "current device %d", current_device_ );
 

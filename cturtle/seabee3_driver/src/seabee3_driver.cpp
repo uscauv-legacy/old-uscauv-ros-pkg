@@ -39,17 +39,17 @@
 
 // tools
 #include <base_robot_driver/base_robot_driver.h>
-#include <control_toolbox/pid.h> // for Pid
-#include <seabee3_beestem/BeeStem3.h> // for MotorControllerIDs
+#include <seabee3_common/movement_common.h> // for MotorControllerIDs
+#include <seabee3_common/control_common.h> // for Pid6D
 #include <mathy_math/mathy_math.h>
 #include <string>
 // msgs
 #include <seabee3_driver_base/MotorCntl.h> // for outgoing thruster commands
-#include <seabee3_msgs/PhysicsState.h>
+#include <seabee3_common/PhysicsState.h>
 // seabee3_driver/Vector3Masked.msg <-- seabee3_driver/SetDesiredPose.srv
 
 // srvs
-#include <seabee3_msgs/SetDesiredPose.h> // for SetDesiredPose
+#include <seabee3_common/SetDesiredPose.h> // for SetDesiredPose
 #include <std_srvs/Empty.h>
 
 void operator *=( geometry_msgs::Vector3 & v, const double & scale )
@@ -80,38 +80,11 @@ geometry_msgs::Twist operator *( const geometry_msgs::Twist & twist, const doubl
 class Seabee3Driver: public BaseRobotDriver<>
 {
 public:
-	// define the direction of each thruster in an array that is responsible for controlling a single axis of movement
-	struct ThrusterArrayCfg
-	{
-		std::vector<double> thrusters;
-		double & at( const unsigned int & i )
-		{
-			if ( thrusters.size() < i )
-			{
-				thrusters.resize( i );
-			}
-			return thrusters.at( i - 1 );
-		}
-	};
 
-	struct Axes
-	{
-		const static int speed = 0;
-		const static int strafe = 1;
-		const static int depth = 2;
-
-		const static int roll = 3;
-		const static int pitch = 4;
-		const static int yaw = 5;
-
-		const static int speed_rel = 6;
-		const static int strafe_rel = 7;
-		const static int depth_rel = 8;
-
-		const static int roll_rel = 9;
-		const static int pitch_rel = 10;
-		const static int yaw_rel = 11;
-	};
+	typedef movement_common::Axes _Axes;
+	typedef movement_common::MotorControllerIDs _MotorControllerIDs;
+	typedef movement_common::AxisArrayCfg _AxisArrayCfg;
+	typedef control_common::Pid6D _Pid6D;
 
 	// how to interpret incoming CmdVel messages; any type except for 'pid' sets thruster values directly
 	struct CmdVelConversionType
@@ -120,65 +93,11 @@ public:
 		const static int linear = 1;
 	};
 
-	struct PidConfig
-	{
-		double p;
-		double i;
-		double d;
-	};
-
-	struct ConfiguredPid
-	{
-		control_toolbox::Pid pid;
-		PidConfig cfg;
-
-		inline double updatePid( double error, ros::Duration dt )
-		{
-			return pid.updatePid( error, dt );
-		}
-		;
-		inline void initPid( double i_min, double i_max )
-		{
-			pid.initPid( cfg.p, cfg.i, cfg.d, i_min, i_max );
-		}
-		;
-		inline void reset()
-		{
-			pid.reset();
-		}
-		;
-	};
-
-	struct Pid3D
-	{
-		ConfiguredPid x, y, z;
-
-		inline void initPid( double i_min, double i_max )
-		{
-			x.initPid( i_min, i_max );
-			y.initPid( i_min, i_max );
-			z.initPid( i_min, i_max );
-		}
-		;
-		inline void reset()
-		{
-			x.reset();
-			y.reset();
-			z.reset();
-		}
-		;
-	};
-
-	struct Pid6D
-	{
-		Pid3D linear, angular;
-	};
-
 private:
 	std::string global_frame_;
 
 	seabee3_driver_base::MotorCntl motor_cntl_msg_;
-	seabee3_msgs::PhysicsState physics_state_msg_;
+	seabee3_common::PhysicsState physics_state_msg_;
 
 	geometry_msgs::Vector3 error_in_rpy_, error_in_xyz_;
 	geometry_msgs::Vector3 max_error_in_rpy_, max_error_in_xyz_;
@@ -192,12 +111,10 @@ private:
 	geometry_msgs::Twist desired_pose_velocity_;
 	geometry_msgs::Twist current_pose_;
 
-	std::vector<ThrusterArrayCfg> thruster_dir_cfg_;
-
 	double axis_dir_cfg_[6];
 	double pid_i_min_, pid_i_max_;
 
-	Pid6D pid_controller_;
+	_Pid6D pid_controller_;
 
 	ros::Publisher motor_cntl_pub_;
 
@@ -211,22 +128,25 @@ private:
 
 	std::map<int, double> cmd_vel_conversions;
 
+	// used to encode motor values
+	std::vector<_AxisArrayCfg> axis_dir_cfg_;
+
 public:
 	Seabee3Driver( ros::NodeHandle & nh ) :
 		BaseRobotDriver<> ( nh, "/seabee3/cmd_vel" )
 	{
-		thruster_dir_cfg_.resize( 6 );
-
 		last_pid_update_time_ = ros::Time( -1 );
+
+		axis_dir_cfg_.resize( 6 );
 
 		nh_priv_.param( "global_frame", global_frame_, std::string( "/landmark_map" ) );
 
 		nh_priv_.param( "cmd_vel_conversion", cmd_vel_conversion_mode_, CmdVelConversionType::pid );
 
-		if( !nh.getParam("/seabee3_teleop/speed_scale", cmd_vel_conversions[Axes::speed]) ) cmd_vel_conversions[Axes::speed] = 1.0;
-		if( !nh.getParam("/seabee3_teleop/strafe_scale", cmd_vel_conversions[Axes::strafe]) ) cmd_vel_conversions[Axes::strafe] = 1.0;
-		if( !nh.getParam("/seabee3_teleop/depth_scale", cmd_vel_conversions[Axes::depth]) ) cmd_vel_conversions[Axes::depth] = 1.0;
-		if( !nh.getParam("/seabee3_teleop/yaw_scale", cmd_vel_conversions[Axes::yaw]) ) cmd_vel_conversions[Axes::yaw] = 1.0;
+		if ( !nh.getParam( "/seabee3_teleop/speed_scale", cmd_vel_conversions[_Axes::speed] ) ) cmd_vel_conversions[_Axes::speed] = 1.0;
+		if ( !nh.getParam( "/seabee3_teleop/strafe_scale", cmd_vel_conversions[_Axes::strafe] ) ) cmd_vel_conversions[_Axes::strafe] = 1.0;
+		if ( !nh.getParam( "/seabee3_teleop/depth_scale", cmd_vel_conversions[_Axes::depth] ) ) cmd_vel_conversions[_Axes::depth] = 1.0;
+		if ( !nh.getParam( "/seabee3_teleop/yaw_scale", cmd_vel_conversions[_Axes::yaw] ) ) cmd_vel_conversions[_Axes::yaw] = 1.0;
 
 
 		// scale motor values to be within the following min+max value such that
@@ -269,30 +189,30 @@ public:
 		nh_priv_.param( "pid/i_max", pid_i_max_, 1.0 );
 		nh_priv_.param( "pid/i_min", pid_i_min_, -1.0 );
 
-		nh_priv_.param( "speed_m1_dir", thruster_dir_cfg_[Axes::speed].at( 1 ), 1.0 );
-		nh_priv_.param( "speed_m2_dir", thruster_dir_cfg_[Axes::speed].at( 2 ), 1.0 );
+		nh_priv_.param( "speed_m1_dir", axis_dir_cfg_[_Axes::speed].at( 1 ), 1.0 );
+		nh_priv_.param( "speed_m2_dir", axis_dir_cfg_[_Axes::speed].at( 2 ), 1.0 );
 
-		nh_priv_.param( "strafe_m1_dir", thruster_dir_cfg_[Axes::strafe].at( 1 ), 1.0 );
-		nh_priv_.param( "strafe_m2_dir", thruster_dir_cfg_[Axes::strafe].at( 2 ), 1.0 );
+		nh_priv_.param( "strafe_m1_dir", axis_dir_cfg_[_Axes::strafe].at( 1 ), 1.0 );
+		nh_priv_.param( "strafe_m2_dir", axis_dir_cfg_[_Axes::strafe].at( 2 ), 1.0 );
 
-		nh_priv_.param( "depth_m1_dir", thruster_dir_cfg_[Axes::depth].at( 1 ), 1.0 );
-		nh_priv_.param( "depth_m2_dir", thruster_dir_cfg_[Axes::depth].at( 2 ), 1.0 );
+		nh_priv_.param( "depth_m1_dir", axis_dir_cfg_[_Axes::depth].at( 1 ), 1.0 );
+		nh_priv_.param( "depth_m2_dir", axis_dir_cfg_[_Axes::depth].at( 2 ), 1.0 );
 
-		nh_priv_.param( "roll_m1_dir", thruster_dir_cfg_[Axes::roll].at( 1 ), 1.0 );
-		nh_priv_.param( "roll_m2_dir", thruster_dir_cfg_[Axes::roll].at( 2 ), 1.0 );
+		nh_priv_.param( "roll_m1_dir", axis_dir_cfg_[_Axes::roll].at( 1 ), 1.0 );
+		nh_priv_.param( "roll_m2_dir", axis_dir_cfg_[_Axes::roll].at( 2 ), 1.0 );
 
-		nh_priv_.param( "pitch_m1_dir", thruster_dir_cfg_[Axes::pitch].at( 1 ), 1.0 );
-		nh_priv_.param( "pitch_m2_dir", thruster_dir_cfg_[Axes::pitch].at( 2 ), 1.0 );
+		nh_priv_.param( "pitch_m1_dir", axis_dir_cfg_[_Axes::pitch].at( 1 ), 1.0 );
+		nh_priv_.param( "pitch_m2_dir", axis_dir_cfg_[_Axes::pitch].at( 2 ), 1.0 );
 
-		nh_priv_.param( "yaw_m1_dir", thruster_dir_cfg_[Axes::yaw].at( 1 ), -1.0 );
-		nh_priv_.param( "yaw_m2_dir", thruster_dir_cfg_[Axes::yaw].at( 2 ), 1.0 );
+		nh_priv_.param( "yaw_m1_dir", axis_dir_cfg_[_Axes::yaw].at( 1 ), -1.0 );
+		nh_priv_.param( "yaw_m2_dir", axis_dir_cfg_[_Axes::yaw].at( 2 ), 1.0 );
 
-		nh_priv_.param( "speed_axis_dir", axis_dir_cfg_[Axes::speed], 1.0 );
-		nh_priv_.param( "strafe_axis_dir", axis_dir_cfg_[Axes::strafe], 1.0 );
-		nh_priv_.param( "depth_axis_dir", axis_dir_cfg_[Axes::depth], -1.0 );
-		nh_priv_.param( "roll_axis_dir", axis_dir_cfg_[Axes::roll], -1.0 );
-		nh_priv_.param( "pitch_axis_dir", axis_dir_cfg_[Axes::pitch], -1.0 );
-		nh_priv_.param( "yaw_axis_dir", axis_dir_cfg_[Axes::yaw], -1.0 );
+		nh_priv_.param( "speed_axis_dir", axis_dir_cfg_[_Axes::speed], 1.0 );
+		nh_priv_.param( "strafe_axis_dir", axis_dir_cfg_[_Axes::strafe], 1.0 );
+		nh_priv_.param( "depth_axis_dir", axis_dir_cfg_[_Axes::depth], -1.0 );
+		nh_priv_.param( "roll_axis_dir", axis_dir_cfg_[_Axes::roll], -1.0 );
+		nh_priv_.param( "pitch_axis_dir", axis_dir_cfg_[_Axes::pitch], -1.0 );
+		nh_priv_.param( "yaw_axis_dir", axis_dir_cfg_[_Axes::yaw], -1.0 );
 
 		pid_controller_.linear.initPid( pid_i_min_, pid_i_max_ );
 		pid_controller_.linear.reset();
@@ -313,7 +233,7 @@ public:
 		resetPose();
 	}
 
-	void physicsStateCB( const seabee3_msgs::PhysicsStateConstPtr & msg )
+	void physicsStateCB( const seabee3_common::PhysicsStateConstPtr & msg )
 	{
 		physics_state_msg_ = *msg;
 	}
@@ -327,52 +247,52 @@ public:
 
 		switch ( axis )
 		{
-		case Axes::speed: //relative to the robot
-			motor1 = BeeStem3::MotorControllerIDs::FWD_RIGHT_THRUSTER;
-			motor2 = BeeStem3::MotorControllerIDs::FWD_LEFT_THRUSTER;
-			motor1_scale = thruster_dir_cfg_[Axes::speed].at( 1 );
-			motor2_scale = thruster_dir_cfg_[Axes::speed].at( 2 );
+		case _Axes::speed: //relative to the robot
+			motor1 = _MotorControllerIDs::FWD_RIGHT_THRUSTER;
+			motor2 = _MotorControllerIDs::FWD_LEFT_THRUSTER;
+			motor1_scale = axis_dir_cfg_[_Axes::speed].at( 1 );
+			motor2_scale = axis_dir_cfg_[_Axes::speed].at( 2 );
 			break;
-		case Axes::strafe: //absolute; relative to the world
-			updateMotorCntlMsg( msg, Axes::strafe_rel, value );
-			//updateMotorCntlMsg(msg, Axes::strafe_rel, value * cos( LocalizationUtil::degToRad( IMUDataCache->ori.x ) ) );
-			//updateMotorCntlMsg(msg, Axes::depth_rel, value * -sin( LocalizationUtil::degToRad( IMUDataCache->ori.x ) ) );
+		case _Axes::strafe: //absolute; relative to the world
+			updateMotorCntlMsg( msg, _Axes::strafe_rel, value );
+			//updateMotorCntlMsg(msg, _Axes::strafe_rel, value * cos( LocalizationUtil::degToRad( IMUDataCache->ori.x ) ) );
+			//updateMotorCntlMsg(msg, _Axes::depth_rel, value * -sin( LocalizationUtil::degToRad( IMUDataCache->ori.x ) ) );
 			return;
-		case Axes::strafe_rel: //relative to the robot
-			motor1 = BeeStem3::MotorControllerIDs::STRAFE_FRONT_THRUSTER;
-			motor2 = BeeStem3::MotorControllerIDs::STRAFE_BACK_THRUSTER;
-			motor1_scale = thruster_dir_cfg_[Axes::strafe].at( 1 );
-			motor2_scale = thruster_dir_cfg_[Axes::strafe].at( 2 );
+		case _Axes::strafe_rel: //relative to the robot
+			motor1 = _MotorControllerIDs::STRAFE_FRONT_THRUSTER;
+			motor2 = _MotorControllerIDs::STRAFE_BACK_THRUSTER;
+			motor1_scale = axis_dir_cfg_[_Axes::strafe].at( 1 );
+			motor2_scale = axis_dir_cfg_[_Axes::strafe].at( 2 );
 			break;
-		case Axes::depth: //absolute; relative to the world
-			updateMotorCntlMsg( msg, Axes::depth_rel, value * -1.0 );
-			//updateMotorCntlMsg(msg, Axes::depth_rel, value * -cos( LocalizationUtil::degToRad( IMUDataCache->ori.x ) ) );
-			//updateMotorCntlMsg(msg, Axes::strafe_rel, value * -sin( LocalizationUtil::degToRad( IMUDataCache->ori.x ) ) );
+		case _Axes::depth: //absolute; relative to the world
+			updateMotorCntlMsg( msg, _Axes::depth_rel, value * -1.0 );
+			//updateMotorCntlMsg(msg, _Axes::depth_rel, value * -cos( LocalizationUtil::degToRad( IMUDataCache->ori.x ) ) );
+			//updateMotorCntlMsg(msg, _Axes::strafe_rel, value * -sin( LocalizationUtil::degToRad( IMUDataCache->ori.x ) ) );
 			return;
-		case Axes::depth_rel: //relative to the robot
-			motor1 = BeeStem3::MotorControllerIDs::DEPTH_RIGHT_THRUSTER;
-			motor2 = BeeStem3::MotorControllerIDs::DEPTH_LEFT_THRUSTER;
-			motor1_scale = thruster_dir_cfg_[Axes::depth].at( 1 );
-			motor2_scale = thruster_dir_cfg_[Axes::depth].at( 2 );
+		case _Axes::depth_rel: //relative to the robot
+			motor1 = _MotorControllerIDs::DEPTH_RIGHT_THRUSTER;
+			motor2 = _MotorControllerIDs::DEPTH_LEFT_THRUSTER;
+			motor1_scale = axis_dir_cfg_[_Axes::depth].at( 1 );
+			motor2_scale = axis_dir_cfg_[_Axes::depth].at( 2 );
 			break;
-		case Axes::roll: //absolute; relative to the world
-			motor1 = BeeStem3::MotorControllerIDs::DEPTH_RIGHT_THRUSTER;
-			motor2 = BeeStem3::MotorControllerIDs::DEPTH_LEFT_THRUSTER;
-			motor1_scale = thruster_dir_cfg_[Axes::roll].at( 1 );
-			motor2_scale = thruster_dir_cfg_[Axes::roll].at( 2 );
+		case _Axes::roll: //absolute; relative to the world
+			motor1 = _MotorControllerIDs::DEPTH_RIGHT_THRUSTER;
+			motor2 = _MotorControllerIDs::DEPTH_LEFT_THRUSTER;
+			motor1_scale = axis_dir_cfg_[_Axes::roll].at( 1 );
+			motor2_scale = axis_dir_cfg_[_Axes::roll].at( 2 );
 			break;
-		case Axes::pitch: //pitch is only available as seabee starts to roll; make sure that's the case here
-			//updateMotorCntlMsg( msg, Axes::yaw_rel, value * -sin( LocalizationUtil::degToRad( IMUDataCache->ori.x ) ) );
+		case _Axes::pitch: //pitch is only available as seabee starts to roll; make sure that's the case here
+			//updateMotorCntlMsg( msg, _Axes::yaw_rel, value * -sin( LocalizationUtil::degToRad( IMUDataCache->ori.x ) ) );
 			return;
-		case Axes::yaw: //absolute; relative to the world
-			//updateMotorCntlMsg(msg, Axes::yaw_rel, value * cos( LocalizationUtil::degToRad( IMUDataCache->ori.x ) ) );
-			updateMotorCntlMsg( msg, Axes::yaw_rel, value );
+		case _Axes::yaw: //absolute; relative to the world
+			//updateMotorCntlMsg(msg, _Axes::yaw_rel, value * cos( LocalizationUtil::degToRad( IMUDataCache->ori.x ) ) );
+			updateMotorCntlMsg( msg, _Axes::yaw_rel, value );
 			return;
-		case Axes::yaw_rel: //relative to the robot
-			motor1 = BeeStem3::MotorControllerIDs::STRAFE_FRONT_THRUSTER;
-			motor2 = BeeStem3::MotorControllerIDs::STRAFE_BACK_THRUSTER;
-			motor1_scale = thruster_dir_cfg_[Axes::yaw].at( 1 );
-			motor2_scale = thruster_dir_cfg_[Axes::yaw].at( 2 );
+		case _Axes::yaw_rel: //relative to the robot
+			motor1 = _MotorControllerIDs::STRAFE_FRONT_THRUSTER;
+			motor2 = _MotorControllerIDs::STRAFE_BACK_THRUSTER;
+			motor1_scale = axis_dir_cfg_[_Axes::yaw].at( 1 );
+			motor2_scale = axis_dir_cfg_[_Axes::yaw].at( 2 );
 			break;
 		}
 
@@ -407,7 +327,7 @@ public:
 
 	void resetMotorCntlMsg()
 	{
-		for ( int i = 0; i < BeeStem3::NUM_MOTOR_CONTROLLERS; i++ )
+		for ( int i = 0; i < movement_common::NUM_MOTOR_CONTROLLERS; i++ )
 		{
 			motor_cntl_msg_.mask[i] = 0;
 			motor_cntl_msg_.motors[i] = 0;
@@ -441,7 +361,7 @@ public:
 		current_pose_ = geometry_msgs::Twist();
 	}
 
-	bool setDesiredPoseCB( seabee3_msgs::SetDesiredPose::Request & req, seabee3_msgs::SetDesiredPose::Response & resp )
+	bool setDesiredPoseCB( seabee3_common::SetDesiredPose::Request & req, seabee3_common::SetDesiredPose::Response & resp )
 	{
 		setDesiredPose( req.ori.mask, desired_pose_.angular, req.ori.values, req.ori.mode );
 
@@ -457,9 +377,9 @@ public:
 
 	void requestChangeInDesiredPose( const geometry_msgs::Twist & msg )
 	{
-		seabee3_msgs::SetDesiredPose::Request req;
-		seabee3_msgs::SetDesiredPose::Response resp;
-		seabee3_msgs::Vector3Masked change_in_desired_pose;
+		seabee3_common::SetDesiredPose::Request req;
+		seabee3_common::SetDesiredPose::Response resp;
+		seabee3_common::Vector3Masked change_in_desired_pose;
 
 		change_in_desired_pose.mask.x = change_in_desired_pose.mask.y = change_in_desired_pose.mask.z = 1; //enable all values
 		change_in_desired_pose.mode.x = change_in_desired_pose.mode.y = change_in_desired_pose.mode.z = 1; //set mode to incremental
@@ -474,15 +394,15 @@ public:
 
 	void generateMotorCntlMsg( std::map<int, double> motor_values )
 	{
-		//MathyMath::capValue( values[Axes::yaw], 100.0 );
-		//MathyMath::capValue( values[Axes::depth], 100.0 );
+		//MathyMath::capValue( values[_Axes::yaw], 100.0 );
+		//MathyMath::capValue( values[_Axes::depth], 100.0 );
 
-		updateMotorCntlMsg( motor_cntl_msg_, Axes::speed, motor_values[Axes::speed] );
-		updateMotorCntlMsg( motor_cntl_msg_, Axes::strafe, motor_values[Axes::strafe] );
-		updateMotorCntlMsg( motor_cntl_msg_, Axes::depth, motor_values[Axes::depth] );
-		//updateMotorCntlMsg( motorCntlMsg, Axes::roll, rollMotorVal );
-		//updateMotorCntlMsg( motorCntlMsg, Axes::pitch, pitchMotorVal );
-		updateMotorCntlMsg( motor_cntl_msg_, Axes::yaw, motor_values[Axes::yaw] );
+		updateMotorCntlMsg( motor_cntl_msg_, _Axes::speed, motor_values[_Axes::speed] );
+		updateMotorCntlMsg( motor_cntl_msg_, _Axes::strafe, motor_values[_Axes::strafe] );
+		updateMotorCntlMsg( motor_cntl_msg_, _Axes::depth, motor_values[_Axes::depth] );
+		//updateMotorCntlMsg( motorCntlMsg, _Axes::roll, rollMotorVal );
+		//updateMotorCntlMsg( motorCntlMsg, _Axes::pitch, pitchMotorVal );
+		updateMotorCntlMsg( motor_cntl_msg_, _Axes::yaw, motor_values[_Axes::yaw] );
 	}
 
 	void pidStep()
@@ -572,13 +492,13 @@ public:
 
 			std::map<int, double> motor_values;
 
-			motor_values[Axes::speed] = axis_dir_cfg_[Axes::speed] * pid_controller_.linear.x.updatePid( error_in_work.x, dt );
-			motor_values[Axes::strafe] = axis_dir_cfg_[Axes::strafe] * pid_controller_.linear.y.updatePid( error_in_work.y, dt );
-			motor_values[Axes::depth] = axis_dir_cfg_[Axes::depth] * pid_controller_.linear.z.updatePid( error_in_work.z, dt );
+			motor_values[_Axes::speed] = axis_dir_cfg_[_Axes::speed] * pid_controller_.linear.x.updatePid( error_in_work.x, dt );
+			motor_values[_Axes::strafe] = axis_dir_cfg_[_Axes::strafe] * pid_controller_.linear.y.updatePid( error_in_work.y, dt );
+			motor_values[_Axes::depth] = axis_dir_cfg_[_Axes::depth] * pid_controller_.linear.z.updatePid( error_in_work.z, dt );
 
 
-			//double rollMotorVal = axis_dir_cfg_[Axes::roll] * pid_controller_.angular.x.updatePid( error_in_rpy_.x, dt );
-			//double pitchMotorVal = axis_dir_cfg_[Axes::pitch] * pid_controller_.angular.y.updatePid( error_in_rpy_.y, dt );
+			//double rollMotorVal = axis_dir_cfg_[_Axes::roll] * pid_controller_.angular.x.updatePid( error_in_rpy_.x, dt );
+			//double pitchMotorVal = axis_dir_cfg_[_Axes::pitch] * pid_controller_.angular.y.updatePid( error_in_rpy_.y, dt );
 
 			//printf("error_in_velocity.angular.z %f\n", error_in_velocity.angular.z);
 			//printf("error_in_rpy.z %f\n", MathyMath::degToRad( error_in_rpy_.z ) );
@@ -589,7 +509,7 @@ public:
 			// W=Fx=mv^2/2
 			double error_in_work_yaw = 5.0 * 0.3 * MathyMath::degToRad( error_in_rpy_.z ) - 100.0 * physics_state_msg_.mass.angular.z * ( error_in_velocity.angular.z < 0 ? 1.0 : -1.0 ) * pow(
 					error_in_velocity.angular.z, 2 ) / 2.0;
-			motor_values[Axes::yaw] = axis_dir_cfg_[Axes::yaw] * pid_controller_.angular.z.updatePid( error_in_work_yaw, dt );
+			motor_values[_Axes::yaw] = axis_dir_cfg_[_Axes::yaw] * pid_controller_.angular.z.updatePid( error_in_work_yaw, dt );
 
 
 			//printf( "speed %f strafe %f depth %f yaw %f\n", speed_motor_val, strafe_motor_val, depth_motor_val, yaw_motor_val );
@@ -609,10 +529,10 @@ public:
 
 		std::map<int, double> motor_values;
 
-		int speed = Axes::speed;
-		int strafe = Axes::strafe;
-		int depth = Axes::depth;
-		int yaw = Axes::yaw;
+		int speed = _Axes::speed;
+		int strafe = _Axes::strafe;
+		int depth = _Axes::depth;
+		int yaw = _Axes::yaw;
 
 		motor_values[speed] = -100 * axis_dir_cfg_[speed] * twist_cache_.linear.x / cmd_vel_conversions[speed];
 		motor_values[strafe] = -100 * axis_dir_cfg_[strafe] * twist_cache_.linear.y / cmd_vel_conversions[strafe];

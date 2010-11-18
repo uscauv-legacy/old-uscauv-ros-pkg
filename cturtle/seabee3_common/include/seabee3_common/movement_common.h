@@ -36,7 +36,10 @@
 #ifndef MOVEMENT_COMMON_H_
 #define MOVEMENT_COMMON_H_
 
-namespace seabee3_common
+#include <map>
+#include <vector>
+
+namespace movement_common
 {
 	const static int NUM_MOTOR_CONTROLLERS = 9;
 	struct MotorControllerIDs
@@ -50,6 +53,14 @@ namespace seabee3_common
 		const static int SHOOTER = 6;
 		const static int DROPPER_STAGE1 = 7;
 		const static int DROPPER_STAGE2 = 8;
+	};
+
+	const static int NUM_FIRING_DEVICES = 3;
+	struct FiringDeviceIDs
+	{
+		const static int shooter = 0;
+		const static int dropper_stage1 = 1;
+		const static int dropper_stage2 = 2;
 	};
 
 	struct Axes
@@ -69,6 +80,22 @@ namespace seabee3_common
 		const static int roll_rel = 9;
 		const static int pitch_rel = 10;
 		const static int yaw_rel = 11;
+	};
+
+	typedef std::map<int, int> ThrusterArrayCfg;
+
+	// define the direction of each thruster in an array that is responsible for controlling a single axis of movement
+	struct AxisArrayCfg
+	{
+		std::vector<double> thrusters;
+		double & at( const unsigned int & i )
+		{
+			if ( thrusters.size() < i )
+			{
+				thrusters.resize( i );
+			}
+			return thrusters.at( i - 1 );
+		}
 	};
 
 }

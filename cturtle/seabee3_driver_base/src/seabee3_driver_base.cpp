@@ -36,7 +36,7 @@
 
 //tools
 #include <base_node/base_node.h>
-#include <seabee3_beestem/BeeStem3Driver.h> //for BeeStem3Driver
+#include <seabee3_beestem/BeeStem3Driver.h> //for BeeStem3Driver, control_common::Axes
 #include <string>
 //msgs
 #include <seabee3_driver_base/Depth.h> // for outgoing Depth
@@ -47,6 +47,12 @@
 #include <seabee3_driver_base/FiringDeviceAction.h> // for FiringDeviceAction
 class Seabee3DriverBase: public BaseNode<>
 {
+public:
+	typedef movement_common::Axes _Axes;
+	typedef movement_common::MotorControllerIDs _MotorControllerIDs;
+	typedef movement_common::ThrusterArrayCfg _ThrusterArrayCfg;
+	typedef movement_common::FiringDeviceIDs _FiringDeviceID;
+
 private:
 	ros::Subscriber motor_cntl_sub_;
 
@@ -63,6 +69,10 @@ private:
 	std::string port_;
 	int surface_pressure_;
 	bool pressure_calibrated_;
+
+	// used to decode motor values
+	_ThrusterArrayCfg thruster_dir_cfg_;
+
 public:
 	//#define SURFACE_PRESSURE 908
 	const static int PRESSURE_DEPTH_SLOPE = 33;
@@ -87,6 +97,23 @@ public:
 		nh_priv_.param( "dropper2/trigger_time", bee_stem_3_driver_->dropper2_params_.trigger_time_, 50 );
 		nh_priv_.param( "dropper2/trigger_value", bee_stem_3_driver_->dropper2_params_.trigger_value_, 40 );
 
+		double thruster_dir;
+
+		nh_priv_.param( "speed_m1_dir", thruster_dir, 1.0 );
+		thruster_dir_cfg_[_MotorControllerIDs::FWD_LEFT_THRUSTER] = thruster_dir;
+		nh_priv_.param( "speed_m2_dir", thruster_dir, 1.0 );
+		thruster_dir_cfg_[_MotorControllerIDs::DEPTH_LEFT_THRUSTER] = thruster_dir;
+
+		nh_priv_.param( "strafe_m1_dir", thruster_dir, 1.0 );
+		thruster_dir_cfg_[_MotorControllerIDs::STRAFE_FRONT_THRUSTER] = thruster_dir;
+		nh_priv_.param( "strafe_m2_dir", thruster_dir, 1.0 );
+		thruster_dir_cfg_[_MotorControllerIDs::STRAFE_BACK_THRUSTER] = thruster_dir;
+
+		nh_priv_.param( "depth_m1_dir", thruster_dir, 1.0 );
+		thruster_dir_cfg_[_MotorControllerIDs::DEPTH_LEFT_THRUSTER] = thruster_dir;
+		nh_priv_.param( "depth_m2_dir", thruster_dir, 1.0 );
+		thruster_dir_cfg_[_MotorControllerIDs::DEPTH_RIGHT_THRUSTER] = thruster_dir;
+
 		motor_cntl_sub_ = nh.subscribe( "/seabee3/motor_cntl", 1, &Seabee3DriverBase::motorCntlCB, this );
 
 		intl_pressure_pub_ = nh.advertise<seabee3_driver_base::Pressure> ( "/seabee3/intl_pressure", 1 );
@@ -106,9 +133,11 @@ public:
 
 	void motorCntlCB( const seabee3_driver_base::MotorCntlConstPtr & msg )
 	{
+		int dir;
 		for ( unsigned int i = 0; i < msg->motors.size(); i++ )
 		{
-			if ( msg->mask[i] == 1 ) bee_stem_3_driver_->setThruster( i, msg->motors[i] );
+			dir = i < movement_common::MotorControllerIDs::SHOOTER ? thruster_dir_cfg_[i] : 1.0;
+			if ( msg->mask[i] == 1 ) bee_stem_3_driver_->setThruster( i, dir * msg->motors[i] );
 		}
 	}
 
@@ -132,17 +161,17 @@ public:
 
 	bool dropper1ActionCB( seabee3_driver_base::FiringDeviceAction::Request &req, seabee3_driver_base::FiringDeviceAction::Response &res )
 	{
-		return executeFiringDeviceAction( req, res, BeeStem3Driver::FiringDeviceID::dropper_stage1 );
+		return executeFiringDeviceAction( req, res, _FiringDeviceID::dropper_stage1 );
 	}
 
 	bool dropper2ActionCB( seabee3_driver_base::FiringDeviceAction::Request &req, seabee3_driver_base::FiringDeviceAction::Response &res )
 	{
-		return executeFiringDeviceAction( req, res, BeeStem3Driver::FiringDeviceID::dropper_stage2 );
+		return executeFiringDeviceAction( req, res, _FiringDeviceID::dropper_stage2 );
 	}
 
 	bool shooterActionCB( seabee3_driver_base::FiringDeviceAction::Request &req, seabee3_driver_base::FiringDeviceAction::Response &res )
 	{
-		return executeFiringDeviceAction( req, res, BeeStem3Driver::FiringDeviceID::shooter );
+		return executeFiringDeviceAction( req, res, _FiringDeviceID::shooter );
 	}
 
 	virtual void spinOnce()

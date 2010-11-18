@@ -1,6 +1,4 @@
-
 /*!@file Devices/BeeStem3.H Simple interface to beestem */
-
 
 // //////////////////////////////////////////////////////////////////// //
 // The iLab Neuromorphic Vision C++ Toolkit - Copyright (C) 2001 by the //
@@ -40,6 +38,7 @@
 #ifndef BeeStem3_H_DEFINED
 #define BeeStem3_H_DEFINED
 
+#include <seabee3_common/movement_common.h>
 #include "seabee3_beestem/Serial.h"
 #include "seabee3_beestem/Types.h"      // for byte
 #include <string>
@@ -58,48 +57,32 @@ class Serial;
 class BeeStem3
 {
 public:
-	const static int NUM_MOTOR_CONTROLLERS = 9;
-	struct MotorControllerIDs
-	{
-		const static int FWD_RIGHT_THRUSTER = 3;
-		const static int FWD_LEFT_THRUSTER = 1;
-		const static int DEPTH_RIGHT_THRUSTER = 4;
-		const static int DEPTH_LEFT_THRUSTER = 2;
-		const static int STRAFE_FRONT_THRUSTER = 0;
-		const static int STRAFE_BACK_THRUSTER = 5;
-		const static int SHOOTER = 6;
-		const static int DROPPER_STAGE1 = 7;
-		const static int DROPPER_STAGE2 = 8;
-	};
-  //! Default constructor; see ModelComponent.H
-  BeeStem3(std::string default_device);
 
-  //! Destructor
-  ~BeeStem3();
+	//! Default constructor; see ModelComponent.H
+	BeeStem3( std::string default_device );
 
-  bool getSensors(int &accelX, int &accelY, int &accelZ,
-                  int &compassHeading, int &compassPitch, int &compassRoll,
-                  int &internalPressure, int &externalPressure,
-                  int &desiredHeading, int &desiredDepth, int &desiredSpeed,
-                  int &headingK, int &headingP, int &headingD, int &headingI, int &headingOutput,
-                  int &depthK, int &depthP, int &depthD, int &depthI, int &depthOutput, char &killSwitch);
+	//! Destructor
+	~BeeStem3();
 
+	bool getSensors( int &accelX, int &accelY, int &accelZ, int &compassHeading, int &compassPitch, int &compassRoll, int &internalPressure, int &externalPressure, int &desiredHeading,
+			int &desiredDepth, int &desiredSpeed, int &headingK, int &headingP, int &headingD, int &headingI, int &headingOutput, int &depthK, int &depthP, int &depthD, int &depthI, int &depthOutput,
+			char &killSwitch );
 
-  bool setPID(int pidMode, float k, float p, float i, float d);
+	bool setPID( int pidMode, float k, float p, float i, float d );
 
-  // bool setDesiredValues(int16 heading, int16 depth, char speed, char markerDropper);
-  bool setDesiredHeading(int16 heading);
-  bool setDesiredDepth(int16 depth);
-  bool setDesiredSpeed(char speed);
-  void setThruster(int num, int val);
-  void startCompassCalibration();
-  void endCompassCalibration();
+	// bool setDesiredValues(int16 heading, int16 depth, char speed, char markerDropper);
+	bool setDesiredHeading( int16 heading );
+	bool setDesiredDepth( int16 depth );
+	bool setDesiredSpeed( char speed );
+	void setThruster( int num, int val );
+	void startCompassCalibration();
+	void endCompassCalibration();
 
-  std::vector<int> mMotorControllerState;
+	std::vector<int> mMotorControllerState;
 
 protected:
-  Serial * itsPort;   //!< Serial port to use
-  pthread_mutex_t itsSerialLock;
+	Serial * itsPort; //!< Serial port to use
+	pthread_mutex_t itsSerialLock;
 };
 
 #endif

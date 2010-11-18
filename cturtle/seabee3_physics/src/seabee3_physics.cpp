@@ -2,7 +2,11 @@
  *
  *      seabee3_physics
  * 
- *      Copyright (c) 2010, Randolph C. Voorhies (voorhies at usc dot edu)
+ *      Copyright (c) 2010
+ *
+ *      Edward T. Kaszubski (ekaszubski@gmail.com)
+ *      Randolph C. Voorhies (voorhies at usc dot edu)
+ *
  *      All rights reserved.
  *
  *      Redistribution and use in source and binary forms, with or without
@@ -40,12 +44,16 @@
 #include <base_tf_tranceiver/base_tf_tranceiver.h>
 #include <vector>
 #include <sstream>
-#include <seabee3_beestem/BeeStem3.h>
+#include <seabee3_common/movement_common.h>
 #include <seabee3_driver_base/MotorCntl.h>
-#include <seabee3_msgs/PhysicsState.h>
+#include <seabee3_common/PhysicsState.h>
 
 class Seabee3Physics: public BaseTfTranceiver<>
 {
+public:
+	typedef movement_common::MotorControllerIDs _MotorControllerIDs;
+	typedef movement_common::NUM_MOTOR_CONTROLLERS _NUM_MOTOR_CONTROLLERS;
+
 private:
 	std::vector<geometry_msgs::Twist> thruster_transforms_;
 	std::string thruster_transform_name_prefix_;
@@ -71,8 +79,8 @@ private:
 
 public:
 	Seabee3Physics( ros::NodeHandle &nh ) :
-		BaseTfTranceiver<> ( nh ), thruster_transforms_( BeeStem3::NUM_MOTOR_CONTROLLERS ), thruster_transform_name_prefix_( "/seabee3/thruster" ), rate_( 60 ), thruster_vals_(
-				BeeStem3::NUM_MOTOR_CONTROLLERS )
+		BaseTfTranceiver<> ( nh ), thruster_transforms_( _NUM_MOTOR_CONTROLLERS ), thruster_transform_name_prefix_( "/seabee3/thruster" ), rate_( 60 ), thruster_vals_(
+				_NUM_MOTOR_CONTROLLERS )
 	{
 		publishTfFrame( tf::Transform( tf::Quaternion( 0, 0, 0 ), tf::Vector3( 0, 0, 0 ) ), "/landmark_map", "/seabee3/base_link" );
 
@@ -81,7 +89,7 @@ public:
 		updateThrusterTransforms();
 
 		motor_cntl_sub_ = nh.subscribe( "/seabee3/motor_cntl", 1, &Seabee3Physics::motorCntlCB, this );
-		physics_state_pub_ = nh.advertise<seabee3_msgs::PhysicsState> ( "/seabee3/physics_state", 1 );
+		physics_state_pub_ = nh.advertise<movement_common::PhysicsState> ( "/seabee3/physics_state", 1 );
 
 
 		// Build the broadphase
@@ -138,9 +146,9 @@ public:
 
 		seabee_body_->clearForces();
 
-		for ( size_t i = 0; i < BeeStem3::NUM_MOTOR_CONTROLLERS; i++ )
+		for ( size_t i = 0; i < _NUM_MOTOR_CONTROLLERS; i++ )
 		{
-			if ( i == BeeStem3::MotorControllerIDs::DROPPER_STAGE1 || i == BeeStem3::MotorControllerIDs::DROPPER_STAGE2 || i == BeeStem3::MotorControllerIDs::SHOOTER ) continue;
+			if ( i == _MotorControllerIDs::DROPPER_STAGE1 || i == _MotorControllerIDs::DROPPER_STAGE2 || i == _MotorControllerIDs::SHOOTER ) continue;
 
 			float thrust = thruster_vals_[i] * 0.05;
 			geometry_msgs::Vector3 pos = thruster_transforms_[i].linear;
@@ -179,7 +187,7 @@ public:
 
 		publishTfFrame( trans, "/landmark_map", "/seabee3/base_link" );
 
-		seabee3_msgs::PhysicsState physics_state_msg;
+		movement_common::PhysicsState physics_state_msg;
 		physics_state_msg.mass.linear.x = physics_state_msg.mass.linear.y = physics_state_msg.mass.linear.z = 100;
 		physics_state_msg.mass.angular.x = seabee_body_->getInvInertiaTensorWorld()[0][0];
 		physics_state_msg.mass.angular.y = seabee_body_->getInvInertiaTensorWorld()[1][1];
@@ -216,9 +224,9 @@ public:
 	void updateThrusterTransforms()
 	{
 		// Fill in all of our thruster transforms
-		for ( size_t i = 0; i < BeeStem3::NUM_MOTOR_CONTROLLERS; ++i )
+		for ( size_t i = 0; i < _NUM_MOTOR_CONTROLLERS; ++i )
 		{
-			if ( i == BeeStem3::MotorControllerIDs::DROPPER_STAGE1 || i == BeeStem3::MotorControllerIDs::DROPPER_STAGE2 || i == BeeStem3::MotorControllerIDs::SHOOTER ) continue;
+			if ( i == _MotorControllerIDs::DROPPER_STAGE1 || i == _MotorControllerIDs::DROPPER_STAGE2 || i == _MotorControllerIDs::SHOOTER ) continue;
 			std::ostringstream stream;
 			stream << thruster_transform_name_prefix_ << i;
 			tf::Transform tmp_transform;
@@ -229,7 +237,7 @@ public:
 
 	void motorCntlCB( const seabee3_driver_base::MotorCntlConstPtr &msg )
 	{
-		for ( size_t i = 0; i < BeeStem3::NUM_MOTOR_CONTROLLERS; i++ )
+		for ( size_t i = 0; i < _NUM_MOTOR_CONTROLLERS; i++ )
 		{
 			if ( msg->mask[i] == 1 ) thruster_vals_[i] = msg->motors[i];
 		}

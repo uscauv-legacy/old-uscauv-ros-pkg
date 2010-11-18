@@ -4,8 +4,8 @@
  * 
  *      Copyright (c) 2010,
  *
- *      Edward T. Kaszubski (ekaszubski@gmail.com),
- *      Rand Voorhies,
+ *      Edward T. Kaszubski (ekaszubski@gmail.com)
+ *      Rand Voorhies
  *      Michael Montalbo
  *
  *      All rights reserved.
@@ -39,6 +39,7 @@
  *******************************************************************************/
 
 #include <seabee3_beestem/BeeStem3.h>
+#include <seabee3_common/movement_common.h>
 #include <vector>
 #include <map>
 
@@ -52,29 +53,12 @@
 #define DEPTH_I 0
 #define DEPTH_D 0
 
-namespace Actions
-{
-	const static int NONE = -1;
-	const static int AXIS_INVERT = 0;
-	const static int DIVE = 1;
-	const static int SURFACE = 2;
-	const static int STRAFE = 3;
-	const static int SPEED = 4;
-	const static int HEADING = 5;
-	const static int ARM_NEXT_DEV = 6;
-	const static int FIRE_DEV = 7;
-}
-
 class BeeStem3Driver
 {
 public:
 
-	struct FiringDeviceID
-	{
-		const static int shooter = 0;
-		const static int dropper_stage1 = 1;
-		const static int dropper_stage2 = 2;
-	};
+	typedef movement_common::MotorControllerIDs _MotorControllerIDs;
+	typedef movement_common::FiringDeviceIDs _FiringDeviceIDs;
 
 	struct FiringDeviceParams
 	{

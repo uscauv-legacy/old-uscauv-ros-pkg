@@ -15,7 +15,7 @@
   <depend package="std_msgs" /> <!-- for Empty.msg -->
   <depend package="base_libs" />
   <depend package="std_srvs"/>
-  <depend package="seabee3_msgs"/>
+  <depend package="seabee3_common"/>
   <export>
     <cpp cflags="-I${prefix}/include -I${prefix}/msg/cpp -I${prefix}/srv/cpp" lflags="-Wl,-rpath,${prefix}/lib -L${prefix}/lib -lseabee3_driver"/>
   </export>

@@ -41,9 +41,9 @@
 #include <seabee3_driver_base/MotorCntl.h>
 #include <seabee3_driver_base/Depth.h>
 #include <xsens_node/Imu.h>
-#include <seabee3_beestem/BeeStem3Driver.h>
-#include <seabee3_msgs/SetDesiredPose.h>
-#include <seabee3_msgs/Vector3Masked.h>
+#include <seabee3_common/movement_common.h>
+#include <seabee3_common/SetDesiredPose.h>
+#include <seabee3_common/Vector3Masked.h>
 #include <std_srvs/Empty.h>
 #include <math.h>
 
