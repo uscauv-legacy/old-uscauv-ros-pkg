@@ -2,7 +2,10 @@
  *
  *      seabee3_teleop
  * 
- *      Copyright (c) 2010, Edward T. Kaszubski (ekaszubski@gmail.com)
+ *      Copyright (c) 2010
+ *
+ *      Edward T. Kaszubski (ekaszubski@gmail.com)
+ *
  *      All rights reserved.
  *
  *      Redistribution and use in source and binary forms, with or without
