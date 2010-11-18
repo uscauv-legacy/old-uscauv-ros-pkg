@@ -17,6 +17,7 @@
   <depend package="dynamic_reconfigure"/>
   <depend package="driver_base"/>
   <depend package="base_libs"/>
+  <depend package="libvml"/>
 
 </package>
 

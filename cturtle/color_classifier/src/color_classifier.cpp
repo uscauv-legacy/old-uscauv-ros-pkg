@@ -41,42 +41,20 @@
 #include <base_image_proc/base_image_proc.h>
 // for cfg code
 #include <color_classifier/ColorClassifierConfig.h>
+// for colors
+#include <color_classifier/colors.h>
+#include <libvml/vml.h>
 
 typedef color_classifier::ColorClassifierConfig _ReconfigureType;
+typedef double _InputDataType;
+typedef double _OutputDataType;
+typedef vml::ArtificialNeuralNetwork<_InputDataType, _OutputDataType> _ANN;
+
 class ColorClassifier: public BaseImageProc<_ReconfigureType>
 {
 
-public:
-	struct OutputColorRGB
-	{
-		const static cv::Vec3b red, orange, yellow, green, blue, black, white, unknown;
-	};
-
-	template<class _pixel_type = uchar>
-	struct DataRange
-	{
-		_pixel_type min, max;
-
-		bool isInRange( _pixel_type value, bool data_wraps = false )
-		{
-			return ( value >= min && value < max ) || ( data_wraps && min > max && ( value >= min || value < max ) );
-		}
-	};
-
-	template<class _pixel_type = uchar>
-	struct ColorRange
-	{
-		ColorRange<_pixel_type> i, j, k;
-	};
-
-	struct ColorSpectrumHSV
-	{
-		DataRange<double> red, orange, yellow, green, blue;
-		double black_l_threshold, white_l_threshold, unknown_s_threshold;
-	};
 private:
-
-	ColorClassifier::ColorSpectrumHSV spectrum_hsv_;
+	ColorSpectrumHSV spectrum_hsv_;
 
 	double ms_spatial_radius_;
 	double ms_color_ratius_;
@@ -86,6 +64,7 @@ private:
 	bool enable_thresholding_;
 	bool enable_meanshift_;
 	bool enable_color_filter_;
+	_ANN ann_;
 
 public:
 
@@ -93,6 +72,8 @@ public:
 		BaseImageProc<_ReconfigureType> ( nh )
 	{
 		initCfgParams();
+
+		vml::AnnParser::readAnnFromFile( ann_, "/home/edward/workspace/seabee3-ros-pkg/libvml/docs/ann_dump.txt" );
 	}
 
 	~ColorClassifier()
@@ -166,47 +147,51 @@ public:
 		reconfigure_initialized_ = true;
 	}
 
-	virtual cv::Mat processImage( IplImage * ipl_img )
+	cv::Mat processImage( IplImage * ipl_img )
 	{
-		ROS_DEBUG("Image processed");
+		ROS_DEBUG( "Image processed" );
 		IplImage * mean_shifted_img = ipl_img;
-		if ( enable_meanshift_ )
-		{
-			cvPyrMeanShiftFiltering( ipl_img, mean_shifted_img, ms_spatial_radius_, ms_color_ratius_, ms_max_level_, cvTermCriteria( CV_TERMCRIT_ITER + CV_TERMCRIT_EPS, ms_max_iter_, ms_min_epsilon_ ) );
-		}
+		/*if ( enable_meanshift_ )
+		 {
+		 cvPyrMeanShiftFiltering( ipl_img, mean_shifted_img, ms_spatial_radius_, ms_color_ratius_, ms_max_level_, cvTermCriteria( CV_TERMCRIT_ITER + CV_TERMCRIT_EPS, ms_max_iter_, ms_min_epsilon_ ) );
+		 }*/
 		cv_img_ = cv::Mat( mean_shifted_img );
-		cv::Mat hsv_img;
+		cv::Mat hls_img;
+		cv::Mat output_img;
 
-		if ( enable_color_filter_ )
-		{
-			for ( int y = 0; y < cv_img_.size().height; y++ )
-			{
-				for ( int x = 0; x < cv_img_.size().width; x++ )
-				{
-					// get pixel data
-					cv::Vec3b pixel = cv_img_.at<cv::Vec3b> ( cv::Point( x, y ) );
-					// set pixel data
-					cv_img_.at<cv::Vec3b> ( cv::Point( x, y ) ) = filterColor( pixel );
-				}
-			}
-		}
+
+		/*if ( enable_color_filter_ )
+		 {
+		 for ( int y = 0; y < cv_img_.size().height; y++ )
+		 {
+		 for ( int x = 0; x < cv_img_.size().width; x++ )
+		 {
+		 // get pixel data
+		 cv::Vec3b pixel = cv_img_.at<cv::Vec3b> ( cv::Point( x, y ) );
+		 // set pixel data
+		 cv_img_.at<cv::Vec3b> ( cv::Point( x, y ) ) = filterColor( pixel );
+		 }
+		 }
+		 }*/
+
+		cv::resize( cv_img_, output_img, cv::Size(), 0.5, 0.5 );
 
 		if ( enable_thresholding_ )
 		{
-			cv::cvtColor( cv_img_, hsv_img, CV_BGR2HLS);
-			for ( int y = 0; y < hsv_img.size().height; y++ )
+			cv::cvtColor( output_img, hls_img, CV_BGR2HLS);
+			for ( int y = 0; y < hls_img.size().height; y++ )
 			{
-				for ( int x = 0; x < hsv_img.size().width; x++ )
+				for ( int x = 0; x < hls_img.size().width; x++ )
 				{
 					// get pixel data
-					cv::Vec3b pixel = hsv_img.at<cv::Vec3b> ( cv::Point( x, y ) );
+					cv::Vec3b pixel = hls_img.at<cv::Vec3b> ( cv::Point( x, y ) );
 					// set pixel data
-					cv_img_.at<cv::Vec3b> ( cv::Point( x, y ) ) = classifyPixel( pixel );
+					output_img.at<cv::Vec3b> ( cv::Point( x, y ) ) = classifyPixel( pixel );
 				}
 			}
 		}
 
-		return cv_img_;
+		return output_img;
 	}
 
 	inline cv::Vec3b filterColor( cv::Vec3b & pixel )
@@ -223,42 +208,73 @@ public:
 
 	inline cv::Vec3b classifyPixel( cv::Vec3b & pixel )
 	{
-		double h = 360.0 * (double) pixel[0] / 255.0;
-		double l = 100.0 * (double) pixel[1] / 255.0;
-		double s = 100.0 * (double) pixel[2] / 255.0;
+		/*double h = 360.0 * (double) pixel[0] / 255.0;
+		 double l = 100.0 * (double) pixel[1] / 255.0;
+		 double s = 100.0 * (double) pixel[2] / 255.0;
 
-		if ( s < spectrum_hsv_.unknown_s_threshold ) return OutputColorRGB::unknown;
+		 if ( s < spectrum_hsv_.unknown_s_threshold ) return OutputColorRGB::unknown;
 
-		if ( l < spectrum_hsv_.black_l_threshold ) return OutputColorRGB::black;
-		if ( l > spectrum_hsv_.white_l_threshold ) return OutputColorRGB::white;
+		 if ( l < spectrum_hsv_.black_l_threshold ) return OutputColorRGB::black;
+		 if ( l > spectrum_hsv_.white_l_threshold ) return OutputColorRGB::white;
 
-		// any color with a value less than this is considered black
-		//if ( v < spectrum_hsv_.black_v_threshold ) return OutputColorRGB::black;
+		 // any color with a value less than this is considered black
+		 //if ( v < spectrum_hsv_.black_v_threshold ) return OutputColorRGB::black;
 
-		// any color with a combined value-saturation ( v * ( 1-s ) ) greater than this is considered white
-		//if ( v * ( 1.0 - s ) > spectrum_hsv_.white_combined_sv_threshold ) return OutputColorRGB::white;
+		 // any color with a combined value-saturation ( v * ( 1-s ) ) greater than this is considered white
+		 //if ( v * ( 1.0 - s ) > spectrum_hsv_.white_combined_sv_threshold ) return OutputColorRGB::white;
 
-		// any color with a combined value-saturation ( v * s ) less than this is considered black
-		//if ( s * v < spectrum_hsv_.black_combined_sv_threshold ) return OutputColorRGB::black;
+		 // any color with a combined value-saturation ( v * s ) less than this is considered black
+		 //if ( s * v < spectrum_hsv_.black_combined_sv_threshold ) return OutputColorRGB::black;
 
-		if ( spectrum_hsv_.red.isInRange( h, true ) ) return OutputColorRGB::red;
-		if ( spectrum_hsv_.orange.isInRange( h, true ) ) return OutputColorRGB::orange;
-		if ( spectrum_hsv_.yellow.isInRange( h, true ) ) return OutputColorRGB::yellow;
-		if ( spectrum_hsv_.green.isInRange( h, true ) ) return OutputColorRGB::green;
-		if ( spectrum_hsv_.blue.isInRange( h, true ) ) return OutputColorRGB::blue;
+		 if ( spectrum_hsv_.red.isInRange( h, true ) ) return OutputColorRGB::red;
+		 if ( spectrum_hsv_.orange.isInRange( h, true ) ) return OutputColorRGB::orange;
+		 if ( spectrum_hsv_.yellow.isInRange( h, true ) ) return OutputColorRGB::yellow;
+		 if ( spectrum_hsv_.green.isInRange( h, true ) ) return OutputColorRGB::green;
+		 if ( spectrum_hsv_.blue.isInRange( h, true ) ) return OutputColorRGB::blue;
+		 return OutputColorRGB::unknown;*/
+
+		_ANN::_InputVector input = ann_.getInputVector();
+		input[0] = _InputDataType( pixel[0] );
+		input[1] = _InputDataType( pixel[1] );
+		input[2] = _InputDataType( pixel[2] );
+
+		_ANN::_OutputVector output = ann_.propagateData( input );
+
+		_OutputDataType max_output = -1.0;
+		int max_index = 0;
+
+		for ( size_t i = 0; i < output.size(); i++ )
+		{
+			if ( output[i] > max_output )
+			{
+				max_output = output[i];
+				max_index = i;
+			}
+		}
+
+		switch ( max_index )
+		{
+		case ColorIds::red:
+			return OutputColorRGB::red;
+		case ColorIds::orange:
+			return OutputColorRGB::orange;
+		case ColorIds::yellow:
+			return OutputColorRGB::yellow;
+		case ColorIds::green:
+			return OutputColorRGB::green;
+		case ColorIds::blue:
+			return OutputColorRGB::blue;
+		case ColorIds::black:
+			return OutputColorRGB::black;
+		case ColorIds::white:
+			return OutputColorRGB::white;
+		case ColorIds::unknown:
+			return OutputColorRGB::unknown;
+		}
+
 		return OutputColorRGB::unknown;
 	}
 };
-
-// bgr
-const cv::Vec3b ColorClassifier::OutputColorRGB::red = cv::Vec3b( 0, 0, 255 );
-const cv::Vec3b ColorClassifier::OutputColorRGB::orange = cv::Vec3b( 0, 128, 255 );
-const cv::Vec3b ColorClassifier::OutputColorRGB::yellow = cv::Vec3b( 0, 255, 255 );
-const cv::Vec3b ColorClassifier::OutputColorRGB::green = cv::Vec3b( 0, 255, 0 );
-const cv::Vec3b ColorClassifier::OutputColorRGB::blue = cv::Vec3b( 255, 0, 0 );
-const cv::Vec3b ColorClassifier::OutputColorRGB::black = cv::Vec3b( 0, 0, 0 );
-const cv::Vec3b ColorClassifier::OutputColorRGB::white = cv::Vec3b( 255, 255, 255 );
-const cv::Vec3b ColorClassifier::OutputColorRGB::unknown = cv::Vec3b( 128, 128, 128 );
 
 int main( int argc, char ** argv )
 {
