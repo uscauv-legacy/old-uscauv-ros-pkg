@@ -40,5 +40,6 @@
 #define VML_H_
 
 #include <libvml/artificial_neural_network.h>
+#include <libvml/ann_parser.h>
 
 #endif /* VML_H_ */

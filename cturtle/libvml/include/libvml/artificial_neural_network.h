@@ -80,7 +80,6 @@ namespace vml
 		typedef Vector<_OutputDataType> _OutputVector;
 		typedef Vector<_InternalDataType> _InternalDataVector;
 
-	private:
 		// 2d matrix of weights
 		Vector<_InternalDataVector> weights_;
 		// 2d matrix of nodes
@@ -89,17 +88,21 @@ namespace vml
 		_Dimension layer_dims_;
 		_InternalDataType learning_rate_;
 
-	public:
-		ArtificialNeuralNetwork( _Dimension & layer_dims = _Dimension(), _InternalDataType learning_rate = 0.5 );
+		// calculated automatically from training data
+		// the goal is to scale the outputs to fit in [-1,1] for training
+		_InternalDataVector output_scales_;
+
+		ArtificialNeuralNetwork( _Dimension layer_dims = _Dimension(), _InternalDataType learning_rate = 0.5 );
 		virtual ~ArtificialNeuralNetwork();
 		void initializeRandomWeights( _InputDataType min = (_InternalDataType) -1.0, _InternalDataType max = (_InternalDataType) 1.0 );
 		void resize( _Dimension & layer_dims );
 		std::string toString();
 		_InternalDataType & getWeight( int n, int i, int j );
-		_OutputVector propagateData( _InputVector & input );
+		_OutputVector propagateData( _InputVector & input, bool scale_output = true );
 		_InternalDataVector getErrorVector( _InputVector & input, _OutputVector & desired_output );
 		_InternalDataType getTotalSystemError( Vector<_InternalDataVector> & error );
 		void backpropagateErrorVector( _InternalDataVector & error );
+		int train( std::vector<_InputVector> & inputs, std::vector<_OutputVector> & outputs, double min_error = 0.1, int max_iterations = 50000 );
 		_InputVector getInputVector();
 		_OutputVector getOutputVector();
 		std::vector<_InputVector> createInputDataSet( uint num );
@@ -107,10 +110,10 @@ namespace vml
 	};
 
 	template<class _InputDataType, class _OutputDataType, class _InternalDataType>
-	ArtificialNeuralNetwork<_InputDataType, _OutputDataType, _InternalDataType>::ArtificialNeuralNetwork( _Dimension & layer_dims, _InternalDataType learning_rate )
+	ArtificialNeuralNetwork<_InputDataType, _OutputDataType, _InternalDataType>::ArtificialNeuralNetwork( _Dimension layer_dims, _InternalDataType learning_rate )
 	{
 		learning_rate_ = (_InternalDataType) learning_rate;
-		resize( layer_dims );
+		if ( layer_dims.size() >= 2 ) resize( layer_dims );
 	}
 
 
@@ -150,7 +153,7 @@ namespace vml
 	template<class _InputDataType, class _OutputDataType, class _InternalDataType>
 	void ArtificialNeuralNetwork<_InputDataType, _OutputDataType, _InternalDataType>::resize( _Dimension & layer_dims )
 	{
-		printf( "resize()\n" );
+		// printf( "resize()\n" );
 		if ( layer_dims.size() < 2 )
 		{
 			fprintf( stderr, "Invalid layer size; the network requires at least two layers.\n" );
@@ -165,6 +168,7 @@ namespace vml
 		for ( uint n = 0; n < layer_dims_.size(); n++ )
 		{
 			nodes_[n].resize( layer_dims_[n] );
+
 
 			// add bias nodes and update weight matrix dimensions
 			if ( n < layer_dims_.size() - 1 )
@@ -235,7 +239,7 @@ namespace vml
 	}
 
 	template<class _InputDataType, class _OutputDataType, class _InternalDataType>
-	Vector<_OutputDataType> ArtificialNeuralNetwork<_InputDataType, _OutputDataType, _InternalDataType>::propagateData( _InputVector & input )
+	Vector<_OutputDataType> ArtificialNeuralNetwork<_InputDataType, _OutputDataType, _InternalDataType>::propagateData( _InputVector & input, bool scale_output )
 	{
 		//printf( "propagateData()\n" );
 
@@ -248,7 +252,6 @@ namespace vml
 			fprintf( stderr, "Invalid data vector size; size must be %d\n", layer_dims_[0] );
 			return result;
 		}
-
 
 		// load inputs
 		for ( uint i = 0; i < layer_dims_[0]; i++ )
@@ -282,7 +285,7 @@ namespace vml
 		// dump outputs
 		for ( uint i = 0; i < layer_dims_[-1]; i++ )
 		{
-			result[i] = (_OutputDataType) ( nodes_[nodes_.size() - 1][i].activation_state_ );
+			result[i] = (_OutputDataType) ( nodes_[nodes_.size() - 1][i].activation_state_ * ( scale_output ? output_scales_[i] : 1.0 ) );
 		}
 
 		return result;
@@ -300,11 +303,11 @@ namespace vml
 			return result;
 		}
 
-		_OutputVector output = propagateData( input );
+		_OutputVector output = propagateData( input, false );
 
 		for ( uint i = 0; i < output.size(); i++ )
 		{
-			result[i] = (_InternalDataType) ( desired_output[i] - output[i] );
+			result[i] = (_InternalDataType) ( desired_output[i] / output_scales_[i] - output[i] );
 		}
 
 		return result;
@@ -376,6 +379,7 @@ namespace vml
 					// don't backpropagate the values of bias nodes
 					if ( nodes_[n][j].type_ == Node<>::Type::bias ) continue;
 
+
 					//printf( "total += w_%d_%d,%d * D_%d,%d\n", n - 1, i, j, n, j );
 					//total += weights_[n - 1][i * nodes_[n].size() + j] * error_gradient[n][j];
 					total += getWeight( n - 1, i, j ) * error_gradient[n][j];
@@ -397,27 +401,93 @@ namespace vml
 					// don't try to change weights going into bias nodes
 					if ( nodes_[n][j].type_ == Node<>::Type::bias ) continue;
 
+
 					//printf( "update w_%d_%d,%d\n", n - 1, i, j );
 					getWeight( n - 1, i, j ) += error_gradient[n][j] * activation_state * learning_rate_;
 				}
 			}
 		}
 
+
 		/*printf( "Error gradient for layer 1 %s\n", error_gradient[-1].toString().c_str() );
-		for ( uint n = layer_dims_.size() - 1; n > 0; n-- )
+		 for ( uint n = layer_dims_.size() - 1; n > 0; n-- )
+		 {
+		 printf( "Error gradient for layer %d %s\n", n - 1, error_gradient[n - 1].toString().c_str() );
+		 }
+		 for ( uint n = layer_dims_.size() - 1; n > 0; n-- )
+		 {
+		 printf( "Weights for layer %d %s\n", n - 1, weights_[n - 1].toString().c_str() );
+		 }*/
+	}
+
+	template<class _InputDataType, class _OutputDataType, class _InternalDataType>
+	int ArtificialNeuralNetwork<_InputDataType, _OutputDataType, _InternalDataType>::train( std::vector<_InputVector> & inputs, std::vector<_OutputVector> & outputs, double min_error,
+			int max_iterations )
+	{
+		_InternalDataVector max_output_amplitude( layer_dims_[-1] );
+		output_scales_.resize( layer_dims_[-1] );
+
+		for ( uint i = 0; i < inputs.size(); i++ )
 		{
-			printf( "Error gradient for layer %d %s\n", n - 1, error_gradient[n - 1].toString().c_str() );
+			printf( "%s:", inputs[i].toString().c_str() );
+			printf( "%s\n", outputs[i].toString().c_str() );
+
+			for ( size_t j = 0; j < outputs[i].size(); j++ )
+			{
+				if ( fabs( outputs[i][j] ) > max_output_amplitude[j] ) max_output_amplitude[j] = fabs( outputs[i][j] );
+			}
 		}
-		for ( uint n = layer_dims_.size() - 1; n > 0; n-- )
+
+		for ( size_t i = 0; i < max_output_amplitude.size(); i++ )
 		{
-			printf( "Weights for layer %d %s\n", n - 1, weights_[n - 1].toString().c_str() );
-		}*/
+			output_scales_[i] = max_output_amplitude[i] > 0.0 ? max_output_amplitude[i] : 1.0;
+		}
+
+		int iterations = 0;
+		double total_error = 2 * min_error;
+
+		Vector<_InternalDataVector> error_vector( inputs.size() );
+
+		int progress_counter = 0;
+
+		while ( total_error > min_error && iterations < max_iterations )
+		{
+			for ( uint i = 0; i < inputs.size(); i++ )
+			{
+				error_vector[i] = getErrorVector( inputs[i], outputs[i] );
+				backpropagateErrorVector( error_vector[i] );
+			}
+			total_error = (double) getTotalSystemError( error_vector );
+			//printf( "Total error: %f\n", total_error );
+			iterations++;
+
+			if( progress_counter > max_iterations / 20 )
+			{
+				progress_counter = 0;
+				printf("Progress %f %f\n", 100.0 * (double) iterations / (double) max_iterations, total_error );
+			}
+			progress_counter ++;
+		}
+
+		int result = total_error <= min_error ? iterations : -1;
+
+		printf( "\n\ntraining summary: " );
+
+		if ( result >= 0 ) printf( "learned %d data pairs in %d iterations with an error of %f\n", inputs.size(), iterations, total_error );
+		else printf( "failed to learn %d data pairs in %d iterations; error: %f\n", inputs.size(), iterations, total_error );
+
+		for ( uint i = 0; i < inputs.size(); i++ )
+		{
+			printf( "%s : %s\n", inputs[i].toString().c_str(), propagateData( inputs[i] ).toString().c_str() );
+		}
+
+		return result;
 	}
 
 	template<class _InputDataType, class _OutputDataType, class _InternalDataType>
 	Vector<_InputDataType> ArtificialNeuralNetwork<_InputDataType, _OutputDataType, _InternalDataType>::getInputVector()
 	{
-		printf( "Generating input vector\n" );
+		// printf( "Generating input vector\n" );
 		_InputVector result;
 		result.resize( layer_dims_[0] );
 		return result;
@@ -426,7 +496,7 @@ namespace vml
 	template<class _InputDataType, class _OutputDataType, class _InternalDataType>
 	Vector<_OutputDataType> ArtificialNeuralNetwork<_InputDataType, _OutputDataType, _InternalDataType>::getOutputVector()
 	{
-		printf( "Generating output vector\n" );
+		// printf( "Generating output vector\n" );
 		_OutputVector result;
 		result.resize( layer_dims_[-1] );
 		return result;
@@ -435,7 +505,7 @@ namespace vml
 	template<class _InputDataType, class _OutputDataType, class _InternalDataType>
 	std::vector<Vector<_InputDataType> > ArtificialNeuralNetwork<_InputDataType, _OutputDataType, _InternalDataType>::createInputDataSet( uint num )
 	{
-		printf( "Generating input dataset\n" );
+		// printf( "Generating input dataset\n" );
 		std::vector<_InputVector> result;
 		result.resize( num );
 		for ( uint i = 0; i < num; i++ )
@@ -449,7 +519,7 @@ namespace vml
 	template<class _InputDataType, class _OutputDataType, class _InternalDataType>
 	std::vector<Vector<_OutputDataType> > ArtificialNeuralNetwork<_InputDataType, _OutputDataType, _InternalDataType>::createOutputDataSet( uint num )
 	{
-		printf( "Generating output dataset\n" );
+		// printf( "Generating output dataset\n" );
 		std::vector<_OutputVector> result;
 		result.resize( num );
 		for ( uint i = 0; i < num; i++ )

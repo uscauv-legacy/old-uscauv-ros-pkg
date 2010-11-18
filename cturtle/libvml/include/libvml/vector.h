@@ -59,7 +59,8 @@ public:
 	void resize( uint size )
 	{
 		//printf( "resizing vector to %d\n", size );
-		data_.resize( size );
+		if( size != data_.size() )
+			data_.resize( size );
 	}
 
 	uint size()
@@ -105,6 +106,17 @@ public:
 	void push_back( const _DataType & value )
 	{
 		data_.push_back( value );
+	}
+
+	template<class _ScalarDataType>
+	Vector<_DataType> & operator*( _ScalarDataType scalar )
+	{
+		for( size_t i = 0; i < size(); i ++ )
+		{
+			data_[i] *= scalar;
+		}
+
+		return *this;
 	}
 };
 

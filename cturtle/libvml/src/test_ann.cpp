@@ -37,70 +37,105 @@
  *******************************************************************************/
 
 #include <libvml/vml.h>
+#include <stdio.h>
+#include <string>
+
+typedef double _InputDataType;
+typedef double _OutputDataType;
+typedef vml::ArtificialNeuralNetwork<_InputDataType, _OutputDataType, double> _ANN;
+
+struct Point
+{
+	double x_;
+	double y_;
+	Point( double x, double y )
+	{
+		x_ = x;
+		y_ = y;
+	}
+};
+
+void dumpOutputs( FILE * out, _ANN & ann, Point i1_domain, Point i2_domain, double step )
+{
+	fprintf( out, "----------\nintput1,input2,output\n" );
+	for ( double i = i1_domain.x_; i <= i1_domain.y_; i += step )
+	{
+		for ( double j = i2_domain.x_; j <= i2_domain.y_; j += step )
+		{
+			static _ANN::_InputVector input = ann.getInputVector();
+			input[0] = i;
+			input[1] = j;
+			fprintf( out, "%f,%f,%f\n", i, j, ann.propagateData( input )[0] );
+		}
+	}
+}
 
 int main( int argc, char ** argv )
 {
-	typedef double _InputDataType;
-	typedef double _OutputDataType;
-
-	int iterations = 0;
+	FILE * out = fopen( "../docs/data.txt", "w+" );
 
 	vml::_Dimension dim;
 
-	dim.resize( 3 );
-	dim[0] = 2;
-	dim[1] = 3;
-	dim[2] = 1;
+	dim.resize( 4 );
+	dim[0] = 3;
+	dim[1] = 6;
+	dim[2] = 6;
+	dim[3] = 1;
 
-	vml::ArtificialNeuralNetwork<_InputDataType, _OutputDataType> ann( dim, 0.75 );
+	_ANN ann( dim, 0.75 );
 	printf( "initial structure:\n%s", ann.toString().c_str() );
 	ann.initializeRandomWeights( -1.0, 1.0 );
 
-	std::vector<vml::_ANN<_InputDataType, _OutputDataType>::_InputVector> inputs = ann.createInputDataSet( 4 );
-	std::vector<vml::_ANN<_InputDataType, _OutputDataType>::_OutputVector> outputs = ann.createOutputDataSet( 4 );
 
-	inputs[0][0] = 0.0;
-	inputs[0][1] = 0.0;
-	outputs[0][0] = 0.0;
+	//dumpOutputs( out, ann );
+
+	std::vector<_ANN::_InputVector> inputs = ann.createInputDataSet( 4 );
+	std::vector<_ANN::_OutputVector> outputs = ann.createOutputDataSet( 4 );
+
+	inputs[0][0] = 56.0;
+	inputs[0][1] = 156.0;
+	inputs[0][2] = 18.0;
+	outputs[0][0] = 1.0;
 
 	inputs[1][0] = 0.0;
-	inputs[1][1] = 1.0;
+	inputs[1][1] = 254.0;
+	inputs[1][2] = 0.0;
 	outputs[1][0] = 1.0;
 
-	inputs[2][0] = 1.0;
-	inputs[2][1] = 0.0;
-	outputs[2][0] = 1.0;
+	inputs[2][0] = 82.0;
+	inputs[2][1] = 118.0;
+	inputs[2][2] = 147.0;
+	outputs[2][0] = 3.0;
 
-	inputs[3][0] = 1.0;
-	inputs[3][1] = 1.0;
-	outputs[3][0] = 0.0;
+	inputs[3][0] = 90.0;
+	inputs[3][1] = 178.0;
+	inputs[3][2] = 252.0;
+	outputs[3][0] = 3.0;
 
-	Vector<vml::_ANN<_InputDataType, _OutputDataType>::_InternalDataVector> error_vector;
-	error_vector.resize( inputs.size() );
+	/*inputs[4][0] = 39.0;
+	inputs[4][1] = 0.0;
+	inputs[4][2] = 0.0;
+	outputs[4][0] = 0.0;
 
-	double total_error = 1.0;
+	inputs[5][0] = 34.0;
+	inputs[5][1] = 0.0;
+	inputs[5][2] = 95.0;
+	outputs[5][0] = 1.0;
 
-	while ( total_error > 0.01 )
-	{
-		for ( uint i = 0; i < inputs.size(); i++ )
-		{
-			error_vector[i] = ann.getErrorVector( inputs[i], outputs[i] );
+	inputs[6][0] = 103.0;
+	inputs[6][1] = 193.0;
+	inputs[6][2] = 0.0;
+	outputs[6][0] = 1.0;
 
-			//printf( "error_vector: %s\n", error_vector[i].toString().c_str() );
+	inputs[7][0] = 1.0;
+	inputs[7][1] = 1.0;
+	inputs[7][2] = 1.0;
+	outputs[7][0] = 1.0;*/
 
-			ann.backpropagateErrorVector( error_vector[i] );
+	int iterations = ann.train( inputs, outputs, 0.01 );
+	if ( iterations > 0 ) printf( "\nfinished in %d iterations\n", iterations );
+	else printf( "\ntraining failed\n" );
 
-			//printf( "%s : %s\n", inputs[i].toString().c_str(), ann.propagateData( inputs[i] ).toString().c_str() );
-		}
-
-		total_error = (double) ann.getTotalSystemError( error_vector );
-		//printf( "\n--------------------\n" );
-		printf( "Total error: %f\n", total_error );
-
-		iterations++;
-	}
-
-	printf( "\nfinished in %d iterations\n", iterations );
 	printf( "--------------------\n" );
 
 	printf( "final structure:\n%s", ann.toString().c_str() );
@@ -110,10 +145,27 @@ int main( int argc, char ** argv )
 		printf( "%s : %s\n", inputs[i].toString().c_str(), ann.propagateData( inputs[i] ).toString().c_str() );
 	}
 
+	dumpOutputs( out, ann, Point( -8.0, 8.0 ), Point( -8.0, 8.0 ), 0.025 );
+	//dumpOutputs( out, ann, Point(-10.0, 10.0), Point(-10.0, 10.0), 0.1 );
+
 
 	/*output_vector = ann.propagateData( input_vector );
 	 printf( "%s\n", output_vector.toString().c_str() );
 
 	 error_vector = ann.getErrorVector( input_vector, desired_output_vector );*/
 
+	fclose( out );
+
+	vml::AnnParser::saveAnnToFile( ann, "/home/edward/workspace/seabee3-ros-pkg/libvml/docs/ann_dump.txt" );
+
+	_ANN loaded_ann;
+
+	vml::AnnParser::readAnnFromFile( loaded_ann, "/home/edward/workspace/seabee3-ros-pkg/libvml/docs/ann_dump.txt" );
+
+	vml::AnnParser::saveAnnToFile( loaded_ann, "/home/edward/workspace/seabee3-ros-pkg/libvml/docs/ann_dump2.txt" );
+
+
+	//_ANN loaded_ann = vml::AnnParser::readAnnFromFile( std::string("/home/edward/workspace/seabee3-ros-pkg/libvml/docs/ann_dump.txt").c_str() );
+
+	return 0;
 }

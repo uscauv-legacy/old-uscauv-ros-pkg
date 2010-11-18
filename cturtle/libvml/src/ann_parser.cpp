@@ -1,11 +1,8 @@
 /*******************************************************************************
  *
- *      activation_function
+ *      ann_parser
  * 
- *      Copyright (c) 2010,
- *
- *      Edward T. Kaszubski (ekaszubski@gmail.com)
- *
+ *      Copyright (c) 2010, edward
  *      All rights reserved.
  *
  *      Redistribution and use in source and binary forms, with or without
@@ -36,58 +33,4 @@
  *
  *******************************************************************************/
 
-#ifndef ACTIVATION_FUNCTION_H_
-#define ACTIVATION_FUNCTION_H_
-
-#include <math.h>
-#include <stdlib.h>
-
-namespace vml
-{
-
-	template<class _InternalDataType = double>
-	class ActivationFunction
-	{
-	public:
-		struct Type
-		{
-			const static uint constant = 0;
-			const static uint piecewise = 1;
-			const static uint linear = 2;
-			const static uint sigmoid = 3;
-		};
-
-		uint type_;
-		_InternalDataType coefficient_;
-
-		ActivationFunction( uint type = Type::sigmoid, _InternalDataType coefficient = (_InternalDataType) 0.0 );
-		_InternalDataType calculateActivationState( _InternalDataType input );
-	};
-
-	template<class _InternalDataType>
-	ActivationFunction<_InternalDataType>::ActivationFunction( uint type, _InternalDataType coefficient )
-	{
-		type_ = type;
-		coefficient_ = coefficient;
-	}
-
-	template<class _InternalDataType>
-	_InternalDataType ActivationFunction<_InternalDataType>::calculateActivationState( _InternalDataType input )
-	{
-		switch ( type_ )
-		{
-		case Type::constant:
-			return coefficient_;
-		case Type::piecewise:
-			return round( input );
-		case Type::linear:
-			return coefficient_ * input;
-		case Type::sigmoid:
-			return 1.0 / ( 1.0 + pow( M_E, -input ) );
-		}
-
-		return 0.0;
-	}
-}
-
-#endif /* ACTIVATION_FUNCTION_H_ */
+#include <libvml/ann_parser.h>

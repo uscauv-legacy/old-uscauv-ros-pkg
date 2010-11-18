@@ -57,10 +57,8 @@ namespace vml
 			const static int bias = 3;
 		};
 
-	private:
 		ActivationFunction<_InternalDataType> activation_function_;
 
-	public:
 		_InternalDataType activation_state_;
 		int type_;
 
@@ -110,12 +108,11 @@ namespace vml
 	class BiasNode: public Node<_InternalDataType>
 	{
 	public:
-		_InternalDataType bias_;
+		// _InternalDataType bias_;
 
 		BiasNode( _InternalDataType bias = 1.0 ) :
 			Node<_InternalDataType> ( Node<>::Type::bias, ActivationFunction<_InternalDataType> ( ActivationFunction<>::Type::constant, bias ) )
 		{
-			bias_ = bias;
 			printf( "BiasNode constructor\n" );
 		}
 	};
