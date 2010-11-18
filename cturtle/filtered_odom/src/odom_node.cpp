@@ -6,7 +6,7 @@ geometry_msgs::Twist pose;
 tf::Transform odom_frame;
 tf::TransformBroadcaster * odom_broadcaster;
 
-bool ResetOdomCallback( seabee3_dead_reckoning::ResetOdom::Request & req, seabee3_dead_reckoning::ResetOdom::Response & resp)
+bool resetPoseCB( seabee3_dead_reckoning::ResetOdom::Request & req, seabee3_dead_reckoning::ResetOdom::Response & resp)
 {
 	x = req.Pos.x;
 	y = req.Pos.y;

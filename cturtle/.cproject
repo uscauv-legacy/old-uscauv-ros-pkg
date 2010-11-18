@@ -54,6 +54,7 @@
 <listOptionValue builtIn="false" value="/opt/ros/cturtle/stacks/driver_common/dynamic_reconfigure/include"/>
 <listOptionValue builtIn="false" value="/opt/ros/cturtle/stacks/driver_common/dynamic_reconfigure/msg_gen/cpp/include"/>
 <listOptionValue builtIn="false" value="/opt/ros/cturtle/stacks/driver_common/dynamic_reconfigure/srv_gen/cpp/include/dynamic_reconfigure"/>
+<listOptionValue builtIn="false" value="/opt/ros/cturtle/stacks/vision_opencv/image_geometry/include"/>
 </option>
 <inputType id="org.eclipse.cdt.build.core.settings.holder.inType.772404913" languageId="org.eclipse.cdt.core.g++" languageName="GNU C++" sourceContentType="org.eclipse.cdt.core.cxxSource,org.eclipse.cdt.core.cxxHeader" superClass="org.eclipse.cdt.build.core.settings.holder.inType"/>
 </tool>
