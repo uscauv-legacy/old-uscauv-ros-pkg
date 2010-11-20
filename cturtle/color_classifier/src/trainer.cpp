@@ -37,7 +37,7 @@
 #include <base_image_proc/base_image_proc.h>
 // for cfg code
 #include <color_classifier/TrainerConfig.h>
-#include <color_classifier/colors.h>
+#include <color_defs/colors.h>
 #include <libvml/vml.h>
 #include <sstream>
 

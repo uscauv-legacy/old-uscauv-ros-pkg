@@ -1,5 +1,3 @@
-rosbuild_add_library(${PROJECT_NAME} colors.cpp)
-
 rosbuild_add_executable(color_classifier color_classifier.cpp)
 
 include(FindPkgConfig)

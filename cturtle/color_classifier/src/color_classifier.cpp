@@ -42,7 +42,7 @@
 // for cfg code
 #include <color_classifier/ColorClassifierConfig.h>
 // for colors
-#include <color_classifier/colors.h>
+#include <color_defs/colors.h>
 #include <libvml/vml.h>
 
 typedef color_classifier::ColorClassifierConfig _ReconfigureType;
