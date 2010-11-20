@@ -1,1 +1,1 @@
-color_segmenter/ColorBlob[] ColorBlobs
+color_segmenter/ColorBlob[] color_blobs
