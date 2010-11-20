@@ -1,7 +1,7 @@
 /*******************************************************************************
  *
  *      color_segmenter
- * 
+ *
  *      Copyright (c) 2010
  *
  *      Mike Gerow
@@ -11,7 +11,7 @@
  *      Redistribution and use in source and binary forms, with or without
  *      modification, are permitted provided that the following conditions are
  *      met:
- *      
+ *
  *      * Redistributions of source code must retain the above copyright
  *        notice, this list of conditions and the following disclaimer.
  *      * Redistributions in binary form must reproduce the above
@@ -21,7 +21,7 @@
  *      * Neither the name of "seabee3-ros-pkg" nor the names of its
  *        contributors may be used to endorse or promote products derived from
  *        this software without specific prior written permission.
- *      
+ *
  *      THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
  *      "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
  *      LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
@@ -38,8 +38,11 @@
 
 #include <base_image_proc/base_image_proc.h>
 #include <color_defs/colors.h>
-#include <time.h>
 #include <color_segmenter/FindBlobs.h>
+//#include <ros/console.h>
+#include "color_segmenter.h"
+#include <deque>
+#include <vector>
 
 typedef BaseImageProc<BaseNodeTypes::_DefaultReconfigureType, color_segmenter::FindBlobs> _BaseImageProc;
 
@@ -58,55 +61,193 @@ public:
 		//req.blob_descriptor.min_mass
 		//req.blob_descriptor.color will be some number in ColorIds::*
 
-		color_segmenter::ColorBlob blob;
-		resp.blob_array.color_blobs.push_back( blob );
+		//color_segmenter::ColorBlob blob;
+		//resp.blob_array.color_blobs.push_back( blob );
+
+		//Use dynamic reconfigure for debug.  That'd be super fancy.
+		bool debug = true;
+		bool use_cv_flood_fill = false;
+		//DYNAMIC RECONFIGURE
 
 		cv_img_ = cv::Mat( ipl_img );
-
-		cv::Size size;
-		cv::Point center;
-		long radius, time;
-		cv::Scalar color;
-
-		time = ( clock() * 10 ) / CLOCKS_PER_SEC;
-
-		size = cv_img_.size();
-
-		center.x = size.width / 2;
-		center.y = size.height / 2;
-		if ( size.width > size.height )
+		makeImageBinary(cv_img_, req.blob_descriptor.color);
+		if (use_cv_flood_fill)
 		{
-			radius = size.height / 4;
+			resp.blob_array.color_blobs = floodFillMethod(cv_img_, req.blob_descriptor.min_mass);
 		}
 		else
 		{
-			radius = size.width / 4;
+			resp.blob_array.color_blobs = blobFindingMethod(cv_img_, req.blob_descriptor.min_mass);
 		}
 
-		radius = radius / ( ( time % 10 ) + 1 );
-
-		if ( ( time % 3 ) == 0 )
+		if (debug)
 		{
-			color = cv::Scalar( 0, 255, 0 );
+			drawSegments(cv_img_, resp.blob_array.color_blobs);
 		}
-		else if ( ( time % 3 ) == 2 )
-		{
-			color = cv::Scalar( 0, 0, 255 );
-		}
-		else
-		{
-			color = cv::Scalar( 255, 0, 0 );
-		}
-
-		cv::circle( cv_img_, center, radius, color, 4 );
-		cv::rectangle( cv_img_, cv::Point( 5, 5 ), cv::Point( 20, 20 ), cv::Scalar( 0, 255, 0 ) );
-		cv::putText( cv_img_, ":)", center, 2, 1, cv::Scalar( 255, 0, 0 ) );
-		//cv::line(cv_img_, cv::Point( 0, 0 ), cv::Point(50, 50), cv::Scalar( 255, 0, 0));
-
 		return cv_img_;
 	}
 
 };
+
+void makeImageBinary(cv::Mat & cv_img_, int color_int)
+{
+	cv::Vec3b color;
+	switch (color_int)
+	{
+	case ColorIds::red:
+		color = OutputColorRGB::red;
+		break;
+	case ColorIds::orange:
+		color = OutputColorRGB::orange;
+		break;
+	case ColorIds::yellow:
+		color = OutputColorRGB::yellow;
+		break;
+	case ColorIds::green:
+		color = OutputColorRGB::green;
+		break;
+	case ColorIds::blue:
+		color = OutputColorRGB::blue;
+		break;
+	case ColorIds::black:
+		color = OutputColorRGB::black;
+		break;
+	case ColorIds::white:
+		color = OutputColorRGB::white;
+		break;
+	case ColorIds::unknown:
+		color = OutputColorRGB::unknown;
+		break;
+	}
+	//
+	//DO SOMETHING FANCY HERE TO MAKE THE IMAGE TWO COLORS
+
+	return;
+}
+
+std::vector<color_segmenter::ColorBlob> blobFindingMethod(cv::Mat & cv_img_, int minmass)
+{
+	std::vector<color_segmenter::ColorBlob> blob_vec;
+	std::vector<std::vector<bool> > table;
+	std::vector<bool> horizvec;
+	color_segmenter::ColorBlob blob;
+
+	for (int i = 0; i < cv_img_.cols; i++)
+	{
+		horizvec.push_back(true);
+	}
+	for (int i = 0; i < cv_img_.rows; i++)
+	{
+		table.push_back(horizvec);
+	}
+	for (int x = 0; x < cv_img_.rows; x++)
+	{
+		for (int y = 0; y < cv_img_.cols; y++)
+		{
+			if (table[x][y])
+			{
+				table[x][y] = false;
+				if(getBinPixelValue(cv_img_, x, y) == true)
+				{
+					blob = findBlob(cv_img_, table, x, y);
+					if (blob.mass >= minmass)
+					{
+						blob_vec.push_back(blob);
+						ROS_INFO("Fond blob at (%lf, %lf) with a mass of %lf.\n", blob.x, blob.y, blob.mass);
+					}
+				}
+			}
+		}
+	}
+	return blob_vec;
+}
+
+color_segmenter::ColorBlob findBlob(cv::Mat & cv_img_, std::vector<std::vector<bool> > & table, int initx, int inity)
+{
+	color_segmenter::ColorBlob blob;
+	std::deque<cv::Point> d;
+	cv::Point curpoint;
+	int modx, mody;
+	long totx, toty;
+
+	d.push_back(cv::Point(initx, inity));
+	blob.mass += 1;
+	while (d.size() != 0)
+	{
+		curpoint = d.front();
+		d.pop_front();
+		for (int i = 0; i < 4; i++){
+			switch (i)
+			{
+			case 0:
+				modx = 1;
+				mody = 0;
+				break;
+			case 1:
+				modx = -1;
+				mody = 0;
+				break;
+			case 2:
+				modx = 0;
+				mody = 1;
+				break;
+			case 3:
+				modx = 0;
+				mody = -1;
+				break;
+			}
+			if (curpoint.x + modx >= 0
+					&& curpoint.y + mody >= 0
+					&& curpoint.x + modx <= cv_img_.rows
+					&& curpoint.y + mody <= cv_img_.cols
+					&& table[curpoint.x + modx][curpoint.y + mody]
+			        && getBinPixelValue(cv_img_, curpoint.x + modx, curpoint.y + mody))
+			{
+				table[curpoint.x + modx][curpoint.y + mody] = false;
+				blob.mass += 1;
+				totx += curpoint.x + modx;
+				toty += curpoint.y + mody;
+				d.push_back(cv::Point(curpoint.x + modx, curpoint.y + mody));
+			}
+		}
+	}
+	blob.x = static_cast<float>(totx)/blob.mass;
+	blob.y = static_cast<float>(toty)/blob.mass;
+	return blob;
+}
+
+std::vector<color_segmenter::ColorBlob> floodFillMethod(cv::Mat & cv_img_, int min_mass)
+{
+	//Implement cv::floodFill to
+	return;
+}
+
+bool getBinPixelValue(cv::Mat & cv_img_, int x, int y)
+{
+	bool val;
+	val = false;
+	//
+	//DO SOMETHING FANCY TO GET RAW X AND Y VALUES
+	//
+	return val;
+}
+
+void drawSegments(cv::Mat & cv_img_, std::vector<color_segmenter::ColorBlob> & color_blobs)
+{
+	for (unsigned int i = 0; i < color_blobs.size(); i++)
+	{
+		cv::circle(cv_img_, cv::Point(color_blobs[i].x, color_blobs[i].y), 2, cv::Scalar(0, 0, 255));
+		cv::putText(cv_img_, weightString(i, color_blobs[i].mass), cv::Point(color_blobs[i].x, color_blobs[i].y), 0, 1, cv::Scalar(255, 0, 0));
+	}
+	return;
+}
+
+std::string weightString(int i, double weight)
+{
+	std::stringstream s;
+	s << "Segment " << i << ". Weight: " << weight;
+	return s.str();
+}
 
 int main( int argc, char **argv )
 {
