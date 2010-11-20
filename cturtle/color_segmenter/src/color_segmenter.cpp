@@ -125,7 +125,7 @@ void makeImageBinary(cv::Mat & cv_img_, int color_int)
 	return;
 }
 
-std::vector<color_segmenter::ColorBlob> blobFindingMethod(cv::Mat & cv_img_, int minmass)
+std::vector<color_segmenter::ColorBlob> blobFindingMethod(cv::Mat & cv_img_, int min_mass)
 {
 	std::vector<color_segmenter::ColorBlob> blob_vec;
 	std::vector<std::vector<bool> > table;
@@ -150,7 +150,7 @@ std::vector<color_segmenter::ColorBlob> blobFindingMethod(cv::Mat & cv_img_, int
 				if(getBinPixelValue(cv_img_, x, y) == true)
 				{
 					blob = findBlob(cv_img_, table, x, y);
-					if (blob.mass >= minmass)
+					if (blob.mass >= min_mass)
 					{
 						blob_vec.push_back(blob);
 						ROS_INFO("Fond blob at (%lf, %lf) with a mass of %lf.\n", blob.x, blob.y, blob.mass);
@@ -211,15 +211,17 @@ color_segmenter::ColorBlob findBlob(cv::Mat & cv_img_, std::vector<std::vector<b
 			}
 		}
 	}
-	blob.x = static_cast<float>(totx)/blob.mass;
-	blob.y = static_cast<float>(toty)/blob.mass;
+	blob.x = static_cast<double>(totx)/blob.mass;
+	blob.y = static_cast<double>(toty)/blob.mass;
 	return blob;
 }
 
 std::vector<color_segmenter::ColorBlob> floodFillMethod(cv::Mat & cv_img_, int min_mass)
 {
 	//Implement cv::floodFill to
-	return;
+	std::vector<color_segmenter::ColorBlob> color_blobs;
+
+	return color_blobs;
 }
 
 bool getBinPixelValue(cv::Mat & cv_img_, int x, int y)
