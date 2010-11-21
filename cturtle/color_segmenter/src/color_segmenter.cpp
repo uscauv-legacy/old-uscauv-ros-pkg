@@ -172,6 +172,8 @@ color_segmenter::ColorBlob findBlob(cv::Mat & cv_img_, std::vector<std::vector<b
 
 	d.push_back(cv::Point(initx, inity));
 	blob.mass += 1;
+	totx = initx;
+	toty = inity;
 	while (d.size() != 0)
 	{
 		curpoint = d.front();
