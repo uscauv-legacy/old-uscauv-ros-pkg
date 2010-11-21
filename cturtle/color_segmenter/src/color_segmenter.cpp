@@ -127,11 +127,17 @@ void makeImageBinary(cv::Mat & cv_img_, int color_int)
 
 std::vector<color_segmenter::ColorBlob> blobFindingMethod(cv::Mat & cv_img_, int min_mass)
 {
+	return blobFindingMethod(cv_img_, min_mass, false);
+}
+
+std::vector<color_segmenter::ColorBlob> blobFindingMethod(cv::Mat & cv_img_, int min_mass, bool include_diagonals)
+{
 	std::vector<color_segmenter::ColorBlob> blob_vec;
 	std::vector<std::vector<bool> > table;
 	std::vector<bool> horizvec;
 	color_segmenter::ColorBlob blob;
 
+	//Build a 2d vector of boolean values to mark which pixels have yet to be searched
 	for (int i = 0; i < cv_img_.cols; i++)
 	{
 		horizvec.push_back(true);
@@ -140,6 +146,7 @@ std::vector<color_segmenter::ColorBlob> blobFindingMethod(cv::Mat & cv_img_, int
 	{
 		table.push_back(horizvec);
 	}
+
 	for (int x = 0; x < cv_img_.rows; x++)
 	{
 		for (int y = 0; y < cv_img_.cols; y++)
@@ -149,7 +156,7 @@ std::vector<color_segmenter::ColorBlob> blobFindingMethod(cv::Mat & cv_img_, int
 				table[x][y] = false;
 				if(getBinPixelValue(cv_img_, x, y) == true)
 				{
-					blob = findBlob(cv_img_, table, x, y);
+					blob = findBlob(cv_img_, table, x, y, include_diagonals);
 					if (blob.mass >= min_mass)
 					{
 						blob_vec.push_back(blob);
@@ -162,13 +169,14 @@ std::vector<color_segmenter::ColorBlob> blobFindingMethod(cv::Mat & cv_img_, int
 	return blob_vec;
 }
 
-color_segmenter::ColorBlob findBlob(cv::Mat & cv_img_, std::vector<std::vector<bool> > & table, int initx, int inity)
+color_segmenter::ColorBlob findBlob(cv::Mat & cv_img_, std::vector<std::vector<bool> > & table, int initx, int inity, bool include_diagonals = false)
 {
 	color_segmenter::ColorBlob blob;
 	std::deque<cv::Point> d;
 	cv::Point curpoint;
 	int modx, mody;
 	long totx, toty;
+	int pixel_shifts = 4;
 
 	d.push_back(cv::Point(initx, inity));
 	blob.mass += 1;
@@ -178,7 +186,11 @@ color_segmenter::ColorBlob findBlob(cv::Mat & cv_img_, std::vector<std::vector<b
 	{
 		curpoint = d.front();
 		d.pop_front();
-		for (int i = 0; i < 4; i++){
+		if (include_diagonals)
+		{
+			pixel_shifts = 8;
+		}
+		for (int i = 0; i < pixel_shifts; i++){
 			switch (i)
 			{
 			case 0:
@@ -195,6 +207,22 @@ color_segmenter::ColorBlob findBlob(cv::Mat & cv_img_, std::vector<std::vector<b
 				break;
 			case 3:
 				modx = 0;
+				mody = -1;
+				break;
+			case 4:
+				modx = 1;
+				mody = 1;
+				break;
+			case 5:
+				modx = -1;
+				mody = -1;
+				break;
+			case 6:
+				modx = -1;
+				mody = 1;
+				break;
+			case 7:
+				modx = 1;
 				mody = -1;
 				break;
 			}
