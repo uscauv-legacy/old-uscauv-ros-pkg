@@ -42,10 +42,10 @@
 // for cfg code
 #include <base_node/../../cfg/cpp/base_libs/EmptyConfig.h>
 
-template<typename _ReconfigureType>
+template<typename _BaseReconfigureType>
 struct ReconfigureSettings
 {
-	static bool enableReconfigure()
+	static bool reconfigureEnabled()
 	{
 		return true;
 	}
@@ -54,7 +54,7 @@ struct ReconfigureSettings
 template<>
 struct ReconfigureSettings<base_libs::EmptyConfig>
 {
-	static bool enableReconfigure()
+	static bool reconfigureEnabled()
 	{
 		return false;
 	}
@@ -71,20 +71,22 @@ struct SpinModeId
 	const static int loop_spin_once = 1;
 };
 
-template<typename _ReconfigureType = BaseNodeTypes::_DefaultReconfigureType>
+template<typename _BaseReconfigureType = BaseNodeTypes::_DefaultReconfigureType>
 class BaseNode
 {
+public:
+	typedef _BaseReconfigureType _ReconfigureType;
 
 protected:
 	ros::NodeHandle nh_priv_;
 	ros::MultiThreadedSpinner spinner_;
 
-	dynamic_reconfigure::Server<_ReconfigureType> reconfigure_srv_;
-	typename dynamic_reconfigure::Server<_ReconfigureType>::CallbackType reconfigure_callback_;
+	dynamic_reconfigure::Server<_BaseReconfigureType> reconfigure_srv_;
+	typename dynamic_reconfigure::Server<_BaseReconfigureType>::CallbackType reconfigure_callback_;
 
 	// workaround for reconfigure ussues
 	bool reconfigure_initialized_, ignore_reconfigure_;
-	_ReconfigureType initial_config_params_;
+	_BaseReconfigureType initial_config_params_;
 	uint32_t initial_config_level_;
 
 public:
@@ -94,16 +96,16 @@ public:
 	virtual void spinOnce();
 
 protected:
-	virtual void reconfigureCB( _ReconfigureType &config, uint32_t level );
+	virtual void reconfigureCB( _BaseReconfigureType &config, uint32_t level );
 	void initCfgParams();
 
 private:
-	void reconfigureCB_0( _ReconfigureType &config, uint32_t level );
+	void reconfigureCB_0( _BaseReconfigureType &config, uint32_t level );
 };
 
-template<typename _ReconfigureType>
-BaseNode<_ReconfigureType>::BaseNode( ros::NodeHandle & nh, uint threads ) :
-	nh_priv_( "~" ), spinner_( threads ), ignore_reconfigure_( !ReconfigureSettings<_ReconfigureType>::enableReconfigure() )
+template<typename _BaseReconfigureType>
+BaseNode<_BaseReconfigureType>::BaseNode( ros::NodeHandle & nh, uint threads ) :
+	nh_priv_( "~" ), spinner_( threads ), ignore_reconfigure_( !ReconfigureSettings<_BaseReconfigureType>::reconfigureEnabled() )
 {
 	reconfigure_initialized_ = ignore_reconfigure_;
 	if ( !ignore_reconfigure_ )
@@ -113,15 +115,15 @@ BaseNode<_ReconfigureType>::BaseNode( ros::NodeHandle & nh, uint threads ) :
 	}
 }
 
-template<typename _ReconfigureType>
-BaseNode<_ReconfigureType>::~BaseNode()
+template<typename _BaseReconfigureType>
+BaseNode<_BaseReconfigureType>::~BaseNode()
 {
 	//
 }
 
 // virtual
-template<typename _ReconfigureType>
-void BaseNode<_ReconfigureType>::spin( int mode )
+template<typename _BaseReconfigureType>
+void BaseNode<_BaseReconfigureType>::spin( int mode )
 {
 	if ( mode == SpinModeId::spin ) spinner_.spin();
 	else if ( mode == SpinModeId::loop_spin_once )
@@ -136,21 +138,21 @@ void BaseNode<_ReconfigureType>::spin( int mode )
 }
 
 // virtual
-template<typename _ReconfigureType>
-void BaseNode<_ReconfigureType>::spinOnce()
+template<typename _BaseReconfigureType>
+void BaseNode<_BaseReconfigureType>::spinOnce()
 {
 	//
 }
 
 //virtual
-template<typename _ReconfigureType>
-void BaseNode<_ReconfigureType>::reconfigureCB( _ReconfigureType &config, uint32_t level )
+template<typename _BaseReconfigureType>
+void BaseNode<_BaseReconfigureType>::reconfigureCB( _BaseReconfigureType &config, uint32_t level )
 {
 	ROS_DEBUG( "Reconfigure successful in base class" );
 }
 
-template<typename _ReconfigureType>
-void BaseNode<_ReconfigureType>::reconfigureCB_0( _ReconfigureType &config, uint32_t level )
+template<typename _BaseReconfigureType>
+void BaseNode<_BaseReconfigureType>::reconfigureCB_0( _BaseReconfigureType &config, uint32_t level )
 {
 	initial_config_params_ = config;
 	initial_config_level_ = level;
@@ -158,8 +160,8 @@ void BaseNode<_ReconfigureType>::reconfigureCB_0( _ReconfigureType &config, uint
 }
 
 // virtual
-template<typename _ReconfigureType>
-void BaseNode<_ReconfigureType>::initCfgParams()
+template<typename _BaseReconfigureType>
+void BaseNode<_BaseReconfigureType>::initCfgParams()
 {
 	if ( !ignore_reconfigure_ )
 	{

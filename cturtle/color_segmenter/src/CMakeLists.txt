@@ -1,1 +1,1 @@
-rosbuild_add_executable(color_segmenter, color_segmenter.cpp)
+rosbuild_add_executable(color_segmenter color_segmenter.cpp)

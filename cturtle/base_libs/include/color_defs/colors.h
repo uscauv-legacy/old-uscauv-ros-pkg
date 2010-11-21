@@ -53,6 +53,39 @@ struct ColorIds
 struct OutputColorRGB
 {
 	const static cv::Vec3b red, orange, yellow, green, blue, black, white, unknown;
+
+	static cv::Vec3b getColorVector( int color_id )
+	{
+		cv::Vec3b color_vector;
+		switch ( color_id )
+		{
+		case ColorIds::red:
+			color_vector = OutputColorRGB::red;
+			break;
+		case ColorIds::orange:
+			color_vector = OutputColorRGB::orange;
+			break;
+		case ColorIds::yellow:
+			color_vector = OutputColorRGB::yellow;
+			break;
+		case ColorIds::green:
+			color_vector = OutputColorRGB::green;
+			break;
+		case ColorIds::blue:
+			color_vector = OutputColorRGB::blue;
+			break;
+		case ColorIds::black:
+			color_vector = OutputColorRGB::black;
+			break;
+		case ColorIds::white:
+			color_vector = OutputColorRGB::white;
+			break;
+		case ColorIds::unknown:
+			color_vector = OutputColorRGB::unknown;
+			break;
+		}
+		return color_vector;
+	}
 };
 
 template<class _pixel_type = uchar>
@@ -60,7 +93,8 @@ struct DataRange
 {
 	_pixel_type min, max;
 
-	bool isInRange( _pixel_type value, bool data_wraps = false )
+	bool isInRange( _pixel_type value,
+	                bool data_wraps = false )
 	{
 		return ( value >= min && value < max ) || ( data_wraps && min > max && ( value >= min || value < max ) );
 	}
