@@ -70,14 +70,15 @@ public:
 		//DYNAMIC RECONFIGURE
 
 		cv_img_ = cv::Mat( ipl_img );
-		makeImageBinary(cv_img_, req.blob_descriptor.color);
+		//makeImageBinary(cv_img_, req.blob_descriptor.color);
+		cv::Vec3b color = getColorVector(req.blob_descriptor.color);
 		if (use_cv_flood_fill)
 		{
 			resp.blob_array.color_blobs = floodFillMethod(cv_img_, req.blob_descriptor.min_mass);
 		}
 		else
 		{
-			resp.blob_array.color_blobs = blobFindingMethod(cv_img_, req.blob_descriptor.min_mass);
+			resp.blob_array.color_blobs = blobFindingMethod(cv_img_, req.blob_descriptor.min_mass, color);
 		}
 
 		if (debug)
@@ -89,7 +90,43 @@ public:
 
 };
 
-void makeImageBinary(cv::Mat & cv_img_, int color_int)
+//void makeImageBinary(cv::Mat & cv_img_, int color_int)
+//{
+//	cv::Vec3b color;
+//	switch (color_int)
+//	{
+//	case ColorIds::red:
+//		color = OutputColorRGB::red;
+//		break;
+//	case ColorIds::orange:
+//		color = OutputColorRGB::orange;
+//		break;
+//	case ColorIds::yellow:
+//		color = OutputColorRGB::yellow;
+//		break;
+//	case ColorIds::green:
+//		color = OutputColorRGB::green;
+//		break;
+//	case ColorIds::blue:
+//		color = OutputColorRGB::blue;
+//		break;
+//	case ColorIds::black:
+//		color = OutputColorRGB::black;
+//		break;
+//	case ColorIds::white:
+//		color = OutputColorRGB::white;
+//		break;
+//	case ColorIds::unknown:
+//		color = OutputColorRGB::unknown;
+//		break;
+//	}
+	//
+	//DO SOMETHING FANCY HERE TO MAKE THE IMAGE TWO COLORS
+//
+//	return;
+//}
+
+cv::Vec3b getColorVector(int color_int)
 {
 	cv::Vec3b color;
 	switch (color_int)
@@ -119,57 +156,10 @@ void makeImageBinary(cv::Mat & cv_img_, int color_int)
 		color = OutputColorRGB::unknown;
 		break;
 	}
-	//
-	//DO SOMETHING FANCY HERE TO MAKE THE IMAGE TWO COLORS
-
-	return;
+	return color;
 }
 
-std::vector<color_segmenter::ColorBlob> blobFindingMethod(cv::Mat & cv_img_, int min_mass)
-{
-	return blobFindingMethod(cv_img_, min_mass, false);
-}
-
-std::vector<color_segmenter::ColorBlob> blobFindingMethod(cv::Mat & cv_img_, int min_mass, bool include_diagonals)
-{
-	std::vector<color_segmenter::ColorBlob> blob_vec;
-	std::vector<std::vector<bool> > table;
-	std::vector<bool> horizvec;
-	color_segmenter::ColorBlob blob;
-
-	//Build a 2d vector of boolean values to mark which pixels have yet to be searched
-	for (int i = 0; i < cv_img_.cols; i++)
-	{
-		horizvec.push_back(true);
-	}
-	for (int i = 0; i < cv_img_.rows; i++)
-	{
-		table.push_back(horizvec);
-	}
-
-	for (int x = 0; x < cv_img_.rows; x++)
-	{
-		for (int y = 0; y < cv_img_.cols; y++)
-		{
-			if (table[x][y])
-			{
-				table[x][y] = false;
-				if(getBinPixelValue(cv_img_, x, y) == true)
-				{
-					blob = findBlob(cv_img_, table, x, y, include_diagonals);
-					if (blob.mass >= min_mass)
-					{
-						blob_vec.push_back(blob);
-						ROS_INFO("Fond blob at (%lf, %lf) with a mass of %lf.\n", blob.x, blob.y, blob.mass);
-					}
-				}
-			}
-		}
-	}
-	return blob_vec;
-}
-
-color_segmenter::ColorBlob findBlob(cv::Mat & cv_img_, std::vector<std::vector<bool> > & table, int initx, int inity, bool include_diagonals = false)
+color_segmenter::ColorBlob findBlob(cv::Mat & cv_img_, std::vector<std::vector<bool> > & table, int initx, int inity, bool include_diagonals, cv::Vec3b & color)
 {
 	color_segmenter::ColorBlob blob;
 	std::deque<cv::Point> d;
@@ -231,7 +221,7 @@ color_segmenter::ColorBlob findBlob(cv::Mat & cv_img_, std::vector<std::vector<b
 					&& curpoint.x + modx <= cv_img_.rows
 					&& curpoint.y + mody <= cv_img_.cols
 					&& table[curpoint.x + modx][curpoint.y + mody]
-			        && getBinPixelValue(cv_img_, curpoint.x + modx, curpoint.y + mody))
+			        && getBinPixelValue(cv_img_, color, curpoint.x + modx, curpoint.y + mody))
 			{
 				table[curpoint.x + modx][curpoint.y + mody] = false;
 				blob.mass += 1;
@@ -246,6 +236,50 @@ color_segmenter::ColorBlob findBlob(cv::Mat & cv_img_, std::vector<std::vector<b
 	return blob;
 }
 
+std::vector<color_segmenter::ColorBlob> blobFindingMethod(cv::Mat & cv_img_, int min_mass, cv::Vec3b & color)
+{
+	return blobFindingMethod(cv_img_, min_mass, color, false);
+}
+
+std::vector<color_segmenter::ColorBlob> blobFindingMethod(cv::Mat & cv_img_, int min_mass, cv::Vec3b & color, bool include_diagonals)
+{
+	std::vector<color_segmenter::ColorBlob> blob_vec;
+	std::vector<std::vector<bool> > table;
+	std::vector<bool> horizvec;
+	color_segmenter::ColorBlob blob;
+
+	//Build a 2d vector of boolean values to mark which pixels have yet to be searched
+	for (int i = 0; i < cv_img_.cols; i++)
+	{
+		horizvec.push_back(true);
+	}
+	for (int i = 0; i < cv_img_.rows; i++)
+	{
+		table.push_back(horizvec);
+	}
+
+	for (int x = 0; x < cv_img_.rows; x++)
+	{
+		for (int y = 0; y < cv_img_.cols; y++)
+		{
+			if (table[x][y])
+			{
+				table[x][y] = false;
+				if(getBinPixelValue(cv_img_, color, x, y) == true)
+				{
+					blob = findBlob(cv_img_, table, x, y, include_diagonals, color);
+					if (blob.mass >= min_mass)
+					{
+						blob_vec.push_back(blob);
+						ROS_INFO("Found blob at (%lf, %lf) with a mass of %lf.\n", blob.x, blob.y, blob.mass);
+					}
+				}
+			}
+		}
+	}
+	return blob_vec;
+}
+
 std::vector<color_segmenter::ColorBlob> floodFillMethod(cv::Mat & cv_img_, int min_mass)
 {
 	//Implement cv::floodFill to
@@ -254,14 +288,15 @@ std::vector<color_segmenter::ColorBlob> floodFillMethod(cv::Mat & cv_img_, int m
 	return color_blobs;
 }
 
-bool getBinPixelValue(cv::Mat & cv_img_, int x, int y)
+bool getBinPixelValue(cv::Mat & cv_img_, cv::Vec3b & color, int x, int y)
 {
-	bool val;
-	val = false;
-	//
-	//DO SOMETHING FANCY TO GET RAW X AND Y VALUES
-	//
-	return val;
+	CvScalar s;
+	s = cvGet2D(&cv_img_, x, y);
+	if(color[0] == s.val[0] && color[1] == s.val[1] && color[2] == s.val[2])
+	{
+		return true;
+	}
+	return false;
 }
 
 void drawSegments(cv::Mat & cv_img_, std::vector<color_segmenter::ColorBlob> & color_blobs)
@@ -283,7 +318,7 @@ std::string weightString(int i, double weight)
 
 int main( int argc, char **argv )
 {
-	ros::init( argc, argv, "demo1_gerow" );
+	ros::init( argc, argv, "color_segmenter" );
 	ros::NodeHandle nh;
 
 	ColorSegmenter color_segmenter( nh );
