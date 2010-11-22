@@ -99,6 +99,10 @@ public:
 			drawSegments( cv_img_,
 			              resp.blob_array.color_blobs );
 		}
+		for (int i = 0; i < resp.blob_array.color_blobs.size(); i++)
+		{
+			resp.blob_array.color_blobs[i].color = req.blob_descriptor.color;
+		}
 		return cv_img_;
 	}
 
@@ -317,8 +321,8 @@ public:
 			                       color_blobs[i].y ),
 			            4,
 			            cv::Scalar( 0,
-			                        220,
-			                        220 ) );
+			                        0,
+			                        255 ) );
 			cv::putText( cv_img_,
 			             weightString( i,
 			                           color_blobs[i].mass ),
@@ -327,8 +331,8 @@ public:
 			             0,
 			             0.5,
 			             cv::Scalar( 0,
-			                         220,
-			                         220 ) );
+			                         0,
+			                         255 ) );
 		}
 		return;
 	}
