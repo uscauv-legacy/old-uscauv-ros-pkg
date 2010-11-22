@@ -54,6 +54,7 @@ class ColorSegmenter: public _BaseImageProc
 {
 private:
 	bool use_flood_fill_;
+	IplImage * ipl;
 public:
 	ColorSegmenter( ros::NodeHandle & nh ) :
 		_BaseImageProc( nh ), use_flood_fill_( false )
@@ -76,6 +77,7 @@ public:
 
 		/** use the inherited (BaseImageProcCore::publish_image_) param publish_image<bool; default:true> instead; set it in the command-line via _publish_image:=value **/
 		bool debug = publish_image_;
+		ipl = ipl_img;
 
 		cv_img_ = cv::Mat( ipl_img );
 		//makeImageBinary(cv_img_, req.blob_descriptor.color);
@@ -106,28 +108,28 @@ public:
 	//	cv::Vec3b color;
 	//	switch (color_int)
 	//	{
-	//	case ColorIds::red:
+	//	case ColorIds::red: 0
 	//		color = OutputColorRGB::red;
 	//		break;
-	//	case ColorIds::orange:
+	//	case ColorIds::orange: 1
 	//		color = OutputColorRGB::orange;
 	//		break;
-	//	case ColorIds::yellow:
+	//	case ColorIds::yellow: 2
 	//		color = OutputColorRGB::yellow;
 	//		break;
-	//	case ColorIds::green:
+	//	case ColorIds::green: 3
 	//		color = OutputColorRGB::green;
 	//		break;
-	//	case ColorIds::blue:
+	//	case ColorIds::blue: 4
 	//		color = OutputColorRGB::blue;
 	//		break;
-	//	case ColorIds::black:
+	//	case ColorIds::black: 5
 	//		color = OutputColorRGB::black;
 	//		break;
-	//	case ColorIds::white:
+	//	case ColorIds::white: 6
 	//		color = OutputColorRGB::white;
 	//		break;
-	//	case ColorIds::unknown:
+	//	case ColorIds::unknown: 7
 	//		color = OutputColorRGB::unknown;
 	//		break;
 	//	}
@@ -153,7 +155,7 @@ public:
 
 		d.push_back( cv::Point( initx,
 		                        inity ) );
-		blob.mass += 1;
+		blob.mass = 1;
 		totx = initx;
 		toty = inity;
 		while ( d.size() != 0 )
@@ -201,7 +203,7 @@ public:
 					mody = -1;
 					break;
 				}
-				if ( curpoint.x + modx >= 0 && curpoint.y + mody >= 0 && curpoint.x + modx <= cv_img_.rows && curpoint.y + mody <= cv_img_.cols
+				if ( curpoint.x + modx >= 0 && curpoint.y + mody >= 0 && curpoint.x + modx < cv_img_.cols && curpoint.y + mody < cv_img_.rows
 				        && table[curpoint.x + modx][curpoint.y + mody] && getBinPixelValue( cv_img_,
 				                                                                            color,
 				                                                                            curpoint.x + modx,
@@ -233,19 +235,23 @@ public:
 
 
 		//Build a 2d vector of boolean values to mark which pixels have yet to be searched
-		for ( int i = 0; i < cv_img_.cols; i++ )
+		ROS_DEBUG("The image is %d pixels by %d pixels.", cv_img_.cols, cv_img_.rows);
+		for ( int i = 0; i < cv_img_.rows; i++ ) //ROWS
 		{
 			horizvec.push_back( true );
 		}
-		for ( int i = 0; i < cv_img_.rows; i++ )
+		for ( int i = 0; i < cv_img_.cols; i++ )  //COLS
 		{
 			table.push_back( horizvec );
 		}
 
-		for ( int x = 0; x < cv_img_.rows; x++ )
+		ROS_DEBUG("The test table is %d by %d elements.", table.size(), table[0].size());
+
+		for ( int x = 0; x < cv_img_.cols; x++ )  //ROWS
 		{
-			for ( int y = 0; y < cv_img_.cols; y++ )
+			for ( int y = 0; y < cv_img_.rows; y++ )  //COLS
 			{
+				ROS_DEBUG("Looking at pixel %d, %d", x, y);
 				if ( table[x][y] )
 				{
 					table[x][y] = false;
@@ -290,9 +296,10 @@ public:
 	                       int y )
 	{
 		CvScalar s;
-		s = cvGet2D( &cv_img_,
-		             x,
-		             y );
+		//ROS_INFO("Getting value at %d, %d", x, y);
+		s = cvGet2D( ipl,
+		             y,
+		             x );
 		if ( color[0] == s.val[0] && color[1] == s.val[1] && color[2] == s.val[2] )
 		{
 			return true;
@@ -308,20 +315,20 @@ public:
 			cv::circle( cv_img_,
 			            cv::Point( color_blobs[i].x,
 			                       color_blobs[i].y ),
-			            2,
+			            4,
 			            cv::Scalar( 0,
-			                        0,
-			                        255 ) );
+			                        220,
+			                        220 ) );
 			cv::putText( cv_img_,
 			             weightString( i,
 			                           color_blobs[i].mass ),
 			             cv::Point( color_blobs[i].x,
 			                        color_blobs[i].y ),
 			             0,
-			             1,
-			             cv::Scalar( 255,
-			                         0,
-			                         0 ) );
+			             0.5,
+			             cv::Scalar( 0,
+			                         220,
+			                         220 ) );
 		}
 		return;
 	}
@@ -330,7 +337,7 @@ public:
 	                          double weight )
 	{
 		std::stringstream s;
-		s << "Segment " << i << ". Weight: " << weight;
+		s << "Segment " << i << ". Mass: " << weight;
 		return s.str();
 	}
 
@@ -349,9 +356,11 @@ int main( int argc,
 	ros::init( argc,
 	           argv,
 	           "color_segmenter" );
+	ROS_INFO("Starting up...");
 	ros::NodeHandle nh;
 
 	ColorSegmenter color_segmenter( nh );
+	ROS_INFO("Ready to receive requests");
 	color_segmenter.spin();
 
 	return 0;
