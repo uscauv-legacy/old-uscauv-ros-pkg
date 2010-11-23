@@ -55,8 +55,6 @@ typedef BaseStereoImageProc<sparse_stereo::SparseStereoConfig> _BaseStereoImageP
 
 class SparseStereo: public _BaseStereoImageProc
 {
-private:
-	const static int MAX_CORNERS = 100;
 public:
 	typedef unsigned char _FeatureDescriptorDataType;
 	typedef double _MatchedFeatureDistanceDataType;
@@ -69,13 +67,10 @@ public:
 		// bgr
 		cv::Vec3b color_;
 
-		Feature( CvPoint2D32f pos_subpix = cvPoint2D32f( 0.0,
-		                                                 0.0 ),
-		         cv::Vec3b color = cv::Vec3b() )
+		Feature( CvPoint2D32f pos_subpix = cvPoint2D32f( 0.0, 0.0 ), cv::Vec3b color = cv::Vec3b() )
 		{
 			pos_subpix_ = pos_subpix;
-			pos_ = cv::Point( cvRound( pos_subpix_.x ),
-			                  cvRound( pos_subpix_.y ) );
+			pos_ = cv::Point( cvRound( pos_subpix_.x ), cvRound( pos_subpix_.y ) );
 			color_ = color;
 		}
 	};
@@ -89,14 +84,15 @@ public:
 		Feature<_DescriptorDataType> right_feature_;
 		_DistanceDataType distance_;
 
-		MatchedFeature( Feature<_DescriptorDataType> left_feature,
-		                Feature<_DescriptorDataType> right_feature )
+		MatchedFeature( Feature<_DescriptorDataType> left_feature, Feature<_DescriptorDataType> right_feature )
 		{
 			left_feature_ = left_feature;
 			right_feature_ = right_feature;
-			distance_ = sqrt( pow( left_feature_.pos_.x - right_feature_.pos_.x,
-			                       2 ) + pow( left_feature_.pos_.y - right_feature_.pos_.y,
-			                                  2 ) );
+			distance_ = sqrt( pow( left_feature_.pos_.x - right_feature_.pos_.x, 2 ) + pow( left_feature_.pos_.y - right_feature_.pos_.y, 2 ) );
+
+
+			// features that the left camera can see are always to the right of features that the right camera can see (ignoring reflections)
+			distance_ *= ( left_feature_.pos_.x >= right_feature_.pos_.x ? 1.0 : -1.0 );
 		}
 	};
 
@@ -106,10 +102,26 @@ private:
 	_MatchedFeatureDistanceDataType feature_space_min_distance_threshold_;
 
 	bool image_history_initialized_;
+	bool optical_flow_initialized_;
 
 	// variables modified by dynamic_reconfigure
-	double yspace_diff_threshold_;
-	int blur_kernel_radius_, num_pyramid_levels_, feature_patch_size_;
+	int search_window_height_;
+	int num_pyramid_levels_;
+	int num_corners_to_track_;
+	double search_window_width_percent_;
+	double max_feature_error_threshold_;
+	double min_feature_distance_;
+	double min_matched_feature_distance_;
+	double max_matched_feature_distance_;
+	int block_size_;
+	bool enable_harris_corners_;
+	bool enable_corner_sub_pix_;
+	double find_good_features_quality_level_;
+	double find_good_features_k_;
+	int flow_max_iterations_;
+	double flow_min_epsilon_;
+	int sub_pix_max_iterations_;
+	double sub_pix_min_epsilon_;
 	//
 
 	ros::Publisher point_cloud_pub_;
@@ -124,173 +136,126 @@ private:
 
 public:
 	SparseStereo( ros::NodeHandle & nh ) :
-		_BaseStereoImageProc( nh )
+		_BaseStereoImageProc( nh ), image_history_initialized_( false ), optical_flow_initialized_( false )
 	{
-		point_cloud_pub_ = nh_priv_.advertise<sensor_msgs::PointCloud> ( "points",
-		                                                                 1 );
+		point_cloud_pub_ = nh_priv_.advertise<sensor_msgs::PointCloud> ( "points", 1 );
 
 		initCfgParams();
 	}
 
 	std::vector<_MatchedFeature> calculateStereoOpticalFlow()
 	{
-		//cv::Mat right_image_mat( right_image );
-
 		std::vector<_MatchedFeature> matched_features;
-		IplImage * left_image_bw = cvCreateImage( cv::Size( left_image_mat_.size().width,
-		                                                    left_image_mat_.size().height ),
-		                                          IPL_DEPTH_8U,
-		                                          1 );
-		cvCvtColor( left_image_,
-		            left_image_bw,
-		            CV_BGR2GRAY );
-
-		IplImage * right_image_bw = cvCreateImage( cvSize( right_image_mat_.size().width,
-		                                                   right_image_mat_.size().height ),
-		                                           IPL_DEPTH_8U,
-		                                           1 );
-		cvCvtColor( right_image_,
-		            right_image_bw,
-		            CV_BGR2GRAY );
-
-		CvSize img_sz = cvGetSize( left_image_bw );
-		int win_size = 10;
-		// The first thing we need to do is get the features
-		// we want to track.
-		//
-		IplImage* eig_image = cvCreateImage( img_sz,
-		                                     IPL_DEPTH_32F,
-		                                     1 );
-		IplImage* tmp_image = cvCreateImage( img_sz,
-		                                     IPL_DEPTH_32F,
-		                                     1 );
-		int corner_count = MAX_CORNERS;
-		CvPoint2D32f* left_features = new CvPoint2D32f[MAX_CORNERS];
-		cvGoodFeaturesToTrack( left_image_bw,
-		                       eig_image,
-		                       tmp_image,
-		                       left_features,
-		                       &corner_count,
-		                       0.01,
-		                       5.0,
-		                       0,
-		                       3,
-		                       0,
-		                       0.04 );
 
 
-		/*cvFindCornerSubPix( left_image_bw,
-		 left_features,
-		 corner_count,
-		 cvSize( win_size,
-		 win_size ),
-		 cvSize( -1,
-		 -1 ),
-		 cvTermCriteria( CV_TERMCRIT_ITER | CV_TERMCRIT_EPS,
-		 20,
-		 0.03 ) );*/
-		// Call the Lucas Kanade algorithm
-		//
-		char features_found[MAX_CORNERS];
-		float feature_errors[MAX_CORNERS];
-		CvSize pyr_sz = cvSize( left_image_bw->width + 8,
-		                        right_image_bw->height / 3 );
-		IplImage* left_pyr = cvCreateImage( pyr_sz,
-		                                    IPL_DEPTH_32F,
-		                                    1 );
-		IplImage* right_pyr = cvCreateImage( pyr_sz,
-		                                     IPL_DEPTH_32F,
-		                                     1 );
-		CvPoint2D32f* right_features = new CvPoint2D32f[MAX_CORNERS];
-		cvCalcOpticalFlowPyrLK( left_image_bw,
-		                        right_image_bw,
-		                        left_pyr,
-		                        right_pyr,
-		                        left_features,
-		                        right_features,
-		                        corner_count,
-		                        cvSize( left_image_bw->width,
-		                                win_size ),
-		                        5,
-		                        features_found,
-		                        feature_errors,
-		                        cvTermCriteria( CV_TERMCRIT_ITER | CV_TERMCRIT_EPS,
-		                                        20,
-		                                        .3 ),
-		                        0 );
+		// optimizations
 
-		printf( "\nmatched %d corners\n",
-		        corner_count );
-		for ( int i = 0; i < corner_count; i++ )
+		static IplImage * left_image_bw = NULL;
+		static IplImage * right_image_bw = NULL;
+
+		static IplImage* eig_image = NULL;
+		static IplImage* tmp_image = NULL;
+
+		static CvPoint2D32f* left_features = NULL;
+		static CvPoint2D32f* right_features = NULL;
+
+		static IplImage* left_pyr = NULL;
+		static IplImage* right_pyr = NULL;
+
+		static int last_num_corners_to_track = -1;
+
+		if ( last_num_corners_to_track != num_corners_to_track_ || !optical_flow_initialized_ )
 		{
-			if ( features_found[i] == 0 )
-			{
-				//printf( "Error is %f\n",
-				//        feature_errors[i] );
-				continue;
-			}
+			last_num_corners_to_track = num_corners_to_track_;
 
-			/*printf( "%d, %f\n",
-			 features_found[i],
-			 feature_errors[i] );*/
+			if ( left_features ) delete[] left_features;
+			left_features = new CvPoint2D32f[last_num_corners_to_track];
+			if ( right_features ) delete[] right_features;
+			right_features = new CvPoint2D32f[last_num_corners_to_track];
+		}
+
+		if ( !optical_flow_initialized_ )
+		{
+			left_image_bw = cvCreateImage( cv::Size( left_image_mat_.size().width, left_image_mat_.size().height ), IPL_DEPTH_8U, 1 );
+			right_image_bw = cvCreateImage( cv::Size( right_image_mat_.size().width, right_image_mat_.size().height ), IPL_DEPTH_8U, 1 );
+
+			const CvSize img_sz = cvGetSize( left_image_bw );
+			eig_image = cvCreateImage( img_sz, IPL_DEPTH_32F, 1 );
+			tmp_image = cvCreateImage( img_sz, IPL_DEPTH_32F, 1 );
+
+			const CvSize pyr_sz = cvSize( left_image_bw->width + 8, right_image_bw->height / 3 );
+			left_pyr = cvCreateImage( pyr_sz, IPL_DEPTH_32F, 1 );
+			right_pyr = cvCreateImage( pyr_sz, IPL_DEPTH_32F, 1 );
+
+			optical_flow_initialized_ = true;
+		}
+
+		// end optimizations
+
+		cvCvtColor( left_image_, left_image_bw, CV_BGR2GRAY );
+		cvCvtColor( right_image_, right_image_bw, CV_BGR2GRAY );
+
+		cvGoodFeaturesToTrack( left_image_bw, eig_image, tmp_image, left_features, &last_num_corners_to_track, find_good_features_quality_level_, min_feature_distance_, 0, block_size_,
+				enable_harris_corners_, find_good_features_k_ );
+
+		const cv::Size window_size( search_window_width_percent_ * left_image_bw->width / 2, search_window_height_ / 2 );
+
+		if ( enable_corner_sub_pix_ )
+			cvFindCornerSubPix( left_image_bw, left_features, last_num_corners_to_track, cvSize( 10, 10 ), cvSize( -1, -1 ), cvTermCriteria( CV_TERMCRIT_ITER | CV_TERMCRIT_EPS, sub_pix_max_iterations_, sub_pix_min_epsilon_ ) );
+
+		char features_found[last_num_corners_to_track];
+		float feature_errors[last_num_corners_to_track];
+		cvCalcOpticalFlowPyrLK( left_image_bw, right_image_bw, left_pyr, right_pyr, left_features, right_features, last_num_corners_to_track, window_size, num_pyramid_levels_, features_found,
+				feature_errors, cvTermCriteria( CV_TERMCRIT_ITER | CV_TERMCRIT_EPS, flow_max_iterations_, flow_min_epsilon_ ), 0 );
+
+		for ( int i = 0; i < last_num_corners_to_track; i++ )
+		{
+			if ( features_found[i] == 0 ) continue;
 
 			_Feature left_feature( left_features[i] ), right_feature( right_features[i] );
 
-			/*printf( "left %d %d right %d %d\n",
-			        left_feature.pos_.x,
-			        left_feature.pos_.y,
-			        right_feature.pos_.x,
-			        right_feature.pos_.y );*/
+			if ( left_feature.pos_.x > left_image_bw->width || left_feature.pos_.x < 0 || right_feature.pos_.x > right_image_bw->width || right_feature.pos_.x < 0 || left_feature.pos_.y
+					> left_image_bw->height || left_feature.pos_.y < 0 || right_feature.pos_.y > right_image_bw->height || right_feature.pos_.y < 0 ) continue;
 
 			left_feature.color_ = left_image_mat_.at<cv::Vec3b> ( left_feature.pos_ );
 			right_feature.color_ = right_image_mat_.at<cv::Vec3b> ( right_feature.pos_ );
 
-			cv::circle( combined_image_mat_,
-			            left_feature.pos_,
-			            3,
-			            cv::Scalar( 255,
-			                        0,
-			                        0 ),
-			            1 );
-			cv::circle( combined_image_mat_,
-			            cv::Point( right_feature.pos_.x,
-			                       right_feature.pos_.y + left_image_mat_.size().height ),
-			            3,
-			            cv::Scalar( 255,
-			                        0,
-			                        0 ),
-			            1 );
-			cv::line( combined_image_mat_,
-			          left_feature.pos_,
-			          cv::Point( right_feature.pos_.x,
-			                     right_feature.pos_.y + left_image_mat_.size().height ),
-			          cv::Scalar( 255,
-			                      0,
-			                      0 ),
-			          1 );
+			_MatchedFeature matched_feature( left_feature, right_feature );
+
+			const bool feature_error_check = feature_errors[i] < max_feature_error_threshold_;
+			const bool feature_distance_check = matched_feature.distance_ >= min_matched_feature_distance_ && matched_feature.distance_ <= max_matched_feature_distance_;
+
+			if ( feature_error_check && feature_distance_check ) matched_features.push_back( matched_feature );
 
 
-			/*printf( "%d %d, %d %d\n",
-			 left_feature.pos_.x,
-			 left_feature.pos_.y,
-			 right_feature.pos_.x,
-			 right_feature.pos_.y );*/
+			// don't draw anything if we're not going to publish the image
+			if ( !publish_image_ || disparity_pub_.getNumSubscribers() == 0 ) continue;
 
-			_MatchedFeature matched_feature( left_feature,
-			                                 right_feature );
+			// default to red
+			cv::Scalar line_color = cv::Scalar( 255, 0, 0 );
 
-			printf( "feature distance %f\n",
-			        matched_feature.distance_ );
-
-			matched_features.push_back( matched_feature );
+			if ( !feature_error_check )
+			{
+				line_color = cv::Scalar( 0, 127, 255 );
+			}
+			// failing the distance check overrides failing the error check
+			if ( !feature_distance_check )
+			{
+				line_color = cv::Scalar( 0, 0, 255 );
+			}
+			cv::circle( combined_image_mat_, left_feature.pos_, 3, cv::Scalar( 255, 0, 0 ), 1 );
+			cv::circle( combined_image_mat_, cv::Point( right_feature.pos_.x, right_feature.pos_.y + left_image_mat_.size().height ), 3, cv::Scalar( 255, 0, 0 ), 1 );
+			cv::line( combined_image_mat_, left_feature.pos_, cv::Point( right_feature.pos_.x, right_feature.pos_.y + left_image_mat_.size().height ), line_color, 1 );
 		}
 
-		cvReleaseImage( &left_image_bw );
-		cvReleaseImage( &right_image_bw );
-		cvReleaseImage( &left_pyr );
-		cvReleaseImage( &right_pyr );
-		cvReleaseImage( &eig_image );
-		cvReleaseImage( &tmp_image );
+
+		// images are no longer re-allocated each time so we don't need to release them here
+		//cvReleaseImage( &left_image_bw );
+		//cvReleaseImage( &right_image_bw );
+		//cvReleaseImage( &left_pyr );
+		//cvReleaseImage( &right_pyr );
+		//cvReleaseImage( &eig_image );
+		//cvReleaseImage( &tmp_image );
 
 		return matched_features;
 	}
@@ -311,9 +276,7 @@ public:
 		for ( size_t i = 0; i < features.size(); i++ )
 		{
 			cv::Point3d point;
-			stereo_model_.projectDisparityTo3d( features[i].left_feature_.pos_,
-			                                    features[i].left_feature_.pos_.x - features[i].right_feature_.pos_.x,
-			                                    point );
+			stereo_model_.projectDisparityTo3d( features[i].left_feature_.pos_, features[i].left_feature_.pos_.x - features[i].right_feature_.pos_.x, point );
 			points.points[i].x = point.x;
 			points.points[i].y = point.y;
 			points.points[i].z = point.z;
@@ -357,8 +320,7 @@ public:
 	 CV_BGR2GRAY );
 	 }*/
 
-	cv::Mat processImages( IplImage * left_image,
-	                       IplImage * right_image )
+	cv::Mat processImages( IplImage * left_image, IplImage * right_image )
 	{
 		copyImagesToCombined();
 
@@ -366,8 +328,7 @@ public:
 
 		matched_features_ = calculateStereoOpticalFlow();
 
-		ROS_DEBUG( "matched_features: %zu\n",
-		           matched_features_.size() );
+		ROS_DEBUG( "matched_features: %zu\n", matched_features_.size() );
 
 
 		/*for ( size_t i = 0; i < matched_features_.size(); i++ )
@@ -395,24 +356,32 @@ public:
 		return combined_image_mat_;
 	}
 
-	void reconfigureCB( _ReconfigureType &config,
-	                    uint32_t level )
+	void reconfigureCB( _ReconfigureType &config, uint32_t level )
 	{
-		yspace_diff_threshold_ = (double) config.yspace_diff_threshold;
-		blur_kernel_radius_ = config.blur_kernel_radius * 2 + 1;
+		search_window_height_ = config.search_window_height;
+		search_window_width_percent_ = config.search_window_width_percent;
 		num_pyramid_levels_ = config.num_pyramid_levels;
-		feature_patch_size_ = config.feature_patch_size * 2 + 1;
-		feature_space_min_distance_threshold_ = (_MatchedFeatureDistanceDataType) config.feature_space_min_distance_threshold;
+		num_corners_to_track_ = config.num_corners_to_track;
+		max_feature_error_threshold_ = config.max_feature_error_threshold;
+		min_feature_distance_ = config.min_feature_distance;
+		min_matched_feature_distance_ = config.min_matched_feature_distance;
+		max_matched_feature_distance_ = config.max_matched_feature_distance;
+		block_size_ = 2 * config.block_size + 1;
+		enable_harris_corners_ = config.enable_harris_corners;
+		enable_corner_sub_pix_ = config.enable_corner_sub_pix;
+		find_good_features_quality_level_ = config.find_good_features_quality_level;
+		find_good_features_k_ = config.find_good_features_k;
+		flow_max_iterations_ = config.flow_max_iterations;
+		flow_min_epsilon_ = config.flow_min_epsilon;
+		sub_pix_max_iterations_ = config.sub_pix_max_iterations;
+		sub_pix_min_epsilon_ = config.sub_pix_min_epsilon;
 	}
 
 };
 
-int main( int argc,
-          char * argv[] )
+int main( int argc, char * argv[] )
 {
-	ros::init( argc,
-	           argv,
-	           "sparse_stereo" );
+	ros::init( argc, argv, "sparse_stereo" );
 	ros::NodeHandle nh;
 
 	SparseStereo sparse_stereo( nh );
