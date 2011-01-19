@@ -122,7 +122,8 @@ void BaseImageProcCore<_ReconfigureType, _ServiceType>::publishCvImage( IplImage
 template<typename _ReconfigureType, typename _ServiceType>
 void BaseImageProcCore<_ReconfigureType, _ServiceType>::publishCvImage( cv::Mat & img )
 {
-	IplImage * ipl_img = & ( (IplImage) img );
+	//IplImage * ipl_img = & ( (IplImage) img );
+	IplImage * ipl_img = new IplImage( img );
 	publishCvImage( ipl_img );
 }
 
