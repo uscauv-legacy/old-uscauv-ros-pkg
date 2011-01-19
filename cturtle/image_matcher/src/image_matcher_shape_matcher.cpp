@@ -52,12 +52,18 @@ class ImageMatcher: public BaseImageProc<_ReconfigureType, _ServiceType>
 
 public:
 	ImageMatcher( ros::NodeHandle & nh ) :
-		BaseImageProc<_ReconfigureType, _ServiceType> ( nh, "match_images" ), image_size_initialized_( false )
+		BaseImageProc<_ReconfigureType, _ServiceType> ( nh, "match_images" ), image_size_initialized_( false ), images_loaded_( false )
 	{
+		nh.param( "axe", axe_file_, std::string( "axe.png" ) );
+		nh.param( "clippers", clippers_file_, std::string( "clippers.png" ) );
+		nh.param( "hammer", hammer_file_, std::string( "hammer.png" ) );
+		nh.param( "machete", machete_file_, std::string( "machete.png" ) );
 
+		loadPlusConvertImages();
+		ROS_INFO( "Finished loading and converting competition templates" );
 	}
 
-	ImageMatcher::~ImageMatcher()
+	~ImageMatcher()
 	{
 		cvReleaseImage( &gray_axe_ );
 		cvReleaseImage( &gray_clippers_ );
@@ -65,10 +71,10 @@ public:
 		cvReleaseImage( &gray_machete_ );
 	}
 	// File names for the bin objects
-	string axe_file_;
-	string clippers_file_;
-	string hammer_file_;
-	string machete_file_;
+	std::string axe_file_;
+	std::string clippers_file_;
+	std::string hammer_file_;
+	std::string machete_file_;
 
 	// Create grayscale image templates.
 	IplImage * gray_axe_;
@@ -77,31 +83,32 @@ public:
 	IplImage * gray_machete_;
 	IplImage * gray_image_;
 	bool image_size_initialized_;
-	bool images_loaded_ = false;
-	const uint match_method_ = CV_CONTOURS_MATCH_I3;
+	bool images_loaded_;
+	const static uint match_method_ = CV_CONTOURS_MATCH_I3;
 
 	std::vector<double> matchImageCall( IplImage * image, _ServiceRequest &req )
 	{
 		std::vector<double> result;
 		cvCvtColor( image, gray_image_, CV_BGR2GRAY);
-		if ( req.desired_image == _ServiceType::IMAGE_ALL || req.desired_image == _ServiceType::IMAGE_AXE )
+		if ( req.desired_image == _ServiceRequest::IMAGE_ALL || req.desired_image == _ServiceRequest::IMAGE_AXE )
 		{
 			result.push_back( cvMatchShapes( gray_axe_, gray_image_, match_method_, 0 ) );
 		}
-		else if ( req.desired_image == _ServiceType::IMAGE_ALL || req.desired_image == _ServiceType::IMAGE_AXE )
+		else if ( req.desired_image == _ServiceRequest::IMAGE_ALL || req.desired_image == _ServiceRequest::IMAGE_AXE )
 		{
 			result.push_back( cvMatchShapes( gray_clippers_, gray_image_, match_method_, 0 ) );
 		}
-		else if ( req.desired_image == _ServiceType::IMAGE_ALL || req.desired_image == _ServiceType::IMAGE_AXE )
+		else if ( req.desired_image == _ServiceRequest::IMAGE_ALL || req.desired_image == _ServiceRequest::IMAGE_AXE )
 		{
 			result.push_back( cvMatchShapes( gray_hammer_, gray_image_, match_method_, 0 ) );
 		}
-		else if ( req.desired_image == _ServiceType::IMAGE_ALL || req.desired_image == _ServiceType::IMAGE_AXE )
+		else if ( req.desired_image == _ServiceRequest::IMAGE_ALL || req.desired_image == _ServiceRequest::IMAGE_AXE )
 		{
 			result.push_back( cvMatchShapes( gray_machete_, gray_image_, match_method_, 0 ) );
 		}
 
-		ROS_INFO( "Match Value::: Axe: %d Clippers: %d Hammer: %d Machete: %d", axe_match, clippers_match, hammer_match, machete_match );
+
+		//ROS_INFO( "Match Value::: Axe: %d Clippers: %d Hammer: %d Machete: %d", axe_match, clippers_match, hammer_match, machete_match );
 
 		return result;
 
@@ -118,11 +125,13 @@ public:
 			IplImage* hammer_img;
 			IplImage* machete_img;
 
+
 			// Extract images from their respective files
-			axe_img = cvLoadImage( axeFile.c_str() );
-			clippers_img = cvLoadImage( clippersFile.c_str() );
-			hammer_img = cvLoadImage( hammerFile.c_str() );
-			machete_img = cvLoadImage( macheteFile.c_str() );
+			axe_img = cvLoadImage( axe_file_.c_str() );
+			clippers_img = cvLoadImage( clippers_file_.c_str() );
+			hammer_img = cvLoadImage( hammer_file_.c_str() );
+			machete_img = cvLoadImage( machete_file_.c_str() );
+
 
 			// Create grayscale image templates.
 			gray_axe_ = cvCreateImage( cvGetSize( axe_img ), IPL_DEPTH_8U, 1 );
@@ -152,7 +161,7 @@ public:
 			gray_image_ = cvCreateImage( cvGetSize( ipl_img ), IPL_DEPTH_8U, 1 );
 		}
 
-		resp.PercentMatch = matchImageCall( ipl_img, req );
+		resp.percent_match = matchImageCall( ipl_img, req );
 		return cv_img_;
 	}
 };
@@ -164,17 +173,6 @@ int main( int argc, char** argv )
 	ros::NodeHandle nh;//("~");
 
 	ImageMatcher image_matcher( nh );
-
-
-	// File paths for objects
-	//nh.param("image_transport", transport, std::string("raw"));
-	nh.param( "axe", axeFile, std::string( "axe.png" ) );
-	nh.param( "clippers", clippersFile, std::string( "clippers.png" ) );
-	nh.param( "hammer", hammerFile, std::string( "hammer.png" ) );
-	nh.param( "machete", macheteFile, std::string( "machete.png" ) );
-
-	image_matcher.loadPlusConvertImages();
-	ROS_INFO( "Finished loading and converting competition templates" );
 
 	image_matcher.spin();
 }
