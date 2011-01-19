@@ -14,6 +14,7 @@
   <depend package="opencv2"/>
   <depend package="cv_bridge"/>
   <depend package="yaml_cpp"/>
+  <depend package="base_libs"/>
 
 </package>
 

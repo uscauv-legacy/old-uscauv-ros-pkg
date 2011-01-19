@@ -32,22 +32,17 @@
  *      OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  *******************************************************************************/
-#include <ros/ros.h>
 #include <sensor_msgs/Image.h>
 #include <image_matcher/MatchImage.h>
-#include <cv_bridge/CvBridge.h>
-#include <opencv/cv.h>
-#include <opencv/highgui.h>
-#include <image_transport/image_transport.h>
 #include <yaml-cpp/yaml.h>
 #include <vector>
 #include <fstream>
 #include <time.h>
-
+#include <base_image_proc/base_image_proc.h>
 #include <boost/thread/thread.hpp>
 #include <boost/thread/mutex.hpp>
 
-using namespace std;
+//using namespace std;
 
 typedef BaseNodeTypes::_DefaultReconfigureType _ReconfigureType;
 typedef image_matcher::MatchImage _ServiceType;

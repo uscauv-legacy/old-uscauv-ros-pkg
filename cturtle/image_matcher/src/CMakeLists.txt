@@ -1,0 +1,3 @@
+#rosbuild_add_executable(image_matcher src/image_matcher.cpp)
+#rosbuild_add_executable(test_image_matcher src/test_image_matcher.cpp)
+rosbuild_add_executable(image_matcher_shape_matcher image_matcher_shape_matcher.cpp)

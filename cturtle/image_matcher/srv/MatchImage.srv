@@ -6,4 +6,4 @@ int8 IMAGE_MACHETE=4
 
 int8 desired_image
 ----
-float64 [] percent_match
+float64[] percent_match
