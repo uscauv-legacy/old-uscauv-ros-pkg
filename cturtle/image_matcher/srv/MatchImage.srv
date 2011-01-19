@@ -1,5 +1,3 @@
+int8 DesiredImage
 ----
-float64 axe_probability
-float64 clippers_probability
-float64 hammer_probability
-float64 machete_probability
+float64 [] PercentMatch
