@@ -49,118 +49,126 @@
 
 using namespace std;
 
-// File names for the bin objects
-string axeFile;
-string clippersFile;
-string hammerFile;
-string macheteFile;
-
-sensor_msgs::ImageConstPtr itsCurrentImage;
-sensor_msgs::ImageConstPtr testImage;
-CvMemStorage* objectStorage;
-// Create grayscale image templates.
-IplImage* grayAxe;
-IplImage* grayClippers;
-IplImage* grayHammer;
-IplImage* grayMachete;
-bool goodToGo = false;
-
-boost::mutex image_mutex;
-
 typedef BaseNodeTypes::_DefaultReconfigureType _ReconfigureType;
 typedef image_matcher::MatchImage _ServiceType;
 
-class RectangleFinder: public BaseImageProc<_ReconfigureType, _ServiceType>
+class ImageMatcher: public BaseImageProc<_ReconfigureType, _ServiceType>
 {
 
+public:
+	ImageMatcher( ros::NodeHandle & nh ) :
+		BaseImageProc<_ReconfigureType, _ServiceType> ( nh, "match_images" ), image_size_initialized_( false )
+	{
 
-void imageCallback( const sensor_msgs::ImageConstPtr& msg )
-{
-	ROS_INFO( "Image received" );
-	boost::lock_guard<boost::mutex> lock( image_mutex );
-	itsCurrentImage = msg;
-	goodToGo = true;
-}
+	}
 
-std::vector<double> matchImageCall ( image_matcher::MatchImage::Request &req, image_matcher::MatchImage::Response &res )
-{
-	boost::lock_guard<boost::mutex> lock( image_mutex );
-
-	if ( !goodToGo ) return false;
-
-	double axeMatch, clippersMatch, hammerMatch, macheteMatch;
-
-	sensor_msgs::CVBridge bridge;
-	CvSeq* imageMoments;
-	CvSeq* imageHuMoments;
-	CvMemStorage* storage = cvCreateMemStorage( 0 );
-
-	IplImage* image = bridge.imgMsgToCv( itsCurrentImage );
-	IplImage* grayImage = cvCreateImage( cvGetSize( image ), 8, 1 );
-	cvCvtColor( image, grayImage, CV_BGR2GRAY);
-
-	axeMatch = cvMatchShapes( grayAxe, grayImage, CV_CONTOURS_MATCH_I3, 0);
-	clippersMatch = cvMatchShapes( grayClippers, grayImage, CV_CONTOURS_MATCH_I3, 0);
-	hammerMatch = cvMatchShapes( grayHammer, grayImage, CV_CONTOURS_MATCH_I3, 0);
-	macheteMatch = cvMatchShapes( grayMachete, grayImage, CV_CONTOURS_MATCH_I3, 0);
-
-	ROS_INFO( "Match Value::: Axe: %d Clippers: %d Hammer: %d Machete: %d", axeMatch, clippersMatch, hammerMatch, macheteMatch);
-
-	std::vector<double> result;
-	result.push_back(axeMatch);
-	result.push_back(clipperMatch);
-	result.push_back(hammerMatch);
-	result.push_back(macheteMatch);
-	return result;
-
-}
-
-
-void loadPlusConvertImages()
-{
-	IplImage* axeImg;
-	IplImage* clippersImg;
-	IplImage* hammerImg;
-	IplImage* macheteImg;
-	CvMemStorage* objectStorage = cvCreateMemStorage( 0 );
-
-
-	// Extract images from their respective files
-	axeImg = cvLoadImage( axeFile.c_str() );
-	clippersImg = cvLoadImage( clippersFile.c_str() );
-	hammerImg = cvLoadImage( hammerFile.c_str() );
-	macheteImg = cvLoadImage( macheteFile.c_str() );
-
+	ImageMatcher::~ImageMatcher()
+	{
+		cvReleaseImage( &gray_axe_ );
+		cvReleaseImage( &gray_clippers_ );
+		cvReleaseImage( &gray_hammer_ );
+		cvReleaseImage( &gray_machete_ );
+	}
+	// File names for the bin objects
+	string axe_file_;
+	string clippers_file_;
+	string hammer_file_;
+	string machete_file_;
 
 	// Create grayscale image templates.
-	grayAxe = cvCreateImage( cvGetSize( axeImg ), 8, 1 );
-	grayClippers = cvCreateImage( cvGetSize( clippersImg ), 8, 1 );
-	grayHammer = cvCreateImage( cvGetSize( hammerImg ), 8, 1 );
-	grayMachete = cvCreateImage( cvGetSize( macheteImg ), 8, 1 );
+	IplImage * gray_axe_;
+	IplImage * gray_clippers_;
+	IplImage * gray_hammer_;
+	IplImage * gray_machete_;
+	IplImage * gray_image_;
+	bool image_size_initialized_;
+	bool images_loaded_ = false;
+	const uint match_method_ = CV_CONTOURS_MATCH_I3;
 
-
-	// Convert all images to grayscale
-	cvCvtColor( axeImg, grayAxe, CV_BGR2GRAY );
-	cvCvtColor( clippersImg, grayClippers, CV_BGR2GRAY );
-	cvCvtColor( hammerImg, grayHammer, CV_BGR2GRAY );
-	cvCvtColor( macheteImg, grayMachete, CV_BGR2GRAY );
-
-}
-
-cv::Mat processImage( IplImage * ipl_img, _ServiceRequest & req, _ServiceResponse & resp )
+	std::vector<double> matchImageCall( IplImage * image, _ServiceRequest &req )
 	{
-		resp.PercentMatch = matchImageCall
+		std::vector<double> result;
+		cvCvtColor( image, gray_image_, CV_BGR2GRAY);
+		if ( req.desired_image == _ServiceType::IMAGE_ALL || req.desired_image == _ServiceType::IMAGE_AXE )
+		{
+			result.push_back( cvMatchShapes( gray_axe_, gray_image_, match_method_, 0 ) );
+		}
+		else if ( req.desired_image == _ServiceType::IMAGE_ALL || req.desired_image == _ServiceType::IMAGE_AXE )
+		{
+			result.push_back( cvMatchShapes( gray_clippers_, gray_image_, match_method_, 0 ) );
+		}
+		else if ( req.desired_image == _ServiceType::IMAGE_ALL || req.desired_image == _ServiceType::IMAGE_AXE )
+		{
+			result.push_back( cvMatchShapes( gray_hammer_, gray_image_, match_method_, 0 ) );
+		}
+		else if ( req.desired_image == _ServiceType::IMAGE_ALL || req.desired_image == _ServiceType::IMAGE_AXE )
+		{
+			result.push_back( cvMatchShapes( gray_machete_, gray_image_, match_method_, 0 ) );
+		}
+
+		ROS_INFO( "Match Value::: Axe: %d Clippers: %d Hammer: %d Machete: %d", axe_match, clippers_match, hammer_match, machete_match );
+
+		return result;
+
+	}
+
+	void loadPlusConvertImages()
+	{
+		if ( !images_loaded_ )
+		{
+			images_loaded_ = true;
+
+			IplImage* axe_img;
+			IplImage* clippers_img;
+			IplImage* hammer_img;
+			IplImage* machete_img;
+
+			// Extract images from their respective files
+			axe_img = cvLoadImage( axeFile.c_str() );
+			clippers_img = cvLoadImage( clippersFile.c_str() );
+			hammer_img = cvLoadImage( hammerFile.c_str() );
+			machete_img = cvLoadImage( macheteFile.c_str() );
+
+			// Create grayscale image templates.
+			gray_axe_ = cvCreateImage( cvGetSize( axe_img ), IPL_DEPTH_8U, 1 );
+			gray_clippers_ = cvCreateImage( cvGetSize( clippers_img ), IPL_DEPTH_8U, 1 );
+			gray_hammer_ = cvCreateImage( cvGetSize( hammer_img ), IPL_DEPTH_8U, 1 );
+			gray_machete_ = cvCreateImage( cvGetSize( machete_img ), IPL_DEPTH_8U, 1 );
+
+
+			// Convert all images to grayscale
+			cvCvtColor( axe_img, gray_axe_, CV_BGR2GRAY );
+			cvCvtColor( clippers_img, gray_clippers_, CV_BGR2GRAY );
+			cvCvtColor( hammer_img, gray_hammer_, CV_BGR2GRAY );
+			cvCvtColor( machete_img, gray_machete_, CV_BGR2GRAY );
+
+			cvReleaseImage( &axe_img );
+			cvReleaseImage( &clippers_img );
+			cvReleaseImage( &hammer_img );
+			cvReleaseImage( &machete_img );
+		}
+
+	}
+
+	cv::Mat processImage( IplImage * ipl_img, _ServiceRequest & req, _ServiceResponse & resp )
+	{
+		if ( !image_size_initialized_ )
+		{
+			gray_image_ = cvCreateImage( cvGetSize( ipl_img ), IPL_DEPTH_8U, 1 );
+		}
+
+		resp.PercentMatch = matchImageCall( ipl_img, req );
 		return cv_img_;
 	}
-}
+};
 
 int main( int argc, char** argv )
 {
 	// Initialize ros structures
 	ros::init( argc, argv, "image_matcher" );
 	ros::NodeHandle nh;//("~");
-	image_transport::ImageTransport it( nh );
-	std::string transport;
+
+	ImageMatcher image_matcher( nh );
 
 
 	// File paths for objects
@@ -170,14 +178,8 @@ int main( int argc, char** argv )
 	nh.param( "hammer", hammerFile, std::string( "hammer.png" ) );
 	nh.param( "machete", macheteFile, std::string( "machete.png" ) );
 
-	loadPlusConvertImages();
-	ROS_INFO( "Finished loading and converting competition templates");
+	image_matcher.loadPlusConvertImages();
+	ROS_INFO( "Finished loading and converting competition templates" );
 
-	//Subscribe to image topic
-	image_transport::Subscriber sub = it.subscribe( "image", 1, &imageCallback );
-
-	//Register service
-	ros::ServiceServer image_match_srv = nh.advertiseService( "MatchImage", matchImageCall );
-
-	ros::spin();
+	image_matcher.spin();
 }
