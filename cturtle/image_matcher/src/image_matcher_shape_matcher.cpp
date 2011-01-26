@@ -134,10 +134,10 @@ public:
 
 
 			// Create grayscale image templates.
-			gray_axe_ = cvCreateImage( cvGetSize( axe_img ), IPL_DEPTH_8U, 1 );
-			gray_clippers_ = cvCreateImage( cvGetSize( clippers_img ), IPL_DEPTH_8U, 1 );
-			gray_hammer_ = cvCreateImage( cvGetSize( hammer_img ), IPL_DEPTH_8U, 1 );
-			gray_machete_ = cvCreateImage( cvGetSize( machete_img ), IPL_DEPTH_8U, 1 );
+			gray_axe_ = cvCreateImage( CvSize( axe_img->width, axe_img->height ), IPL_DEPTH_8U, 1 );
+			gray_clippers_ = cvCreateImage( CvSize( clippers_img->width, clippers_img->height ), IPL_DEPTH_8U, 1 );
+			gray_hammer_ = cvCreateImage( CvSize( hammer_img->width, hammer_img->height ), IPL_DEPTH_8U, 1 );
+			gray_machete_ = cvCreateImage( CvSize( machete_img->width, machete_img->height ), IPL_DEPTH_8U, 1 );
 
 
 			// Convert all images to grayscale
@@ -158,7 +158,7 @@ public:
 	{
 		if ( !image_size_initialized_ )
 		{
-			gray_image_ = cvCreateImage( cvGetSize( ipl_img ), IPL_DEPTH_8U, 1 );
+			gray_image_ = cvCreateImage( CvSize( ipl_img->width, ipl_img->height ), IPL_DEPTH_8U, 1 );
 		}
 
 		resp.percent_match = matchImageCall( ipl_img, req );
