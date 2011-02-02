@@ -50,6 +50,7 @@ private:
 public:
 	int this_state;
 	State * prev_state_ptr;
+	static ros::NodeHandle & nh;
 
 	State()
 	{
@@ -94,6 +95,8 @@ public:
 	}
 };
 
+//ros::NodeHandle & State::nh;
+
 class Machine
 {
 private:
@@ -102,14 +105,14 @@ private:
 public:
 	int state;
 	int prev_state;
-	ros::NodeHandle nh;
+	ros::NodeHandle & nh;
 
-	Machine(ros::NodeHandle & nodehandle, std::vector<State> & state_vector_)
+	Machine(ros::NodeHandle & nodehandle, std::vector<State> & state_vector_) : nh(nodehandle)
 	{
 		state = STATE_INIT;
 		prev_state = STATE_INIT;
 		state_vector = state_vector_;
-		nh = nodehandle;
+		//nh = nodehandle;
 	}
 	void spin()
 	{
@@ -361,10 +364,16 @@ public:
 	}
 };
 
+ros::NodeHandle nh;
+ros::NodeHandle & State::nh = nh;
+
 int main(int argc, char ** argv)
 {
 	ros::init(argc, argv, "seabee3_mission_control");
 	ROS_INFO("Starting up...");
+	//ros::NodeHandle nh;
+	//ros::NodeHandle & State::nh = nh;
+
 	std::vector<State> states;
 
 	states.push_back(StateInit());
@@ -377,7 +386,6 @@ int main(int argc, char ** argv)
 	states.push_back(StateWindow());
 	states.push_back(StatePinger());
 
-	ros::NodeHandle nh;
 	Machine m(nh, states);
 
 	m.spin();
