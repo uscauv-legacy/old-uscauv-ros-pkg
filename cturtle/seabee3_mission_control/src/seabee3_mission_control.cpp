@@ -49,6 +49,7 @@ private:
 
 public:
 	int this_state;
+	State * prev_state_ptr;
 
 	State()
 	{
@@ -79,8 +80,9 @@ public:
 	{
 		return prev_state;
 	}
-	int spin(int prev_state_)
+	int spin(int prev_state_, State * prev_state_ptr_)
 	{
+		prev_state_ptr_ = prev_state_ptr;
 		prev_state = prev_state_;
 		entry();
 		while(ros::ok() && (switch_to == -1))
@@ -118,7 +120,7 @@ public:
 		while (ros::ok())
 		{
 			int new_state;
-			new_state = state_vector[state].spin(prev_state);
+			new_state = state_vector[state].spin(prev_state, &state_vector[prev_state]);
 			prev_state = state;
 			state = new_state;
 		}
