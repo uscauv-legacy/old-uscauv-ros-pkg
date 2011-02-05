@@ -14,6 +14,9 @@
   <depend package="opencv2"/>
   <depend package="localization_defs"/>
   <depend package="color_segmenter"/>
+  <export>
+    <cpp cflags="-I${prefix}/include -I${prefix}/msg/cpp -I${prefix}/srv/cpp" lflags="-Wl,-rpath,${prefix}/lib -L${prefix}/lib -llandmark_projector"/>
+  </export>
 
 </package>
 

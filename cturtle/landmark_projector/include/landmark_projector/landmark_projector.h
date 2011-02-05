@@ -12,13 +12,11 @@
 #include <color_segmenter/FindBlobs.h>
 
 class LandmarkProjector
-    {
+{
 public:
-    static Landmark projectBouy(color_segmenter::ColorBlob &b,
-	    double dist_measured_from = 0.3048, double width_at_dist_measured = 374,
-	    double bouy_actual_width = 0.19404187);
-    static void projectBin(Landmark &l);
-    static void projectPipe(Landmark &l);
- };
+	static Landmark projectBuoy( color_segmenter::ColorBlob &b, double dist_measured_from = 0.3048, double width_at_dist_measured = 374, double buoy_actual_width = 0.19404187 );
+	static void projectBin( Landmark &l );
+	static void projectPipe( Landmark &l );
+};
 
 #endif /* LANDMARK_PROJECTOR_H_ */

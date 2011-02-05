@@ -47,7 +47,7 @@ int main(int argc, char ** argv)
 	b.x = 10;
 	b.y = 20;
 	b.mass = 100;
-	Landmark l = LandmarkProjector::projectBouy(b);
+	Landmark l = LandmarkProjector::projectBuoy(b);
 	std::cout << "Bouy is at location (" << l.center_.x << "," << l.center_.y << "," << l.center_.z << ")";
 
 	return 0;

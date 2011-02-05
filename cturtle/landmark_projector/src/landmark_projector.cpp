@@ -42,32 +42,30 @@
 
 #include <landmark_projector/landmark_projector.h>
 
-Landmark LandmarkProjector::projectBouy(color_segmenter::ColorBlob &b,
-		double dist_measured_from, double width_at_dist_measured,
-		double bouy_actual_width)
+Landmark LandmarkProjector::projectBuoy( color_segmenter::ColorBlob &b, double dist_measured_from, double width_at_dist_measured, double buoy_actual_width )
 {
 	//REMEMBER BOUY SIZE!
-	double radius = sqrt(b.mass / M_PI);
-	double dist = (width_at_dist_measured / (radius * 2)) * dist_measured_from;
+	double radius = sqrt( b.mass / M_PI );
+	double dist = ( width_at_dist_measured / ( radius * 2 ) ) * dist_measured_from;
 	//If this doesn't work, it's totally not my fault.
-	double scalar = (width_at_dist_measured / (radius * 2)) * bouy_actual_width;
+	double scalar = ( width_at_dist_measured / ( radius * 2 ) ) * buoy_actual_width;
 
 	double x = dist;
 	double y = -b.x * scalar;
 	double z = b.y * scalar;
 
-	Landmark l(cv::Point3d(x, y, z));
+	Landmark l( cv::Point3d( x, y, z ) );
 	l.shape_type_ = Landmark::LandmarkType::Buoy;
 
 	return l;
 }
 
-void LandmarkProjector::projectBin(Landmark &l)
+void LandmarkProjector::projectBin( Landmark &l )
 {
 
 }
 
-void LandmarkProjector::projectPipe(Landmark &l)
+void LandmarkProjector::projectPipe( Landmark &l )
 {
 
 }
