@@ -85,7 +85,7 @@ public:
 
 		nh.param( "axe", axe_file_, std::string( "../axe.jpeg" ) );
 		nh.param( "clippers", clippers_file_, std::string( "../clippers.jpeg" ) );
-		nh.param( "hammer", hammer_file_, std::string( "../hammer.	jpeg" ) );
+		nh.param( "hammer", hammer_file_, std::string( "../hammer.jpeg" ) );
 		nh.param( "machete", machete_file_, std::string( "../machete.jpeg" ) );
 		/*axe_file_ = "axe.jpeg";
 		clippers_file_ = "clippers.jpeg";
@@ -159,7 +159,7 @@ public:
 			// Extract images from their respective files
 			axe_img = cvLoadImage( axe_file_.c_str(), 1 );
 			//if(!axe_img_){ROS_ERROR ("COULD NOT LOAD IMAGE! ");}
-			//if(!axe_img){ROS_ERROR ("COULD NOT LOAD IMAGE!");}
+			if(!axe_img){ROS_ERROR ("COULD NOT LOAD IMAGE!");}
 			clippers_img = cvLoadImage( clippers_file_.c_str(), 1 );
 			hammer_img = cvLoadImage( hammer_file_.c_str(), 1 );
 			machete_img = cvLoadImage( machete_file_.c_str(), 1 );
