@@ -114,24 +114,26 @@ public:
 	std::vector<double> matchImageCall( IplImage * image, _ServiceRequest &req )
 	{
 		std::vector<double> result;
+		ROS_INFO("%i 2", gray_image_->height);
 		cvCvtColor( image, gray_image_, CV_BGR2GRAY);
+		ROS_INFO("%i 3", gray_image_->height);
 		if ( req.desired_image == _ServiceRequest::IMAGE_ALL || req.desired_image == _ServiceRequest::IMAGE_AXE )
 		{
 			result.push_back( cvMatchShapes( gray_axe_, gray_image_, match_method_, 0 ) );
 		}
-		else if ( req.desired_image == _ServiceRequest::IMAGE_ALL || req.desired_image == _ServiceRequest::IMAGE_AXE )
+		if ( req.desired_image == _ServiceRequest::IMAGE_ALL || req.desired_image == _ServiceRequest::IMAGE_CLIPPERS )
 		{
 			result.push_back( cvMatchShapes( gray_clippers_, gray_image_, match_method_, 0 ) );
 		}
-		else if ( req.desired_image == _ServiceRequest::IMAGE_ALL || req.desired_image == _ServiceRequest::IMAGE_AXE )
+		if ( req.desired_image == _ServiceRequest::IMAGE_ALL || req.desired_image == _ServiceRequest::IMAGE_HAMMER )
 		{
 			result.push_back( cvMatchShapes( gray_hammer_, gray_image_, match_method_, 0 ) );
 		}
-		else if ( req.desired_image == _ServiceRequest::IMAGE_ALL || req.desired_image == _ServiceRequest::IMAGE_AXE )
+		if ( req.desired_image == _ServiceRequest::IMAGE_ALL || req.desired_image == _ServiceRequest::IMAGE_HAMMER )
 		{
 			result.push_back( cvMatchShapes( gray_machete_, gray_image_, match_method_, 0 ) );
 		}
-
+		ROS_INFO("%i 4", gray_image_->height);
 
 		//ROS_INFO( "Match Value::: Axe: %d Clippers: %d Hammer: %d Machete: %d", axe_match, clippers_match, hammer_match, machete_match );
 
@@ -163,6 +165,11 @@ public:
 			clippers_img = cvLoadImage( clippers_file_.c_str(), 1 );
 			hammer_img = cvLoadImage( hammer_file_.c_str(), 1 );
 			machete_img = cvLoadImage( machete_file_.c_str(), 1 );
+			if(!hammer_img){ROS_ERROR ("COULD NOT LOAD IMAGE!");}
+			if(!clippers_img){ROS_ERROR ("COULD NOT LOAD IMAGE!");}
+			if(!machete_img){ROS_ERROR ("COULD NOT LOAD IMAGE!");}
+
+			ROS_INFO("%i", cvSize (axe_img -> width, axe_img -> height));
 
 			//ROS_ERROR ("axe file is %s, clippers file is %s", axe_file_, clippers_file_);
 
@@ -200,8 +207,9 @@ public:
 		{
 			gray_image_ = cvCreateImage( cvSize( ipl_img->width, ipl_img->height ), IPL_DEPTH_8U, 1 );
 		}
-
+		ROS_INFO("%i 1", gray_image_->height);
 		resp.percent_match = matchImageCall( ipl_img, req );
+		ROS_INFO("%d", cv_img_.size().width);
 		return cv_img_;
 	}
 };
