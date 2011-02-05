@@ -129,7 +129,7 @@ public:
 		{
 			result.push_back( cvMatchShapes( gray_hammer_, gray_image_, match_method_, 0 ) );
 		}
-		if ( req.desired_image == _ServiceRequest::IMAGE_ALL || req.desired_image == _ServiceRequest::IMAGE_HAMMER )
+		if ( req.desired_image == _ServiceRequest::IMAGE_ALL || req.desired_image == _ServiceRequest::IMAGE_MACHETE )
 		{
 			result.push_back( cvMatchShapes( gray_machete_, gray_image_, match_method_, 0 ) );
 		}
