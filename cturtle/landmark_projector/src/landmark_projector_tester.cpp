@@ -1,6 +1,6 @@
 /*******************************************************************************
  *
- *      landmark_projector
+ *      landmark_projector_tester
  *
  *      Copyright (c) 2010
  *
@@ -35,39 +35,20 @@
  *      OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  *******************************************************************************/
-#include <math.h>
+#include <vector>
 
-#include <landmark_map/Landmark.h>
 #include <color_segmenter/FindBlobs.h>
 
 #include <landmark_projector/landmark_projector.h>
 
-Landmark LandmarkProjector::projectBouy(color_segmenter::ColorBlob &b,
-		double dist_measured_from, double width_at_dist_measured,
-		double bouy_actual_width)
+int main(int argc, char ** argv)
 {
-	//REMEMBER BOUY SIZE!
-	double radius = sqrt(b.mass / M_PI);
-	double dist = (width_at_dist_measured / (radius * 2)) * dist_measured_from;
-	//If this doesn't work, it's totally not my fault.
-	double scalar = (width_at_dist_measured / (radius * 2)) * bouy_actual_width;
+	color_segmenter::ColorBlob b;
+	b.x = 10;
+	b.y = 20;
+	b.mass = 100;
+	Landmark l = LandmarkProjector::projectBouy(b);
+	std::cout << "Bouy is at location (" << l.center_.x << "," << l.center_.y << "," << l.center_.z << ")";
 
-	double x = dist;
-	double y = -b.x * scalar;
-	double z = b.y * scalar;
-
-	Landmark l(cv::Point3d(x, y, z));
-	l.shape_type_ = Landmark::LandmarkType::Buoy;
-
-	return l;
-}
-
-void LandmarkProjector::projectBin(Landmark &l)
-{
-
-}
-
-void LandmarkProjector::projectPipe(Landmark &l)
-{
-
+	return 0;
 }

@@ -13,6 +13,7 @@
   <depend package="geometry_msgs"/>
   <depend package="opencv2"/>
   <depend package="localization_defs"/>
+  <depend package="color_segmenter"/>
 
 </package>
 
