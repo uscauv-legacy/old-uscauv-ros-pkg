@@ -146,7 +146,7 @@ bool BaseImageProc<_ReconfigureType, _ServiceType>::serviceCB( _ServiceRequest &
 		last_response_ = resp;
 	}
 
-	if ( this->publish_image_ && this->reconfigure_initialized_ ) this->publishCvImage( this->cv_img_ );
+	if ( this->publish_image_ && this->reconfigure_initialized_ && this->cv_img_.size().width == 0 && this->cv_img_.size().height == 0 ) this->publishCvImage( this->cv_img_ );
 
 
 	// notify ROS whether or not everything executed properly
