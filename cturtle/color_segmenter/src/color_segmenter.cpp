@@ -99,10 +99,12 @@ public:
 			drawSegments( cv_img_,
 			              resp.blob_array.color_blobs );
 		}
-		for (int i = 0; i < resp.blob_array.color_blobs.size(); i++)
+		for (unsigned int i = 0; i < resp.blob_array.color_blobs.size(); i++)
 		{
 			resp.blob_array.color_blobs[i].color = req.blob_descriptor.color;
 		}
+		///Changes at the end since the methods above rely on the origin being in the top left
+		changeOriginToCenter(cv_img_, resp.blob_array.color_blobs);
 		return cv_img_;
 	}
 
@@ -350,6 +352,15 @@ public:
 	{
 		// param_name_ = config.param_name;
 		use_flood_fill_ = config.use_flood_fill;
+	}
+
+	void changeOriginToCenter(cv::Mat &img, std::vector<color_segmenter::ColorBlob> &blobVector)
+	{
+		for (unsigned int i = 0; i < blobVector.size(); i++)
+		{
+			blobVector[i].x -= (img.cols / 2);
+			blobVector[i].y -= (img.rows / 2);
+		}
 	}
 
 };
