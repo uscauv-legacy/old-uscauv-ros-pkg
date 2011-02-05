@@ -139,6 +139,8 @@ bool BaseImageProc<_ReconfigureType, _ServiceType>::serviceCB( _ServiceRequest &
 		// cv_img_ has the raw image data that should be analyzed
 		if ( this->reconfigure_initialized_ ) this->cv_img_ = processImage( ipl_img, req, resp );
 
+		if ( this->cv_img_.size().width == 0 && this->cv_img_.size().height == 0 ) this->cv_img_ = cv::Mat( ipl_img );
+
 
 		// store the last response to save processing time
 		last_response_ = resp;
