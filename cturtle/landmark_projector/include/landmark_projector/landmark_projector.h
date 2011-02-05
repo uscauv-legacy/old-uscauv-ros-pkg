@@ -9,10 +9,16 @@
 #define LANDMARK_PROJECTOR_H_
 
 #include <landmark_map/Landmark.h>
+#include <color_segmenter/FindBlobs.h>
 
-Landmark projectLandmark(Landmark l);
-void projectBouy(Landmark &l);
-void projectBin(Landmark &l);
-void projectPipe(Landmark &l);
+class LandmarkProjector
+    {
+public:
+    static Landmark projectBouy(color_segmenter::ColorBlob &b,
+	    double dist_measured_from = 0.3048, double width_at_dist_measured = 374,
+	    double bouy_actual_width = 0.19404187);
+    static void projectBin(Landmark &l);
+    static void projectPipe(Landmark &l);
+ };
 
 #endif /* LANDMARK_PROJECTOR_H_ */
