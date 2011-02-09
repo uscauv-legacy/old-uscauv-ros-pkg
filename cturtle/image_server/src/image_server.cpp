@@ -1,34 +1,22 @@
 #include <base_image_proc/base_image_proc.h>
-
-#include <iostream>
-#include <iomanip>
-#include <sstream>
-#include <vector>
+#include <image_loader/image_loader.h>
 
 class ImageServer: public BaseImageProc<>
 {
 private:
-	std::vector<cv::Mat> image_cache_;
+	ImageLoader image_loader_;
 
-	std::string file_prefix_;
-	std::string file_ext_;
-	int start_;
-	int end_;
-	int digits_;
 	double rate_;
 	bool loop_;
 
 public:
 	ImageServer( ros::NodeHandle & nh ) :
-		BaseImageProc<> ( nh )
+		BaseImageProc<> ( nh ), image_loader_( nh_priv_ )
 	{
-		nh_priv_.param( "prefix", file_prefix_, std::string( "" ) );
-		nh_priv_.param( "start", start_, 0 );
-		nh_priv_.param( "end", end_, 0 );
-		nh_priv_.param( "digits", digits_, 0 );
-		nh_priv_.param( "ext", file_ext_, std::string( "" ) );
 		nh_priv_.param( "rate", rate_, 15.0 );
 		nh_priv_.param( "loop", loop_, false );
+
+		image_loader_.loadImages();
 	}
 
 	~ImageServer()
@@ -38,58 +26,20 @@ public:
 
 	void spinOnce()
 	{
-		static int current_frame = start_;
+		static int current_frame = image_loader_.start_;
 
-		/*if ( current_frame > end_ )
+		ROS_INFO("spinning...");
+
+		if ( image_loader_.images_loaded_ && image_loader_.image_cache_.size() > 0 && current_frame <= image_loader_.end_ )
 		{
-			if ( loop_ )
-			{
-				current_frame = start_;
-			}
-			else
-			{
-				ROS_INFO( "returning; current_frame %d", current_frame );
-				ros::Rate( rate_ ).sleep();
-				return;
-			}
-		}*/
-
-		if( current_frame > end_ )
-			return;
-
-		cv::Mat img;
-		if ( image_cache_.size() > 0 && image_cache_.size() > current_frame - start_ )
-		{
-			img = image_cache_[current_frame - start_];
+			ROS_INFO( "Publishing image %d index %d", current_frame, current_frame - image_loader_.start_ );
+			publishCvImage( &(image_loader_.image_cache_[current_frame - image_loader_.start_]) );
 		}
-		else
-		{
-			std::stringstream filename;
-			filename << file_prefix_ << std::setfill( '0' ) << std::setw( digits_ ) << current_frame << file_ext_;
-			ROS_INFO( "Opening %s", filename.str().c_str() );
-			img = cv::imread( filename.str().c_str() );
-
-			if ( img.data != NULL )
-			{
-				image_cache_.push_back( img );
-			}
-			else
-			{
-				ROS_WARN( "Ignoring %s; does not exist in filesystem", filename.str().c_str() );
-				end_--;
-				current_frame--;
-			}
-		}
-
-		//Memory leak? Probably.
-		ROS_INFO( "Publishing image %d", current_frame );
-		IplImage ipl_img = img;
-		publishCvImage( &ipl_img );
 
 		ros::Rate( rate_ ).sleep();
 		current_frame++;
 
-		if( current_frame > end_ && loop_ ) current_frame = start_;
+		if ( current_frame > image_loader_.end_ && loop_ ) current_frame = image_loader_.start_;
 	}
 };
 
