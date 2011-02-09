@@ -1,0 +1,13 @@
+<launch>
+	<!-- gui controls for the trainer -->
+	<node pkg="dynamic_reconfigure" type="reconfigure_gui" name="trainer_options" output="screen" />
+	
+	<!-- the trainer -->
+	<node pkg="color_classifier" type="trainer" name="trainer_gui" args="image:=/image_server/output_image" output="screen"/>
+	
+	<!-- image server which sends images to the trainer -->
+	<include file="$(find seabee3_launch)/seabee3_vision_tester.launch">
+		<!-- publish images at this frequency -->
+	</include>
+	<param name="/image_server/rate" type="double" value="0.05" />
+</launch>
