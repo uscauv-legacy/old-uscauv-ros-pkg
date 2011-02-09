@@ -8,4 +8,7 @@ rosbuild_add_library(${PROJECT_NAME} base_node.cpp
 									 base_teleop.cpp
 									 mathy_math.cpp
 									 timeout_monitor.cpp
-									 colors.cpp)
+									 colors.cpp
+									 image_loader.cpp)
+									 
+rosbuild_add_executable(test_base_image_proc test_base_image_proc.cpp)

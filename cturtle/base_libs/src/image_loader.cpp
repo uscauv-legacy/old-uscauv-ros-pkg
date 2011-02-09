@@ -1,8 +1,8 @@
 /*******************************************************************************
  *
- *      base_image_proc_tester
+ *      image_loader
  * 
- *      Copyright (c) 2010, edward
+ *      Copyright (c) 2011, edward
  *      All rights reserved.
  *
  *      Redistribution and use in source and binary forms, with or without
@@ -33,16 +33,47 @@
  *
  *******************************************************************************/
 
-#include <base_image_proc/base_image_proc.h>
-#include <mathy_math/mathy_math.h>
+#include <image_loader/image_loader.h>
 
-int main( int argc, char ** argv )
+ImageLoader::ImageLoader( ros::NodeHandle & nh ) : images_loaded_( false )
 {
-	ros::init( argc, argv, "color_classifier" );
-	ros::NodeHandle nh;
+	nh.param( "prefix", file_prefix_, std::string( "image" ) );
+	nh.param( "start", start_, 0 );
+	nh.param( "end", end_, 0 );
+	nh.param( "digits", digits_, 1 );
+	nh.param( "ext", file_ext_, std::string( ".png" ) );
 
-	BaseImageProc<> base_image_proc( nh );
-	base_image_proc.spin();
+	ROS_INFO("constructed");
+}
 
-	return 0;
+std::vector<IplImage> ImageLoader::loadImages()
+{
+	ROS_INFO("Loading images %s %d %d %d %s", file_prefix_.c_str(), start_, end_, digits_, file_ext_.c_str() );
+	cv::Mat img;
+	for ( int i = start_; i < end_; i++ )
+	{
+		std::stringstream filename;
+		filename << file_prefix_ << std::setfill( '0' ) << std::setw( digits_ ) << i << file_ext_;
+
+		img = cv::imread( filename.str().c_str() );
+
+		if ( img.data != NULL && img.size().width * img.size().height > 0 )
+		{
+			ROS_INFO( "Opening %s %dx%d", filename.str().c_str(), img.size().width, img.size().height );
+			IplImage ipl_img = IplImage( img );
+			image_cache_.push_back( ipl_img );
+		}
+		else
+		{
+			ROS_WARN( "Ignoring %s; does not exist in filesystem", filename.str().c_str() );
+			end_--;
+			i--;
+		}
+	}
+
+	images_loaded_ = true;
+
+	ROS_INFO("done");
+
+	return image_cache_;
 }

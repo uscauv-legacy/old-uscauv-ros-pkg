@@ -1,8 +1,8 @@
 /*******************************************************************************
  *
- *      base_image_proc_tester
+ *      image_loader
  * 
- *      Copyright (c) 2010, edward
+ *      Copyright (c) 2011, edward
  *      All rights reserved.
  *
  *      Redistribution and use in source and binary forms, with or without
@@ -33,16 +33,42 @@
  *
  *******************************************************************************/
 
-#include <base_image_proc/base_image_proc.h>
-#include <mathy_math/mathy_math.h>
+#ifndef IMAGE_LOADER_H_
+#define IMAGE_LOADER_H_
 
-int main( int argc, char ** argv )
+#include <vector>
+#include <string>
+#include <iostream>
+#include <iomanip>
+#include <sstream>
+#include <ros/ros.h>
+// for ImageTransport, Publisher
+#include <image_transport/image_transport.h>
+// for Mat
+#include <opencv/cv.h>
+#include <cxcore.h>
+// for image utilities like imread()
+#include "highgui.h"
+//for CvBridge
+#include <cv_bridge/CvBridge.h>
+
+class ImageLoader
 {
-	ros::init( argc, argv, "color_classifier" );
-	ros::NodeHandle nh;
+private:
+	ros::NodeHandle nh_priv_;
 
-	BaseImageProc<> base_image_proc( nh );
-	base_image_proc.spin();
+public:
+	typedef std::vector<IplImage> _ImageCache;
 
-	return 0;
-}
+	_ImageCache image_cache_;
+	bool images_loaded_;
+
+	std::string file_prefix_, file_ext_;
+	int start_, end_, digits_;
+
+	ImageLoader( ros::NodeHandle & nh );
+
+	std::vector<IplImage> loadImages();
+};
+
+#endif /* IMAGE_LOADER_H_ */
