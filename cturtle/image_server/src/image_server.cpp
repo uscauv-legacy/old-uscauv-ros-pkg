@@ -21,25 +21,27 @@ public:
 
 	~ImageServer()
 	{
-		delete img_pub_;
 	}
 
 	void spinOnce()
 	{
 		static int current_frame = image_loader_.start_;
+		static IplImage * img = NULL;
 
-		ROS_INFO("spinning...");
-
-		if ( image_loader_.images_loaded_ && image_loader_.image_cache_.size() > 0 && current_frame <= image_loader_.end_ )
+		if ( image_loader_.images_loaded_ && image_loader_.image_cache_.size() > 0 && current_frame < image_loader_.end_ )
 		{
-			ROS_INFO( "Publishing image %d index %d", current_frame, current_frame - image_loader_.start_ );
-			publishCvImage( &(image_loader_.image_cache_[current_frame - image_loader_.start_]) );
+			ROS_INFO( "Publishing image %d", current_frame );
+			img = &(image_loader_.image_cache_[current_frame - image_loader_.start_]);
+			if( img )
+				publishCvImage( img );
+			else
+				ROS_ERROR("Bad pointer in image cache...");
 		}
 
 		ros::Rate( rate_ ).sleep();
 		current_frame++;
 
-		if ( current_frame > image_loader_.end_ && loop_ ) current_frame = image_loader_.start_;
+		if ( current_frame >= image_loader_.end_ && loop_ ) current_frame = image_loader_.start_;
 	}
 };
 
