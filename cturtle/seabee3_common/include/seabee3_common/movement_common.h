@@ -42,44 +42,44 @@
 namespace movement_common
 {
 	const static int NUM_MOTOR_CONTROLLERS = 9;
-	struct MotorControllerIDs
+	namespace MotorControllerIDs
 	{
-		const static int FWD_RIGHT_THRUSTER = 3;
-		const static int FWD_LEFT_THRUSTER = 1;
-		const static int DEPTH_RIGHT_THRUSTER = 4;
-		const static int DEPTH_LEFT_THRUSTER = 2;
-		const static int STRAFE_FRONT_THRUSTER = 0;
-		const static int STRAFE_BACK_THRUSTER = 5;
-		const static int SHOOTER = 6;
-		const static int DROPPER_STAGE1 = 7;
-		const static int DROPPER_STAGE2 = 8;
+		const int FWD_RIGHT_THRUSTER = 3;
+		const int FWD_LEFT_THRUSTER = 1;
+		const int DEPTH_RIGHT_THRUSTER = 4;
+		const int DEPTH_LEFT_THRUSTER = 2;
+		const int STRAFE_FRONT_THRUSTER = 0;
+		const int STRAFE_BACK_THRUSTER = 5;
+		const int SHOOTER = 6;
+		const int DROPPER_STAGE1 = 7;
+		const int DROPPER_STAGE2 = 8;
 	};
 
 	const static int NUM_FIRING_DEVICES = 3;
-	struct FiringDeviceIDs
+	namespace FiringDeviceIDs
 	{
-		const static int shooter = 0;
-		const static int dropper_stage1 = 1;
-		const static int dropper_stage2 = 2;
+		const int shooter = 0;
+		const int dropper_stage1 = 1;
+		const int dropper_stage2 = 2;
 	};
 
-	struct Axes
+	namespace Axes
 	{
-		const static int speed = 0;
-		const static int strafe = 1;
-		const static int depth = 2;
+		const int speed = 0;
+		const int strafe = 1;
+		const int depth = 2;
 
-		const static int roll = 3;
-		const static int pitch = 4;
-		const static int yaw = 5;
+		const int roll = 3;
+		const int pitch = 4;
+		const int yaw = 5;
 
-		const static int speed_rel = 6;
-		const static int strafe_rel = 7;
-		const static int depth_rel = 8;
+		const int speed_rel = 6;
+		const int strafe_rel = 7;
+		const int depth_rel = 8;
 
-		const static int roll_rel = 9;
-		const static int pitch_rel = 10;
-		const static int yaw_rel = 11;
+		const int roll_rel = 9;
+		const int pitch_rel = 10;
+		const int yaw_rel = 11;
 	};
 
 	typedef std::map<int, int> ThrusterArrayCfg;

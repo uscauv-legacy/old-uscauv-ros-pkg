@@ -53,12 +53,11 @@
 #define DEPTH_I 0
 #define DEPTH_D 0
 
+using namespace movement_common;
+
 class BeeStem3Driver
 {
 public:
-
-	typedef movement_common::MotorControllerIDs _MotorControllerIDs;
-	typedef movement_common::FiringDeviceIDs _FiringDeviceIDs;
 
 	struct FiringDeviceParams
 	{

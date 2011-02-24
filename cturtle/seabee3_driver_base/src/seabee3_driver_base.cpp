@@ -45,13 +45,12 @@
 #include <seabee3_driver_base/Pressure.h> // for outgoing Pressure
 //srvs
 #include <seabee3_driver_base/FiringDeviceAction.h> // for FiringDeviceAction
+
+using namespace movement_common;
 class Seabee3DriverBase: public BaseNode<>
 {
 public:
-	typedef movement_common::Axes _Axes;
-	typedef movement_common::MotorControllerIDs _MotorControllerIDs;
 	typedef movement_common::ThrusterArrayCfg _ThrusterArrayCfg;
-	typedef movement_common::FiringDeviceIDs _FiringDeviceID;
 
 private:
 	ros::Subscriber motor_cntl_sub_;
@@ -100,19 +99,19 @@ public:
 		double thruster_dir;
 
 		nh_priv_.param( "speed_m1_dir", thruster_dir, 1.0 );
-		thruster_dir_cfg_[_MotorControllerIDs::FWD_LEFT_THRUSTER] = thruster_dir;
+		thruster_dir_cfg_[MotorControllerIDs::FWD_LEFT_THRUSTER] = thruster_dir;
 		nh_priv_.param( "speed_m2_dir", thruster_dir, 1.0 );
-		thruster_dir_cfg_[_MotorControllerIDs::DEPTH_LEFT_THRUSTER] = thruster_dir;
+		thruster_dir_cfg_[MotorControllerIDs::DEPTH_LEFT_THRUSTER] = thruster_dir;
 
 		nh_priv_.param( "strafe_m1_dir", thruster_dir, 1.0 );
-		thruster_dir_cfg_[_MotorControllerIDs::STRAFE_FRONT_THRUSTER] = thruster_dir;
+		thruster_dir_cfg_[MotorControllerIDs::STRAFE_FRONT_THRUSTER] = thruster_dir;
 		nh_priv_.param( "strafe_m2_dir", thruster_dir, 1.0 );
-		thruster_dir_cfg_[_MotorControllerIDs::STRAFE_BACK_THRUSTER] = thruster_dir;
+		thruster_dir_cfg_[MotorControllerIDs::STRAFE_BACK_THRUSTER] = thruster_dir;
 
 		nh_priv_.param( "depth_m1_dir", thruster_dir, 1.0 );
-		thruster_dir_cfg_[_MotorControllerIDs::DEPTH_LEFT_THRUSTER] = thruster_dir;
+		thruster_dir_cfg_[MotorControllerIDs::DEPTH_LEFT_THRUSTER] = thruster_dir;
 		nh_priv_.param( "depth_m2_dir", thruster_dir, 1.0 );
-		thruster_dir_cfg_[_MotorControllerIDs::DEPTH_RIGHT_THRUSTER] = thruster_dir;
+		thruster_dir_cfg_[MotorControllerIDs::DEPTH_RIGHT_THRUSTER] = thruster_dir;
 
 		motor_cntl_sub_ = nh.subscribe( "/seabee3/motor_cntl", 1, &Seabee3DriverBase::motorCntlCB, this );
 
@@ -161,17 +160,17 @@ public:
 
 	bool dropper1ActionCB( seabee3_driver_base::FiringDeviceAction::Request &req, seabee3_driver_base::FiringDeviceAction::Response &res )
 	{
-		return executeFiringDeviceAction( req, res, _FiringDeviceID::dropper_stage1 );
+		return executeFiringDeviceAction( req, res, FiringDeviceIDs::dropper_stage1 );
 	}
 
 	bool dropper2ActionCB( seabee3_driver_base::FiringDeviceAction::Request &req, seabee3_driver_base::FiringDeviceAction::Response &res )
 	{
-		return executeFiringDeviceAction( req, res, _FiringDeviceID::dropper_stage2 );
+		return executeFiringDeviceAction( req, res, FiringDeviceIDs::dropper_stage2 );
 	}
 
 	bool shooterActionCB( seabee3_driver_base::FiringDeviceAction::Request &req, seabee3_driver_base::FiringDeviceAction::Response &res )
 	{
-		return executeFiringDeviceAction( req, res, _FiringDeviceID::shooter );
+		return executeFiringDeviceAction( req, res, FiringDeviceIDs::shooter );
 	}
 
 	virtual void spinOnce()
