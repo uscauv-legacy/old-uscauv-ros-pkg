@@ -7,5 +7,6 @@
 		<param name="ext" type="string" value=".jpg" />
 		<param name="rate" type="double" value="0.5" />
 		<param name="loop" type="bool" value="true" />
+		<!-- _prefix:=/home/edward/workspace/seabee3-ros-pkg/seabee3_launch/frames/frame00 _start:=0 _end:=16 _digits:=2 _ext:=.jpg _rate:=0.5 _loop:=true -->
 	</node>
 </launch>
