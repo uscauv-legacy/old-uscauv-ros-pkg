@@ -46,7 +46,7 @@ ImageLoader::ImageLoader( ros::NodeHandle & nh ) : images_loaded_( false )
 	ROS_INFO("constructed");
 }
 
-std::vector<IplImage> ImageLoader::loadImages()
+std::vector<IplImage *> ImageLoader::loadImages()
 {
 	ROS_INFO("Loading images %s %d %d %d %s", file_prefix_.c_str(), start_, end_, digits_, file_ext_.c_str() );
 	cv::Mat img;
@@ -60,7 +60,7 @@ std::vector<IplImage> ImageLoader::loadImages()
 		if ( img.data != NULL && img.size().width * img.size().height > 0 )
 		{
 			ROS_INFO( "Opening %s %dx%d", filename.str().c_str(), img.size().width, img.size().height );
-			IplImage ipl_img = IplImage( img );
+			IplImage * ipl_img = new IplImage( img );
 			image_cache_.push_back( ipl_img );
 		}
 		else

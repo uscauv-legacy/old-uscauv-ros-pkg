@@ -58,7 +58,7 @@ private:
 	ros::NodeHandle nh_priv_;
 
 public:
-	typedef std::vector<IplImage> _ImageCache;
+	typedef std::vector<IplImage *> _ImageCache;
 
 	_ImageCache image_cache_;
 	bool images_loaded_;
@@ -68,7 +68,7 @@ public:
 
 	ImageLoader( ros::NodeHandle & nh );
 
-	std::vector<IplImage> loadImages();
+	std::vector<IplImage *> loadImages();
 };
 
 #endif /* IMAGE_LOADER_H_ */

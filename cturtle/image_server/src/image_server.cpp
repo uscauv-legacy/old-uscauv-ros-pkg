@@ -31,7 +31,7 @@ public:
 		if ( image_loader_.images_loaded_ && image_loader_.image_cache_.size() > 0 && current_frame < image_loader_.end_ )
 		{
 			ROS_INFO( "Publishing image %d", current_frame );
-			img = &(image_loader_.image_cache_[current_frame - image_loader_.start_]);
+			img = image_loader_.image_cache_[current_frame - image_loader_.start_];
 			if( img )
 				publishCvImage( img );
 			else
