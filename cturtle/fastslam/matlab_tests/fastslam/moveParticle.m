@@ -16,6 +16,5 @@ function [newpos, G, V] = updateMovement(pos, movement, variance)
        sin(pos(3) + rotation), cos(pos(3) + rotation);
        0                     , 1 ];
 
-
   newpos = pos+delta;
 end
