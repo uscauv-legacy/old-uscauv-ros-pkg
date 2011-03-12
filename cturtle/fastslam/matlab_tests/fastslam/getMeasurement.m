@@ -8,7 +8,7 @@ function [z, H] = getMeasurement(pos, landmark_pos, observation_variance)
 
   landmark_distance = pdist([landmark_pos(1:2)';pos(1:2)']) + normrnd(0, observation_variance(1)*.75);
 
-  landmark_angle = angle_to_landmark +  normrnd(0, observation_variance(2)*.75);
+  landmark_angle = angle_to_landmark +  normrnd(0, observation_variance(2)*.7);
 
   q = landmark_distance^2.0;
 
