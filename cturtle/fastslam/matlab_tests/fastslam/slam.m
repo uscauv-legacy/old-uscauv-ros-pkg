@@ -1,25 +1,24 @@
-timesteps = 120;
-arrow_length = .5;
+timesteps = 200;
 max_read_distance = 1.5;
 
 real_landmarks = [1.0,  2.0,  0.0, 0.0, 1.0;     % x
-                  2.0,  1.0   2.0, 0.5, 0.5;     % y
+                  3.0,  2.5   3.4, 1.5, 3.5;     % y
                   0.0,  0.0   0.0, 0.0, 0.0];    % Nuthin
 
 real_position = [0.0;     % x
-                 0.0;     % y
-                 pi/4.0]; % rotation
+                 -1.0;     % y
+                 pi/3.0]; % rotation
 
-movement_command = [.03;     % Distance
-                    .01];    % Rotation
+movement_command = [.05;     % Distance
+                    .00];    % Rotation
                     
-movement_variance = [.09;   % Distance
-                     .055]; % Rotation
+movement_variance = [.1;   % Distance
+                     .5]; % Rotation
 
 M = [movement_variance(1), 0.0;
      0.0, movement_variance(2)];
 
-measurement_variance = [1.0; % Distance
+measurement_variance = [0.1; % Distance
                         0.01; % Angle
                         .0001]; % Landmark Identity
 
@@ -62,6 +61,8 @@ for timestep = 1:timesteps
 
     %disp('perfect:');
     z_perfect = getMeasurement(real_position, real_landmark, [0 0]);
+    real_distance(lIdx) = z_perfect(1);
+    real_angle(lIdx)    = z_perfect(2);
 
     %disp('real:');
     [z_real, G] = getMeasurement(real_position, real_landmark, measurement_variance);
@@ -70,7 +71,7 @@ for timestep = 1:timesteps
 
 
     % If the landmark is close enough, then we can spot it
-    if(z_perfect(1) < max_read_distance)
+    if(real_distance(lIdx) < max_read_distance)
       doResample = true;
 
       perf_x = cos(z_perfect(2))*z_perfect(1) + real_position(1);
@@ -102,19 +103,14 @@ for timestep = 1:timesteps
           residual = z_real - z_p;
 
           %Calculate the Kalman gain
-          %Q = G' * particles(pIdx).landmarks(lIdx).E * G + R;
-          %K = particles(pIdx).landmarks(lIdx).E * G * Q;
-
           Q = G' * particles(pIdx).landmarks(lIdx).E * G + R;
           K = particles(pIdx).landmarks(lIdx).E * G * inv(Q);
-
 
           % Mix the ideal reading, and our actual reading using the Kalman gain, and use the result
           % to predict a new landmark position
           particles(pIdx).landmarks(lIdx).pos = particles(pIdx).landmarks(lIdx).pos + K*(residual); 
 
           % Update the covariance of this landmark
-          %particles(pIdx).landmarks(lIdx).E = (eye(size(K)) - K*G')*particles(pIdx).landmarks(lIdx).E;
           particles(pIdx).landmarks(lIdx).E = (eye(size(K)) - K*G')*particles(pIdx).landmarks(lIdx).E;
 
           % Update the weight of the particle
@@ -157,12 +153,21 @@ for timestep = 1:timesteps
 
   % Plot the real robot
   plot(pos_history(1,:), pos_history(2,:), 'r');
-  plot(real_position(1), real_position(2), 'm*');
+  w = .1;
+  l = .3;
+  x = real_position(1);
+  y = real_position(2);
+  t = real_position(3);
+  plot(real_position(1), real_position(2), 'mo', ...
+                                           'LineWidth',1.5, ...
+                                           'MarkerEdgeColor','k', ...
+                                           'MarkerFaceColor',[0 1 0], ...
+                                           'MarkerSize',10);
 
   % Show the sensor measurement as an arrow
   for lIdx=1:size(real_landmarks,2)
     real_landmark = real_landmarks(:, lIdx);
-    if(read_distance(lIdx) < max_read_distance)
+    if(real_distance(lIdx) < max_read_distance)
       line([real_position(1), real_position(1)+cos(read_angle(lIdx))*read_distance(lIdx)], ...
            [real_position(2), real_position(2)+sin(read_angle(lIdx))*read_distance(lIdx)]);
     end
