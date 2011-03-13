@@ -1,47 +1,41 @@
-timesteps = 60;
+timesteps = 120;
 arrow_length = .5;
-max_read_distance = 9.5;
+max_read_distance = 1.5;
 
-
-%%%%%%%%%%%%%%%%  l1  l2  l3
-real_landmarks = [1.0,  2.0,  0.0;     % x
-                  2.0,  1.0   2.0;     % y
-                  0.0,  0.0   0.0];    % Nuthin
+real_landmarks = [1.0,  2.0,  0.0, 0.0, 1.0;     % x
+                  2.0,  1.0   2.0, 0.5, 0.5;     % y
+                  0.0,  0.0   0.0, 0.0, 0.0];    % Nuthin
 
 real_position = [0.0;     % x
                  0.0;     % y
                  pi/4.0]; % rotation
 
-movement_command = [.07;     % Distance
-                    .03];    % Rotation
+movement_command = [.03;     % Distance
+                    .01];    % Rotation
                     
-movement_variance = [.05;   % Distance
-                     .035]; % Rotation
+movement_variance = [.09;   % Distance
+                     .055]; % Rotation
 
 M = [movement_variance(1), 0.0;
      0.0, movement_variance(2)];
 
-measurement_variance = [0.01; % Distance
-                        .001; % Angle
-                        0]; % Nuthin
+measurement_variance = [1.0; % Distance
+                        0.01; % Angle
+                        .0001]; % Landmark Identity
 
 R = [measurement_variance(1), 0.0, 0.0;
      0.0, measurement_variance(2), 0.0;
      0.0, 0.0, measurement_variance(3)];
 
-
 % Create the particles 
-num_particles = 300;
+particles = [];
+num_particles = 100;
 for i = 1:num_particles
-
   particles(i).w = 1.0/num_particles;
-
   particles(i).position = real_position;
-
-  for lIdx=1:length(real_landmarks)
+  for lIdx=1:size(real_landmarks,2)
     particles(i).landmarks(lIdx).seen = false;
   end
-
 end
 
 pos_history = [];
@@ -56,64 +50,83 @@ for timestep = 1:timesteps
   for pIdx = 1:num_particles
     [particles(pIdx).position,G_p, V_p] = moveParticle( ...
         particles(pIdx).position, movement_command, movement_variance);
+     particles(pIdx).position(3) = real_position(3);
   end
 
   %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   % Take a noisy reading
 
-  measurementTaken = false;
-  for lIdx = 1:length(real_landmarks)
+  doResample = false;
+  for lIdx = 1:size(real_landmarks,2)
     real_landmark = real_landmarks(:, lIdx);
 
+    %disp('perfect:');
+    z_perfect = getMeasurement(real_position, real_landmark, [0 0]);
+
+    %disp('real:');
     [z_real, G] = getMeasurement(real_position, real_landmark, measurement_variance);
-    landmark_distance = z_real(1);
-    landmark_angle    = z_real(2);
+    read_distance(lIdx) = z_real(1);
+    read_angle(lIdx)    = z_real(2);
+
 
     % If the landmark is close enough, then we can spot it
-    if(landmark_distance < max_read_distance)
+    if(z_perfect(1) < max_read_distance)
+      doResample = true;
 
-      x = cos(landmark_angle)*landmark_distance + real_position(1);
-      y = sin(landmark_angle)*landmark_distance + real_position(2);
-      measurementTaken = true;
+      perf_x = cos(z_perfect(2))*z_perfect(1) + real_position(1);
+      perf_y = sin(z_perfect(2))*z_perfect(1) + real_position(2);
+      read_x = cos(z_real(2))*z_real(1) + real_position(1);
+      read_y = sin(z_real(2))*z_real(1) + real_position(2);
+      %disp(['Landmark: (',num2str(perf_x),',',num2str(perf_y),') ~ (',num2str(read_x),',',num2str(read_y),')']);
+
+      x = cos(read_angle(lIdx))*read_distance(lIdx) + real_position(1);
+      y = sin(read_angle(lIdx))*read_distance(lIdx) + real_position(2);
       for pIdx = 1:num_particles
 
         if(particles(pIdx).landmarks(lIdx).seen == false)
-          particles(pIdx).landmarks(lIdx).pos = [particles(pIdx).position(1) + cos(landmark_angle)*landmark_distance;
-                                                 particles(pIdx).position(2) + sin(landmark_angle)*landmark_distance;
+          % If we have never seen this landmark, then we need to initialize it
+          particles(pIdx).landmarks(lIdx).pos = [particles(pIdx).position(1) + cos(read_angle(lIdx))*read_distance(lIdx);
+                                                 particles(pIdx).position(2) + sin(read_angle(lIdx))*read_distance(lIdx);
                                                  0];
           particles(pIdx).landmarks(lIdx).E = inv(G) * R * inv(G)';
           particles(pIdx).landmarks(lIdx).seen = true;
 
+          partlan_x = particles(pIdx).landmarks(lIdx).pos(1);
+          partlan_y = particles(pIdx).landmarks(lIdx).pos(2);
+          %disp([' InitPos: (',num2str(partlan_x),',',num2str(partlan_y),')']);
+
         else
           % Get an ideal reading to our believed landmark position
-          z_p = getMeasurement(particles(pIdx).position, particles(pIdx).landmarks(lIdx).pos, [0;0]);
-
+          %disp('particle:');
+          [z_p, Gp] = getMeasurement(particles(pIdx).position, particles(pIdx).landmarks(lIdx).pos, [0;0]);
           residual = z_real - z_p;
 
-          x = cos(z_p(2))*landmark_distance + particles(pIdx).position(1);
-          y = sin(z_p(2))*landmark_distance + particles(pIdx).position(2);
+          %Calculate the Kalman gain
+          %Q = G' * particles(pIdx).landmarks(lIdx).E * G + R;
+          %K = particles(pIdx).landmarks(lIdx).E * G * Q;
 
           Q = G' * particles(pIdx).landmarks(lIdx).E * G + R;
+          K = particles(pIdx).landmarks(lIdx).E * G * inv(Q);
 
-          %Calculate the Kalman gain
-          K = particles(pIdx).landmarks(lIdx).E * G * Q;
 
           % Mix the ideal reading, and our actual reading using the Kalman gain, and use the result
           % to predict a new landmark position
           particles(pIdx).landmarks(lIdx).pos = particles(pIdx).landmarks(lIdx).pos + K*(residual); 
 
           % Update the covariance of this landmark
+          %particles(pIdx).landmarks(lIdx).E = (eye(size(K)) - K*G')*particles(pIdx).landmarks(lIdx).E;
           particles(pIdx).landmarks(lIdx).E = (eye(size(K)) - K*G')*particles(pIdx).landmarks(lIdx).E;
 
           % Update the weight of the particle
           particles(pIdx).w = particles(pIdx).w * norm(2*pi*Q).^(-1/2)*exp(-1/2*(residual)'*inv(Q)*(residual));
-        end
-      end
-    end
-  end
+        end %else
+      end %pIdx
+    end %distance
+
+
+  end %for landmark
   % Resample all particles based on their weights
-  if(measurementTaken)
-    %disp('Resampling');
+  if(doResample)
     particles = resample(particles);
   end
 
@@ -123,18 +136,15 @@ for timestep = 1:timesteps
   hold on;
 
   % Plot the landmarks
-  for lIdx=1:length(real_landmarks)
+  for lIdx=1:size(real_landmarks,2)
     plot(real_landmarks(1,lIdx), real_landmarks(2,lIdx), 'b*');
   end
 
-  for lIdx = 1:length(real_landmarks)
+  for lIdx = 1:size(real_landmarks,2)
     if(particles(1).landmarks(lIdx).seen)
-      avg_landmark_guess = particles(1).landmarks(lIdx).pos;
-      min_w = inf;
-      for pIdx = 2:num_particles
-        if norm(particles(pIdx).w) < min_w
-          avg_landmark_guess = avg_landmark_guess + particles(pIdx).landmarks(lIdx).pos;
-        end
+      avg_landmark_guess =[0;0;0];
+      for pIdx = 1:length(particles)
+        avg_landmark_guess = avg_landmark_guess + particles(pIdx).landmarks(lIdx).pos;
       end
       avg_landmark_guess = avg_landmark_guess / length(particles);
       plot(avg_landmark_guess(1), avg_landmark_guess(2), 'ko');
@@ -148,24 +158,17 @@ for timestep = 1:timesteps
   % Plot the real robot
   plot(pos_history(1,:), pos_history(2,:), 'r');
   plot(real_position(1), real_position(2), 'm*');
-  quiver(real_position(1), real_position(2), ...
-    cos(real_position(3))*arrow_length, ...
-    sin(real_position(3))*arrow_length);
 
   % Show the sensor measurement as an arrow
-  for lIdx=1:length(real_landmarks)
+  for lIdx=1:size(real_landmarks,2)
     real_landmark = real_landmarks(:, lIdx);
-    [z_real, G] = getMeasurement(real_position, real_landmark, measurement_variance);
-    landmark_distance = z_real(1);
-    landmark_angle    = z_real(2);
-    if(landmark_distance < max_read_distance)
-      quiver(real_position(1), real_position(2), ...
-            cos(landmark_angle)*landmark_distance, ...
-            sin(landmark_angle)*landmark_distance);
+    if(read_distance(lIdx) < max_read_distance)
+      line([real_position(1), real_position(1)+cos(read_angle(lIdx))*read_distance(lIdx)], ...
+           [real_position(2), real_position(2)+sin(read_angle(lIdx))*read_distance(lIdx)]);
     end
   end
 
-  axis([-2, 2, -1, 4]);
+  axis([-3, 3, -2, 5]);
   pause(.1);
 end
 

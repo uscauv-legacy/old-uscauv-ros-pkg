@@ -1,6 +1,6 @@
 function [newpos, G, V] = updateMovement(pos, movement, variance)
-  speed    = normrnd(movement(1), variance(1));
-  rotation = normrnd(movement(2), variance(2));
+  speed    = normrnd(movement(1), variance(1)*.25);
+  rotation = normrnd(movement(2), variance(2)*.25);
 
   delta = zeros(3,1);
   delta(1,1) = cos(pos(3)+rotation)*speed;

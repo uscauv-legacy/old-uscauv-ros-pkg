@@ -28,8 +28,8 @@ function [newParticles] = resample(oldParticles)
     newParticles = [newParticles, oldParticles(i)];
   end
 
-  %for i=1:length(newParticles)
-  %  newParticles(i).w = 1.0/length(newParticles);
-  %end
+  for i=1:length(newParticles)
+    newParticles(i).w = 1.0/length(newParticles);
+  end
 
 end
