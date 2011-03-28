@@ -1,4 +1,3 @@
-
 //! Segment an image using Super Pixel Segmentation.
 /*!
  * Returns an integer image where the value at each pixel denotes the group it
