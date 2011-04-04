@@ -101,7 +101,7 @@ public:
 		nh_priv_.param( "speed_m1_dir", thruster_dir, 1.0 );
 		thruster_dir_cfg_[MotorControllerIDs::FWD_LEFT_THRUSTER] = thruster_dir;
 		nh_priv_.param( "speed_m2_dir", thruster_dir, 1.0 );
-		thruster_dir_cfg_[MotorControllerIDs::DEPTH_LEFT_THRUSTER] = thruster_dir;
+		thruster_dir_cfg_[MotorControllerIDs::FWD_RIGHT_THRUSTER] = thruster_dir;
 
 		nh_priv_.param( "strafe_m1_dir", thruster_dir, 1.0 );
 		thruster_dir_cfg_[MotorControllerIDs::STRAFE_FRONT_THRUSTER] = thruster_dir;
