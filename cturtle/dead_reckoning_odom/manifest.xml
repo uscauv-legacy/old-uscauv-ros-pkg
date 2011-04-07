@@ -16,7 +16,7 @@
   <depend package="base_libs"/>
   <depend package="std_srvs"/>
   <depend package="seabee3_common"/>
-  <depend package="seabee3_physics"/>
+  <!-- <depend package="seabee3_physics"/> -->
 
 </package>
 

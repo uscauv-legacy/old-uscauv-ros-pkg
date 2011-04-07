@@ -79,7 +79,7 @@ geometry_msgs::Twist operator *( const geometry_msgs::Twist & twist, const doubl
 	return result;
 }
 
-class Seabee3Driver: public BaseRobotDriver<>
+class Seabee3Driver : public BaseRobotDriver<>
 {
 public:
 
@@ -125,6 +125,8 @@ private:
 
 	double motor_val_min_, motor_val_max_;
 
+	bool use_pid_assist_;
+
 	int cmd_vel_conversion_mode_;
 
 	std::map<int, double> cmd_vel_conversions;
@@ -144,11 +146,12 @@ public:
 
 		nh_priv_.param( "cmd_vel_conversion", cmd_vel_conversion_mode_, CmdVelConversionType::pid );
 
+		nh_priv_.param( "use_pid_assist", use_pid_assist_, false );
+
 		if ( !nh.getParam( "/seabee3_teleop/speed_scale", cmd_vel_conversions[Axes::speed] ) ) cmd_vel_conversions[Axes::speed] = 1.0;
 		if ( !nh.getParam( "/seabee3_teleop/strafe_scale", cmd_vel_conversions[Axes::strafe] ) ) cmd_vel_conversions[Axes::strafe] = 1.0;
 		if ( !nh.getParam( "/seabee3_teleop/depth_scale", cmd_vel_conversions[Axes::depth] ) ) cmd_vel_conversions[Axes::depth] = 1.0;
 		if ( !nh.getParam( "/seabee3_teleop/yaw_scale", cmd_vel_conversions[Axes::yaw] ) ) cmd_vel_conversions[Axes::yaw] = 1.0;
-
 
 		// scale motor values to be within the following min+max value such that
 		// |D'| = [ motor_val_min, motor_val_max ]
@@ -228,7 +231,6 @@ public:
 
 		reset_pose_srv_ = nh.advertiseService( "/seabee3/reset_pose", &Seabee3Driver::resetPoseCB, this );
 		set_desired_pose_srv_ = nh.advertiseService( "/seabee3/set_desired_pose", &Seabee3Driver::setDesiredPoseCB, this );
-
 
 		//set current xyz to 0, desired RPY to current RPY
 		resetPose();
@@ -410,10 +412,8 @@ public:
 	{
 		desired_pose_velocity_ = twist_cache_;
 
-
 		//fetchTfFrame( desired_pose_tf_, "landmark_map", "seabee3/desired_pose" );
 		fetchTfFrame( current_pose_tf_, global_frame_, "seabee3/base_link" );
-
 
 		//convert tf frames to Twist messages; fuck quaternions
 		//desired_pose_tf_ >> desired_pose_;
@@ -424,7 +424,6 @@ public:
 			resetMotorCntlMsg();
 
 			ros::Duration dt = ros::Time::now() - last_pid_update_time_;
-
 
 			//twistCache is essentially the linear and angular change in desired pose per second (linear + angular velocity)
 			//we multiply by the change in time to obtain the desired change in pose
@@ -441,8 +440,8 @@ public:
 			MathyMath::normalizeAngle( desired_pose_.angular.z );
 
 			MathyMath::normalizeAngle( current_pose_.angular.x );
-			MathyMath::normalizeAngle( current_pose_.angular.x );
-			MathyMath::normalizeAngle( current_pose_.angular.x );
+			MathyMath::normalizeAngle( current_pose_.angular.y );
+			MathyMath::normalizeAngle( current_pose_.angular.z );
 
 			error_in_xyz_.x = desired_pose_.linear.x - current_pose_.linear.x;
 			error_in_xyz_.y = desired_pose_.linear.y - current_pose_.linear.y;
@@ -451,7 +450,6 @@ public:
 			error_in_rpy_.x = MathyMath::angleDistRel( MathyMath::radToDeg( desired_pose_.angular.x ), MathyMath::radToDeg( current_pose_.angular.x ) );
 			error_in_rpy_.y = MathyMath::angleDistRel( MathyMath::radToDeg( desired_pose_.angular.y ), MathyMath::radToDeg( current_pose_.angular.y ) );
 			error_in_rpy_.z = MathyMath::angleDistRel( MathyMath::radToDeg( desired_pose_.angular.z ), MathyMath::radToDeg( current_pose_.angular.z ) );
-
 
 			//printf("error x %f y %f z %f r %f p %f y %f\n", error_in_xyz_.x, error_in_xyz_.y, error_in_xyz_.z, error_in_rpy_.x, error_in_rpy_.y, error_in_rpy_.z );
 
@@ -462,7 +460,6 @@ public:
 			MathyMath::capValue( error_in_rpy_.x, max_error_in_rpy_.x );
 			MathyMath::capValue( error_in_rpy_.y, max_error_in_rpy_.y );
 			MathyMath::capValue( error_in_rpy_.z, max_error_in_rpy_.z );
-
 
 			//			printf( "error x %f y %f z %f r %f p %f y %f\n", error_in_xyz_.x, error_in_xyz_.y, error_in_xyz_.z, error_in_rpy_.x, error_in_rpy_.y, error_in_rpy_.z );
 
@@ -475,14 +472,12 @@ public:
 			error_in_velocity.angular.y = physics_state_msg_.velocity.angular.y - desired_pose_velocity_.angular.y;
 			error_in_velocity.angular.z = physics_state_msg_.velocity.angular.z - desired_pose_velocity_.angular.z;
 
-
 			// error in work is the total work able to be done over the available distance minus the work required to stop the robot at the desired location
 			// W=Fx=mv^2/2
 			geometry_msgs::Vector3 error_in_work;
 			error_in_work.x = 10.0 * error_in_xyz_.x - physics_state_msg_.mass.linear.x * ( error_in_velocity.linear.x < 0 ? -1.0 : 1.0 ) * pow( error_in_velocity.linear.x, 2 ) / 2.0;
 			error_in_work.y = 10.0 * error_in_xyz_.y - physics_state_msg_.mass.linear.x * ( error_in_velocity.linear.y < 0 ? -1.0 : 1.0 ) * pow( error_in_velocity.linear.y, 2 ) / 2.0;
 			error_in_work.z = 5.0 * error_in_xyz_.z - physics_state_msg_.mass.linear.x * ( error_in_velocity.linear.z < 0 ? -1.0 : 1.0 ) * pow( error_in_velocity.linear.z, 2 ) / 2.0;
-
 
 			// Fx_min=mv^2/2; minimum stopping distnace x_min=mv^2/2F
 			// error in distance x_err=x-x_min
@@ -496,7 +491,6 @@ public:
 			motor_values[Axes::speed] = axis_dir_cfg_[Axes::speed] * pid_controller_.linear.x.updatePid( error_in_work.x, dt );
 			motor_values[Axes::strafe] = axis_dir_cfg_[Axes::strafe] * pid_controller_.linear.y.updatePid( error_in_work.y, dt );
 			motor_values[Axes::depth] = axis_dir_cfg_[Axes::depth] * pid_controller_.linear.z.updatePid( error_in_work.z, dt );
-
 
 			//double rollMotorVal = axis_dir_cfg_[roll] * pid_controller_.angular.x.updatePid( error_in_rpy_.x, dt );
 			//double pitchMotorVal = axis_dir_cfg_[pitch] * pid_controller_.angular.y.updatePid( error_in_rpy_.y, dt );
@@ -512,7 +506,6 @@ public:
 					error_in_velocity.angular.z, 2 ) / 2.0;
 			motor_values[Axes::yaw] = axis_dir_cfg_[Axes::yaw] * pid_controller_.angular.z.updatePid( error_in_work_yaw, dt );
 
-
 			//printf( "speed %f strafe %f depth %f yaw %f\n", speed_motor_val, strafe_motor_val, depth_motor_val, yaw_motor_val );
 
 
@@ -524,19 +517,78 @@ public:
 		last_pid_update_time_ = ros::Time::now();
 	}
 
-	void setMotorValsFromCmdVel()
+	// temporary change to enable heading-only PID
+	void stepAbsoluteMeasurementPID()
+	{
+		desired_pose_velocity_ = twist_cache_;
+
+		//fetchTfFrame( desired_pose_tf_, "landmark_map", "seabee3/desired_pose" );
+		fetchTfFrame( current_pose_tf_, global_frame_, "/seabee3/base_link" );
+
+		//convert tf frames to Twist messages; fuck quaternions
+		//desired_pose_tf_ >> desired_pose_;
+		current_pose_tf_ >> current_pose_;
+
+		if ( last_pid_update_time_ != ros::Time( -1 ) )
+		{
+			ros::Duration dt = ros::Time::now() - last_pid_update_time_;
+
+			//twistCache is essentially the linear and angular change in desired pose per second (linear + angular velocity)
+			//we multiply by the change in time to obtain the desired change in pose
+			//this change in pose is then added to the current pose; the result is desiredPose
+			const double t1 = dt.toSec();
+			geometry_msgs::Twist change_in_desired_pose = twist_cache_ * t1;
+			requestChangeInDesiredPose( change_in_desired_pose );
+
+			desired_pose_ >> desired_pose_tf_;
+			publishTfFrame( desired_pose_tf_, global_frame_, "/seabee3/desired_pose" );
+
+			MathyMath::normalizeAngle( desired_pose_.angular.z );
+
+			MathyMath::normalizeAngle( current_pose_.angular.z );
+
+			error_in_xyz_.z = desired_pose_.linear.z - current_pose_.linear.z;
+
+			error_in_rpy_.z = MathyMath::angleDistRel( MathyMath::radToDeg( desired_pose_.angular.z ), MathyMath::radToDeg( current_pose_.angular.z ) );
+
+			//printf("error x %f y %f z %f r %f p %f y %f\n", error_in_xyz_.x, error_in_xyz_.y, error_in_xyz_.z, error_in_rpy_.x, error_in_rpy_.y, error_in_rpy_.z );
+
+			MathyMath::capValue( error_in_rpy_.z, max_error_in_rpy_.z );
+
+			//printf( "error x %f y %f z %f r %f p %f y %f\n", error_in_xyz_.x, error_in_xyz_.y, error_in_xyz_.z, error_in_rpy_.x, error_in_rpy_.y, error_in_rpy_.z );
+
+			double depth_motor_value = axis_dir_cfg_[Axes::depth] * pid_controller_.linear.z.updatePid( error_in_xyz_.z, dt );
+			double yaw_motor_value = axis_dir_cfg_[Axes::yaw] * pid_controller_.angular.z.updatePid( error_in_rpy_.z, dt );
+
+			printf( "depth %f yaw %f\n", depth_motor_value, yaw_motor_value );
+
+
+			MathyMath::capValue( depth_motor_value, 100.0 );
+			MathyMath::capValue( yaw_motor_value, 100.0 );
+
+			updateMotorCntlMsg( motor_cntl_msg_, Axes::depth, depth_motor_value );
+			updateMotorCntlMsg( motor_cntl_msg_, Axes::yaw, yaw_motor_value );
+
+		}
+		last_pid_update_time_ = ros::Time::now();
+	}
+
+	void setMotorValsFromCmdVel( bool use_pid_assist = false )
 	{
 		resetMotorCntlMsg();
 
-		std::map<int, double> motor_values;
+		updateMotorCntlMsg( motor_cntl_msg_, Axes::speed, -100 * axis_dir_cfg_[Axes::speed] * twist_cache_.linear.x / cmd_vel_conversions[Axes::speed] );
+		updateMotorCntlMsg( motor_cntl_msg_, Axes::strafe, -100 * axis_dir_cfg_[Axes::strafe] * twist_cache_.linear.y / cmd_vel_conversions[Axes::strafe] );
 
-		motor_values[Axes::speed] = -100 * axis_dir_cfg_[Axes::speed] * twist_cache_.linear.x / cmd_vel_conversions[Axes::speed];
-		motor_values[Axes::strafe] = -100 * axis_dir_cfg_[Axes::strafe] * twist_cache_.linear.y / cmd_vel_conversions[Axes::strafe];
-		motor_values[Axes::depth] = -100 * axis_dir_cfg_[Axes::depth] * twist_cache_.linear.z / cmd_vel_conversions[Axes::depth];
-
-		motor_values[Axes::yaw] = 100 * axis_dir_cfg_[Axes::yaw] * twist_cache_.angular.z / cmd_vel_conversions[Axes::yaw];
-
-		generateMotorCntlMsg( motor_values );
+		if ( use_pid_assist )
+		{
+			stepAbsoluteMeasurementPID();
+		}
+		else
+		{
+			updateMotorCntlMsg( motor_cntl_msg_, Axes::depth, -100 * axis_dir_cfg_[Axes::depth] * twist_cache_.linear.z / cmd_vel_conversions[Axes::depth] );
+			updateMotorCntlMsg( motor_cntl_msg_, Axes::yaw, 100 * axis_dir_cfg_[Axes::yaw] * twist_cache_.angular.z / cmd_vel_conversions[Axes::yaw] );
+		}
 	}
 
 	void spinOnce()
@@ -544,8 +596,7 @@ public:
 		//this also grabs and publishes tf frames
 
 		if ( cmd_vel_conversion_mode_ == CmdVelConversionType::pid ) pidStep();
-		else if ( cmd_vel_conversion_mode_ == CmdVelConversionType::linear ) setMotorValsFromCmdVel();
-
+		else if ( cmd_vel_conversion_mode_ == CmdVelConversionType::linear ) setMotorValsFromCmdVel( use_pid_assist_ );
 
 		/*for ( size_t i; i < motor_cntl_msg_.motors.size(); i++ )
 		 {
