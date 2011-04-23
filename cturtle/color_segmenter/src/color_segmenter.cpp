@@ -55,6 +55,7 @@ class ColorSegmenter: public _BaseImageProc
 private:
 	bool use_flood_fill_;
 	IplImage * ipl;
+	cv::Vec3b target_color;
 public:
 	ColorSegmenter( ros::NodeHandle & nh ) :
 		_BaseImageProc( nh ), use_flood_fill_( false )
@@ -82,6 +83,7 @@ public:
 		cv_img_ = cv::Mat( ipl_img );
 		//makeImageBinary(cv_img_, req.blob_descriptor.color);
 		cv::Vec3b color = OutputColorRGB::getColorVector( req.blob_descriptor.color );
+		this->target_color = color;
 		if ( use_flood_fill_ )
 		{
 			resp.blob_array.color_blobs = floodFillMethod( cv_img_,
@@ -103,6 +105,11 @@ public:
 		{
 			resp.blob_array.color_blobs[i].color = req.blob_descriptor.color;
 		}
+		for (unsigned int i = 0; i < resp.blob_array.color_blobs.size(); ++i)
+		{
+			this->buildReferenceImage(resp.blob_array.color_blobs[i]);
+		}
+		//
 		///Changes at the end since the methods above rely on the origin being in the top left
 		changeOriginToCenter(cv_img_, resp.blob_array.color_blobs);
 		return cv_img_;
@@ -153,6 +160,9 @@ public:
 	                                     cv::Vec3b & color )
 	{
 		color_segmenter::ColorBlob blob;
+		blob.xmax = blob.ymax = 0;
+		blob.xmin = cv_img_.rows - 1;
+		blob.ymin = cv_img_.cols - 1;
 		std::deque<cv::Point> d;
 		cv::Point curpoint;
 		int modx, mody;
@@ -210,8 +220,7 @@ public:
 					break;
 				}
 				if ( curpoint.x + modx >= 0 && curpoint.y + mody >= 0 && curpoint.x + modx < cv_img_.cols && curpoint.y + mody < cv_img_.rows
-				        && table[curpoint.x + modx][curpoint.y + mody] && getBinPixelValue( cv_img_,
-				                                                                            color,
+				        && table[curpoint.x + modx][curpoint.y + mody] && getBinPixelValue( color,
 				                                                                            curpoint.x + modx,
 				                                                                            curpoint.y + mody ) )
 				{
@@ -219,6 +228,15 @@ public:
 					blob.mass += 1;
 					totx += curpoint.x + modx;
 					toty += curpoint.y + mody;
+					if (curpoint.x < blob.xmin)
+					    blob.xmin = curpoint.x;
+					if (curpoint.y < blob.ymin)
+					    blob.ymin = curpoint.y;
+					if (curpoint.x > blob.xmax)
+					    blob.xmax = curpoint.x;
+					if (curpoint.y > blob.ymax)
+					    blob.ymax = curpoint.y;
+					//blob.table.data.push_back(true);
 					d.push_back( cv::Point( curpoint.x + modx,
 					                        curpoint.y + mody ) );
 				}
@@ -261,8 +279,7 @@ public:
 				if ( table[x][y] )
 				{
 					table[x][y] = false;
-					if ( getBinPixelValue( cv_img_,
-					                       color,
+					if ( getBinPixelValue( color,
 					                       x,
 					                       y ) == true )
 					{
@@ -296,14 +313,13 @@ public:
 		return color_blobs;
 	}
 
-	bool getBinPixelValue( cv::Mat & cv_img_,
-	                       cv::Vec3b & color,
+	bool getBinPixelValue( cv::Vec3b & color,
 	                       int x,
 	                       int y )
 	{
 		CvScalar s;
 		//ROS_INFO("Getting value at %d, %d", x, y);
-		s = cvGet2D( ipl,
+		s = cvGet2D( this->ipl,
 		             y,
 		             x );
 		if ( color[0] == s.val[0] && color[1] == s.val[1] && color[2] == s.val[2] )
@@ -363,6 +379,26 @@ public:
 		}
 	}
 
+	void buildReferenceImage(color_segmenter::ColorBlob &blob)
+	{
+		IplImage *imgs[4];
+		cvSetImageROI(this->ipl, cvRect(blob.xmin, blob.ymin, blob.xmax, blob.ymax));
+		cv::Vec3b color = OutputColorRGB::getColorVector( blob.color );
+		cvSplit(this->ipl, imgs[0], imgs[1], imgs[2], imgs[3]);
+		for (int i = 0; i < this->ipl->nChannels; ++i)
+		{
+			cvCmpS(imgs[i], color[i], imgs[i], CV_CMP_EQ);
+		}
+		for (int i = 1; i < this->ipl->nChannels; ++i)
+		{
+			cvAnd(imgs[0], imgs[1], imgs[0]);
+		}
+		sensor_msgs::CvBridge::fromIpltoRosImage(imgs[0], blob.image);
+		for (int i = 0; i < 4; ++i)
+		{
+			cvReleaseImage(&imgs[i]);
+		}
+	}
 };
 
 int main( int argc,

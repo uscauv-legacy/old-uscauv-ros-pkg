@@ -2,3 +2,8 @@ float32 x
 float32 y
 float32 mass
 uint8 color
+uint32 xmax
+uint32 ymax
+uint32 xmin
+uint32 ymin
+sensor_msgs/Image image
