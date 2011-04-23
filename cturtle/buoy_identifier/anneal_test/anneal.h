@@ -40,18 +40,20 @@ public:
  */
 class Anneal
 {
-protected:
+public:
 	std::vector<AnnealVar> vars;
 	virtual double score(AnnealResult &candidate) = 0;
-	virtual double temp() = 0;
+	enum tempTypes {LINEAR, NEG_PARAB, SQRT, INVERSE};
+	virtual double temp(int type=Anneal::LINEAR);
 	bool randBin();
 	double randDouble();
 	//double best_score;
 	AnnealResult best_result;
 	AnnealResult current_result;
 	int iterations;
+	int currentIteration;
 public:
-	AnnealResult simulate(int iterations);
+	AnnealResult simulate(int iterations, int tempCurve=Anneal::LINEAR);
 	void addVar(AnnealVar &var);
 };
 
@@ -86,11 +88,34 @@ double Anneal::randDouble()
 	return (double)rand() / (double)RAND_MAX;
 }
 
-AnnealResult Anneal::simulate(int iterations)
+double Anneal::temp(int tempCurve)
+{
+	double temp;
+	switch (tempCurve)
+	{
+		case Anneal::LINEAR:
+			temp = 1 -  ((double)this->currentIteration)/((double)this->iterations);
+			break;
+		case Anneal::NEG_PARAB:
+			temp = 1 - ((double)pow(this->currentIteration, 2) / ((double)pow(this->iterations, 2)));
+			break;
+		case Anneal::SQRT:
+			temp =  1 - sqrt((double)this->currentIteration)/sqrt((double)this->iterations);
+			break;
+		case Anneal::INVERSE:
+			temp = 1 - ((double)1 / (((double)this->currentIteration * (double)this->iterations) + 1));
+			break;
+	}
+	cout << "Temp is " << temp << endl;
+	return temp;
+}
+
+AnnealResult Anneal::simulate(int iterations, int tempCurve)
 {
 	this->iterations = iterations;
 	AnnealResult candidate;
 	double temperature;
+	this->currentIteration = 0;
 	for (unsigned int i = 0; i < this->vars.size(); ++i)
 	{
 		this->best_result.results.push_back(this->vars[i].value);
@@ -98,7 +123,8 @@ AnnealResult Anneal::simulate(int iterations)
 	this->current_result = best_result;
 	this->score(this->best_result);
 	candidate = this->current_result = this->best_result;
-	while ((temperature = this->temp()) > 0)
+	temperature = this->temp(tempCurve);
+	while (temperature > 0)
 	{
 		for (unsigned int i = 0; i < this->vars.size(); ++i)
 		{
@@ -131,6 +157,8 @@ AnnealResult Anneal::simulate(int iterations)
 			current_result = candidate;
 		else if (this->randDouble() < temperature)
 			current_result = candidate;
+		++this->currentIteration;
+		temperature = this->temp(tempCurve);
 	}
 	return best_result;
 }
