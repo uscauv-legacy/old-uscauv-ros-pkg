@@ -42,15 +42,16 @@ class Anneal
 {
 protected:
 	std::vector<AnnealVar> vars;
-	virtual double score() = 0;
+	virtual double score(AnnealResult &candidate) = 0;
 	virtual double temp() = 0;
 	bool randBin();
 	double randDouble();
 	//double best_score;
 	AnnealResult best_result;
 	AnnealResult current_result;
+	int iterations;
 public:
-	AnnealResult simulate();
+	AnnealResult simulate(int iterations);
 	void addVar(AnnealVar &var);
 };
 
@@ -85,8 +86,9 @@ double Anneal::randDouble()
 	return (double)rand() / (double)RAND_MAX;
 }
 
-AnnealResult Anneal::simulate()
+AnnealResult Anneal::simulate(int iterations)
 {
+	this->iterations = iterations;
 	AnnealResult candidate;
 	double temperature;
 	for (unsigned int i = 0; i < this->vars.size(); ++i)
@@ -94,7 +96,7 @@ AnnealResult Anneal::simulate()
 		this->best_result.results.push_back(this->vars[i].value);
 	}
 	this->current_result = best_result;
-	this->best_result.score = this->score();
+	this->score(this->best_result);
 	candidate = this->current_result = this->best_result;
 	while ((temperature = this->temp()) > 0)
 	{
@@ -122,7 +124,7 @@ AnnealResult Anneal::simulate()
 			} while (newVar < vars[i].min || newVar > vars[i].max);
 			candidate.results[i] = newVar;
 		}
-		candidate.score = this->score();
+		this->score(candidate);
 		if (candidate > this->best_result)
 			best_result = candidate;
 		if (candidate > this->current_result)
