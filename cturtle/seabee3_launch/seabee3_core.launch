@@ -7,7 +7,7 @@
 	
 	<include file="$(find seabee3_launch)/seabee3_driver_tuned.launch" />
 
-	<!-- <group ns="/xsens">
+	<group ns="/xsens">
 		<include file="$(find seabee3_launch)/xsens_node.launch" />
-	</group> -->
+	</group>
 </launch>
