@@ -72,6 +72,8 @@ private:
 	// used to decode motor values
 	_ThrusterArrayCfg thruster_dir_cfg_;
 
+	int min_motor_value_;
+
 public:
 	//#define SURFACE_PRESSURE 908
 	const static int PRESSURE_DEPTH_SLOPE = 33;
@@ -95,6 +97,8 @@ public:
 
 		nh_priv_.param( "dropper2/trigger_time", bee_stem_3_driver_->dropper2_params_.trigger_time_, 50 );
 		nh_priv_.param( "dropper2/trigger_value", bee_stem_3_driver_->dropper2_params_.trigger_value_, 40 );
+
+		nh_priv_.param( "min_motor_value_", min_motor_value_, 15 );
 
 		double thruster_dir;
 
@@ -136,7 +140,7 @@ public:
 		for ( unsigned int i = 0; i < msg->motors.size(); i++ )
 		{
 			dir = i < movement_common::MotorControllerIDs::SHOOTER ? thruster_dir_cfg_[i] : 1.0;
-			if ( msg->mask[i] == 1 ) bee_stem_3_driver_->setThruster( i, dir * msg->motors[i] );
+			if ( msg->mask[i] == 1 ) bee_stem_3_driver_->setThruster( i, abs( msg->motors[i] ) >= min_motor_value_ ? dir * msg->motors[i] : 0 );
 		}
 	}
 

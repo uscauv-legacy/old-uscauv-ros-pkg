@@ -316,6 +316,14 @@ public:
 		msg.mask[motor2] = 1;
 	}
 
+	void scaleMotorValues( seabee3_driver_base::MotorCntl & msg )
+	{
+		for( size_t i = 0; i < msg.motors.size(); ++i )
+		{
+			msg.motors[i] = scaleMotorValue( msg.motors[i] );
+		}
+	}
+
 	int scaleMotorValue( int value )
 	{
 		//ROS_INFO( "value: %d", value );
@@ -560,7 +568,7 @@ public:
 			double depth_motor_value = axis_dir_cfg_[Axes::depth] * pid_controller_.linear.z.updatePid( error_in_xyz_.z, dt );
 			double yaw_motor_value = axis_dir_cfg_[Axes::yaw] * pid_controller_.angular.z.updatePid( error_in_rpy_.z, dt );
 
-			printf( "depth %f yaw %f\n", depth_motor_value, yaw_motor_value );
+			//printf( "depth %f yaw %f\n", depth_motor_value, yaw_motor_value );
 
 
 			MathyMath::capValue( depth_motor_value, 100.0 );
@@ -603,6 +611,7 @@ public:
 		 motor_cntl_msg_.motors[i] = scaleMotorValue( motor_cntl_msg_.motors[i] );
 		 }*/
 
+		//scaleMotorValues( motor_cntl_msg_ );
 		motor_cntl_pub_.publish( motor_cntl_msg_ );
 
 		ros::Rate( 20 ).sleep();
