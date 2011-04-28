@@ -287,8 +287,8 @@ public:
 
 		temp >> custom_imu_msg.ori;
 
-		custom_imu_msg.ori.x = MathyMath::degToRad( custom_imu_msg.ori.x );
-		custom_imu_msg.ori.y = MathyMath::degToRad( custom_imu_msg.ori.y );
+		custom_imu_msg.ori.x = 0;//MathyMath::degToRad( custom_imu_msg.ori.x );
+		custom_imu_msg.ori.y = 0;//MathyMath::degToRad( custom_imu_msg.ori.y );
 		custom_imu_msg.ori.z = MathyMath::degToRad( custom_imu_msg.ori.z );
 
 		tf::Quaternion ori( temp.z(), temp.y(), temp.x() );
