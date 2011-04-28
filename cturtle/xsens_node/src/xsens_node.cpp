@@ -91,7 +91,7 @@ private:
 	tf::Vector3 drift_comp_total_;
 
 	std::string port_, frame_id_;
-	bool calibrated_, autocalibrate_, assume_calibrated_;
+	bool drift_calibrated_, autocalibrate_, assume_calibrated_;
 	double orientation_stdev_, angular_velocity_stdev_, linear_acceleration_stdev_, max_drift_rate_;
 
 	int drift_calibration_steps_, ori_calibration_steps_;
@@ -121,7 +121,7 @@ public:
 		nh_priv_.param( "drift_calibration_steps", drift_calibration_steps_, 550 );
 		nh_priv_.param( "ori_calibration_steps", ori_calibration_steps_, 110 );
 
-		calibrated_ = true;
+		drift_calibrated_ = true;
 
 		imu_pub_ = nh.advertise<sensor_msgs::Imu> ( "data", 1 );
 		custom_imu_pub_ = nh.advertise<xsens_node::Imu> ( "/xsens/custom_data", 1 );
@@ -176,12 +176,12 @@ public:
 		ROS_INFO( "Checking calibration..." );
 
 		double drift_rate = sqrt( pow( drift_comp_.x(), 2 ) + pow( drift_comp_.y(), 2 ) + pow( drift_comp_.z(), 2 ) );
-		calibrated_ = drift_rate <= max_drift_rate_;
+		drift_calibrated_ = drift_rate <= max_drift_rate_;
 
 		ROS_INFO( "Drift rate: %f Max drift rate: %f", drift_rate, max_drift_rate_ );
 
 		std_msgs::Bool is_calibrated_msg;
-		is_calibrated_msg.data = calibrated_;
+		is_calibrated_msg.data = drift_calibrated_;
 		is_calibrated_pub_.publish( is_calibrated_msg );
 	}
 
@@ -237,8 +237,6 @@ public:
 
 		ori_comp_ >> res.calibration;
 
-		checkCalibration();
-
 		return true;
 	}
 
@@ -263,7 +261,7 @@ public:
 
 	virtual void spinOnce()
 	{
-		if ( autocalibrate_ && !calibrated_ ) runFullCalibration();
+		if ( autocalibrate_ && !drift_calibrated_ ) runRPYDriftCalibration();
 
 		sensor_msgs::Imu imu_msg;
 		xsens_node::Imu custom_imu_msg;
