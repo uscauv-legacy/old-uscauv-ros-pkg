@@ -123,7 +123,7 @@ private:
 	ros::ServiceServer set_desired_pose_srv_;
 	ros::Subscriber physics_state_sub_;
 
-	double motor_val_min_, motor_val_max_;
+	double motor_val_deadzone_, motor_val_min_, motor_val_max_;
 
 	bool use_pid_assist_;
 
@@ -155,6 +155,7 @@ public:
 
 		// scale motor values to be within the following min+max value such that
 		// |D'| = [ motor_val_min, motor_val_max ]
+		nh_priv_.param( "motor_val_deadzone", motor_val_deadzone_, 5.0 );
 		nh_priv_.param( "motor_val_min", motor_val_min_, 20.0 );
 		nh_priv_.param( "motor_val_max", motor_val_max_, 100.0 );
 
@@ -318,7 +319,7 @@ public:
 
 	void scaleMotorValues( seabee3_driver_base::MotorCntl & msg )
 	{
-		for( size_t i = 0; i < msg.motors.size(); ++i )
+		for ( size_t i = 0; i < msg.motors.size(); ++i )
 		{
 			msg.motors[i] = scaleMotorValue( msg.motors[i] );
 		}
@@ -328,6 +329,8 @@ public:
 	{
 		//ROS_INFO( "value: %d", value );
 		if ( value == 0 ) return value;
+
+		if ( abs( value ) < motor_val_deadzone_ ) return 0;
 
 		double value_d = (double) value;
 
@@ -366,10 +369,16 @@ public:
 		return true;
 	}
 
+	// set the current pose to the desired pose to zero out all errors
 	void resetPose()
 	{
-		desired_pose_ = geometry_msgs::Twist();
-		current_pose_ = geometry_msgs::Twist();
+		// copy current pose into desired pose
+		current_pose_tf_ >> desired_pose_;
+		current_pose_ = desired_pose_;
+		desired_pose_ >> desired_pose_tf_;
+
+		// publish the pose
+		publishTfFrame( desired_pose_tf_, global_frame_, "/seabee3/desired_pose" );
 	}
 
 	bool setDesiredPoseCB( seabee3_common::SetDesiredPose::Request & req, seabee3_common::SetDesiredPose::Response & resp )
@@ -382,6 +391,10 @@ public:
 		req.pos.values.y = velocity.x * sin( desired_pose_.angular.z ) + velocity.y * cos( desired_pose_.angular.z );
 
 		setDesiredPose( req.pos.mask, desired_pose_.linear, req.pos.values, req.pos.mode );
+
+		desired_pose_ >> desired_pose_tf_;
+		// publish the pose
+		publishTfFrame( desired_pose_tf_, global_frame_, "/seabee3/desired_pose" );
 
 		return true;
 	}
@@ -611,7 +624,7 @@ public:
 		 motor_cntl_msg_.motors[i] = scaleMotorValue( motor_cntl_msg_.motors[i] );
 		 }*/
 
-		//scaleMotorValues( motor_cntl_msg_ );
+		scaleMotorValues( motor_cntl_msg_ );
 		motor_cntl_pub_.publish( motor_cntl_msg_ );
 
 		ros::Rate( 20 ).sleep();

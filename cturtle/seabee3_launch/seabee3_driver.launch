@@ -1,0 +1,5 @@
+<launch>
+	<node pkg="dead_reckoning_odom" type="odom_node" name="odom_node" output="screen" />
+	
+	<include file="$(find seabee3_launch)/seabee3_driver_tuned.launch" />
+</launch>

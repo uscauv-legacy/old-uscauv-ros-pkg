@@ -9,7 +9,6 @@
 		
 		<param name="dropper2/trigger_time" type="int" value="125" />
 		<param name="dropper2/trigger_value" type="int" value="55" />
-		<param name="min_motor_value" type="int" value="15" />
 		
 		<!-- ========== Motor/Behavior Tuning ========== -->
 		

@@ -98,7 +98,8 @@ public:
 		nh_priv_.param( "dropper2/trigger_time", bee_stem_3_driver_->dropper2_params_.trigger_time_, 50 );
 		nh_priv_.param( "dropper2/trigger_value", bee_stem_3_driver_->dropper2_params_.trigger_value_, 40 );
 
-		nh_priv_.param( "min_motor_value_", min_motor_value_, 15 );
+		// try to grab this param from the high-level driver so the values are synced
+		nh_priv_.param( "/seabee3_driver/min_motor_value_", min_motor_value_, 15 );
 
 		double thruster_dir;
 

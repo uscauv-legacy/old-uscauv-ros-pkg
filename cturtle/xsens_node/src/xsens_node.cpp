@@ -83,7 +83,12 @@ class XSensNode: public BaseNode<>
 {
 private:
 	std::queue<tf::Vector3> ori_data_cache_;
-	tf::Vector3 ori_comp_, drift_comp_, drift_comp_total_;
+
+	// offset from imu's "north"
+	tf::Vector3 ori_comp_;
+	//
+	tf::Vector3 drift_comp_;
+	tf::Vector3 drift_comp_total_;
 
 	std::string port_, frame_id_;
 	bool calibrated_, autocalibrate_, assume_calibrated_;
@@ -116,7 +121,7 @@ public:
 		nh_priv_.param( "drift_calibration_steps", drift_calibration_steps_, 550 );
 		nh_priv_.param( "ori_calibration_steps", ori_calibration_steps_, 110 );
 
-		calibrated_ = false;
+		calibrated_ = true;
 
 		imu_pub_ = nh.advertise<sensor_msgs::Imu> ( "data", 1 );
 		custom_imu_pub_ = nh.advertise<xsens_node::Imu> ( "/xsens/custom_data", 1 );
@@ -127,12 +132,12 @@ public:
 		imu_driver_ = new XSensDriver();
 		if ( !imu_driver_->initMe() )
 		{
-			ROS_WARN( "Failed to connect to IMU. Exiting..." );
-			return;
+			ROS_FATAL( "Failed to connect to IMU. Exiting..." );
+			_Exit( 1 );
 		}
 	}
 
-	~XSensNode()
+	virtual ~XSensNode()
 	{
 		delete imu_driver_;
 	}
@@ -159,9 +164,11 @@ public:
 
 	void runFullCalibration()
 	{
-		runRPYOriCalibration();
+		// compensate for drift first, then zero out the angle
 		runRPYDriftCalibration();
 		checkCalibration();
+
+		runRPYOriCalibration();
 	}
 
 	void checkCalibration()
@@ -183,6 +190,7 @@ public:
 		runRPYOriCalibration( (uint) ori_calibration_steps_ );
 	}
 
+	// assuming the robot is not moving, calculate the IMU's "north" and offset all future measurements by this amount
 	void runRPYOriCalibration( uint n )
 	{
 		ROS_INFO( "Running ori calibration..." );
@@ -204,6 +212,7 @@ public:
 		runRPYDriftCalibration( (uint) drift_calibration_steps_ );
 	}
 
+	// see how far the IMU drifts in the given time and try to compensate
 	void runRPYDriftCalibration( uint n )
 	{
 		ROS_INFO( "Running drift calibration..." );
@@ -221,6 +230,7 @@ public:
 		drift_comp_ /= (double) ( n ); //avg drift per cycle
 	}
 
+	// entry point for service
 	bool calibrateRPYOriCB( xsens_node::CalibrateRPY::Request &req, xsens_node::CalibrateRPY::Response &res )
 	{
 		runRPYOriCalibration( req.num_samples );
@@ -232,6 +242,7 @@ public:
 		return true;
 	}
 
+	// entry point for service
 	bool calibrateRPYDriftCB( xsens_node::CalibrateRPY::Request &req, xsens_node::CalibrateRPY::Response &res )
 	{
 		runRPYDriftCalibration( req.num_samples );
@@ -243,6 +254,7 @@ public:
 		return true;
 	}
 
+	// entry point for service
 	bool calibrateCB( std_srvs::Empty::Request & req, std_srvs::Empty::Response & res )
 	{
 		runFullCalibration();
@@ -265,7 +277,7 @@ public:
 		imu_driver_->gyro_ >> custom_imu_msg.gyro;
 		imu_driver_->mag_ >> custom_imu_msg.mag;
 
-		drift_comp_total_ += drift_comp_;
+		// drift_comp_total_ += drift_comp_;
 
 		imu_driver_->ori_ += drift_comp_total_;
 

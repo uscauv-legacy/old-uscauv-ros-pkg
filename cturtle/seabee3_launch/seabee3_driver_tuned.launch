@@ -8,7 +8,8 @@
 
 		<param name="cmd_vel_conversion" type="int" value="1" />
 		
-		<param name="motor_val_min" type="double" value="20.0" />
+		<param name="motor_val_deadzone" type="double" value="5.0" />
+		<param name="motor_val_min" type="double" value="15.0" />
 		<param name="motor_val_max" type="double" value="100.0" />
 		
 		<!-- ========== PID tuning ========== -->
