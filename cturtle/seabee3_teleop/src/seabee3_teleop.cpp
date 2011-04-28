@@ -45,7 +45,7 @@
 class Seabee3Teleop: public BaseTeleop<>
 {
 public:
-	typedef movement_common::FiringDeviceIDs _FiringDeviceIDs;
+	//typedef movement_common::FiringDeviceIDs _FiringDeviceIDs;
 
 private:
 	// button indices
@@ -101,13 +101,13 @@ public:
 		device_action_.request.action = seabee3_driver_base::FiringDeviceAction::Request::FIRE;
 		switch ( current_device_ )
 		{
-		case _FiringDeviceIDs::shooter:
+		case movement_common::FiringDeviceIDs::shooter:
 			shooter_cli_.call( device_action_ );
 			break;
-		case _FiringDeviceIDs::dropper_stage1:
+		case movement_common::FiringDeviceIDs::dropper_stage1:
 			dropper1_cli_.call( device_action_ );
 			break;
-		case _FiringDeviceIDs::dropper_stage2:
+		case movement_common::FiringDeviceIDs::dropper_stage2:
 			dropper2_cli_.call( device_action_ );
 			break;
 		}
