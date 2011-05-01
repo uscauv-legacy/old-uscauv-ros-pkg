@@ -2,6 +2,8 @@
 #include <opencv/cv.h>
 #include <opencv/highgui.h>
 #include <iostream>
+#include <limits>
+#include <cstdio>
 
 #include "CVSuperPixel.H"
 
@@ -117,79 +119,77 @@ int main()
 		cap >> inputImage;
 
 		float normScale = float( scale ) / 100.0;
-		// Resize the image before we do any segmentation to speed things up
 		cv::Mat smallImage;
-		cv::resize( inputImage, smallImage, cv::Size( inputImage.size().width * normScale, inputImage.size().height * normScale ) );
+    cv::resize( inputImage, smallImage, 
+        cv::Size( inputImage.size().width * normScale, inputImage.size().height * normScale ) );
 
-		// Find the distance in color space to the desired color for each of our segmented groups
-		cv::Mat smallHSVImage;
-		cv::cvtColor( smallImage, smallHSVImage, CV_BGR2HSV );
+    cv::Mat hsvImage(smallImage.size(), CV_8UC3);
+		cv::cvtColor( smallImage, hsvImage, CV_BGR2HSV );
+
+    cv::Mat distanceImg(hsvImage.size(), CV_8UC3);
+    cv::MatConstIterator_<cv::Vec3b> in_it = hsvImage.begin<cv::Vec3b>(), in_end = hsvImage.end<cv::Vec3b>();
+    cv::MatIterator_<cv::Vec3b> dist_it = distanceImg.begin<cv::Vec3b>();
+    while(in_it != in_end)
+    {
+      float dist = abs( hMean - (*in_it)[0] ) / float( 255 - hWeight ) * 10.0 +
+                   abs( sMean - (*in_it)[1] ) / float( 255 - sWeight ) * 10.0 +
+                   abs( vMean - (*in_it)[2] ) / float( 255 - vWeight ) * 10.0;
+      if(dist > 255) dist = 255;
+      else if(dist < 0) dist = 0;
+
+      const unsigned char chardist = ceil(dist+.5);
+
+      (*dist_it)[0] = chardist;
+      (*dist_it)[1] = chardist;
+      (*dist_it)[2] = chardist;
+
+      in_it++;
+      dist_it++;
+    }
+
+    std::vector<std::vector<cv::Point> > groups = SuperPixelSegment( distanceImg, sigma, c, min_size );
+    cv::Mat debugImage = SuperPixelDebugImage( groups, smallImage );
 
 
-		// Segment the image using Felzenszwalb's graph-based segmentation algorithm
-		std::vector<std::vector<cv::Point> > groups = SuperPixelSegment( smallHSVImage, sigma, c, min_size );
-
-		// Make a mean looking debug image
-		cv::Mat debugImage = SuperPixelDebugImage( groups, smallImage );
-
-
-		cv::Mat distImage( smallImage.size(), CV_32F );
-		std::vector<std::vector<cv::Point> > buoyGroups;
 		for ( size_t grpIdx = 0; grpIdx < groups.size(); grpIdx++ )
 		{
-			cv::Vec3f avgColor( 0, 0, 0 );
+      double avgDist = 0;
+      int minX = std::numeric_limits<int>::max();
+      int maxX = std::numeric_limits<int>::min();
+      int minY = std::numeric_limits<int>::max();
+      int maxY = std::numeric_limits<int>::min();
 			for ( size_t pntIdx = 0; pntIdx < groups[grpIdx].size(); pntIdx++ )
-				avgColor += debugImage.at<cv::Vec3b> ( groups[grpIdx][pntIdx] );
+      {
+				avgDist += distanceImg.at<cv::Vec3b> ( groups[grpIdx][pntIdx] )[0];
+				minX = std::min( minX, groups[grpIdx][pntIdx].x );
+				maxX = std::max( maxX, groups[grpIdx][pntIdx].x );
+				minY = std::min( minY, groups[grpIdx][pntIdx].y );
+				maxY = std::max( maxY, groups[grpIdx][pntIdx].y );
+      }
+      avgDist /= groups[grpIdx].size();
+      std::cout << "AVGDIST: " << avgDist << " THRESH: " << threshold << std::endl;
 
-			//	avgColor += smallHSVImage.at<cv::Vec3b> ( groups[grpIdx][pntIdx] );
-			avgColor[0] /= groups[grpIdx].size();
-			avgColor[1] /= groups[grpIdx].size();
-			avgColor[2] /= groups[grpIdx].size();
+      if(avgDist < threshold)
+      {
+        cv::rectangle( inputImage,
+            cv::Point( minX / normScale, minY / normScale ),
+            cv::Point( maxX / normScale, maxY / normScale ),
+            255, 2 );
+        char buff[255];
+        sprintf(buff, "Buoy- Conf:%f Size: %d", (255-avgDist)/255.0*100.0, groups[grpIdx].size());
+        cv::putText(inputImage, std::string(buff), cv::Point(minX/normScale, minY/normScale), cv::FONT_HERSHEY_SIMPLEX,
+            .5, 128, 2);
+      }
+    }
 
-			// Find the weighted distance to our desired color
-			float dist = abs( hMean - avgColor[0] ) / float( 255 - hWeight ) / 10.0 + abs( sMean - avgColor[1] ) / float( 255 - sWeight ) / 10.0 + abs( vMean - avgColor[2] ) / float( 255 - vWeight )
-					/ 10.0;
-
-			for ( size_t pntIdx = 0; pntIdx < groups[grpIdx].size(); pntIdx++ )
-				distImage.at<float> ( groups[grpIdx][pntIdx] ) = dist;
-
-			// If this group looks cool then push it back into the list of potential buoy groups
-			float normThresh = threshold / 1000.0;
-			std::cout << " Dist: " << dist << " Thresh: " << normThresh << std::endl;
-			if ( dist < normThresh ) buoyGroups.push_back( groups[grpIdx] );
-		}
-
-
-
-		// Resize the images for display
-		cv::Mat displayImage;
-		cv::resize( debugImage, displayImage, cv::Size( debugImage.size().width / normScale, debugImage.size().height / normScale ) );
-		cv::Mat bigDistImage;
-		cv::resize( distImage, bigDistImage, cv::Size( debugImage.size().width / normScale, debugImage.size().height / normScale ) );
-
-		// Go through all of the buoy groups and find the bounding boxes around
-		// each, then draw that box on the displayImage. Edward: this is the data you should post
-		std::cout << buoyGroups.size() << " buoys detected" << std::endl;
-		for ( size_t grpIdx = 0; grpIdx < buoyGroups.size(); ++grpIdx )
-		{
-			int minX = inputImage.size().width;
-			int maxX = 0;
-			int minY = inputImage.size().height;
-			int maxY = 0;
-
-			for ( size_t pntIdx = 0; pntIdx < buoyGroups[grpIdx].size(); ++pntIdx )
-			{
-				minX = std::min( minX, buoyGroups[grpIdx][pntIdx].x );
-				maxX = std::max( maxX, buoyGroups[grpIdx][pntIdx].x );
-				minY = std::min( minY, buoyGroups[grpIdx][pntIdx].y );
-				maxY = std::max( maxY, buoyGroups[grpIdx][pntIdx].y );
-			}
-			cv::rectangle( displayImage, cv::Point( minX / normScale, minY / normScale ), cv::Point( maxX / normScale, maxY / normScale ), 255, 2 );
-		}
-
-		// Show it!
-		cv::imshow( "Debug", displayImage );
-		cv::imshow( "Distance", bigDistImage );
+    cv::Mat bigDebugImage, bigDistanceImg;
+    cv::resize( debugImage, bigDebugImage, 
+        cv::Size( debugImage.size().width / normScale, debugImage.size().height / normScale ) );
+    cv::resize( distanceImg, bigDistanceImg, 
+        cv::Size( distanceImg.size().width / normScale, distanceImg.size().height / normScale ) );
+		cv::imshow( "Debug", bigDebugImage );
+		cv::imshow( "Distance", bigDistanceImg );
+		cv::imshow( "Buoys", inputImage );
 		cv::waitKey( 50 );
 	}
 
