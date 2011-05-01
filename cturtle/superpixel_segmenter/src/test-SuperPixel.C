@@ -118,11 +118,13 @@ int main()
 		cv::Mat inputImage;
 		cap >> inputImage;
 
+    // Rescale the image so we don't waste cpu power
 		float normScale = float( scale ) / 100.0;
 		cv::Mat smallImage;
     cv::resize( inputImage, smallImage, 
         cv::Size( inputImage.size().width * normScale, inputImage.size().height * normScale ) );
 
+    // Convert the RGB input image to Hue-Saturation-Value
     cv::Mat hsvImage(smallImage.size(), CV_8UC3);
 		cv::cvtColor( smallImage, hsvImage, CV_BGR2HSV );
 
@@ -131,26 +133,43 @@ int main()
     cv::MatIterator_<cv::Vec3b> dist_it = distanceImg.begin<cv::Vec3b>();
     while(in_it != in_end)
     {
-      float dist = abs( hMean - (*in_it)[0] ) / float( 255 - hWeight ) * 10.0 +
-                   abs( sMean - (*in_it)[1] ) / float( 255 - sWeight ) * 10.0 +
-                   abs( vMean - (*in_it)[2] ) / float( 255 - vWeight ) * 10.0;
+      // Extract the H,S, and V channels from the input image
+      const unsigned char input_hue = (*in_it)[0];
+      const unsigned char input_sat = (*in_it)[1];
+      const unsigned char input_val = (*in_it)[2];
+
+      // Calculate the weighted distance to our target color
+      float dist = abs( hMean - input_hue ) / float( 255 - hWeight ) * 10.0 +
+                   abs( sMean - input_sat ) / float( 255 - sWeight ) * 10.0 +
+                   abs( vMean - input_val ) / float( 255 - vWeight ) * 10.0;
+
+      // Clamp the distance between 0-255 because we have to stuff the value into a byte
       if(dist > 255) dist = 255;
       else if(dist < 0) dist = 0;
 
-      const unsigned char chardist = ceil(dist+.5);
+      // Round the distance, and stuff it into a byte
+      const unsigned char bytedist = ceil(dist+.5);
 
-      (*dist_it)[0] = chardist;
-      (*dist_it)[1] = chardist;
-      (*dist_it)[2] = chardist;
+      // Set all 3 channels of the distance image to the byte distance ( the
+      // superpixel algorithm is only set up to work with 3-channel images for
+      // now).
+      (*dist_it)[0] = bytedist;
+      (*dist_it)[1] = bytedist;
+      (*dist_it)[2] = bytedist;
 
+      // Let's check out the next pixel
       in_it++;
       dist_it++;
     }
 
+    // Segment the distance image using Felzenszwalb's efficient graph-based
+    // segmentation algorithm: http://people.cs.uchicago.edu/~pff/papers/seg-ijcv.pdf
     std::vector<std::vector<cv::Point> > groups = SuperPixelSegment( distanceImg, sigma, c, min_size );
+
+    // Create a debug image just for show.
     cv::Mat debugImage = SuperPixelDebugImage( groups, smallImage );
 
-
+    // Inspect each of the groups produced by the segmentation algorithm
 		for ( size_t grpIdx = 0; grpIdx < groups.size(); grpIdx++ )
 		{
       double avgDist = 0;
@@ -158,6 +177,8 @@ int main()
       int maxX = std::numeric_limits<int>::min();
       int minY = std::numeric_limits<int>::max();
       int maxY = std::numeric_limits<int>::min();
+
+      // Compute the average distance of the current group, as well as the bounding box
 			for ( size_t pntIdx = 0; pntIdx < groups[grpIdx].size(); pntIdx++ )
       {
 				avgDist += distanceImg.at<cv::Vec3b> ( groups[grpIdx][pntIdx] )[0];
@@ -167,8 +188,10 @@ int main()
 				maxY = std::max( maxY, groups[grpIdx][pntIdx].y );
       }
       avgDist /= groups[grpIdx].size();
-      std::cout << "AVGDIST: " << avgDist << " THRESH: " << threshold << std::endl;
 
+      // If the average distance in color space of this group is below some
+      // threshold, then it's a match! Let's call it a buoy and draw a box
+      // around it.
       if(avgDist < threshold)
       {
         cv::rectangle( inputImage,
@@ -182,6 +205,7 @@ int main()
       }
     }
 
+    // Display all of our various debugging images
     cv::Mat bigDebugImage, bigDistanceImg;
     cv::resize( debugImage, bigDebugImage, 
         cv::Size( debugImage.size().width / normScale, debugImage.size().height / normScale ) );
