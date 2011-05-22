@@ -84,8 +84,8 @@ public:
 
 protected:
 	virtual void imageCB();
-	void publishCvImage( cv::Mat & img );
-	void publishCvImage( IplImage * ipl_img );
+	void publishCvImage( const cv::Mat & img );
+	void publishCvImage( const IplImage * ipl_img );
 
 private:
 	void imageCB_0( const sensor_msgs::ImageConstPtr& msg );
@@ -113,17 +113,22 @@ BaseImageProcCore<_ReconfigureType, _ServiceType>::~BaseImageProcCore()
 }
 
 template<typename _ReconfigureType, typename _ServiceType>
-void BaseImageProcCore<_ReconfigureType, _ServiceType>::publishCvImage( IplImage * ipl_img )
+void BaseImageProcCore<_ReconfigureType, _ServiceType>::publishCvImage( const IplImage * ipl_img )
 {
 	ROS_DEBUG( "Published image" );
-	img_pub_.publish( bridge_.cvToImgMsg( ipl_img ) );
+
+	static sensor_msgs::Image::Ptr image_msg;
+	image_msg = bridge_.cvToImgMsg( ipl_img );
+
+	img_pub_.publish( image_msg );
 }
 
 template<typename _ReconfigureType, typename _ServiceType>
-void BaseImageProcCore<_ReconfigureType, _ServiceType>::publishCvImage( cv::Mat & img )
+void BaseImageProcCore<_ReconfigureType, _ServiceType>::publishCvImage( const cv::Mat & img )
 {
 	//IplImage * ipl_img = & ( (IplImage) img );
-	IplImage * ipl_img = new IplImage( img );
+	static IplImage * ipl_img = NULL;
+	ipl_img = new IplImage( img );
 	publishCvImage( ipl_img );
 }
 

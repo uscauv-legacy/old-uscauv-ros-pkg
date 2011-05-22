@@ -46,28 +46,25 @@ ImageLoader::ImageLoader( ros::NodeHandle & nh ) : images_loaded_( false )
 	ROS_INFO("constructed");
 }
 
-std::vector<IplImage *> ImageLoader::loadImages()
+ImageLoader::_ImageCache ImageLoader::loadImages()
 {
 	ROS_INFO("Loading images %s %d %d %d %s", file_prefix_.c_str(), start_, end_, digits_, file_ext_.c_str() );
-	cv::Mat img;
+	IplImage * img = NULL;
 	for ( int i = start_; i < end_; i++ )
 	{
 		std::stringstream filename;
 		filename << file_prefix_ << std::setfill( '0' ) << std::setw( digits_ ) << i << file_ext_;
 
-		img = cv::imread( filename.str().c_str() );
+		img = cvLoadImage( filename.str().c_str() );
 
-		if ( img.data != NULL && img.size().width * img.size().height > 0 )
+		if ( img && img->width * img->height > 0 )
 		{
-			ROS_INFO( "Opening %s %dx%d", filename.str().c_str(), img.size().width, img.size().height );
-			IplImage * ipl_img = new IplImage( img );
-			image_cache_.push_back( ipl_img );
+			ROS_INFO( "Opening %s %dx%d", filename.str().c_str(), img->width, img->height );
+			image_cache_.push_back( img );
 		}
 		else
 		{
 			ROS_WARN( "Ignoring %s; does not exist in filesystem", filename.str().c_str() );
-			end_--;
-			i--;
 		}
 	}
 

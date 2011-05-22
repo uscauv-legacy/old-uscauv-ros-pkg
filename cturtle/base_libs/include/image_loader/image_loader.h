@@ -68,7 +68,7 @@ public:
 
 	ImageLoader( ros::NodeHandle & nh );
 
-	std::vector<IplImage *> loadImages();
+	_ImageCache loadImages();
 };
 
 #endif /* IMAGE_LOADER_H_ */

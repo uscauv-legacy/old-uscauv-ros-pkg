@@ -1,7 +1,7 @@
 #include <base_image_proc/base_image_proc.h>
 #include <image_loader/image_loader.h>
 
-class ImageServer: public BaseImageProc<>
+class ImageServer : public BaseImageProc<>
 {
 private:
 	ImageLoader image_loader_;
@@ -25,23 +25,20 @@ public:
 
 	void spinOnce()
 	{
-		static int current_frame = image_loader_.start_;
-		static IplImage * img = NULL;
+		static int current_frame = 0;
 
-		if ( image_loader_.images_loaded_ && image_loader_.image_cache_.size() > 0 && current_frame < image_loader_.end_ )
+		if ( image_loader_.images_loaded_ && current_frame < image_loader_.image_cache_.size() )
 		{
 			ROS_INFO( "Publishing image %d", current_frame );
-			img = image_loader_.image_cache_[current_frame - image_loader_.start_];
-			if( img )
-				publishCvImage( img );
-			else
-				ROS_ERROR("Bad pointer in image cache...");
+			publishCvImage( image_loader_.image_cache_[current_frame] );
+			++current_frame;
+		}
+		else if( loop_ )
+		{
+			current_frame = 0;
 		}
 
 		ros::Rate( rate_ ).sleep();
-		current_frame++;
-
-		if ( current_frame >= image_loader_.end_ && loop_ ) current_frame = image_loader_.start_;
 	}
 };
 
