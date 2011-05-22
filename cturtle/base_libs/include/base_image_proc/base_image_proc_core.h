@@ -55,6 +55,15 @@
 #include <std_srvs/Empty.h>
 #include <base_node/base_node.h>
 
+// _DataType * pixel = getIplPixel( image, y, x );
+// returns a reference to the pixel at (x, y) in image
+// access channels in the pixel via pixel[channel]
+template<class _DataType>
+static _DataType * getIplPixel( IplImage * image, unsigned int row, unsigned int col )
+{
+	return (_DataType *) ( image->imageData + row * image->widthStep + image->nChannels * col * image->depth / 8 );
+}
+
 template<typename _ReconfigureType, typename _ServiceType>
 class BaseImageProcCore: public BaseNode<_ReconfigureType>
 {
