@@ -51,14 +51,14 @@ protected:
 
 public:
 	BaseTeleop( ros::NodeHandle & nh, std::string topic_name = "cmd_vel" );
-	~BaseTeleop();
+	virtual ~BaseTeleop();
 
 protected:
-	virtual void joyCB( const joy::Joy::ConstPtr& joy );
+	virtual void joyCB( const joy::Joy::ConstPtr& joy_msg );
 	double applyDeadZone( float value, float dead_radius_max = 0.15 );
 
 private:
-	void joyCB_0( const joy::Joy::ConstPtr& joy );
+	void joyCB_0( const joy::Joy::ConstPtr& joy_msg );
 
 };
 
@@ -78,15 +78,15 @@ BaseTeleop<_ReconfigureType>::~BaseTeleop()
 
 // virtual
 template<typename _ReconfigureType>
-void BaseTeleop<_ReconfigureType>::joyCB( const joy::Joy::ConstPtr& joy )
+void BaseTeleop<_ReconfigureType>::joyCB( const joy::Joy::ConstPtr& joy_msg )
 {
 	//
 }
 
 template<typename _ReconfigureType>
-void BaseTeleop<_ReconfigureType>::joyCB_0( const joy::Joy::ConstPtr& joy )
+void BaseTeleop<_ReconfigureType>::joyCB_0( const joy::Joy::ConstPtr& joy_msg )
 {
-	joyCB( joy );
+	joyCB( joy_msg );
 }
 
 template<typename _ReconfigureType>

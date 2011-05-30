@@ -103,7 +103,7 @@ protected:
 public:
 	BaseStereoImageProcCore( ros::NodeHandle & nh,
 	                         uint threads = 3 );
-	~BaseStereoImageProcCore();
+	virtual ~BaseStereoImageProcCore();
 
 protected:
 	void copyImageToCombined( int image_id );

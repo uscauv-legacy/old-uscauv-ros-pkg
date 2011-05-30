@@ -67,8 +67,8 @@ struct BaseNodeTypes
 
 struct SpinModeId
 {
-	const static int spin = 0;
-	const static int loop_spin_once = 1;
+	const static unsigned int SPIN = 0;
+	const static unsigned int LOOP_SPIN_ONCE = 1;
 };
 
 template<typename _BaseReconfigureType = BaseNodeTypes::_DefaultReconfigureType>
@@ -84,15 +84,15 @@ protected:
 	dynamic_reconfigure::Server<_BaseReconfigureType> reconfigure_srv_;
 	typename dynamic_reconfigure::Server<_BaseReconfigureType>::CallbackType reconfigure_callback_;
 
-	// workaround for reconfigure ussues
+	// workaround for reconfigure issues
 	bool reconfigure_initialized_, ignore_reconfigure_;
 	_BaseReconfigureType initial_config_params_;
 	uint32_t initial_config_level_;
 
 public:
 	BaseNode( ros::NodeHandle & nh, uint threads = 3 );
-	~BaseNode();
-	virtual void spin( int mode = SpinModeId::spin );
+	virtual ~BaseNode();
+	virtual void spin( unsigned int mode = SpinModeId::SPIN, float frequency = 10 );
 	virtual void spinOnce();
 
 protected:
@@ -123,18 +123,20 @@ BaseNode<_BaseReconfigureType>::~BaseNode()
 
 // virtual
 template<typename _BaseReconfigureType>
-void BaseNode<_BaseReconfigureType>::spin( int mode )
+void BaseNode<_BaseReconfigureType>::spin( unsigned int mode, float frequency )
 {
-	if ( mode == SpinModeId::spin ) spinner_.spin();
-	else if ( mode == SpinModeId::loop_spin_once )
+	if ( mode == SpinModeId::SPIN ) spinner_.spin();
+	else if ( mode == SpinModeId::LOOP_SPIN_ONCE )
 	{
+		static ros::Rate loop_rate( frequency );
 		while ( ros::ok() )
 		{
 			spinOnce();
 			ros::spinOnce();
+			loop_rate.sleep();
 		}
 	}
-	else spin( SpinModeId::spin );
+	else spin( SpinModeId::SPIN );
 }
 
 // virtual

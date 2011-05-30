@@ -54,65 +54,57 @@
 // for the DoSomething service
 #include <std_srvs/Empty.h>
 #include <base_node/base_node.h>
-
-// _DataType * pixel = getIplPixel( image, y, x );
-// returns a reference to the pixel at (x, y) in image
-// access channels in the pixel via pixel[channel]
-template<class _DataType>
-static _DataType * getIplPixel( IplImage * image, unsigned int row, unsigned int col )
-{
-	return (_DataType *) ( image->imageData + row * image->widthStep + image->nChannels * col * image->depth / 8 );
-}
+#include <common_utils/opencv.h>
 
 template<typename _ReconfigureType, typename _ServiceType>
 class BaseImageProcCore: public BaseNode<_ReconfigureType>
 {
 
 protected:
-	sensor_msgs::ImagePtr img_;
-	sensor_msgs::CameraInfo info_;
+	image_transport::ImageTransport image_transport_;
+	bool new_image_;
+	IplImage * ipl_image_;
 
-	image_transport::Publisher img_pub_;
+	sensor_msgs::ImagePtr image_msg_;
+	sensor_msgs::CameraInfo camera_info_msg_;
 
-	image_transport::Subscriber img_sub_;
-	image_transport::ImageTransport it_;
+	image_transport::Publisher image_pub_;
 
-	ros::Subscriber info_sub_;
+	image_transport::Subscriber image_sub_;
 
-	sensor_msgs::CvBridge bridge_;
+	ros::Subscriber camera_info_sub_;
 
-	cv::Mat cv_img_;
+	sensor_msgs::CvBridge image_bridge_;
 
-	boost::mutex img_mutex_, info_mutex_, flag_mutex_;
-	bool new_img_;
-	std::string image_transport_;
+	boost::mutex image_mutex_, camera_info_mutex_, flag_mutex_;
+	std::string image_transport_type_;
 	bool publish_image_;
 public:
 	BaseImageProcCore( ros::NodeHandle & nh, uint threads = 3 );
-	~BaseImageProcCore();
+	virtual ~BaseImageProcCore();
 
 protected:
 	virtual void imageCB();
-	void publishCvImage( const cv::Mat & img );
-	void publishCvImage( const IplImage * ipl_img );
+	void publishCvImage( const cv::Mat & image_mat );
+	void publishCvImage( const IplImage * ipl_image );
 
 private:
-	void imageCB_0( const sensor_msgs::ImageConstPtr& msg );
-	void infoCB( const sensor_msgs::CameraInfoConstPtr& msg );
+	void imageCB_0( const sensor_msgs::ImageConstPtr& image_msg );
+	void infoCB( const sensor_msgs::CameraInfoConstPtr& camera_info_msg );
 
 };
 
 template<typename _ReconfigureType, typename _ServiceType>
 BaseImageProcCore<_ReconfigureType, _ServiceType>::BaseImageProcCore( ros::NodeHandle & nh, uint threads ) :
-	BaseNode<_ReconfigureType>( nh, threads ), it_( this->nh_priv_ ), new_img_( false )
+	BaseNode<_ReconfigureType>( nh, threads ), image_transport_( this->nh_priv_ ), new_image_( false ), ipl_image_( NULL )
 {
-	this->nh_priv_.param( "image_transport", image_transport_, std::string( "raw" ) );
+	this->nh_priv_.param( "image_transport", image_transport_type_, std::string( "raw" ) );
 	this->nh_priv_.param( "publish_image", publish_image_, true );
 
-	img_sub_ = it_.subscribe( nh.resolveName( "image" ), 1, &BaseImageProcCore::imageCB_0, this, image_transport_ );
-	info_sub_ = this->nh_priv_.subscribe( nh.resolveName( "camera_info" ), 1, &BaseImageProcCore::infoCB, this );
+	image_sub_ = image_transport_.subscribe( nh.resolveName( "image" ), 1, &BaseImageProcCore::imageCB_0, this, image_transport_type_ );
+	camera_info_sub_ = this->nh_priv_.subscribe( nh.resolveName( "camera_info" ), 1, &BaseImageProcCore::infoCB, this );
 
-	if ( publish_image_ ) img_pub_ = it_.advertise( "output_image", 1 );
+	if ( publish_image_ ) image_pub_ = image_transport_.advertise( "output_image", 1 );
 }
 
 template<typename _ReconfigureType, typename _ServiceType>
@@ -122,50 +114,42 @@ BaseImageProcCore<_ReconfigureType, _ServiceType>::~BaseImageProcCore()
 }
 
 template<typename _ReconfigureType, typename _ServiceType>
-void BaseImageProcCore<_ReconfigureType, _ServiceType>::publishCvImage( const IplImage * ipl_img )
+void BaseImageProcCore<_ReconfigureType, _ServiceType>::publishCvImage( const IplImage * ipl_image )
 {
-	ROS_DEBUG( "Published image" );
-
-	static sensor_msgs::Image::Ptr image_msg;
-	image_msg = bridge_.cvToImgMsg( ipl_img );
-
-	img_pub_.publish( image_msg );
+	opencv_utils::publishCvImage( ipl_image, &image_pub_, &image_bridge_ );
 }
 
 template<typename _ReconfigureType, typename _ServiceType>
-void BaseImageProcCore<_ReconfigureType, _ServiceType>::publishCvImage( const cv::Mat & img )
+void BaseImageProcCore<_ReconfigureType, _ServiceType>::publishCvImage( const cv::Mat & image_mat )
 {
-	//IplImage * ipl_img = & ( (IplImage) img );
-	static IplImage * ipl_img = NULL;
-	ipl_img = new IplImage( img );
-	publishCvImage( ipl_img );
+	opencv_utils::publishCvImage( image_mat, &image_pub_, &image_bridge_ );
 }
 
 template<typename _ReconfigureType, typename _ServiceType>
-void BaseImageProcCore<_ReconfigureType, _ServiceType>::imageCB_0( const sensor_msgs::ImageConstPtr& msg )
+void BaseImageProcCore<_ReconfigureType, _ServiceType>::imageCB_0( const sensor_msgs::ImageConstPtr& image_msg )
 {
 	ROS_DEBUG( "got image" );
-	img_mutex_.lock();
+	image_mutex_.lock();
 
-	img_ = boost::const_pointer_cast<sensor_msgs::Image>( msg );
+	image_msg_ = boost::const_pointer_cast<sensor_msgs::Image>( image_msg );
 
-	img_mutex_.unlock();
+	image_mutex_.unlock();
 
 	boost::lock_guard<boost::mutex> guard( flag_mutex_ );
-	new_img_ = true;
+	new_image_ = true;
 
 	imageCB();
 }
 
 template<typename _ReconfigureType, typename _ServiceType>
-void BaseImageProcCore<_ReconfigureType, _ServiceType>::infoCB( const sensor_msgs::CameraInfoConstPtr& msg )
+void BaseImageProcCore<_ReconfigureType, _ServiceType>::infoCB( const sensor_msgs::CameraInfoConstPtr& camera_info_msg )
 {
 	ROS_DEBUG( "got camera info" );
-	info_mutex_.lock();
+	camera_info_mutex_.lock();
 
-	info_ = *msg;
+	camera_info_msg_ = *camera_info_msg;
 
-	info_mutex_.unlock();
+	camera_info_mutex_.unlock();
 }
 
 template<typename _ReconfigureType, typename _ServiceType>

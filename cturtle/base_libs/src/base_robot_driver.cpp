@@ -34,28 +34,3 @@
  *******************************************************************************/
 
 #include <base_robot_driver/base_robot_driver.h>
-
-void operator *=( geometry_msgs::Vector3 & v, const double & scale )
-{
-	v.x = v.x * scale;
-	v.y = v.y * scale;
-	v.z = v.z * scale;
-}
-
-// copy @v and scale the result
-geometry_msgs::Vector3 operator *( const geometry_msgs::Vector3 & v, const double & scale )
-{
-	geometry_msgs::Vector3 result( v );
-	result *= scale;
-	return result;
-}
-
-// copy @twist and scale its components
-geometry_msgs::Twist operator *( const geometry_msgs::Twist & twist, const double & scale )
-{
-	geometry_msgs::Twist result;
-	result.linear = twist.linear * scale;
-	result.angular = twist.angular * scale;
-
-	return result;
-}

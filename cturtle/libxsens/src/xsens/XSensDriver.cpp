@@ -67,11 +67,52 @@ bool XSensDriver::initMe()
 		return false;
 	}
 
+	// Get the available scenarios for this IMU and print them out
+	CmtScenario scenarios[CMT_MAX_SCENARIOS_IN_MT + 1];
+	if ( cmt3.getAvailableScenarios( scenarios ) != XRV_OK )
+	{
+		std::cerr << "Error getting IMU scenarios! Please check the IMU!" << std::endl;
+	}
+	else
+	{
+		for ( int scenIdx = 0; scenIdx < CMT_MAX_SCENARIOS_IN_MT + 1; scenIdx++ )
+		{
+			CmtScenario scenario = scenarios[scenIdx];
+			if ( scenario.m_type == 0 ) break;
+			std::cout << "Scenario #" << scenIdx << " m_type=[" << (int) scenario.m_type << "] : " << scenario.m_label << std::endl;
+		}
+	}
+
+	// Set the current filtering scenario
+	// Modify this scenarioType variable to set the IMU's filtering scenario.
+	uint8_t scenarioType = 6;
+	if ( cmt3.setScenario( scenarioType ) == XRV_OK ) std::cout << "Sucessfully set scenario type to [" << (int) scenarioType << "]" << std::endl;
+	else std::cerr << "Failed to set scenario type! Please check the IMU!" << std::endl;
+
+	// Set the output mode
 	mode = CMT_OUTPUTMODE_CALIB | CMT_OUTPUTMODE_ORIENT;
 	settings = CMT_OUTPUTSETTINGS_ORIENTMODE_EULER;
-
 	doMtSettings( cmt3, mode, settings, deviceIds );
 
+	// Print out the current device configuration to make sure everything's ok
+	CmtDeviceConfiguration configuration;
+	if ( cmt3.getConfiguration( configuration ) != XRV_OK )
+	{
+		std::cerr << "Configuration query failed! Check IMU!" << std::endl;
+	}
+	else
+	{
+		std::cout << "Got Configuration:" << std::endl;
+		for ( uint16_t devIdx = 0; devIdx < configuration.m_numberOfDevices; devIdx++ )
+		{
+			std::cout << " - Device[" << devIdx << "]" << std::endl;
+			std::cout << " |- m_currentScenario:  " << configuration.m_deviceInfo[0].m_currentScenario << std::endl;
+			std::cout << " |- m_filterType:       " << (int) configuration.m_deviceInfo[0].m_filterType << std::endl;
+			std::cout << " |- m_filterMajor:      " << (int) configuration.m_deviceInfo[0].m_filterMajor << std::endl;
+			std::cout << " |- m_filterMinor:      " << (int) configuration.m_deviceInfo[0].m_filterMinor << std::endl;
+		}
+		std::cout << "Everything looks good, we're ready to roll" << std::endl;
+	}
 
 	// Initialize packet for data
 	packet = new Packet( (unsigned short) mtCount, cmt3.isXm() );
@@ -214,12 +255,10 @@ int XSensDriver::doHardwareScan( xsens::Cmt3 &cmt3, CmtDeviceId deviceIds[] )
 	}
 	std::cout << "done" << std::endl;
 
-
 	//get the Mt sensor count.
 	std::cout << "Retrieving MotionTracker count (excluding attached Xbus Master(s))" << std::endl;
 	mtCount = cmt3.getMtCount();
 	std::cout << "MotionTracker count: " << mtCount << std::endl;
-
 
 	// retrieve the device IDs 
 	std::cout << "Retrieving MotionTrackers device ID(s)" << std::endl;
@@ -243,16 +282,14 @@ void XSensDriver::doMtSettings( xsens::Cmt3 &cmt3, CmtOutputMode &mode, CmtOutpu
 	XsensResultValue res;
 	unsigned long mtCount = cmt3.getMtCount();
 
-
 	// set sensor to config sate
 	res = cmt3.gotoConfig();
 
 	unsigned short sampleFreq;
-	sampleFreq = cmt3.getSampleFrequency();
+	sampleFreq = 100;//cmt3.getSampleFrequency();
 
 	std::cout << "sampling at " << sampleFreq << std::endl;
 	
-
 	// set the device output mode for the device(s)
 	std::cout << "Configuring your mode selection" << std::endl;
 
@@ -266,7 +303,6 @@ void XSensDriver::doMtSettings( xsens::Cmt3 &cmt3, CmtOutputMode &mode, CmtOutpu
 		}
 		res = cmt3.setDeviceMode( deviceMode, true, deviceIds[i] );
 	}
-
 
 	// start receiving data
 	res = cmt3.gotoMeasurement();

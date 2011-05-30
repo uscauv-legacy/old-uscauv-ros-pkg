@@ -1,8 +1,8 @@
 /*******************************************************************************
  *
- *      base_tf_tranceiver
+ *      opencv_utils
  * 
- *      Copyright (c) 2010, Edward T. Kaszubski (ekaszubski@gmail.com)
+ *      Copyright (c) 2011, Edward T. Kaszubski ( ekaszubski@gmail.com )
  *      All rights reserved.
  *
  *      Redistribution and use in source and binary forms, with or without
@@ -15,7 +15,7 @@
  *        copyright notice, this list of conditions and the following disclaimer
  *        in the documentation and/or other materials provided with the
  *        distribution.
- *      * Neither the name of "seabee3-ros-pkg" nor the names of its
+ *      * Neither the name of "interaction-ros-pkg" nor the names of its
  *        contributors may be used to endorse or promote products derived from
  *        this software without specific prior written permission.
  *      
@@ -33,4 +33,51 @@
  *
  *******************************************************************************/
 
-#include <base_tf_tranceiver/base_tf_tranceiver.h>
+#ifndef OPENCV_UTILS_H_
+#define OPENCV_UTILS_H_
+
+#include <opencv/cv.h>
+#include <cxcore.h>
+#include <sensor_msgs/Image.h>
+#include <cv_bridge/CvBridge.h>
+// for ImageTransport, Publisher
+#include <image_transport/image_transport.h>
+
+namespace opencv_utils
+{
+	// _DataType * pixel = getIplPixel( image, y, x );
+	// returns a reference to the pixel at (x, y) in image
+	// access channels in the pixel via pixel[channel]
+	template<class _DataType>
+	static _DataType * getIplPixel( IplImage * image, const unsigned int & row, const unsigned int & col )
+	{
+		return (_DataType *) ( image->imageData + row * image->widthStep + image->nChannels * col * image->depth / 8 );
+	}
+
+	template<class _DataType>
+	static _DataType * getIplPixel( IplImage * image, const cv::Point & pixel )
+	{
+		return getIplPixel<_DataType> ( image, pixel.x, pixel.y );
+	}
+
+	static void publishCvImage( const IplImage * ipl_img, image_transport::Publisher * img_pub, sensor_msgs::CvBridge * bridge = NULL )
+	{
+		static sensor_msgs::CvBridge * temp_bridge = new sensor_msgs::CvBridge();
+		if ( !bridge ) bridge = temp_bridge;
+
+		static sensor_msgs::Image::Ptr image_message;
+		image_message = bridge->cvToImgMsg( ipl_img );
+
+		img_pub->publish( image_message );
+	}
+
+	static void publishCvImage( const cv::Mat & img, image_transport::Publisher * img_pub, sensor_msgs::CvBridge * bridge = NULL )
+	{
+		static IplImage * ipl_img = NULL;
+		ipl_img = new IplImage( img );
+
+		publishCvImage( ipl_img, img_pub, bridge );
+	}
+}
+
+#endif /* OPENCV_UTILS_H_ */

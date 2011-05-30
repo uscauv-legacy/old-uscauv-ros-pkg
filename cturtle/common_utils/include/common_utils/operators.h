@@ -1,8 +1,8 @@
 /*******************************************************************************
  *
- *      base_tf_tranceiver
+ *      operators
  * 
- *      Copyright (c) 2010, Edward T. Kaszubski (ekaszubski@gmail.com)
+ *      Copyright (c) 2011, Edward T. Kaszubski ( ekaszubski@gmail.com )
  *      All rights reserved.
  *
  *      Redistribution and use in source and binary forms, with or without
@@ -33,4 +33,35 @@
  *
  *******************************************************************************/
 
-#include <base_tf_tranceiver/base_tf_tranceiver.h>
+#ifndef OPERATORS_H_
+#define OPERATORS_H_
+
+#include <geometry_msgs/Vector3.h>
+#include <geometry_msgs/Twist.h>
+
+void operator *=( geometry_msgs::Vector3 & v, const double & scale )
+{
+	v.x = v.x * scale;
+	v.y = v.y * scale;
+	v.z = v.z * scale;
+}
+
+// copy @v and scale the result
+geometry_msgs::Vector3 operator *( const geometry_msgs::Vector3 & v, const double & scale )
+{
+	geometry_msgs::Vector3 result( v );
+	result *= scale;
+	return result;
+}
+
+// copy @twist and scale its components
+geometry_msgs::Twist operator *( const geometry_msgs::Twist & twist, const double & scale )
+{
+	geometry_msgs::Twist result;
+	result.linear = twist.linear * scale;
+	result.angular = twist.angular * scale;
+
+	return result;
+}
+
+#endif /* OPERATORS_H_ */

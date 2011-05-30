@@ -9,7 +9,6 @@
   <review status="unreviewed" notes=""/>
   <url>http://ros.org/wiki/seabee3_driver</url>
   <depend package="roscpp"/>
-  <depend package="control_toolbox" /> <!-- for Pid -->
   <depend package="seabee3_driver_base" /> <!-- for Depth.msg, KillSwitch.msg, MotorCntl.msg, Pressure.msg -->
   <depend package="geometry_msgs" /> <!-- for Twist.msg, Vector3.msg -->
   <depend package="std_msgs" /> <!-- for Empty.msg -->

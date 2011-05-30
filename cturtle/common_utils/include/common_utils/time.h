@@ -1,8 +1,8 @@
 /*******************************************************************************
  *
- *      base_tf_tranceiver
+ *      time
  * 
- *      Copyright (c) 2010, Edward T. Kaszubski (ekaszubski@gmail.com)
+ *      Copyright (c) 2011, edward
  *      All rights reserved.
  *
  *      Redistribution and use in source and binary forms, with or without
@@ -15,7 +15,7 @@
  *        copyright notice, this list of conditions and the following disclaimer
  *        in the documentation and/or other materials provided with the
  *        distribution.
- *      * Neither the name of "seabee3-ros-pkg" nor the names of its
+ *      * Neither the name of "interaction-ros-pkg" nor the names of its
  *        contributors may be used to endorse or promote products derived from
  *        this software without specific prior written permission.
  *      
@@ -33,4 +33,56 @@
  *
  *******************************************************************************/
 
-#include <base_tf_tranceiver/base_tf_tranceiver.h>
+#ifndef TIME_H_
+#define TIME_H_
+
+#include <time.h>
+#include <sys/time.h>
+#include <stdio.h>
+
+namespace time_utils
+{
+	static double getTimeInSecs()
+	{
+		struct timeval time;
+		gettimeofday( &time, NULL );
+
+		return double( time.tv_sec ) + double( time.tv_usec ) / 1000000;
+	}
+
+	// very simple class to time operations
+	class Timer
+	{
+		double current_time;
+		double last_time;
+
+		Timer() :
+			current_time( getTimeInSecs() ), last_time( current_time )
+		{
+			//
+		}
+
+		void start()
+		{
+			last_time = getTimeInSecs();
+		}
+
+		void reset()
+		{
+			last_time = current_time = getTimeInSecs();
+		}
+
+		double stop()
+		{
+			current_time = getTimeInSecs();
+			return getDuration();
+		}
+
+		double getDuration()
+		{
+			return current_time - last_time;
+		}
+	};
+}
+
+#endif /* TIME_H_ */

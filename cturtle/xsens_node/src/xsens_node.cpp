@@ -43,14 +43,15 @@
 #include <xsens/XSensDriver.h> // for XSensDriver
 #include <geometry_msgs/Vector3.h>
 #include <math.h> //for pow, sqrt
-#include <mathy_math/mathy_math.h>
+#include <common_utils/math.h>
 //msgs
-#include <sensor_msgs/Imu.h> // for outgoing IMU data; quaternions? srsly? fuckin bullshit
-#include <xsens_node/Imu.h> // for backwards-compatibility; also gives euler angles (because fuck quaternions)
+#include <sensor_msgs/Imu.h> // for outgoing IMU data;
+#include <xsens_node/Imu.h> // for backwards-compatibility; also gives euler angles
 #include <std_msgs/Bool.h> //for Bool
 //srvs
 #include <xsens_node/CalibrateRPY.h> // for CalibrateRPY
 #include <std_srvs/Empty.h> //for Empty
+
 void operator +=( XSensDriver::Vector3 & v1, tf::Vector3 & v2 )
 {
 	v1.x += v2.getX();
@@ -74,9 +75,9 @@ void operator >>( XSensDriver::Vector3 & v1, tf::Vector3 & v2 )
 
 void operator >>( tf::Vector3 & v1, geometry_msgs::Vector3 & v2 )
 {
-	v2.x = v1.getX();
-	v2.y = v1.getY();
-	v2.z = v1.getZ();
+        v2.x = v1.getX();
+        v2.y = v1.getY();
+        v2.z = v1.getZ();
 }
 
 class XSensNode: public BaseNode<>
@@ -285,9 +286,9 @@ public:
 
 		temp >> custom_imu_msg.ori;
 
-		custom_imu_msg.ori.x = 0;//MathyMath::degToRad( custom_imu_msg.ori.x );
-		custom_imu_msg.ori.y = 0;//MathyMath::degToRad( custom_imu_msg.ori.y );
-		custom_imu_msg.ori.z = MathyMath::degToRad( custom_imu_msg.ori.z );
+		custom_imu_msg.ori.x = math_utils::degToRad( custom_imu_msg.ori.x );
+		custom_imu_msg.ori.y = math_utils::degToRad( custom_imu_msg.ori.y );
+		custom_imu_msg.ori.z = math_utils::degToRad( custom_imu_msg.ori.z );
 
 		tf::Quaternion ori( temp.z(), temp.y(), temp.x() );
 
@@ -314,7 +315,7 @@ int main( int argc, char** argv )
 	ros::NodeHandle nh;
 
 	XSensNode xsens_node( nh );
-	xsens_node.spin( SpinModeId::loop_spin_once );
+	xsens_node.spin( SpinModeId::LOOP_SPIN_ONCE );
 	
 	return 0;
 }

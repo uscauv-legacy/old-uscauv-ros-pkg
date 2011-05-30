@@ -1,8 +1,8 @@
 /*******************************************************************************
  *
- *      base_tf_tranceiver
+ *      core
  * 
- *      Copyright (c) 2010, Edward T. Kaszubski (ekaszubski@gmail.com)
+ *      Copyright (c) 2011, edward
  *      All rights reserved.
  *
  *      Redistribution and use in source and binary forms, with or without
@@ -15,7 +15,7 @@
  *        copyright notice, this list of conditions and the following disclaimer
  *        in the documentation and/or other materials provided with the
  *        distribution.
- *      * Neither the name of "seabee3-ros-pkg" nor the names of its
+ *      * Neither the name of "interaction-ros-pkg" nor the names of its
  *        contributors may be used to endorse or promote products derived from
  *        this software without specific prior written permission.
  *      
@@ -33,4 +33,4 @@
  *
  *******************************************************************************/
 
-#include <base_tf_tranceiver/base_tf_tranceiver.h>
+#include <common_utils/core.h>

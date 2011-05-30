@@ -197,7 +197,7 @@ int main( int argc, char** argv )
 	ros::NodeHandle nh;
 
 	OdomNode odom_node( nh );
-	odom_node.spin( SpinModeId::loop_spin_once );
+	odom_node.spin( SpinModeId::LOOP_SPIN_ONCE );
 
 	return 0;
 }

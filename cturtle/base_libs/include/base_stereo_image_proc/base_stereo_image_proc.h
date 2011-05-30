@@ -75,7 +75,7 @@ template<typename _ReconfigureType> class BaseStereoImageProc<_ReconfigureType, 
 public:
 	BaseStereoImageProc( ros::NodeHandle & nh,
 	                     uint threads = 3 );
-	~BaseStereoImageProc();
+	virtual ~BaseStereoImageProc();
 
 protected:
 	// process the last image; the intent is for this method to modify the image

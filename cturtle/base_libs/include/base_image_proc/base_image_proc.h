@@ -51,12 +51,12 @@ protected:
 
 public:
 	BaseImageProc( ros::NodeHandle & nh, std::string service_name = "service", uint threads = 3 );
-	~BaseImageProc();
+	virtual ~BaseImageProc();
 
 protected:
 	// process the last image given the request and provide a response; modification of the image is optional
 	// called during serviceCB
-	virtual cv::Mat processImage( IplImage * ipl_img, _ServiceRequest & req, _ServiceResponse & resp );
+	virtual IplImage * processImage( IplImage * ipl_image, _ServiceRequest & req, _ServiceResponse & resp );
 	bool serviceCB( _ServiceRequest & req, _ServiceResponse & resp );
 };
 
@@ -64,12 +64,12 @@ template<typename _ReconfigureType> class BaseImageProc<_ReconfigureType, std_sr
 {
 public:
 	BaseImageProc( ros::NodeHandle & nh, uint threads = 3 );
-	~BaseImageProc();
+	virtual ~BaseImageProc();
 
 protected:
 	// process the last image; the intent is for this method to modify the image
 	// called at the end of imageCB
-	virtual cv::Mat processImage( IplImage * ipl_img );
+	virtual IplImage * processImage( IplImage * ipl_img );
 	virtual void imageCB();
 
 };
@@ -102,55 +102,54 @@ BaseImageProc<_ReconfigureType, std_srvs::Empty>::~BaseImageProc()
 
 //virtual
 template<typename _ReconfigureType, typename _ServiceType>
-cv::Mat BaseImageProc<_ReconfigureType, _ServiceType>::processImage( IplImage * ipl_img, _ServiceRequest & req, _ServiceResponse & resp )
+IplImage * BaseImageProc<_ReconfigureType, _ServiceType>::processImage( IplImage * ipl_image, _ServiceRequest & req, _ServiceResponse & resp )
 {
 	ROS_DEBUG( "Processed image in base class" );
-	return cv::Mat( ipl_img );
+	return ipl_image;
 }
 
 //virtual
 template<typename _ReconfigureType>
-cv::Mat BaseImageProc<_ReconfigureType, std_srvs::Empty>::processImage( IplImage * ipl_img )
+IplImage * BaseImageProc<_ReconfigureType, std_srvs::Empty>::processImage( IplImage * ipl_image )
 {
 	ROS_DEBUG( "Processed image in base class" );
-	return cv::Mat( ipl_img );
+	return ipl_image;
 }
 
 template<typename _ReconfigureType, typename _ServiceType>
 bool BaseImageProc<_ReconfigureType, _ServiceType>::serviceCB( _ServiceRequest & req, _ServiceResponse & resp )
 {
 	// if the image hasn't changed, just use the last response
-	if ( !this->new_img_ )
+	if ( !this->new_image_ )
 	{
 		resp = last_response_;
 	}
 	// if the image has changed, generate and then save a new response (and potentially a new output image)
 	else
 	{
-		this->new_img_ = false;
+		this->new_image_ = false;
 
-		boost::lock_guard<boost::mutex> img_guard( this->img_mutex_ );
-
+		boost::lock_guard<boost::mutex> image_guard( this->image_mutex_ );
 
 		//IplImg is a more low-level open-cv image type
-		IplImage * ipl_img = this->bridge_.imgMsgToCv( this->img_ );
-
+		IplImage * ipl_image = this->image_bridge_.imgMsgToCv( this->image_msg_ );
 
 		// cv_img_ has the raw image data that should be analyzed
-		if ( this->reconfigure_initialized_ ) this->cv_img_ = processImage( ipl_img, req, resp );
+		if ( this->reconfigure_initialized_ ) this->ipl_image_ = processImage( ipl_image, req, resp );
 
-		if ( this->cv_img_.size().width == 0 && this->cv_img_.size().height == 0 ) this->cv_img_ = cv::Mat( ipl_img );
+		if ( this->ipl_image_->width == 0 && this->ipl_image_->height == 0 ) this->ipl_image_ = ipl_image;
 
 
 		// store the last response to save processing time
 		last_response_ = resp;
 	}
 
-	if ( this->publish_image_ && this->reconfigure_initialized_ && this->cv_img_.size().width == 0 && this->cv_img_.size().height == 0 ) this->publishCvImage( this->cv_img_ );
+	if ( this->publish_image_ && this->reconfigure_initialized_ && this->ipl_image_->width == 0 && this->ipl_image_->height == 0 ) this->publishCvImage( this->ipl_image_ );
 
 
 	// notify ROS whether or not everything executed properly
 	return true;
+
 }
 
 // virtual
@@ -159,9 +158,9 @@ void BaseImageProc<_ReconfigureType, std_srvs::Empty>::imageCB()
 {
 	if ( this->reconfigure_initialized_ )
 	{
-		this->cv_img_ = processImage( this->bridge_.imgMsgToCv( this->img_ ) );
+		this->ipl_image_ = processImage( this->image_bridge_.imgMsgToCv( this->image_msg_ ) );
 
-		if ( this->publish_image_ ) this->publishCvImage( this->cv_img_ );
+		if ( this->publish_image_ ) this->publishCvImage( this->ipl_image_ );
 	}
 }
 

@@ -1,0 +1,19 @@
+<package>
+  <description brief="generic_controllers">
+
+     generic_controllers
+
+  </description>
+  <author>Edward T. Kaszubski</author>
+  <license>BSD</license>
+  <review status="unreviewed" notes=""/>
+  <url>http://ros.org/wiki/generic_controllers</url>
+  <depend package="roscpp"/>
+  <depend package="common_utils"/>
+  <export>
+    <cpp cflags="-I${prefix}/include -I${prefix}/msg/cpp -I${prefix}/srv/cpp" lflags="-Wl,-rpath,${prefix}/lib -L${prefix}/lib -lgeneric_controllers"/>
+  </export>
+
+</package>
+
+

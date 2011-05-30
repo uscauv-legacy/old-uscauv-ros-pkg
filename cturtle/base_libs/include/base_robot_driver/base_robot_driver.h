@@ -38,14 +38,7 @@
 
 #include <base_tf_tranceiver/base_tf_tranceiver.h>
 #include <timeout_monitor/timeout_monitor.h>
-
-void operator *=( geometry_msgs::Vector3 & v, const double & scale );
-
-// copy @v and scale the result
-geometry_msgs::Vector3 operator *( const geometry_msgs::Vector3 & v, const double & scale );
-
-// copy @twist and scale its components
-geometry_msgs::Twist operator *( const geometry_msgs::Twist & twist, const double & scale );
+#include <common_utils/operators.h>
 
 template<typename _ReconfigureType = BaseNodeTypes::_DefaultReconfigureType>
 class BaseRobotDriver: public BaseTfTranceiver<_ReconfigureType>
@@ -58,7 +51,7 @@ protected:
 
 public:
 	BaseRobotDriver( ros::NodeHandle & nh, std::string topic_name = "cmd_vel", uint threads = 3 );
-	~BaseRobotDriver();
+	virtual ~BaseRobotDriver();
 
 protected:
 	virtual void cmdVelCB( const geometry_msgs::TwistConstPtr & twist );

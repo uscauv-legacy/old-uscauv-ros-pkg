@@ -34,11 +34,10 @@
  *******************************************************************************/
 
 #include <base_image_proc/base_image_proc.h>
-#include <mathy_math/mathy_math.h>
 
 int main( int argc, char ** argv )
 {
-	ros::init( argc, argv, "color_classifier" );
+	ros::init( argc, argv, "base_image_proc_tester" );
 	ros::NodeHandle nh;
 
 	BaseImageProc<> base_image_proc( nh );

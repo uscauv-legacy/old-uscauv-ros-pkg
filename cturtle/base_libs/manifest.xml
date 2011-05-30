@@ -20,6 +20,7 @@
   <depend package="geometry_msgs"/>
   <depend package="tf"/>
   <depend package="joy"/>
+  <depend package="common_utils"/>
   <export>
     <cpp cflags="-I${prefix}/include -I${prefix}/msg/cpp -I${prefix}/srv/cpp" lflags="-Wl,-rpath,${prefix}/lib -L${prefix}/lib -lbase_libs"/>
   </export>
