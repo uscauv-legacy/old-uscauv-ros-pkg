@@ -327,9 +327,10 @@ public:
 
 				if ( abs( value ) < motor_val_deadzone_ ) return 0;
 
-				double value_d = (double) value;
+				double value_d = fabs( value );
+				double direction = ( value < 0 ? -1.0 : 1.0 );
 
-				value_d = motor_val_min_ * ( value < 0 ? -1.0 : 1.0 ) + value_d * ( motor_val_max_ - motor_val_min_ ) / 100.0;
+				value_d = direction * ( motor_val_min_ + ( value_d - motor_val_deadzone_ ) * ( motor_val_max_ - motor_val_min_ ) / 100.0 );
 
 				return (int) round( value_d );
 			}
