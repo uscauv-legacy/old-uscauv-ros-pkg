@@ -74,7 +74,7 @@ namespace tf_utils
 		static tf::TransformListener * static_listener = new tf::TransformListener;
 		static tf::TransformListener * listener;
 
-		listener = listener_ ? listener : static_listener;
+		listener = listener_ ? listener_ : static_listener;
 
 		try
 		{

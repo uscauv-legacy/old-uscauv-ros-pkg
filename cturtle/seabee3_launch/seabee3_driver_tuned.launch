@@ -1,4 +1,5 @@
 <launch>
+	<include file="$(find seabee3_launch)/seabee3_dead_reckoning.launch" />
 	<node pkg="seabee3_driver" type="seabee3_driver" name="seabee3_driver" output="screen">
 		<param name="use_pid_assist" type="bool" value="true" />
 		
@@ -19,29 +20,29 @@
 		<param name="pitch_err_cap" type="double" value="25.0" />
 		<param name="heading_err_cap" type="double" value="50.0" />
 		
-		<param name="pid/pos/X/p" type="double" value="500.0" />
-		<param name="pid/pos/X/i" type="double" value="0.01" />
-		<param name="pid/pos/X/d" type="double" value="0.6" />
+		<param name="pid/linear/x/p" type="double" value="500.0" />
+		<param name="pid/linear/x/i" type="double" value="0.01" />
+		<param name="pid/linear/x/d" type="double" value="0.6" />
 		
-		<param name="pid/pos/Y/p" type="double" value="500.0" />
-		<param name="pid/pos/Y/i" type="double" value="0.01" />
-		<param name="pid/pos/Y/d" type="double" value="0.6" />
+		<param name="pid/linear/y/p" type="double" value="500.0" />
+		<param name="pid/linear/Y/i" type="double" value="0.01" />
+		<param name="pid/linear/Y/d" type="double" value="0.6" />
 		
-		<param name="pid/pos/Z/p" type="double" value="500.0" />
-		<param name="pid/pos/Z/i" type="double" value="0.01" />
-		<param name="pid/pos/Z/d" type="double" value="0.6" />
+		<param name="pid/linear/z/p" type="double" value="50.0" />
+		<param name="pid/linear/z/i" type="double" value="0.01" />
+		<param name="pid/linear/z/d" type="double" value="0.6" />
 		
-		<param name="pid/ori/R/p" type="double" value="2.5" />
-		<param name="pid/ori/R/i" type="double" value="0.05" />
-		<param name="pid/ori/R/d" type="double" value="0.2" />
+		<param name="pid/angular/x/p" type="double" value="2.5" />
+		<param name="pid/angular/x/i" type="double" value="0.05" />
+		<param name="pid/angular/x/d" type="double" value="0.2" />
 		
-		<param name="pid/ori/P/p" type="double" value="2.5" />
-		<param name="pid/ori/P/i" type="double" value="0.05" />
-		<param name="pid/ori/P/d" type="double" value="0.2" />
+		<param name="pid/angular/y/p" type="double" value="2.5" />
+		<param name="pid/angular/y/i" type="double" value="0.05" />
+		<param name="pid/angular/y/d" type="double" value="0.2" />
 		
-		<param name="pid/ori/Y/p" type="double" value="2.0" />
-		<param name="pid/ori/Y/i" type="double" value="0.05" />
-		<param name="pid/ori/Y/d" type="double" value="0.6" />
+		<param name="pid/angular/z/p" type="double" value="2.0" />
+		<param name="pid/angular/z/i" type="double" value="0.05" />
+		<param name="pid/angular/z/d" type="double" value="0.6" />
 		
 		<param name="pid_i_max" type="double" value="1.0" />
 		<param name="pid_i_min" type="double" value="-1.0" />

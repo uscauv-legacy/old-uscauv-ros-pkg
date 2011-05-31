@@ -1,0 +1,3 @@
+<launch>
+	<node pkg="dead_reckoning_odom" type="odom_node" name="odom_node" />
+</launch>

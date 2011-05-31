@@ -49,6 +49,31 @@ public:
 	typedef __StorageDataType _StorageDataType;
 	typedef __TimeDataType _TimeDataType;
 
+	struct Settings
+	{
+		const static _StorageDataType DEF_p_ = 1;
+		const static _StorageDataType DEF_i_ = 0;
+		const static _StorageDataType DEF_d_ = 0.05;
+		const static _StorageDataType DEF_i_min_ = -1;
+		const static _StorageDataType DEF_i_max_ = 1;
+		const static _StorageDataType DEF_e_min_ = 0;
+		const static _StorageDataType DEF_e_max_ = 0;
+
+		Settings( _StorageDataType p_ = DEF_p_, _StorageDataType i_ = DEF_i_, _StorageDataType d_ = DEF_d_, _StorageDataType i_min_ = DEF_i_min_, _StorageDataType i_max_ = DEF_i_max_,
+				_StorageDataType e_min_ = DEF_e_min_, _StorageDataType e_max_ = DEF_e_max_ ) :
+			p( p_ ), i( i_ ), d( d_ ), i_min( i_min_ ), i_max( i_max_ ), e_min( e_min_ ), e_max( e_max_ )
+		{
+			//
+		}
+
+		void apply()
+		{
+
+		}
+
+		_StorageDataType p, i, d, i_min, i_max, e_min, e_max;
+	};
+
 	virtual void init() = 0;
 
 	virtual void reset() = 0;
@@ -67,126 +92,111 @@ class PidBase : public IPidBase<__StorageDataType, __TimeDataType> {
 public:
 typedef __StorageDataType _StorageDataType;
 typedef __TimeDataType _TimeDataType;
+typedef IPidBase<__StorageDataType, __TimeDataType> _IPidBase;
+typedef typename _IPidBase::Settings _Settings;
 
-struct Settings
-{
-	const static _StorageDataType DEF_p_ = 1;
-	const static _StorageDataType DEF_i_ = 0;
-	const static _StorageDataType DEF_d_ = 0.05;
-	const static _StorageDataType DEF_i_min_ = -1;
-	const static _StorageDataType DEF_i_max_ = 1;
-	const static _StorageDataType DEF_e_min_ = 0;
-	const static _StorageDataType DEF_e_max_ = 0;
-
-	Settings( _StorageDataType p_ = DEF_p_, _StorageDataType i_ = DEF_i_, _StorageDataType d_ = DEF_d_, _StorageDataType i_min_ = DEF_i_min_, _StorageDataType i_max_ = DEF_i_max_,
-			_StorageDataType e_min_ = DEF_e_min_, _StorageDataType e_max_ = DEF_e_max_ ) :
-	p( p_ ), i( i_ ), d( d_ ), i_min( i_min_ ), i_max( i_max_ ), e_min( e_min_ ), e_max( e_max_ )
-	{
-		//
-	}
-
-	_StorageDataType p, i, d, i_min, i_max, e_min, e_max;
-};
-
-Settings settings;
+_Settings settings;
 
 _StorageDataType output, integral, last_error;
 
 bool time_initialized, error_initialized;
 _TimeDataType current_time, last_update_time;
 
-PidBase( _StorageDataType p_ = Settings::DEF_p_, _StorageDataType i_ = Settings::DEF_i_, _StorageDataType d_ = Settings::DEF_d_, _StorageDataType i_min_ = Settings::DEF_i_min_,
-		_StorageDataType i_max_ = Settings::DEF_i_max_, _StorageDataType e_min_ = Settings::DEF_e_min_, _StorageDataType e_max_ = Settings::DEF_e_max_, _StorageDataType output_ = 0 ) :
-settings( p_, i_, d_, i_min_, i_max_, e_min_, e_max_ ), output( output_ ), integral( 0 ), last_error( 0 ), time_initialized( false ), error_initialized( false ), current_time( 0 ),
-last_update_time( 0 )
+PidBase( _StorageDataType output_ = 0 ) :
+output( output_ )
 {
 	//
-}
-
-PidBase( Settings settings_, _StorageDataType output_ = 0 ) :
-settings( settings_ ), output( output_ )
-{
-	//
-}
-
-virtual void init()
-{
-	update( 0 );
-}
-
-virtual void reset()
-{
-	output = 0;
-	integral = 0;
-	time_initialized = false;
-	error_initialized = false;
-}
-
-// update using a given dt
-virtual _StorageDataType update( _StorageDataType error, _TimeDataType dt, bool update_time = true )
-{
-	printf( "update( %f %f )\n", error, dt );
-
-	// to prevent insane P values, limit the error to within the specified bounds
-	if ( settings.e_min != 0 && error < settings.e_min ) error = settings.e_min;
-	if ( settings.e_max != 0 && error > settings.e_max ) error = settings.e_max;
-
-	//printf( "capped error: %f\n", error );
-
-	//printf( "settings: %f %f\n", settings.e_min, settings.e_max );
-
-	// register the loop was updated
-	if ( update_time ) updateTime();
-
-	if ( !error_initialized )
-	{
-		error_initialized = true;
-		last_error = error;
-		printf( "error initialized: %f\n", last_error );
 	}
 
-	output = settings.p * error;
-	if ( dt > 0 )
+	virtual void init()
 	{
-		if ( fabs( settings.i ) > 0 )
+		update( 0 );
+	}
+
+	virtual void reset()
+	{
+		output = 0;
+		integral = 0;
+		time_initialized = false;
+		error_initialized = false;
+	}
+
+	// update using a given dt
+	virtual _StorageDataType update( _StorageDataType error, _TimeDataType dt, bool update_time = true )
+	{
+		printf( "update( %f %f )\n", error, dt );
+
+		// to prevent insane P values, limit the error to within the specified bounds
+		if ( settings.e_min != 0 && error < settings.e_min ) error = settings.e_min;
+		if ( settings.e_max != 0 && error > settings.e_max ) error = settings.e_max;
+
+		//printf( "capped error: %f\n", error );
+
+		//printf( "settings: %f %f\n", settings.e_min, settings.e_max );
+
+		// register the loop was updated
+		if ( update_time ) updateTime();
+
+		if ( !error_initialized )
 		{
-			integral += error * dt;
-
-			// make sure the integral term doesn't go outside of [i_min, i_max]
-			integral = integral > settings.i_max ? settings.i_max : integral < settings.i_min ? settings.i_min : integral;
-
-			output += settings.i * integral;
+			error_initialized = true;
+			last_error = error;
+			printf( "error initialized: %f\n", last_error );
 		}
 
-		printf( "last_error %f error %f dE %f dT %f\n", last_error, error, last_error - error, dt );
+		output = settings.p * error;
+		if ( dt > 0 )
+		{
+			if ( fabs( settings.i ) > 0 )
+			{
+				integral += error * dt;
 
-		output += settings.d > 0 ? settings.d * ( error - last_error ) / dt : 0;
+				// make sure the integral term doesn't go outside of [i_min, i_max]
+				integral = integral > settings.i_max ? settings.i_max : integral < settings.i_min ? settings.i_min : integral;
+
+				output += settings.i * integral;
+			}
+
+			printf( "last_error %f error %f dE %f dT %f\n", last_error, error, last_error - error, dt );
+
+			output += settings.d > 0 ? settings.d * ( error - last_error ) / dt : 0;
+		}
+		last_error = error;
+
+		printf( "error: %f integral: %f output: %f\n", error, integral, output );
+
+		return output;
 	}
-	last_error = error;
 
-	printf( "error: %f integral: %f output: %f\n", error, integral, output );
+	// calculate dt automatically
+	virtual _StorageDataType update( _StorageDataType error )
+	{
+		printf( "update( %f )\n", error );
 
-	return output;
-}
+		if ( !time_initialized ) updateTime();
+		else update( error, updateTime(), false );
 
-// calculate dt automatically
-virtual _StorageDataType update( _StorageDataType error )
-{
-	printf( "update( %f )\n", error );
+		return output;
+	}
 
-	if ( !time_initialized ) updateTime();
-	else update( error, updateTime(), false );
+	virtual _TimeDataType updateTime()
+	{
+		last_update_time = time_initialized ? current_time : _TimeDataType( time_utils::getTimeInSecs() );
+		current_time = _TimeDataType( time_utils::getTimeInSecs() );
+		time_initialized = true;
+		return current_time - last_update_time;
+	}
 
-	return output;
-}
+	void applySettings()
+	{
+		//
+	}
 
-virtual _TimeDataType updateTime()
-{
-	last_update_time = time_initialized ? current_time : _TimeDataType( time_utils::getTimeInSecs() );
-	current_time = _TimeDataType( time_utils::getTimeInSecs() );
-	time_initialized = true;
-	return current_time - last_update_time;
-}
+	void applySettings( _Settings settings_ )
+	{
+		settings = settings_;
+		applySettings();
+	}
 };
 
 template<class __PidBaseType, unsigned int __Dim__ = 1>
@@ -242,27 +252,29 @@ protected:
 _PidBaseType pids[__Dim__];
 std::vector<_StorageDataType> outputs;
 
+typedef std::vector<_Settings> _SettingsArray;
+
 public:
 Pid()
 {
-	//
+	//applySettings( settings_array );
 	}
 	virtual ~Pid()
 	{
 		//
 	}
 
-	void applySettings( std::vector<_Settings> settings_array )
+	void applySettings( _SettingsArray settings_array )
 	{
 		for ( unsigned int i = 0; i < __Dim__; ++i )
 		{
-			pids[i].settings = settings_array[i];
+			pids[i].applySettings( settings_array[i] );
 		}
 	}
 
 	void applySettings( unsigned int i, _Settings settings )
 	{
-		pids[i].settings = settings;
+		pids[i].applySettings( settings );
 	}
 
 	virtual void reset()
@@ -303,11 +315,12 @@ public:
 	typedef typename __PidBaseType::_TimeDataType _TimeDataType;
 
 	typedef __PidBaseType _PidBaseType;
+	typedef typename _PidBaseType::Settings _Settings;
 
 public:
-	Pid()
+	Pid() : __PidBaseType()
 	{
-		//
+
 	}
 	virtual ~Pid()
 	{
@@ -323,25 +336,27 @@ public:
 	typedef typename __PidBaseType::_TimeDataType _TimeDataType;
 
 	typedef __PidBaseType _PidBaseType;
+	typedef typename _PidBaseType::Settings _Settings;
+	typedef std::vector<_Settings> _SettingsArray;
 
 	typedef Pid<_PidBaseType, 1> _Pid;
 
 	// allocate storage for a 3D pid
-	typedef Pid<_PidBaseType, 3> _Pid3D;
+		typedef Pid<_PidBaseType, 3> _Pid3D;
 
-	_PidBaseType * x, *y, *z;
+		_PidBaseType * x, *y, *z;
 
-	Pid3D() :
+		Pid3D() :
 		_Pid3D(), x( &this->pids[0] ), y( &this->pids[1] ), z( &this->pids[2] )
-	{
-		//
-	}
+		{
+			//
+		}
 
-	virtual ~Pid3D()
-	{
-		//
-	}
-};
+		virtual ~Pid3D()
+		{
+			//
+		}
+	};
 
 template<class __PidBaseType>
 class Pid6D : public Pid<__PidBaseType, 6>
@@ -351,24 +366,26 @@ public:
 	typedef typename __PidBaseType::_TimeDataType _TimeDataType;
 
 	typedef __PidBaseType _PidBaseType;
+	typedef typename _PidBaseType::Settings _Settings;
+	typedef std::vector<_Settings> _SettingsArray;
 
 	typedef Pid<_PidBaseType, 1> _Pid;
 	typedef Pid3D<_PidBaseType> _Pid3D;
 
 	// allocate storage for a 6D pid
-	typedef Pid<_PidBaseType, 6> _Pid6D;
+		typedef Pid<_PidBaseType, 6> _Pid6D;
 
-	_PidBaseType * linear_x, * linear_y, * linear_z, * angular_x, * angular_y, * angular_z;
+		_PidBaseType * linear_x, * linear_y, * linear_z, * angular_x, * angular_y, * angular_z;
 
-	Pid6D() : _Pid6D(), linear_x( &this->pids[0] ), linear_y( &this->pids[1] ), linear_z( &this->pids[2] ), angular_x( &this->pids[3] ), angular_y( &this->pids[4] ),angular_z( &this->pids[5] )
-	{
-		//
-	}
+		Pid6D() : _Pid6D(), linear_x( &this->pids[0] ), linear_y( &this->pids[1] ), linear_z( &this->pids[2] ), angular_x( &this->pids[3] ), angular_y( &this->pids[4] ),angular_z( &this->pids[5] )
+		{
+			//
+		}
 
-	virtual ~Pid6D()
-	{
-		//
-	}
-};
+		virtual ~Pid6D()
+		{
+			//
+		}
+	};
 
 #endif /* PID_H_ */

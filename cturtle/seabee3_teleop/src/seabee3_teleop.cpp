@@ -39,7 +39,7 @@
 #include <base_teleop/base_teleop.h>
 #include <seabee3_common/movement_common.h>
 #include <seabee3_driver_base/FiringDeviceAction.h>
-#include <mathy_math/mathy_math.h>
+#include <common_utils/math.h>
 #include <std_srvs/Empty.h>
 
 class Seabee3Teleop: public BaseTeleop<>
@@ -87,7 +87,7 @@ public:
 
 		nh_priv_.param( "keep_alive_period", keep_alive_period_, 0.25 );
 
-		shooter_cli_ = nh_priv_.serviceClient<seabee3_driver_base::FiringDeviceAction> ( "/seabee3/shooter1_action" );
+		shooter_cli_ = nh_priv_.serviceClient<seabee3_driver_base::FiringDeviceAction> ( "/seabee3/shooter_action" );
 		dropper1_cli_ = nh_priv_.serviceClient<seabee3_driver_base::FiringDeviceAction> ( "/seabee3/dropper1_action" );
 		dropper2_cli_ = nh_priv_.serviceClient<seabee3_driver_base::FiringDeviceAction> ( "/seabee3/dropper2_action" );
 		reset_pose_cli_ = nh_priv_.serviceClient<std_srvs::Empty> ( "/seabee3/reset_pose" );
@@ -99,6 +99,9 @@ public:
 	void fireCurrentDevice( bool reset = false )
 	{
 		device_action_.request.action = seabee3_driver_base::FiringDeviceAction::Request::FIRE;
+
+		ROS_INFO("Firing device: %d", current_device_ );
+
 		switch ( current_device_ )
 		{
 		case movement_common::FiringDeviceIDs::shooter:
@@ -188,7 +191,7 @@ public:
 		cmd_vel_.linear.y = strafe_scale_ * joy_strafe; //strafe
 		cmd_vel_.linear.z = depth_scale_ * joy_depth;
 
-		cmd_vel_.angular.z = MathyMath::degToRad( heading_scale_ ) * joy_heading; //heading
+		cmd_vel_.angular.z = math_utils::degToRad( heading_scale_ ) * joy_heading; //heading
 
 		last_cmd_vel_ = cmd_vel_;
 
