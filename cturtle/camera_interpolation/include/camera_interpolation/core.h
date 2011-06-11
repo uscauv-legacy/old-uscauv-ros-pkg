@@ -36,6 +36,6 @@
 #ifndef CORE_H_
 #define CORE_H_
 
-#include <distance_interpolation.h>
+#include "distance_interpolation.h"
 
 #endif /* CORE_H_ */

@@ -41,16 +41,15 @@ class DistanceInterpolation
 public:
 
 	typedef double _DistanceType;
-	typedef sensor_msgs::CameraInfo _CameraInfoType;
 
 	/* constructor params */
-	_CameraInfoType camera_info_;
 	_DistanceType pixel_meters_;
+	double calibration_medium_IOR_;
 
 	// get the pixel-meter calibration for a camera given the distance to an object, the observed pixel width of the object at that distance, and the diameter of the object in meters
 	static _DistanceType getPixelMeters( _DistanceType distance_in_meters, int diameter_in_pixels, _DistanceType diameter_in_meters = 1.0 )
 	{
-		diameter_in_pixels * distance_in_meters / diameter_in_meters;
+		return diameter_in_pixels * distance_in_meters / diameter_in_meters;
 	}
 
 	DistanceInterpolation()
@@ -58,15 +57,17 @@ public:
 		//
 	}
 
-	DistanceInterpolation( _CameraInfoType camera_info, _DistanceType pixel_meters ) : camera_info_( camera_info ), pixel_meters_( pixel_meters )
+	DistanceInterpolation( _DistanceType pixel_meters, double calibration_medium_IOR = 1.0 ) :
+		pixel_meters_( pixel_meters ), calibration_medium_IOR_( calibration_medium_IOR )
 	{
 		//
 	}
 
+
 	// get the distance to an object given its diameter in meters and observed diameter in pixels
-	_DistanceType distanceToFeature( int pixel_diameter, _DistanceType meter_diameter )
+	_DistanceType distanceToFeature( int pixel_diameter, _DistanceType meter_diameter, double current_medium_IOR = 1.33 )
 	{
-		meter_diameter * pixel_meters_ / pixel_diameter;
+		return meter_diameter * pixel_meters_ / pixel_diameter * ( calibration_medium_IOR_ / current_medium_IOR );
 	}
 };
 
