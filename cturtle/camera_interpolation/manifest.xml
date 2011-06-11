@@ -1,0 +1,17 @@
+<package>
+  <description brief="camera_interpolation">
+
+     camera_interpolation
+
+  </description>
+  <author>Noah</author>
+  <license>BSD</license>
+  <review status="unreviewed" notes=""/>
+  <url>http://ros.org/wiki/camera_interpolation</url>
+  <depend package="roscpp"/>
+  <depend package="opencv2"/>
+  <depend package="sensor_msgs"/>
+
+</package>
+
+
