@@ -67,7 +67,7 @@ public:
 	// get the distance to an object given its diameter in meters and observed diameter in pixels
 	_DistanceType distanceToFeature( int pixel_diameter, _DistanceType meter_diameter, double current_medium_IOR = 1.33 )
 	{
-		return meter_diameter * pixel_meters_ / pixel_diameter * ( calibration_medium_IOR_ / current_medium_IOR );
+		return meter_diameter * pixel_meters_ / pixel_diameter * (current_medium_IOR / calibration_medium_IOR_);
 	}
 };
 

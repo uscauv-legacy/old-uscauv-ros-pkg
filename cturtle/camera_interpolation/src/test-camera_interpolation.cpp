@@ -38,6 +38,6 @@
 int main( int argc, char ** argv )
 {
 	DistanceInterpolation distance_interpolation( DistanceInterpolation::getPixelMeters(1, 40, 2) );
-	printf("Distance interpolation equals: %f \n", distance_interpolation.distanceToFeature(10, 1, 1));
+	printf("Distance interpolation equals: %f \n", distance_interpolation.distanceToFeature(10, 1, 1.33));
 	return 0;
 }
