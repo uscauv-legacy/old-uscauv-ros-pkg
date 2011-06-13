@@ -57,17 +57,20 @@ static void operator >>( const tf::Transform & the_pose_tf, geometry_msgs::Twist
 
 namespace tf_utils
 {
+	const static tf::Quaternion ZERO_QUAT ( 0, 0, 0, 1 );
 
-	static void publishTfFrame( const tf::Transform & transform, const std::string & from, const std::string & to, tf::TransformBroadcaster * broadcaster_ = NULL )
+	static void publishTfFrame( const tf::Transform & transform, const std::string & from, const std::string & to, ros::Time timestamp = ros::Time( 0 ), tf::TransformBroadcaster * broadcaster_ = NULL )
 	{
 		static tf::TransformBroadcaster * static_broadcaster = new tf::TransformBroadcaster;
 		static tf::TransformBroadcaster * broadcaster;
 		broadcaster = broadcaster_ ? broadcaster_ : static_broadcaster;
 
-		broadcaster->sendTransform( tf::StampedTransform( transform, ros::Time::now(), from, to ) );
+		if( timestamp == ros::Time( 0 ) ) timestamp = ros::Time::now();
+
+		broadcaster->sendTransform( tf::StampedTransform( transform, timestamp, from, to ) );
 	}
 
-	static void fetchTfFrame( tf::Transform & transform, const std::string & from, const std::string & to, const double & wait_time = 1.0, tf::TransformListener * listener_ = NULL )
+	static void fetchTfFrame( tf::Transform & transform, const std::string & from, const std::string & to, const double & wait_time = 0.1, ros::Time timestamp = ros::Time( 0 ), tf::TransformListener * listener_ = NULL )
 	{
 		static tf::StampedTransform stamped_transform;
 		static unsigned int error_count = 0;
@@ -78,8 +81,8 @@ namespace tf_utils
 
 		try
 		{
-			listener->waitForTransform( from, to, ros::Time( 0 ), ros::Duration( wait_time ) );
-			listener->lookupTransform( from, to, ros::Time( 0 ), stamped_transform );
+			listener->waitForTransform( from, to, timestamp, ros::Duration( wait_time ) );
+			listener->lookupTransform( from, to, timestamp, stamped_transform );
 
 			transform.setOrigin( stamped_transform.getOrigin() );
 			transform.setRotation( stamped_transform.getRotation() );
