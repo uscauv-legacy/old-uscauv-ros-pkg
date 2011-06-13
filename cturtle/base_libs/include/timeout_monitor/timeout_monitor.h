@@ -49,16 +49,31 @@ public:
 	bool active_;
 
 public:
-	TimeoutMonitor();
+	TimeoutMonitor()
+	{
+
+	}
+
 	template<typename _T>
 	void registerCallback( ros::NodeHandle & nh, void(_T::*callback)( const ros::TimerEvent & event ), _T* obj, double timeout_delay = 5.0 )
 	{
-		timer_ = nh.createTimer( ros::Duration( timeout_delay ), callback, obj );
+		timer_ = nh.createTimer( ros::Duration( timeout_delay ), callback, obj, true );
 		timer_.stop();
 		active_ = true;
 	}
-	void keepAlive();
-	void stop();
+
+	void keepAlive()
+	{
+		active_ = true;
+		timer_.stop();
+		timer_.start();
+	}
+
+	void stop()
+	{
+		timer_.stop();
+		active_ = false;
+	}
 };
 
 #endif /* TIMEOUT_MONITOR_H_ */

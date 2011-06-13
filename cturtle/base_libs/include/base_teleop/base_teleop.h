@@ -36,63 +36,59 @@
 #ifndef BASE_TELEOP_H_
 #define BASE_TELEOP_H_
 
-#include <base_node/base_node.h>
+/* ROS */
 #include <geometry_msgs/Twist.h>
 #include <joy/Joy.h>
 
+/* others */
+#include <base_node/base_node.h>
+
 template<typename _ReconfigureType = BaseNodeTypes::_DefaultReconfigureType>
-class BaseTeleop: public BaseNode<_ReconfigureType>
+class BaseTeleop : public BaseNode<_ReconfigureType>
 {
 
 protected:
-	geometry_msgs::Twist cmd_vel_;
-	ros::Publisher cmd_vel_pub_;
+	/* subs */
 	ros::Subscriber joy_sub_;
 
+	/* pubs */
+	ros::Publisher cmd_vel_pub_;
+
+	/* messags */
+	geometry_msgs::Twist cmd_vel_;
+
 public:
-	BaseTeleop( ros::NodeHandle & nh, std::string topic_name = "cmd_vel" );
-	virtual ~BaseTeleop();
+	BaseTeleop( ros::NodeHandle & nh, std::string topic_name = "cmd_vel" ) :
+		BaseNode<_ReconfigureType> ( nh, 1 )
+	{
+		joy_sub_ = nh.subscribe( nh.resolveName( "/joy" ), 1, &BaseTeleop::joyCB_0, this );
+		cmd_vel_pub_ = nh.advertise<geometry_msgs::Twist> ( topic_name, 1 );
+
+
+	}
+
+	virtual ~BaseTeleop()
+	{
+		//
+	}
 
 protected:
-	virtual void joyCB( const joy::Joy::ConstPtr& joy_msg );
-	double applyDeadZone( float value, float dead_radius_max = 0.15 );
+	virtual void joyCB( const joy::Joy::ConstPtr& joy_msg )
+	{
+		//
+	}
+
+	double applyDeadZone( float value, float dead_radius_max = 0.15 )
+	{
+		return fabs( value ) < dead_radius_max ? 0.0 : (double) value;
+	}
 
 private:
-	void joyCB_0( const joy::Joy::ConstPtr& joy_msg );
+	void joyCB_0( const joy::Joy::ConstPtr& joy_msg )
+	{
+		joyCB( joy_msg );
+	}
 
 };
-
-template<typename _ReconfigureType>
-BaseTeleop<_ReconfigureType>::BaseTeleop( ros::NodeHandle & nh, std::string topic_name ) :
-	BaseNode<_ReconfigureType>( nh, 1 )
-{
-	joy_sub_ = nh.subscribe( nh.resolveName( "/joy" ), 1, &BaseTeleop::joyCB_0, this );
-	cmd_vel_pub_ = nh.advertise<geometry_msgs::Twist> ( topic_name, 1 );
-}
-
-template<typename _ReconfigureType>
-BaseTeleop<_ReconfigureType>::~BaseTeleop()
-{
-	//
-}
-
-// virtual
-template<typename _ReconfigureType>
-void BaseTeleop<_ReconfigureType>::joyCB( const joy::Joy::ConstPtr& joy_msg )
-{
-	//
-}
-
-template<typename _ReconfigureType>
-void BaseTeleop<_ReconfigureType>::joyCB_0( const joy::Joy::ConstPtr& joy_msg )
-{
-	joyCB( joy_msg );
-}
-
-template<typename _ReconfigureType>
-double BaseTeleop<_ReconfigureType>::applyDeadZone( float value, float dead_radius_max )
-{
-	return fabs( value ) < dead_radius_max ? 0.0 : (double) value;
-}
 
 #endif /* BASE_TELEOP_H_ */

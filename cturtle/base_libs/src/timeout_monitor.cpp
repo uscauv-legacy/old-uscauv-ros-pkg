@@ -37,18 +37,6 @@
 
 #include <timeout_monitor/timeout_monitor.h>
 
-TimeoutMonitor::TimeoutMonitor()
-{
-	//
-}
-
-void TimeoutMonitor::keepAlive()
-{
-	active_ = true;
-	timer_.stop();
-	timer_.start();
-}
-
 /*template<typename _T>
 void TimeoutMonitor::registerCallback( ros::NodeHandle & nh, void(_T::*callback)( const ros::TimerEvent & event ), _T* obj, double timeout_delay )
 {
@@ -56,9 +44,3 @@ void TimeoutMonitor::registerCallback( ros::NodeHandle & nh, void(_T::*callback)
 	timer_.stop();
 	active_ = true;
 }*/
-
-void TimeoutMonitor::stop()
-{
-	timer_.stop();
-	active_ = false;
-}

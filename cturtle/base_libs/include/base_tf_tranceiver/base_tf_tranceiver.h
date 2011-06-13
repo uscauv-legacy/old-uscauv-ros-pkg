@@ -42,7 +42,7 @@
 #include <common_utils/tf.h>
 
 template<typename _ReconfigureType = BaseNodeTypes::_DefaultReconfigureType>
-class BaseTfTranceiver: public BaseNode<_ReconfigureType>
+class BaseTfTranceiver : public BaseNode<_ReconfigureType>
 {
 protected:
 	tf::TransformListener * transform_listener_;
@@ -52,39 +52,29 @@ private:
 	int error_count_;
 
 public:
-	BaseTfTranceiver( ros::NodeHandle & nh, uint threads = 3 );
-	~BaseTfTranceiver();
+	BaseTfTranceiver( ros::NodeHandle & nh, uint threads = 3 ) :
+		BaseNode<_ReconfigureType> ( nh, threads ), error_count_( 0 )
+	{
+		transform_listener_ = new tf::TransformListener;
+		transform_broadcaster_ = new tf::TransformBroadcaster;
+	}
+
+	~BaseTfTranceiver()
+	{
+		delete transform_listener_;
+		delete transform_broadcaster_;
+	}
 
 protected:
-	void fetchTfFrame( tf::Transform & transform, const std::string & from, const std::string & to, double wait_time = 0.0 );
-	void publishTfFrame( const tf::Transform & transform, const std::string & from, const std::string & to );
+	void publishTfFrame( const tf::Transform & transform, const std::string & from, const std::string & to, ros::Time timestamp = ros::Time( 0 ) )
+	{
+		tf_utils::publishTfFrame( transform, from, to, timestamp, transform_broadcaster_ );
+	}
+
+	void fetchTfFrame( tf::Transform & transform, const std::string & from, const std::string & to, double wait_time = 0.1, ros::Time timestamp = ros::Time( 0 ) )
+	{
+		tf_utils::fetchTfFrame( transform, from, to, wait_time, timestamp, transform_listener_ );
+	}
 };
-
-template<typename _ReconfigureType>
-BaseTfTranceiver<_ReconfigureType>::BaseTfTranceiver( ros::NodeHandle & nh, uint threads ) :
-	BaseNode<_ReconfigureType> ( nh, threads ), error_count_( 0 )
-{
-	transform_listener_ = new tf::TransformListener;
-	transform_broadcaster_ = new tf::TransformBroadcaster;
-}
-
-template<typename _ReconfigureType>
-BaseTfTranceiver<_ReconfigureType>::~BaseTfTranceiver()
-{
-	delete transform_listener_;
-	delete transform_broadcaster_;
-}
-
-template<typename _ReconfigureType>
-void BaseTfTranceiver<_ReconfigureType>::fetchTfFrame( tf::Transform & transform, const std::string & from, const std::string & to, double wait_time )
-{
-	tf_utils::fetchTfFrame( transform, from, to, wait_time, transform_listener_ );
-}
-
-template<typename _ReconfigureType>
-void BaseTfTranceiver<_ReconfigureType>::publishTfFrame( const tf::Transform & transform, const std::string & from, const std::string & to )
-{
-	tf_utils::publishTfFrame( transform, from, to, transform_broadcaster_ );
-}
 
 #endif /* BASE_TF_TRANCEIVER_H_ */
