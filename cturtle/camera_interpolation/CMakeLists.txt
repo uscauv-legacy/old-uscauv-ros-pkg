@@ -20,3 +20,4 @@ rosbuild_genmsg()
 rosbuild_gensrv()
 
 add_subdirectory( src )
+add_subdirectory( test )

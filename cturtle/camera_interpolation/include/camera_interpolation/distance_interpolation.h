@@ -36,38 +36,57 @@
 #ifndef DISTANCE_INTERPOLATION_H_
 #define DISTANCE_INTERPOLATION_H_
 
+#include <stdio.h>
+
 class DistanceInterpolation
 {
 public:
 
-	typedef double _DistanceType;
+	typedef double _MetricDistanceType;
+	typedef double _PixelDistanceType;
+	typedef double _IORType;
 
 	/* constructor params */
-	_DistanceType pixel_meters_;
-	double calibration_medium_IOR_;
+	_MetricDistanceType pixel_meters_;
+	_IORType calibration_medium_ior_;
 
 	// get the pixel-meter calibration for a camera given the distance to an object, the observed pixel width of the object at that distance, and the diameter of the object in meters
-	static _DistanceType getPixelMeters( _DistanceType distance_in_meters, int diameter_in_pixels, _DistanceType diameter_in_meters = 1.0 )
+	static _MetricDistanceType getPixelMeters( _PixelDistanceType pixels, _MetricDistanceType distance, _MetricDistanceType diameter = 1.0 )
 	{
-		return diameter_in_pixels * distance_in_meters / diameter_in_meters;
+		if ( diameter <= 0 )
+		{
+			printf( "Invalid diameter: %f\n", diameter );
+			return 0;
+		}
+		if ( pixels <= 0 )
+		{
+			printf( "Invalid number of pixels: %f\n", pixels );
+			return 0;
+		}
+		if ( distance <= 0 )
+		{
+			printf( "Invalid distance: %f\n", distance );
+			return 0;
+		}
+		return pixels * distance / diameter;
 	}
 
-	DistanceInterpolation()
+	DistanceInterpolation() :
+		pixel_meters_( 0 ), calibration_medium_ior_( 1.0 )
 	{
 		//
 	}
 
-	DistanceInterpolation( _DistanceType pixel_meters, double calibration_medium_IOR = 1.0 ) :
-		pixel_meters_( pixel_meters ), calibration_medium_IOR_( calibration_medium_IOR )
+	DistanceInterpolation( _MetricDistanceType pixel_meters, _IORType calibration_medium_ior = 1.0 ) :
+		pixel_meters_( pixel_meters ), calibration_medium_ior_( calibration_medium_ior )
 	{
 		//
 	}
-
 
 	// get the distance to an object given its diameter in meters and observed diameter in pixels
-	_DistanceType distanceToFeature( int pixel_diameter, _DistanceType meter_diameter, double current_medium_IOR = 1.33 )
+	_MetricDistanceType distanceToFeature( _PixelDistanceType pixels, _MetricDistanceType diameter, _IORType current_medium_ior = 1.0 )
 	{
-		return meter_diameter * pixel_meters_ / pixel_diameter * (current_medium_IOR / calibration_medium_IOR_);
+		return diameter * pixel_meters_ * current_medium_ior / ( calibration_medium_ior_ * _IORType( pixels ) );
 	}
 };
 
