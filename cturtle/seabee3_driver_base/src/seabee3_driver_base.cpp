@@ -212,7 +212,7 @@ int main( int argc, char** argv )
 	ros::NodeHandle nh;
 	
 	Seabee3DriverBase seabee3_driver_base( nh );
-	seabee3_driver_base.spin( SpinModeId::loop_spin_once );
+	seabee3_driver_base.spin( SpinModeId::LOOP_SPIN_ONCE );
 
 	return 0;
 }
