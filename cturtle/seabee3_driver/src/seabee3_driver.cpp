@@ -73,7 +73,7 @@ public:
 	typedef _ConfiguredPid3D _Pid3D;
 	typedef _ConfiguredPid6D _Pid6D;
 
-	typedef typename _PidBaseType::Settings _Settings;
+	typedef _PidBaseType::Settings _Settings;
 	typedef std::vector<_Settings> _SettingsArray;
 
 	// how to interpret incoming CmdVel messages; any type except for 'pid' sets thruster values directly
