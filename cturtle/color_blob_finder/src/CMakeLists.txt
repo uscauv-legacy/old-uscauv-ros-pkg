@@ -1,0 +1,1 @@
+rosbuild_add_executable (test_findcontour test_findcontour.cpp)

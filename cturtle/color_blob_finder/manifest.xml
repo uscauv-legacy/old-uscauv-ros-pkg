@@ -1,0 +1,16 @@
+<package>
+  <description brief="color_blob_finder">
+
+     color_blob_finder
+
+  </description>
+  <author>Noah</author>
+  <license>BSD</license>
+  <review status="unreviewed" notes=""/>
+  <url>http://ros.org/wiki/color_blob_finder</url>
+  <depend package="roscpp"/>
+  <depend package="opencv2"/>
+
+</package>
+
+
