@@ -74,6 +74,9 @@ int main( int argc, char* argv[] )
 			CvPoint* p = CV_GET_SEQ_ELEM( CvPoint, c, i );
 			printf( "(%d,%d)\n", p->x, p->y );
 			//printf("i = %d\n", i);
+			/*Iterates through the values of the contour until it finds
+			another index with same x value. if x > new x, it adds that value
+			to the mass. This effectively numerically integrates the blob.*/
 			for ( int j = i + 1; j != i; j = ( j + 1 ) % ((c->total)) )
 			{
 				//printf("j = %d\n", j);
