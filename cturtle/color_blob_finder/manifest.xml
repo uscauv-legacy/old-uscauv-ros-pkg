@@ -10,7 +10,7 @@
   <url>http://ros.org/wiki/color_blob_finder</url>
   <depend package="roscpp"/>
   <depend package="opencv2"/>
-
+  <depend package="common_utils"/>
 </package>
 
 

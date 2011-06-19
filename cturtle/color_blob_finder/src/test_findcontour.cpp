@@ -36,8 +36,10 @@
 #include <opencv/cv.h>
 #include "highgui.h"
 #include <opencv/cxcore.h>
+#include <common_utils/time.h>
 int main( int argc, char* argv[] )
 {
+	double tik = time_utils::getTimeInSecs();
 	CvScalar red = { 255, 0, 0 };
 	CvScalar blue = { 0, 0, 255 };
 	int mass;
@@ -71,34 +73,36 @@ int main( int argc, char* argv[] )
 		{
 			CvPoint* p = CV_GET_SEQ_ELEM( CvPoint, c, i );
 			printf( "(%d,%d)\n", p->x, p->y );
-
-			for ( int j = 0; j < c->total; ++j )
+			//printf("i = %d\n", i);
+			for ( int j = i + 1; j != i; j = ( j + 1 ) % ((c->total)) )
 			{
-				if ( j != i )
+				//printf("j = %d\n", j);
+				CvPoint* q = CV_GET_SEQ_ELEM( CvPoint, c, j );
+				if ( q->x == p->x && p->y > q->y)
 				{
-					CvPoint* q = CV_GET_SEQ_ELEM( CvPoint, c, j );
+					mass_c += ( p->y - q->y );
+				}
+
+			}
+		}
+		if ( c->v_next )
+		{
+			h = c->v_next;
+			for ( int i = 0; i < h->total; ++i )
+			{
+				//printf( "i = %d, h_total = %d\n", i, h->total);
+				CvPoint* p = CV_GET_SEQ_ELEM( CvPoint, h, i );
+				for ( int j = i + 1; j != i; j = ( j + 1 ) % ((h->total)) )
+				{
+					//printf( "(i,j) = (%d,%d)\n", i, j );
+					CvPoint* q = CV_GET_SEQ_ELEM( CvPoint, h, j );
 					if ( q->x == p->x && p->y > q->y )
 					{
-						mass_c += ( p->y - q->y );
+						mass_h += ( p->y - q->y );
 					}
 				}
 			}
-			if ( c->v_next )
-			{
-				h = c->v_next;
-				for ( int j = 0; j < h->total; ++j )
-				{
-					if ( j != i )
-					{
-						CvPoint* q = CV_GET_SEQ_ELEM( CvPoint, h, j );
-						if ( q->x == p->x && p->y > q->y )
-						{
-							mass_h += ( p->y - q->y );
-						}
-					}
-				}
-			}
-			mass = mass_c-mass_h;
+			mass = mass_c - mass_h;
 		}
 		printf( "Mass of contour is %d\n", mass_c );
 		printf( "Mass of hole is %d\n", mass_h );
@@ -114,5 +118,7 @@ int main( int argc, char* argv[] )
 	cvReleaseImage( &img_8uc1 );
 	cvReleaseImage( &img_8uc3 );
 	cvReleaseImage( &img_edge );
+	double tok = time_utils::getTimeInSecs();
+	printf("Total run time = %f",tok-tik);
 	return 0;
 }
