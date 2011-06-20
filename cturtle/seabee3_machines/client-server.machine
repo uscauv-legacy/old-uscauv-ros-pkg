@@ -1,0 +1,27 @@
+<launch>
+	<!--
+	The goal of this file is to allow for client-server scenarios and server-only scenarios
+	(client-only scenarios are identical to server-only scenarios)
+	
+	client-server secenario:
+	
+	Say that node A, B, C, and D must be run. Node A and B must be run on the server,
+	node C could be run on either machine, and node D must be run on the client or not at all.
+	
+	We define ROS_CLIENT_MACHINE and ROS_SERVER_MACHINE to locate .machine definitions for these
+	computers. For any launch files we have, we specify which nodes should run on the server
+	and which on the client.
+
+	server-only scenario / client-only scenario:
+
+	Say now that we want to run the same scenario with all possible nodes on the server.
+	We set ROS_CLIENT_MACHINE equal to ROS_SERVER_MACHINE and all client nodes that can be run on
+	the server will be started.
+		
+	In general, a node that can be run on either the client or the server should use ROS_CLIENT_MACHINE.
+	
+	For all cases, seabee is the server and other computers are clients.
+	-->
+	<include file="$(find seabee3_machines)/$(env ROS_CLIENT_MACHINE).machine" />
+	<include file="$(find seabee3_machines)/$(env ROS_SERVER_MACHINE).machine" />
+</launch>

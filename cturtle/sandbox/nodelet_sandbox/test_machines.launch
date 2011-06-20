@@ -1,0 +1,8 @@
+<launch>
+	<include file="$(find seabee3_machines)/client-server.machine" />
+
+	<node pkg="nodelet" type="nodelet" name="nodelet_manager" args="manager" output="screen" machine="$(env ROS_SERVER_MACHINE)" />
+
+	<node pkg="nodelet" type="nodelet" name="node1" args="load nodelet_sandbox/StaticMemberVar nodelet_manager _string_pub_topic_name:=node2/message" machine="$(env ROS_CLIENT_MACHINE)" />
+	<node pkg="nodelet" type="nodelet" name="node2" args="load nodelet_sandbox/StaticMemberVar nodelet_manager _string_pub_topic_name:=node1/message" machine="$(env ROS_CLIENT_MACHINE)" />
+</launch>

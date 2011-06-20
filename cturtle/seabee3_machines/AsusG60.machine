@@ -1,0 +1,3 @@
+<launch>
+	<machine name="AsusG60" address="AsusG60" user="edward" ros-root="$(env ROS_ROOT)" ros-package-path="$(env ROS_PACKAGE_PATH)" />
+</launch>

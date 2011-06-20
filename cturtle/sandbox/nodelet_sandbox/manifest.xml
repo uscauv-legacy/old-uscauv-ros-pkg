@@ -1,0 +1,21 @@
+<package>
+  <description brief="nodelet_sandbox">
+
+     nodelet_sandbox
+
+  </description>
+  <author>Edward</author>
+  <license>BSD</license>
+  <review status="unreviewed" notes=""/>
+  <url>http://ros.org/wiki/nodelet_sandbox</url>
+  <depend package="roscpp"/>
+  <depend package="pluginlib"/>
+  <depend package="std_msgs"/>
+  <depend package="nodelet"/>
+  
+  <export>
+    <nodelet plugin="${prefix}/nodelet_plugins.xml" />
+  </export>
+</package>
+
+

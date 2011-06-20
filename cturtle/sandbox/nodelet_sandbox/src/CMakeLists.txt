@@ -1,0 +1,1 @@
+rosbuild_add_library( nodelets static_member_var_nodelet.cpp )
