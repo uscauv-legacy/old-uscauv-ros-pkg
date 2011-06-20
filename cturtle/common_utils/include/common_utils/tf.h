@@ -40,49 +40,78 @@
 #include <tf/transform_listener.h> // for TransformListener
 #include <geometry_msgs/Twist.h>
 
-static void operator >>( const geometry_msgs::Twist & the_pose, tf::Transform & the_pose_tf )
+static void operator >>( const geometry_msgs::Twist & the_pose,
+                         tf::Transform & the_pose_tf )
 {
-	the_pose_tf.setOrigin( tf::Vector3( the_pose.linear.x, the_pose.linear.y, the_pose.linear.z ) );
-	the_pose_tf.setRotation( tf::Quaternion( the_pose.angular.z, the_pose.angular.y, the_pose.angular.x ) );
+	the_pose_tf.setOrigin( tf::Vector3( the_pose.linear.x,
+	                                    the_pose.linear.y,
+	                                    the_pose.linear.z ) );
+	the_pose_tf.setRotation( tf::Quaternion( the_pose.angular.z,
+	                                         the_pose.angular.y,
+	                                         the_pose.angular.x ) );
 }
 
-static void operator >>( const tf::Transform & the_pose_tf, geometry_msgs::Twist & the_pose )
+static void operator >>( const tf::Transform & the_pose_tf,
+                         geometry_msgs::Twist & the_pose )
 {
 	the_pose.linear.x = the_pose_tf.getOrigin().x();
 	the_pose.linear.y = the_pose_tf.getOrigin().y();
 	the_pose.linear.z = the_pose_tf.getOrigin().z();
 
-	the_pose_tf.getBasis().getEulerZYX( the_pose.angular.z, the_pose.angular.y, the_pose.angular.x );
+	the_pose_tf.getBasis().getEulerZYX( the_pose.angular.z,
+	                                    the_pose.angular.y,
+	                                    the_pose.angular.x );
 }
 
 namespace tf_utils
 {
-	const static tf::Quaternion ZERO_QUAT ( 0, 0, 0, 1 );
+	const static tf::Quaternion ZERO_QUAT( 0,
+	                                       0,
+	                                       0,
+	                                       1 );
 
-	static void publishTfFrame( const tf::Transform & transform, const std::string & from, const std::string & to, ros::Time timestamp = ros::Time( 0 ), tf::TransformBroadcaster * broadcaster_ = NULL )
+	static void publishTfFrame( const tf::Transform & transform,
+	                            const std::string & from,
+	                            const std::string & to,
+	                            ros::Time timestamp = ros::Time( 0 ) )
 	{
-		static tf::TransformBroadcaster * static_broadcaster = new tf::TransformBroadcaster;
-		static tf::TransformBroadcaster * broadcaster;
-		broadcaster = broadcaster_ ? broadcaster_ : static_broadcaster;
-
-		if( timestamp == ros::Time( 0 ) ) timestamp = ros::Time::now();
-
-		broadcaster->sendTransform( tf::StampedTransform( transform, timestamp, from, to ) );
+		static tf::TransformBroadcaster * broadcaster = new tf::TransformBroadcaster;
+		if ( timestamp == ros::Time( 0 ) ) timestamp = ros::Time::now();
+		broadcaster->sendTransform( tf::StampedTransform( transform,
+		                                                  timestamp,
+		                                                  from,
+		                                                  to ) );
 	}
 
-	static void fetchTfFrame( tf::Transform & transform, const std::string & from, const std::string & to, const double & wait_time = 0.1, ros::Time timestamp = ros::Time( 0 ), tf::TransformListener * listener_ = NULL )
+	static void fetchTfFrame( tf::Transform & transform,
+	                          const std::string & from,
+	                          ros::Time from_timestamp,
+	                          const std::string & to,
+	                          ros::Time to_timestamp,
+	                          const std::string & static_frame = "/world",
+	                          const double & wait_time = 0.1,
+	                          const double & extrapolation_limit = 1.0 )
 	{
 		static tf::StampedTransform stamped_transform;
 		static unsigned int error_count = 0;
-		static tf::TransformListener * static_listener = new tf::TransformListener;
-		static tf::TransformListener * listener;
-
-		listener = listener_ ? listener_ : static_listener;
+		static tf::TransformListener * listener = new tf::TransformListener;
+		listener->setExtrapolationLimit( ros::Duration( extrapolation_limit ) );
 
 		try
 		{
-			listener->waitForTransform( from, to, timestamp, ros::Duration( wait_time ) );
-			listener->lookupTransform( from, to, timestamp, stamped_transform );
+			listener->waitForTransform( from,
+			                            from_timestamp,
+			                            to,
+			                            to_timestamp,
+			                            static_frame,
+			                            ros::Duration( wait_time ) );
+
+			listener->lookupTransform( from,
+			                           from_timestamp,
+			                           to,
+			                           to_timestamp,
+			                           static_frame,
+			                           stamped_transform );
 
 			transform.setOrigin( stamped_transform.getOrigin() );
 			transform.setRotation( stamped_transform.getRotation() );
@@ -93,10 +122,59 @@ namespace tf_utils
 		{
 			if ( error_count < 10 )
 			{
-				ROS_ERROR( "%s", ex.what() );
+				ROS_ERROR( "%s",
+				           ex.what() );
 				++error_count;
 			}
+		}
+	}
 
+	static void fetchTfFrame( tf::Transform & transform,
+	                          const std::string & from,
+	                          const std::string & to,
+	                          ros::Time timestamp = ros::Time( 0 ),
+	                          const double & wait_time = 0.1,
+	                          double extrapolation_limit = 1.0,
+	                          unsigned int attempts = 0 )
+	{
+		static tf::StampedTransform stamped_transform;
+		static unsigned int error_count = 0;
+		static tf::TransformListener * listener = new tf::TransformListener;
+		listener->setExtrapolationLimit( ros::Duration( extrapolation_limit ) );
+
+		try
+		{
+			listener->waitForTransform( from,
+			                            to,
+			                            timestamp,
+			                            ros::Duration( wait_time ) );
+
+			listener->lookupTransform( from,
+			                           to,
+			                           timestamp,
+			                           stamped_transform );
+
+			transform.setOrigin( stamped_transform.getOrigin() );
+			transform.setRotation( stamped_transform.getRotation() );
+
+			if ( attempts == 0 ) error_count = 0;
+		}
+		catch ( tf::TransformException ex )
+		{
+			if ( error_count < 10 )
+			{
+				ROS_ERROR( "%s",
+				           ex.what() );
+				++error_count;
+			}
+			ROS_WARN( "Attempting to look up most recent frame instead...\n" );
+			if ( attempts == 0 ) fetchTfFrame( transform,
+			                                   from,
+			                                   to,
+			                                   ros::Time( 0 ),
+			                                   wait_time,
+			                                   extrapolation_limit,
+			                                   attempts + 1 );
 		}
 	}
 

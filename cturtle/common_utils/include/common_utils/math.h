@@ -42,6 +42,12 @@
 
 namespace math_utils
 {
+	template<class _DataType>
+	struct HasDecAccuracy
+	{
+		const static bool val = (_DataType) 0.5 > 0;
+	};
+
 	template<class _DataType = int>
 	class Point
 	{
@@ -88,7 +94,7 @@ namespace math_utils
 	template<class _DataType>
 	static _DataType rand( const _DataType & low, const _DataType & high_, const bool & nonzero = false )
 	{
-		const static bool dec_accuracy = (_DataType) 0.5 > 0;
+		const static bool dec_accuracy = HasDecAccuracy<_DataType>::val;
 		const _DataType high = dec_accuracy ? high_ : high_ + 1;
 
 		_DataType value;
@@ -277,7 +283,7 @@ namespace math_utils
 	template<typename _DataType>
 	static void capValueProp( _DataType & value1, _DataType & value2, const _DataType & mag_cap ) //scale @t1 and @t2 down by the same amount such that -@magCap <= t1, t2 <= magCap
 	{
-		const static bool dec_accuracy = (_DataType) 0.5 > 0;
+		const static bool dec_accuracy = HasDecAccuracy<_DataType>::val;
 
 		static _DataType largest;
 		static double scale;

@@ -42,7 +42,7 @@
 #include <common_utils/tf.h>
 
 template<typename _ReconfigureType = BaseNodeTypes::_DefaultReconfigureType>
-class BaseTfTranceiver : public BaseNode<_ReconfigureType>
+class BaseTfTranceiver: public BaseNode<_ReconfigureType>
 {
 protected:
 	tf::TransformListener * transform_listener_;
@@ -52,8 +52,10 @@ private:
 	int error_count_;
 
 public:
-	BaseTfTranceiver( ros::NodeHandle & nh, uint threads = 3 ) :
-		BaseNode<_ReconfigureType> ( nh, threads ), error_count_( 0 )
+	BaseTfTranceiver( ros::NodeHandle & nh,
+	                  uint threads = 3 ) :
+		BaseNode<_ReconfigureType> ( nh,
+		                             threads ), error_count_( 0 )
 	{
 		transform_listener_ = new tf::TransformListener;
 		transform_broadcaster_ = new tf::TransformBroadcaster;
@@ -66,14 +68,28 @@ public:
 	}
 
 protected:
-	void publishTfFrame( const tf::Transform & transform, const std::string & from, const std::string & to, ros::Time timestamp = ros::Time( 0 ) )
+	void publishTfFrame( const tf::Transform & transform,
+	                     const std::string & from,
+	                     const std::string & to,
+	                     ros::Time timestamp = ros::Time( 0 ) )
 	{
-		tf_utils::publishTfFrame( transform, from, to, timestamp, transform_broadcaster_ );
+		tf_utils::publishTfFrame( transform,
+		                          from,
+		                          to,
+		                          timestamp );
 	}
 
-	void fetchTfFrame( tf::Transform & transform, const std::string & from, const std::string & to, double wait_time = 0.1, ros::Time timestamp = ros::Time( 0 ) )
+	void fetchTfFrame( tf::Transform & transform,
+	                   const std::string & from,
+	                   const std::string & to,
+	                   double wait_time = 0.1,
+	                   ros::Time timestamp = ros::Time( 0 ) )
 	{
-		tf_utils::fetchTfFrame( transform, from, to, wait_time, timestamp, transform_listener_ );
+		tf_utils::fetchTfFrame( transform,
+		                        from,
+		                        to,
+		                        timestamp,
+		                        wait_time );
 	}
 };
 
