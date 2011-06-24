@@ -1,0 +1,7 @@
+<library path="lib/libbase_libs_nodelets">
+  <class name="base_libs/image_loader" type="base_libs::ImageLoader" base_class_type="nodelet::Nodelet">
+    <description> 
+      loads images from the file-system
+    </description>
+  </class>
+</library>
