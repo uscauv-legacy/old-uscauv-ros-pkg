@@ -139,7 +139,7 @@ namespace tritech
 		mtAliveMsg(Message const& msg)
 		{
 			TRITECH_MSG_LENGTH_CHK(10)
-			TRITECH_MSG_EXPECT_BYTE_AT(0x80, 0);
+				TRITECH_MSG_EXPECT_BYTE_AT(0x80, 0);
 
 			node = msg.data[1];
 
@@ -164,16 +164,20 @@ namespace tritech
 			inScan    = headinf[5];
 			noParams  = headinf[6];
 			sentCfg   = headinf[7];
+		};
+
+		void print()
+		{
+			printf("mtAliveMsg: node = %#x headTime_msec = %d motorPos = %d inCentre = %d centered = %d motoring = %d motorOn"
+					"= %d dir = %d inScan = %d noParams = %d sentCfg = %d\n", node, headTime_msec, motorPos, inCentre, centered,
+					motoring, motorOn, dir, inScan, noParams, sentCfg);
+		}
 	};
 
-	void print()
-	{
-		printf("mtAliveMsg: node = %#x headTime_msec = %d motorPos = %d inCentre = %d centered = %d motoring = %d motorOn"
-				"= %d dir = %d inScan = %d noParams = %d sentCfg = %d\n", node, headTime_msec, motorPos, inCentre, centered,
-				motoring, motorOn, dir, inScan, noParams, sentCfg);
-	}
 
-};
+
+	// ######################################################################
+	
 }
 
 #endif // TRITECHMICRON_MESSAGETYPES_H
