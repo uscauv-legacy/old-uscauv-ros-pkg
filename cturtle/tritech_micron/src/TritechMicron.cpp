@@ -19,6 +19,7 @@
 // ######################################################################
 
 #include "../include/TritechMicron.h"
+#include "../include/MessageTypes.h"
 #include <iostream>
 #include <algorithm>
     
@@ -55,8 +56,8 @@ void TritechMicron::processByte(char byte)
     // Ignore the 'Hex Length' section
     if(itsRawMsg.size() < 6) return;
 
-    if(itsRawMsg.size() == 6)  { itsMsg.binLength += uint16_t(byte);      return; }
-    if(itsRawMsg.size() == 7)  { itsMsg.binLength += uint16_t(byte) << 8; return; }
+    if(itsRawMsg.size() == 6)  { itsMsg.binLength  = uint16_t(byte);      return; }
+    if(itsRawMsg.size() == 7)  { itsMsg.binLength |= uint16_t(byte) << 8; return; }
     if(itsRawMsg.size() == 8)  { itsMsg.txNode = byte; return; }
     if(itsRawMsg.size() == 9)  { itsMsg.rxNode = byte; return; }
     if(itsRawMsg.size() == 10) { itsMsg.count  = byte; return; }
@@ -91,7 +92,7 @@ void TritechMicron::processByte(char byte)
   }
 }
 
-void TritechMicron::processMessage(TritechMicron::Message msg)
+void TritechMicron::processMessage(tritech::Message msg)
 {
   std::cout << "Got Data: ";
   for(uint8_t byte : msg.data)
@@ -101,6 +102,8 @@ void TritechMicron::processMessage(TritechMicron::Message msg)
   if(msg.type == mtVersionData)
   {
     std::cout << "Handling Version Data Message" << std::endl;
+    mtVersionDataMsg parsedMsg(msg);
+    parsedMsg.print();
   }
 }
 

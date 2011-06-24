@@ -18,7 +18,11 @@
 //
 // ######################################################################
 
+#ifndef TRITECHMICRON_TRITECHMICRON_H
+#define TRITECHMICRON_TRITECHMICRON_H
+
 #include "Constants.h"
+#include "MessageTypes.h"
 #include <vector>
 #include <stdint.h>
 
@@ -33,27 +37,20 @@ class TritechMicron
       ReadingData   = 2, //!< The header has been read, now we're just reading the data
     };
 
-    struct Message
-    {
-      uint16_t binLength; //!< The expected data section length of the message
-      uint8_t txNode;        
-      uint8_t rxNode;
-      uint8_t count;
-      std::vector<uint8_t> data;
-      tritech::MessageType type;
-    };
-
     TritechMicron();
 
     void processByte(char byte);
 
-    void processMessage(Message msg);
+    void processMessage(tritech::Message msg);
 
     void resetMessage();
 
   //private:
     StateType itsState;
     std::vector<uint8_t> itsRawMsg; //!< The current message begin read in
-    Message itsMsg;
+    tritech::Message itsMsg;
 
 };
+
+#endif // TRITECHMICRON_TRITECHMICRON_H
+

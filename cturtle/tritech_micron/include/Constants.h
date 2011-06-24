@@ -18,9 +18,11 @@
 //
 // ######################################################################
 
+#ifndef TRITECHMICRON_CONSTANTS_H
+#define TRITECHMICRON_CONSTANTS_H
+
 namespace tritech
 {
-
   enum MessageType
   {
     mtNull                = 0,
@@ -94,4 +96,8 @@ namespace tritech
     mtChangeVerData       = 71,
     mtFpgaProgUsrCde      = 72
   };
+
 }
+
+#endif // TRITECHMICRON_CONSTANTS_H
+
