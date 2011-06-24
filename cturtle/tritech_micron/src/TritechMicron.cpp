@@ -82,6 +82,7 @@ void TritechMicron::processByte(char byte)
         itsMsg.data.resize(itsMsg.count-1);
         std::copy(itsRawMsg.begin()+11, itsRawMsg.end()-1, itsMsg.data.begin());
         processMessage(itsMsg);
+        resetMessage();
       }
       else
       {
@@ -94,16 +95,20 @@ void TritechMicron::processByte(char byte)
 
 void TritechMicron::processMessage(tritech::Message msg)
 {
-  std::cout << "Got Data: ";
-  for(uint8_t byte : msg.data)
-    printf("0x%x ", byte);
-  std::cout << std::endl;
+//  std::cout << "Got Data: ";
+//  for(uint8_t byte : msg.data)
+//    printf("0x%x ", byte);
+//  std::cout << std::endl;
 
   if(msg.type == mtVersionData)
+  { mtVersionDataMsg parsedMsg(msg); parsedMsg.print(); }
+  else if(msg.type == mtAlive)
+  { mtAliveMsg parsedMsg(msg); parsedMsg.print(); }
+  else
   {
-    std::cout << "Handling Version Data Message" << std::endl;
-    mtVersionDataMsg parsedMsg(msg);
-    parsedMsg.print();
+    std::cerr << "Unhandled Message Type: " << msg.type << std::endl;
   }
+
+
 }
 
