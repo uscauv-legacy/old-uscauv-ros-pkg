@@ -41,5 +41,6 @@
 #include "opencv.h"
 #include "tf.h"
 #include "operators.h"
+#include "gtest.h"
 
 #endif /* CORE_H_ */

@@ -21,8 +21,12 @@
   <depend package="tf"/>
   <depend package="joy"/>
   <depend package="common_utils"/>
+  <depend package="nodelet"/>
+  <depend package="pluginlib"/>
+  
   <export>
-    <cpp cflags="-I${prefix}/include -I${prefix}/msg/cpp -I${prefix}/srv/cpp" lflags="-Wl,-rpath,${prefix}/lib -L${prefix}/lib -lbase_libs"/>
+    <nodelet plugin="${prefix}/nodelet_plugins.xml" />
+    <cpp cflags="-std=c++0x -I${prefix}/include -I${prefix}/msg/cpp -I${prefix}/srv/cpp" lflags="-Wl,-rpath,${prefix}/lib -L${prefix}/lib -lbase_libs"/>
   </export>
 
 </package>

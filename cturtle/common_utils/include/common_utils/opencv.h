@@ -49,7 +49,7 @@ namespace opencv_utils
 	// returns a reference to the pixel at (x, y) in image
 	// access channels in the pixel via pixel[channel]
 	template<class _DataType>
-	static _DataType * getIplPixel( IplImage * image, const unsigned int & x, const unsigned int & x )
+	static _DataType * getIplPixel( IplImage * image, const unsigned int & x, const unsigned int & y )
 	{
 		return (_DataType *) ( image->imageData + y * image->widthStep + image->nChannels * x * image->depth / 8 );
 	}

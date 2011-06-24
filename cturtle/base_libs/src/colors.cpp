@@ -36,11 +36,11 @@
 #include <color_defs/colors.h>
 
 // bgr
-const cv::Vec3b OutputColorRGB::red = cv::Vec3b( 0, 0, 255 );
-const cv::Vec3b OutputColorRGB::orange = cv::Vec3b( 0, 128, 255 );
-const cv::Vec3b OutputColorRGB::yellow = cv::Vec3b( 0, 255, 255 );
-const cv::Vec3b OutputColorRGB::green = cv::Vec3b( 0, 255, 0 );
-const cv::Vec3b OutputColorRGB::blue = cv::Vec3b( 255, 0, 0 );
-const cv::Vec3b OutputColorRGB::black = cv::Vec3b( 0, 0, 0 );
-const cv::Vec3b OutputColorRGB::white = cv::Vec3b( 255, 255, 255 );
-const cv::Vec3b OutputColorRGB::unknown = cv::Vec3b( 128, 128, 128 );
+OutputColorRGB::_CvColorType OutputColorRGB::Value::red     ( 0, 0, 255 );
+OutputColorRGB::_CvColorType OutputColorRGB::Value::orange  ( 0, 128, 255 );
+OutputColorRGB::_CvColorType OutputColorRGB::Value::yellow  ( 0, 255, 255 );
+OutputColorRGB::_CvColorType OutputColorRGB::Value::green   ( 0, 255, 0 );
+OutputColorRGB::_CvColorType OutputColorRGB::Value::blue    ( 255, 0, 0 );
+OutputColorRGB::_CvColorType OutputColorRGB::Value::black   ( 0, 0, 0 );
+OutputColorRGB::_CvColorType OutputColorRGB::Value::white   ( 255, 255, 255 );
+OutputColorRGB::_CvColorType OutputColorRGB::Value::unknown ( 128, 128, 128 );

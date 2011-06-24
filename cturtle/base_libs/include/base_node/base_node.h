@@ -84,10 +84,7 @@ public:
 
 protected:
 	/* dynamic reconfigure */
-	dynamic_reconfigure::Server<_BaseReconfigureType> reconfigure_srv_;
 	typename dynamic_reconfigure::Server<_BaseReconfigureType>::CallbackType reconfigure_callback_;
-
-	/* others */
 	bool reconfigure_initialized_;
 	_BaseReconfigureType initial_config_params_;
 	uint32_t initial_config_level_;
@@ -95,11 +92,12 @@ protected:
 	/* constructor params */
 	ros::NodeHandle nh_priv_;
 	ros::MultiThreadedSpinner spinner_;
+	dynamic_reconfigure::Server<_BaseReconfigureType> reconfigure_srv_;
 	bool ignore_reconfigure_;
 
 public:
-	BaseNode( ros::NodeHandle & nh, uint threads = 3 ) :
-		nh_priv_( "~" ), spinner_( threads ), ignore_reconfigure_( !ReconfigureSettings<_BaseReconfigureType>::reconfigureEnabled() )
+	BaseNode( ros::NodeHandle & nh, std::string reconfigure_ns = "reconfigure", uint threads = 3 ) :
+		nh_priv_( "~" ), spinner_( threads ), reconfigure_srv_( ros::NodeHandle ( nh_priv_, reconfigure_ns ) ), ignore_reconfigure_( !ReconfigureSettings<_BaseReconfigureType>::reconfigureEnabled() )
 	{
 		reconfigure_initialized_ = ignore_reconfigure_;
 		if ( !ignore_reconfigure_ )

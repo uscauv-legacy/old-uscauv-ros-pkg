@@ -50,8 +50,8 @@ protected:
 	_ServiceResponse last_response_;
 
 public:
-	BaseImageProc( ros::NodeHandle & nh, std::string service_name = "service", uint threads = 3 ) :
-		BaseImageProcCore<_ReconfigureType, _ServiceType> ( nh, threads )
+	BaseImageProc( ros::NodeHandle & nh, std::string reconfigure_ns = "reconfigure", std::string service_name = "service", uint threads = 3 ) :
+		BaseImageProcCore<_ReconfigureType, _ServiceType> ( nh, reconfigure_ns, threads )
 	{
 		service_srv_ = this->nh_priv_.advertiseService( service_name, &BaseImageProc::serviceCB, this );
 	}
@@ -109,8 +109,8 @@ template<typename _ReconfigureType>
 class BaseImageProc<_ReconfigureType, std_srvs::Empty> : public BaseImageProcCore<_ReconfigureType, std_srvs::Empty>
 {
 public:
-	BaseImageProc( ros::NodeHandle & nh, uint threads = 3 ) :
-		BaseImageProcCore<_ReconfigureType, std_srvs::Empty> ( nh, threads )
+	BaseImageProc( ros::NodeHandle & nh, std::string reconfigure_ns = "reconfigure", uint threads = 3 ) :
+		BaseImageProcCore<_ReconfigureType, std_srvs::Empty> ( nh, reconfigure_ns, threads )
 	{
 
 	}

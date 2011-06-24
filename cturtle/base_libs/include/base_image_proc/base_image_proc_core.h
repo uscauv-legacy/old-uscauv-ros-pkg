@@ -89,8 +89,8 @@ protected:
 	IplImage * ipl_image_;
 
 public:
-	BaseImageProcCore( ros::NodeHandle & nh, uint threads = 3, bool publish_image = true ) :
-		BaseNode<_ReconfigureType> ( nh, threads ), image_transport_( this->nh_priv_ ), new_image_( false ), ipl_image_( NULL )
+	BaseImageProcCore( ros::NodeHandle & nh, std::string reconfigure_ns = "reconfigure", uint threads = 3, bool publish_image = true ) :
+		BaseNode<_ReconfigureType> ( nh, reconfigure_ns, threads ), image_transport_( this->nh_priv_ ), new_image_( false ), ipl_image_( NULL )
 	{
 		this->nh_priv_.param( "image_transport", image_transport_type_, std::string( "raw" ) );
 		this->nh_priv_.param( "publish_image", publish_image_, publish_image );

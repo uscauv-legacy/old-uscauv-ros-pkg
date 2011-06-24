@@ -11,3 +11,6 @@ rosbuild_add_library(${PROJECT_NAME} base_node.cpp
 									 image_loader.cpp)
 									 
 rosbuild_add_executable(test_base_image_proc test_base_image_proc.cpp)
+rosbuild_add_compile_flags(${PROJECT_NAME} -std=c++0x)
+
+add_subdirectory( nodelets )
