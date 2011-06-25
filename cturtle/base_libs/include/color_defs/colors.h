@@ -122,24 +122,24 @@ public:
 	typedef std::array<__DataType, _VecBase::_Dim_> _ArrayType;
 	typedef __DataType _DataType;
 
-	__DataType & i_;
-	__DataType & j_;
-	__DataType & k_;
+	__DataType * i_;
+	__DataType * j_;
+	__DataType * k_;
 
 	Vec( const _ArrayType data ) :
-	_VecBase( data ), i_( this->data_[0] ), j_( this->data_[1] ), k_( this->data_[2] )
+	_VecBase( data ), i_( &this->data_[0] ), j_( &this->data_[1] ), k_( &this->data_[2] )
 	{
 		//
 	}
 
 	Vec( const __DataType & i, const __DataType & j, const __DataType & k ) :
-	_VecBase( {	i, j, k } ), i_( this->data_[0] ), j_( this->data_[1] ), k_( this->data_[2] )
+	_VecBase( {	i, j, k } ), i_( &this->data_[0] ), j_( &this->data_[1] ), k_( &this->data_[2] )
 	{
 		//
 	}
 
 	Vec() :
-	_VecBase(), i_( this->data_[0] ), j_( this->data_[1] ), k_( this->data_[2] )
+	_VecBase(), i_( &this->data_[0] ), j_( &this->data_[1] ), k_( &this->data_[2] )
 	{
 
 	}
@@ -165,12 +165,12 @@ public:
 	{
 		__DataType dist = fabs( data_ - other.data_ );
 
-		if ( radius > 0 )
+		if ( radius > 0 && dist > radius )
 		{
-			dist = fmod( dist,
-			             radius );
+			dist = radius - fmod( dist,
+			                      radius );
 		}
-		return dist * dist;
+		return dist;
 	}
 };
 
@@ -194,11 +194,11 @@ public:
 	                     const __DataType radius = __DataType( 0 ) )
 	{
 		__DataType dist = fabs( data_ - other.data_ );
-		if ( radius > 0 )
+		if ( radius > 0 && dist > radius )
 		{
-			return dist % radius;
+			dist = radius - ( dist % radius );
 		}
-		return dist * dist;
+		return dist;
 	}
 };
 
@@ -232,9 +232,9 @@ public:
 	{
 		__DataType total_distance;
 
-		for ( int i = 0; i < __Dim__; ++i )
+		for ( _DimType i = 0; i < __Dim__; ++i )
 		{
-			total_distance += this->data_[i].distance( other.data_[i], radii[i] ) * weights[i];
+			total_distance += pow( this->data_[i].distance( other.data_[i], radii[i] ) * weights[i], 2 );
 		}
 
 		return sqrt( total_distance );
@@ -244,9 +244,9 @@ public:
 	{
 		__DataType total_distance;
 
-		for ( int i = 0; i < __Dim__; ++i )
+		for ( _DimType i = 0; i < __Dim__; ++i )
 		{
-			total_distance += this->data_[i].distance( other.data_[i], radii[i] ) * uniform_weight;
+			total_distance += pow( this->data_[i].distance( other.data_[i], radii[i] ) * uniform_weight, 2 );
 		}
 
 		return sqrt( total_distance );
@@ -256,9 +256,9 @@ public:
 	{
 		__DataType total_distance;
 
-		for ( int i = 0; i < __Dim__; ++i )
+		for ( _DimType i = 0; i < __Dim__; ++i )
 		{
-			total_distance += this->data_[i].distance( other.data_[i], uniform_radius ) * uniform_weight;
+			total_distance += pow( this->data_[i].distance( other.data_[i], uniform_radius ) * uniform_weight, 2 );
 		}
 
 		return sqrt( total_distance );
@@ -268,9 +268,9 @@ public:
 	{
 		__DataType total_distance;
 
-		for ( int i = 0; i < __Dim__; ++i )
+		for ( _DimType i = 0; i < __Dim__; ++i )
 		{
-			total_distance += this->data_[i].distance( other.data_[i], uniform_radius ) * weights[i];
+			total_distance += pow( this->data_[i].distance( other.data_[i], uniform_radius ) * weights[i], 2 );
 		}
 
 		return sqrt( total_distance );
@@ -296,7 +296,7 @@ public:
 
 	__DataType distance( const _Feature & other, __DataType radius = __DataType( 0 ) )
 	{
-		return sqrt( data_.distance( other.data_ ) );
+		return data_.distance( other.data_ );
 	}
 };
 

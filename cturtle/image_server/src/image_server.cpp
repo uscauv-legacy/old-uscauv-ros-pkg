@@ -19,7 +19,7 @@ public:
 		image_loader_.loadImages();
 	}
 
-	~ImageServer()
+	virtual ~ImageServer()
 	{
 	}
 

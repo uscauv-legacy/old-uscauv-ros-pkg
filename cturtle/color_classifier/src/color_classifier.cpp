@@ -55,7 +55,8 @@ public:
 	struct ThresholdedColor
 	{
 		_Color3f color;
-		ThresholdColor<_Color3f> threshold;
+		float radius;
+		Vec<float, 3> weight;
 		bool enabled;
 	};
 
@@ -75,8 +76,6 @@ public:
 	double ms_min_epsilon_;
 
 	bool enable_meanshift_;
-
-	double color_distance_max_;
 
 	bool enable_thresholding_;
 	double threshold_value_;
@@ -111,61 +110,68 @@ public:
 	{
 		ROS_DEBUG( "Reconfigure successful" );
 
-		target_colors_[OutputColorRGB::Id::red].color.i_ = config.red_hue;
-		target_colors_[OutputColorRGB::Id::red].color.j_ = config.red_sat;
-		target_colors_[OutputColorRGB::Id::red].color.k_ = config.red_val;
-		target_colors_[OutputColorRGB::Id::red].threshold.i_ = config.red_hue_dist_thresh;
-		target_colors_[OutputColorRGB::Id::red].threshold.j_ = config.red_sat_dist_thresh;
-		target_colors_[OutputColorRGB::Id::red].threshold.k_ = config.red_val_dist_thresh;
 		target_colors_[OutputColorRGB::Id::red].enabled = config.red_filter_enabled;
+		*target_colors_[OutputColorRGB::Id::red].color.i_ = config.red_hue;
+		*target_colors_[OutputColorRGB::Id::red].color.j_ = config.red_sat;
+		*target_colors_[OutputColorRGB::Id::red].color.k_ = config.red_val;
+		target_colors_[OutputColorRGB::Id::red].radius = config.red_radius;
+		*target_colors_[OutputColorRGB::Id::red].weight.i_ = config.red_hue_weight;
+		*target_colors_[OutputColorRGB::Id::red].weight.j_ = config.red_sat_weight;
+		*target_colors_[OutputColorRGB::Id::red].weight.k_ = config.red_val_weight;
 
-		target_colors_[OutputColorRGB::Id::orange].color.i_ = config.orange_hue;
-		target_colors_[OutputColorRGB::Id::orange].color.j_ = config.orange_sat;
-		target_colors_[OutputColorRGB::Id::orange].color.k_ = config.orange_val;
-		target_colors_[OutputColorRGB::Id::orange].threshold.i_ = config.orange_hue_dist_thresh;
-		target_colors_[OutputColorRGB::Id::orange].threshold.j_ = config.orange_sat_dist_thresh;
-		target_colors_[OutputColorRGB::Id::orange].threshold.k_ = config.orange_val_dist_thresh;
 		target_colors_[OutputColorRGB::Id::orange].enabled = config.orange_filter_enabled;
+		*target_colors_[OutputColorRGB::Id::orange].color.i_ = config.orange_hue;
+		*target_colors_[OutputColorRGB::Id::orange].color.j_ = config.orange_sat;
+		*target_colors_[OutputColorRGB::Id::orange].color.k_ = config.orange_val;
+		target_colors_[OutputColorRGB::Id::orange].radius = config.orange_radius;
+		*target_colors_[OutputColorRGB::Id::orange].weight.i_ = config.orange_hue_weight;
+		*target_colors_[OutputColorRGB::Id::orange].weight.j_ = config.orange_sat_weight;
+		*target_colors_[OutputColorRGB::Id::orange].weight.k_ = config.orange_val_weight;
 
-		target_colors_[OutputColorRGB::Id::yellow].color.i_ = config.yellow_hue;
-		target_colors_[OutputColorRGB::Id::yellow].color.j_ = config.yellow_sat;
-		target_colors_[OutputColorRGB::Id::yellow].color.k_ = config.yellow_val;
-		target_colors_[OutputColorRGB::Id::yellow].threshold.i_ = config.yellow_hue_dist_thresh;
-		target_colors_[OutputColorRGB::Id::yellow].threshold.j_ = config.yellow_sat_dist_thresh;
-		target_colors_[OutputColorRGB::Id::yellow].threshold.k_ = config.yellow_val_dist_thresh;
 		target_colors_[OutputColorRGB::Id::yellow].enabled = config.yellow_filter_enabled;
+		*target_colors_[OutputColorRGB::Id::yellow].color.i_ = config.yellow_hue;
+		*target_colors_[OutputColorRGB::Id::yellow].color.j_ = config.yellow_sat;
+		*target_colors_[OutputColorRGB::Id::yellow].color.k_ = config.yellow_val;
+		target_colors_[OutputColorRGB::Id::yellow].radius = config.yellow_radius;
+		*target_colors_[OutputColorRGB::Id::yellow].weight.i_ = config.yellow_hue_weight;
+		*target_colors_[OutputColorRGB::Id::yellow].weight.j_ = config.yellow_sat_weight;
+		*target_colors_[OutputColorRGB::Id::yellow].weight.k_ = config.yellow_val_weight;
 
-		target_colors_[OutputColorRGB::Id::green].color.i_ = config.green_hue;
-		target_colors_[OutputColorRGB::Id::green].color.j_ = config.green_sat;
-		target_colors_[OutputColorRGB::Id::green].color.k_ = config.green_val;
-		target_colors_[OutputColorRGB::Id::green].threshold.i_ = config.green_hue_dist_thresh;
-		target_colors_[OutputColorRGB::Id::green].threshold.j_ = config.green_sat_dist_thresh;
-		target_colors_[OutputColorRGB::Id::green].threshold.k_ = config.green_val_dist_thresh;
 		target_colors_[OutputColorRGB::Id::green].enabled = config.green_filter_enabled;
+		*target_colors_[OutputColorRGB::Id::green].color.i_ = config.green_hue;
+		*target_colors_[OutputColorRGB::Id::green].color.j_ = config.green_sat;
+		*target_colors_[OutputColorRGB::Id::green].color.k_ = config.green_val;
+		target_colors_[OutputColorRGB::Id::green].radius = config.green_radius;
+		*target_colors_[OutputColorRGB::Id::green].weight.i_ = config.green_hue_weight;
+		*target_colors_[OutputColorRGB::Id::green].weight.j_ = config.green_sat_weight;
+		*target_colors_[OutputColorRGB::Id::green].weight.k_ = config.green_val_weight;
 
-		target_colors_[OutputColorRGB::Id::blue].color.i_ = config.blue_hue;
-		target_colors_[OutputColorRGB::Id::blue].color.j_ = config.blue_sat;
-		target_colors_[OutputColorRGB::Id::blue].color.k_ = config.blue_val;
-		target_colors_[OutputColorRGB::Id::blue].threshold.i_ = config.blue_hue_dist_thresh;
-		target_colors_[OutputColorRGB::Id::blue].threshold.j_ = config.blue_sat_dist_thresh;
-		target_colors_[OutputColorRGB::Id::blue].threshold.k_ = config.blue_val_dist_thresh;
 		target_colors_[OutputColorRGB::Id::blue].enabled = config.blue_filter_enabled;
+		*target_colors_[OutputColorRGB::Id::blue].color.i_ = config.blue_hue;
+		*target_colors_[OutputColorRGB::Id::blue].color.j_ = config.blue_sat;
+		*target_colors_[OutputColorRGB::Id::blue].color.k_ = config.blue_val;
+		target_colors_[OutputColorRGB::Id::blue].radius = config.blue_radius;
+		*target_colors_[OutputColorRGB::Id::blue].weight.i_ = config.blue_hue_weight;
+		*target_colors_[OutputColorRGB::Id::blue].weight.j_ = config.blue_sat_weight;
+		*target_colors_[OutputColorRGB::Id::blue].weight.k_ = config.blue_val_weight;
 
-		target_colors_[OutputColorRGB::Id::black].color.i_ = config.black_hue;
-		target_colors_[OutputColorRGB::Id::black].color.j_ = config.black_sat;
-		target_colors_[OutputColorRGB::Id::black].color.k_ = config.black_val;
-		target_colors_[OutputColorRGB::Id::black].threshold.i_ = config.black_hue_dist_thresh;
-		target_colors_[OutputColorRGB::Id::black].threshold.j_ = config.black_sat_dist_thresh;
-		target_colors_[OutputColorRGB::Id::black].threshold.k_ = config.black_val_dist_thresh;
 		target_colors_[OutputColorRGB::Id::black].enabled = config.black_filter_enabled;
+		*target_colors_[OutputColorRGB::Id::black].color.i_ = config.black_hue;
+		*target_colors_[OutputColorRGB::Id::black].color.j_ = config.black_sat;
+		*target_colors_[OutputColorRGB::Id::black].color.k_ = config.black_val;
+		target_colors_[OutputColorRGB::Id::black].radius = config.black_radius;
+		*target_colors_[OutputColorRGB::Id::black].weight.i_ = config.black_hue_weight;
+		*target_colors_[OutputColorRGB::Id::black].weight.j_ = config.black_sat_weight;
+		*target_colors_[OutputColorRGB::Id::black].weight.k_ = config.black_val_weight;
 
-		target_colors_[OutputColorRGB::Id::white].color.i_ = config.white_hue;
-		target_colors_[OutputColorRGB::Id::white].color.j_ = config.white_sat;
-		target_colors_[OutputColorRGB::Id::white].color.k_ = config.white_val;
-		target_colors_[OutputColorRGB::Id::white].threshold.i_ = config.white_hue_dist_thresh;
-		target_colors_[OutputColorRGB::Id::white].threshold.j_ = config.white_sat_dist_thresh;
-		target_colors_[OutputColorRGB::Id::white].threshold.k_ = config.white_val_dist_thresh;
 		target_colors_[OutputColorRGB::Id::white].enabled = config.white_filter_enabled;
+		*target_colors_[OutputColorRGB::Id::white].color.i_ = config.white_hue;
+		*target_colors_[OutputColorRGB::Id::white].color.j_ = config.white_sat;
+		*target_colors_[OutputColorRGB::Id::white].color.k_ = config.white_val;
+		target_colors_[OutputColorRGB::Id::white].radius = config.white_radius;
+		*target_colors_[OutputColorRGB::Id::white].weight.i_ = config.white_hue_weight;
+		*target_colors_[OutputColorRGB::Id::white].weight.j_ = config.white_sat_weight;
+		*target_colors_[OutputColorRGB::Id::white].weight.k_ = config.white_val_weight;
 
 		ms_spatial_radius_ = config.ms_spatial_radius;
 		ms_color_radius_ = config.ms_color_ratius;
@@ -174,8 +180,6 @@ public:
 		ms_min_epsilon_ = config.ms_min_epsilon;
 
 		enable_meanshift_ = config.enable_meanshift;
-
-		color_distance_max_ = config.color_distance_max;
 
 		enable_thresholding_ = config.enable_thresholding;
 		threshold_value_ = config.threshold_value;
@@ -202,7 +206,7 @@ public:
 
 	IplImage * processImage( IplImage * ipl_img )
 	{
-		printf("got image\n");
+		printf( "got image\n" );
 
 		if ( !process_image_initialized_ )
 		{
@@ -251,12 +255,12 @@ public:
 			{
 				// get pixel data
 				original_pixel = opencv_utils::getIplPixel<unsigned char>( ipl_img,
-				                                                   x,
-				                                                   y );
+				                                                           x,
+				                                                           y );
 				_Color3f current_color( original_pixel );
 
-				float distance_pixel_max = std::numeric_limits<float>::min();
-				unsigned int distance_pixel_max_index = -1;
+				float distance_pixel_min = std::numeric_limits<float>::max();
+				unsigned int distance_pixel_min_index = -1;
 
 				// calculate the distance from the current pixel's color to all our desired colors
 				for ( unsigned int color_index = 0; color_index < OutputColorRGB::NUM_COLORS; ++color_index )
@@ -266,19 +270,20 @@ public:
 					                                                   x,
 					                                                   y );
 
-					static std::array<float, 3> weights = { 1.0, 1.0, 1.0 };
-					static std::array<float, 3> radii = { 255.0 / 2.0, 0.0, 0.0 };
+					static std::array<float, 3> radii = { 90.0, 0.0, 0.0 };
 
-					*distance_pixel = target_colors_[color_index].color.distance( current_color, radii, weights );//, weights );
+					*distance_pixel = target_colors_[color_index].color.distance( current_color,
+					                                                              radii,
+					                                                              target_colors_[color_index].weight.data_ ); //, weights );
 
-					if( target_colors_[color_index].enabled && *distance_pixel > distance_pixel_max && *distance_pixel < color_distance_max_ )
+					if ( target_colors_[color_index].enabled && *distance_pixel < distance_pixel_min && *distance_pixel < target_colors_[color_index].radius )
 					{
-						distance_pixel_max = *distance_pixel;
-						distance_pixel_max_index = color_index;
+						distance_pixel_min = *distance_pixel;
+						distance_pixel_min_index = color_index;
 					}
 				}
 
-				OutputColorRGB::_CvColorType output_pixel = OutputColorRGB::getColorRGB( distance_pixel_max_index );
+				OutputColorRGB::_CvColorType output_pixel = OutputColorRGB::getColorRGB( distance_pixel_min_index );
 
 				original_pixel[0] = output_pixel[0];
 				original_pixel[1] = output_pixel[1];

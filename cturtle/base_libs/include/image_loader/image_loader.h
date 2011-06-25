@@ -72,7 +72,7 @@ public:
 		nh.param( "prefix", file_prefix_, std::string( "image" ) );
 		nh.param( "start", start_, 0 );
 		nh.param( "end", end_, 0 );
-		nh.param( "digits", digits_, 1 );
+		nh.param( "digits", digits_, 0 );
 		nh.param( "ext", file_ext_, std::string( ".png" ) );
 
 		ROS_INFO( "constructed" );
@@ -82,16 +82,19 @@ public:
 	{
 		ROS_INFO( "Loading images %s %d %d %d %s", file_prefix_.c_str(), start_, end_, digits_, file_ext_.c_str() );
 		IplImage * img = NULL;
-		for ( int i = start_; i < end_; i++ )
+		for ( int i = start_; i <= end_; i++ )
 		{
 			std::stringstream filename;
-			filename << file_prefix_ << std::setfill( '0' ) << std::setw( digits_ ) << i << file_ext_;
+			if( digits_ > 0 ) filename << file_prefix_ << std::setfill( '0' ) << std::setw( digits_ ) << i << file_ext_;
+			else filename << file_prefix_ << file_ext_;
 
+
+			ROS_INFO( "Attempting to open %s", filename.str().c_str() );
 			img = cvLoadImage( filename.str().c_str() );
 
 			if ( img && img->width * img->height > 0 )
 			{
-				ROS_INFO( "Opening %s %dx%d", filename.str().c_str(), img->width, img->height );
+				ROS_INFO( "Success: %dx%d", img->width, img->height );
 				image_cache_.push_back( img );
 			}
 			else
