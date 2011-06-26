@@ -2,7 +2,7 @@
  *
  *      color_classifier
  * 
- *      Copyright (c) 2010, Edward T. Kaszubski
+ *      Copyright (c) 2011, Edward T. Kaszubski ( ekaszubski@gmail.com )
  *      All rights reserved.
  *
  *      Redistribution and use in source and binary forms, with or without
@@ -15,7 +15,7 @@
  *        copyright notice, this list of conditions and the following disclaimer
  *        in the documentation and/or other materials provided with the
  *        distribution.
- *      * Neither the name of "seabee3-ros-pkg" nor the names of its
+ *      * Neither the name of "color_classifier-RelWithDebInfo@color_classifier" nor the names of its
  *        contributors may be used to endorse or promote products derived from
  *        this software without specific prior written permission.
  *      
@@ -32,6 +32,9 @@
  *      OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  *******************************************************************************/
+
+#ifndef COLOR_CLASSIFIER_H_
+#define COLOR_CLASSIFIER_H_
 
 // for Mat
 #include <opencv/cv.h>
@@ -83,13 +86,12 @@ public:
 	unsigned char threshold_type_;
 
 	/* constructor params */
-	ros::NodeHandle nh_local_;
 	bool process_image_initialized_;
 
 public:
 
 	ColorClassifier( ros::NodeHandle & nh ) :
-			BaseImageProc<_ReconfigureType>( nh ), nh_local_( "~" ), process_image_initialized_( false )
+			BaseImageProc<_ReconfigureType>( nh ), process_image_initialized_( false )
 	{
 		// create publishers
 		for ( unsigned int i = 0; i < image_transport_publishers_.size(); ++i )
@@ -185,21 +187,6 @@ public:
 		threshold_value_ = config.threshold_value;
 		threshold_max_value_ = config.threshold_max_value;
 		threshold_type_ = config.threshold_type;
-
-		/*spectrum_hsv_.red.min = config.red_h_min;
-		 spectrum_hsv_.red.max = config.red_h_max;
-
-		 spectrum_hsv_.orange.min = config.orange_h_min;
-		 spectrum_hsv_.orange.max = config.orange_h_max;
-
-		 spectrum_hsv_.yellow.min = config.yellow_h_min;
-		 spectrum_hsv_.yellow.max = config.yellow_h_max;
-
-		 spectrum_hsv_.green.min = config.green_h_min;
-		 spectrum_hsv_.green.max = config.green_h_max;
-
-		 spectrum_hsv_.blue.min = config.blue_h_min;
-		 spectrum_hsv_.blue.max = config.blue_h_max;*/
 
 		this->reconfigure_initialized_ = true;
 	}
@@ -313,54 +300,6 @@ public:
 		return ipl_img;
 	}
 
-	/*	cv::Vec3b classifyPixel( cv::Vec3b & pixel )
-	 {
-	 int max_index = 0;
-
-	 // find best color match in ANN outputs
-	 for ( size_t i = 0; i < output.size(); i++ )
-	 {
-	 if ( output[i] > max_output )
-	 {
-	 max_output = output[i];
-	 max_index = i;
-	 }
-	 }
-
-	 switch ( max_index )
-	 {
-	 case OutputColorRGB::Id::red:
-	 return OutputColorRGB::red;
-	 case ColorIds::orange:
-	 return OutputColorRGB::orange;
-	 case ColorIds::yellow:
-	 return OutputColorRGB::yellow;
-	 case ColorIds::green:
-	 return OutputColorRGB::green;
-	 case ColorIds::blue:
-	 return OutputColorRGB::blue;
-	 case ColorIds::black:
-	 return OutputColorRGB::black;
-	 case ColorIds::white:
-	 return OutputColorRGB::white;
-	 case ColorIds::unknown:
-	 return OutputColorRGB::unknown;
-	 }
-
-	 return OutputColorRGB::unknown;
-	 }*/
 };
 
-int main( int argc,
-          char ** argv )
-{
-	ros::init( argc,
-	           argv,
-	           "color_classifier" );
-	ros::NodeHandle nh;
-
-	ColorClassifier color_classifier( nh );
-	color_classifier.spin();
-
-	return 0;
-}
+#endif /* COLOR_CLASSIFIER_H_ */

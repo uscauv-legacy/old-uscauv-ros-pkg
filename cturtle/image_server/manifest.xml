@@ -8,7 +8,14 @@
   <license>BSD</license>
   <review status="unreviewed" notes=""/>
   <url>http://ros.org/wiki/image_server</url>
-	<depend package="base_libs"/>
+  <depend package="base_libs"/>
+  <depend package="nodelet"/>
+  <depend package="pluginlib"/>
+  
+  <export>
+    <nodelet plugin="${prefix}/nodelet_plugins.xml" />
+    <cpp cflags="-std=c++0x -I${prefix}/include -I${prefix}/msg/cpp -I${prefix}/srv/cpp" lflags="-Wl,-rpath,${prefix}/lib -L${prefix}/lib -limage_server"/>
+  </export>
 </package>
 
 

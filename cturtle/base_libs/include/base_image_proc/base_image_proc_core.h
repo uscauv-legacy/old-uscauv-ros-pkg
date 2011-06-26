@@ -90,13 +90,13 @@ protected:
 
 public:
 	BaseImageProcCore( ros::NodeHandle & nh, std::string reconfigure_ns = "reconfigure", uint threads = 3, bool publish_image = true ) :
-		BaseNode<_ReconfigureType> ( nh, reconfigure_ns, threads ), image_transport_( this->nh_priv_ ), new_image_( false ), ipl_image_( NULL )
+		BaseNode<_ReconfigureType> ( nh, reconfigure_ns, threads ), image_transport_( this->nh_local_ ), new_image_( false ), ipl_image_( NULL )
 	{
-		this->nh_priv_.param( "image_transport", image_transport_type_, std::string( "raw" ) );
-		this->nh_priv_.param( "publish_image", publish_image_, publish_image );
+		this->nh_local_.param( "image_transport", image_transport_type_, std::string( "raw" ) );
+		this->nh_local_.param( "publish_image", publish_image_, publish_image );
 
 		image_sub_ = image_transport_.subscribe( nh.resolveName( "image" ), 1, &BaseImageProcCore::imageCB_0, this, image_transport_type_ );
-		camera_info_sub_ = this->nh_priv_.subscribe( nh.resolveName( "camera_info" ), 1, &BaseImageProcCore::infoCB, this );
+		camera_info_sub_ = this->nh_local_.subscribe( nh.resolveName( "camera_info" ), 1, &BaseImageProcCore::infoCB, this );
 
 		if ( publish_image_ ) output_image_pub_ = image_transport_.advertise( "output_image", 1 );
 	}

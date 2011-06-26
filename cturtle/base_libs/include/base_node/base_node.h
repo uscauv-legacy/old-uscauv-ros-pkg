@@ -81,8 +81,11 @@ class BaseNode
 {
 public:
 	typedef _BaseReconfigureType _ReconfigureType;
+	typedef dynamic_reconfigure::Server<_BaseReconfigureType> _DynamicReconfigureServerType;
 
 protected:
+	ros::Rate * loop_rate_;
+
 	/* dynamic reconfigure */
 	typename dynamic_reconfigure::Server<_BaseReconfigureType>::CallbackType reconfigure_callback_;
 	bool reconfigure_initialized_;
@@ -90,20 +93,21 @@ protected:
 	uint32_t initial_config_level_;
 
 	/* constructor params */
-	ros::NodeHandle nh_priv_;
+	ros::NodeHandle nh_local_;
 	ros::MultiThreadedSpinner spinner_;
-	dynamic_reconfigure::Server<_BaseReconfigureType> reconfigure_srv_;
+	_DynamicReconfigureServerType * reconfigure_srv_;
 	bool ignore_reconfigure_;
 
 public:
 	BaseNode( ros::NodeHandle & nh, std::string reconfigure_ns = "reconfigure", uint threads = 3 ) :
-		nh_priv_( "~" ), spinner_( threads ), reconfigure_srv_( ros::NodeHandle ( nh_priv_, reconfigure_ns ) ), ignore_reconfigure_( !ReconfigureSettings<_BaseReconfigureType>::reconfigureEnabled() )
+		nh_local_( nh ), spinner_( threads ), reconfigure_srv_( NULL ), ignore_reconfigure_( !ReconfigureSettings<_BaseReconfigureType>::reconfigureEnabled() )
 	{
 		reconfigure_initialized_ = ignore_reconfigure_;
 		if ( !ignore_reconfigure_ )
 		{
+			reconfigure_srv_ = new _DynamicReconfigureServerType( ros::NodeHandle ( nh_local_, reconfigure_ns ) );
 			reconfigure_callback_ = boost::bind( &BaseNode::reconfigureCB_0, this, _1, _2 );
-			reconfigure_srv_.setCallback( reconfigure_callback_ );
+			reconfigure_srv_->setCallback( reconfigure_callback_ );
 		}
 	}
 
@@ -117,12 +121,12 @@ public:
 		if ( mode == SpinModeId::SPIN ) spinner_.spin();
 		else if ( mode == SpinModeId::LOOP_SPIN_ONCE )
 		{
-			static ros::Rate loop_rate( frequency );
+			loop_rate_ = new ros::Rate( frequency );
 			while ( ros::ok() )
 			{
 				spinOnce();
 				ros::spinOnce();
-				loop_rate.sleep();
+				loop_rate_->sleep();
 			}
 		}
 		else spin( SpinModeId::SPIN );

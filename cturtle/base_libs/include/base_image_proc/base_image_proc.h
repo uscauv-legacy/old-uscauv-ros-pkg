@@ -53,7 +53,7 @@ public:
 	BaseImageProc( ros::NodeHandle & nh, std::string reconfigure_ns = "reconfigure", std::string service_name = "service", uint threads = 3 ) :
 		BaseImageProcCore<_ReconfigureType, _ServiceType> ( nh, reconfigure_ns, threads )
 	{
-		service_srv_ = this->nh_priv_.advertiseService( service_name, &BaseImageProc::serviceCB, this );
+		service_srv_ = this->nh_local_.advertiseService( service_name, &BaseImageProc::serviceCB, this );
 	}
 
 	virtual ~BaseImageProc()
@@ -72,7 +72,10 @@ protected:
 
 	bool serviceCB( _ServiceRequest & req, _ServiceResponse & resp )
 	{
-		static IplImage * _ipl_image = NULL;
+		IplImage * _ipl_image = NULL;
+
+		this->image_mutex_.lock();
+
 		// if the image hasn't changed, just use the last response
 		if ( !this->new_image_ )
 		{
@@ -81,8 +84,6 @@ protected:
 		// if the image has changed, generate and then save a new response (and potentially a new output image)
 		else
 		{
-			this->image_mutex_.lock();
-
 			this->new_image_ = false;
 
 			//IplImg is a more low-level open-cv image type
@@ -98,6 +99,8 @@ protected:
 		}
 
 		if ( this->publish_image_ && this->reconfigure_initialized_ && this->ipl_image_ ) this->publishCvImage( this->ipl_image_ );
+
+		this->image_mutex_.unlock();
 
 		// notify ROS whether or not everything executed properly
 		return true;
@@ -132,7 +135,9 @@ protected:
 	{
 		if ( this->reconfigure_initialized_ )
 		{
+			this->image_mutex_.lock();
 			this->ipl_image_ = processImage( this->image_bridge_.imgMsgToCv( this->image_msg_ ) );
+			this->image_mutex_.unlock();
 
 			if ( this->publish_image_ ) this->publishCvImage( this->ipl_image_ );
 		}

@@ -1,4 +1,5 @@
-rosbuild_add_library(${PROJECT_NAME} base_node.cpp
+rosbuild_add_library(${PROJECT_NAME} base_nodelet.cpp
+									 base_node.cpp
 									 base_image_proc_core.cpp
 									 base_image_proc.cpp
 									 base_stereo_image_proc_core.cpp
@@ -13,4 +14,4 @@ rosbuild_add_library(${PROJECT_NAME} base_node.cpp
 rosbuild_add_executable(test_base_image_proc test_base_image_proc.cpp)
 rosbuild_add_compile_flags(${PROJECT_NAME} -std=c++0x)
 
-add_subdirectory( nodelets )
+#add_subdirectory( nodelets )

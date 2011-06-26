@@ -74,8 +74,6 @@ public:
 		nh.param( "end", end_, 0 );
 		nh.param( "digits", digits_, 0 );
 		nh.param( "ext", file_ext_, std::string( ".png" ) );
-
-		ROS_INFO( "constructed" );
 	}
 
 	_ImageCache loadImages()

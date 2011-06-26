@@ -18,6 +18,13 @@
   <depend package="driver_base"/>
   <depend package="base_libs"/>
   <depend package="common_utils"/>
+  <depend package="nodelet"/>
+  <depend package="pluginlib"/>
+  
+  <export>
+    <nodelet plugin="${prefix}/nodelet_plugins.xml" />
+    <cpp cflags="-std=c++0x -I${prefix}/include -I${prefix}/msg/cpp -I${prefix}/srv/cpp" lflags="-Wl,-rpath,${prefix}/lib -L${prefix}/lib -lcolor_classifer"/>
+  </export>
 
 </package>
 
