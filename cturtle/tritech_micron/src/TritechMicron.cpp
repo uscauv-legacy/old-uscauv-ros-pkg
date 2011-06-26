@@ -109,8 +109,8 @@ void TritechMicron::processMessage(tritech::Message msg)
   }
   else if(msg.type == mtHeadData)
   {
-//    mtHeadDataMsg parsedMsg(msg);
-//    parsedMsg.print(); 
+    mtHeadDataMsg parsedMsg(msg);
+    parsedMsg.print(); 
   }
   else
   {

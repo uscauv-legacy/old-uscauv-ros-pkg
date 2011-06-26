@@ -198,6 +198,7 @@ namespace tritech
 		enum sweepCode_t {Scanning_Normal, Scan_AtLeftLimit, Scan_AtRightLimit, Scan_AtCentre};
 		sweepCode_t sweepCode;
 
+
 		//! Head Control
 		/*! @{ */
 		struct headControl_t
@@ -221,16 +222,43 @@ namespace tritech
 		} headControl;
 		/*! @} */
 
-		int rangeScale;
-		enum rangeUnits_t {feet, fathoms, yards};
+		float rangeScale;
+		enum rangeUnits_t { meters=0, feet=1, fathoms=2, yards=3 };
 		rangeUnits_t rangeUnits;
 
 		float stepSize_degrees;
 		float bearing_degrees; //!< The current bearing of the sonar head
 
+		std::vector<uint8_t> scanLine;
+
+		void print()
+		{
+			std::cout << "mtHeadDataMsg: " << std::endl;
+			std::cout << "   packetInSequence: "          << int(packetSequence) << std::endl;
+			std::cout << "   isLast?: "                   << isLastInSequence << std::endl;
+			std::cout << "   Error?: "                    << motorErr << std::endl;
+			std::cout << "   Sweep Code: "                << sweepCode << std::endl;
+			std::cout << "   Adc8on?: "                   << headControl.adc8on << std::endl;
+			std::cout << "   Range Scale: "               << rangeScale << std::endl;
+			std::cout << "   Range Scale Units: "         << rangeUnits << std::endl;
+			std::cout << "   Step Size (degrees): "       << stepSize_degrees << std::endl;
+			std::cout << "   Current Bearing (degrees): " << bearing_degrees << std::endl;
+
+			std::cout << "   Scanline [ ";
+			for(uint8_t c : scanLine)
+				std::cout << int(c) << " ";
+			std::cout << "]" << std::endl;
+		}
 
 		mtHeadDataMsg(Message const& msg)
 		{
+//			if(msg.count == 0)
+//			{
+//				std::cerr << "Your sonar is sending multi-packet data! This driver does not support this format. Please "
+//				"reconfigure your device to send data in single-packet mode." << std::endl;
+//				return;
+//			}
+
 			TRITECH_MSG_EXPECT_BYTE_AT('@', 1);
 			TRITECH_MSG_EXPECT_BYTE_AT(mtHeadData, 11);
 			uint8_t const msgSequenceBitset = msg.data[12];
@@ -240,7 +268,7 @@ namespace tritech
 			uint16_t const totalByteCount = msg.data[14] | (msg.data[15] << 8);
 
 			// We expect the device type to be '11', i.e. a Digital Img Sonar (hDIG).
-			TRITECH_MSG_EXPECT_BYTE_AT(0x0A, 16);
+//			TRITECH_MSG_EXPECT_BYTE_AT(0x0A, 16);
 
 			std::bitset<8> headStatus = msg.data[17];
 			hdPwrLoss          = headStatus[0];
@@ -278,31 +306,55 @@ namespace tritech
       headControl.replyThr     = headCtrl[14];
       headControl.ignoreSensor = headCtrl[15];
 
-			int rangeScale = ((uint16_t(msg.data[21]) | (uint16_t(msg.data[22]) << 8)) & 0xDFFF)*10;
+			rangeScale = ((uint16_t(msg.data[21]) | (uint16_t(msg.data[22]) << 8)) & 0xC0FF)/10;
 			uint8_t rangeTp = uint8_t(msg.data[22]) >> 6;
 			switch(rangeTp)
 			{
+				case 0: rangeUnits = meters; break;
 				case 1: rangeUnits = feet; break;
 				case 2: rangeUnits = fathoms; break;
 				case 3: rangeUnits = yards; break;
 				default:
 								std::cerr << __FUNCTION__ << ":" << __LINE__ <<
-									" - Unknown range units Code (" << rangeTp << ")" << std::endl;
+									" - Unknown range units Code (" << (int)rangeTp << ")" << std::endl;
 								break;
 			}
 
 			stepSize_degrees = msg.data[40]/16.0 * 180.0/200.0;
 			bearing_degrees  = (uint16_t(msg.data[41]) | (uint16_t(msg.data[42]) << 8))/16.0 * 180.0/200.0;
 
+			uint16_t dbytes = (uint16_t(msg.data[43]) | (uint16_t(msg.data[44]) << 8));
+			if(headControl.adc8on)
+			{
+				scanLine.resize(dbytes);
+				if(scanLine.size() != msg.data.size() - 46)
+				{
+					std::cerr << __FUNCTION__ << ":" << __LINE__ <<
+						" - scanLine appears to be mis-sized.  Size is " << scanLine.size() << 
+						", but should be " << msg.data.size()-46 << std::endl;
+					return;
+				}
 
-
+				// TODO: std::copy here
+				for(size_t i=0; i<scanLine.size(); ++i)
+					scanLine[i] = msg.data.at(i+45);
+			}
+			else
+			{
+				scanLine.resize(dbytes*2);
+				if(scanLine.size() != msg.data.size()/2 - 46)
+				{
+					std::cerr << __FUNCTION__ << ":" << __LINE__ <<
+						" - scanLine appears to be mis-sized.  Size is " << scanLine.size() << 
+						", but should be " << msg.data.size()-46 << std::endl;
+					return;
+				}
+				std::cerr << __FUNCTION__ << ":" << __LINE__ <<
+					" - Your device is transmitting in packed 4-bit mode. This is not yet supported." << std::endl;
+				return;
+			}
 		}
-
-
-
-
 	};
-	
 }
 
 #endif // TRITECHMICRON_MESSAGETYPES_H
