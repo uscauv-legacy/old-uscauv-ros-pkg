@@ -86,25 +86,29 @@ namespace tritech
 
 		mtVersionDataMsg(Message const& msg)
 		{
-			TRITECH_MSG_LENGTH_CHK(13)
-			TRITECH_MSG_EXPECT_BYTE_AT(0x80, 0);
+			TRITECH_MSG_LENGTH_CHK(26);
+			TRITECH_MSG_EXPECT_BYTE_AT('@', 1);
+			TRITECH_MSG_EXPECT_BYTE_AT(mtVersionData, 11);
 
-			node = msg.data[1];
+			node = msg.data[13];
 
-			softwareVersion = msg.data[2];
+			softwareVersion = msg.data[14];
 
-			infoBits = msg.data[3];
+			infoBits = msg.data[15];
 
-			uid =  uint16_t(msg.data[4] << 0);
-			uid |= uint16_t(msg.data[5] << 8);
+			uid =  uint16_t(msg.data[16] << 0);
+			uid |= uint16_t(msg.data[17] << 8);
 
-			programLength  = uint32_t(msg.data[6] << 0);
-			programLength |= uint32_t(msg.data[7] << 8);
-			programLength |= uint32_t(msg.data[8] << 16);
-			programLength |= uint32_t(msg.data[9] << 24);
+			programLength  = uint32_t(msg.data[18] << 0);
+			programLength |= uint32_t(msg.data[19] << 8);
+			programLength |= uint32_t(msg.data[20] << 16);
+			programLength |= uint32_t(msg.data[21] << 24);
 
-			checksum  = uint32_t(msg.data[10]  << 0);
-			checksum += uint32_t(msg.data[11] << 8);
+			checksum  = uint32_t(msg.data[22] << 0);
+			checksum += uint32_t(msg.data[23] << 8);
+
+			TRITECH_MSG_EXPECT_BYTE_AT(0x0A, 25);
+
 		}
 
 		void print()
@@ -123,8 +127,8 @@ namespace tritech
 	struct mtAliveMsg
 	{
 		static const int type = mtAlive;
-		uint8_t node;
-		int headTime_msec;
+		uint8_t txNode;
+		uint32_t headTime_msec;
 		int motorPos;
 
 		bool inCentre;
@@ -138,24 +142,22 @@ namespace tritech
 
 		mtAliveMsg(Message const& msg)
 		{
-			TRITECH_MSG_LENGTH_CHK(10)
-				TRITECH_MSG_EXPECT_BYTE_AT(0x80, 0);
+			TRITECH_MSG_EXPECT_BYTE_AT('@', 1);
+			TRITECH_MSG_LENGTH_CHK(23);
+			TRITECH_MSG_EXPECT_BYTE_AT(mtAlive, 11);
+			TRITECH_MSG_EXPECT_BYTE_AT(0x80, 12);
 
-			node = msg.data[1];
+			txNode = msg.data[13];
 
-			TRITECH_MSG_EXPECT_BYTE_AT(0x80, 2);
+			headTime_msec  = uint32_t(msg.data[15]) << 0;
+			headTime_msec |= uint32_t(msg.data[16]) << 8;
+			headTime_msec |= uint32_t(msg.data[17]) << 16;
+			headTime_msec |= uint32_t(msg.data[18]) << 24;
 
-			uint32_t htms = 0;
-			htms  = uint32_t(msg.data[3]) << 0;
-			htms |= uint32_t(msg.data[4]) << 8;
-			htms |= uint32_t(msg.data[5]) << 16;
-			htms |= uint32_t(msg.data[6]) << 24;
-			headTime_msec = htms;
+			motorPos  = msg.data[19] << 0;
+			motorPos |= msg.data[20] << 8;
 
-			motorPos  = msg.data[7] << 0;
-			motorPos |= msg.data[8] << 8;
-
-			std::bitset<8> headinf = msg.data[9];
+			std::bitset<8> headinf = msg.data[21];
 			inCentre  = headinf[0];
 			centered  = headinf[1];
 			motoring  = headinf[2];
@@ -164,12 +166,14 @@ namespace tritech
 			inScan    = headinf[5];
 			noParams  = headinf[6];
 			sentCfg   = headinf[7];
+
+			TRITECH_MSG_EXPECT_BYTE_AT(0x0A, 22);
 		};
 
 		void print()
 		{
 			printf("mtAliveMsg: node = %#x headTime_msec = %d motorPos = %d inCentre = %d centered = %d motoring = %d motorOn"
-					"= %d dir = %d inScan = %d noParams = %d sentCfg = %d\n", node, headTime_msec, motorPos, inCentre, centered,
+					"= %d dir = %d inScan = %d noParams = %d sentCfg = %d\n", txNode, headTime_msec, motorPos, inCentre, centered,
 					motoring, motorOn, dir, inScan, noParams, sentCfg);
 		}
 	};
@@ -177,6 +181,44 @@ namespace tritech
 
 
 	// ######################################################################
+	struct mtHeadDataMsg
+	{
+		uint8_t packetSequence; //!< If this is part of a multi-packet sequence, which packet is this?
+		bool isLastInSequence; //!< Is this the last packet in the sequence?
+		uint8_t txNode;
+
+		//! Head Status Data
+		/*! {@ */
+		bool hdPwrLoss;          //!< Head is in reset condition
+		bool motorErr;           //!< Motor has lost sync, re-send parameters.
+		bool dataRangeis0to80db; //!< When in 8-bit adc datamode, data is 0..255 = 0..80db
+		bool messageAppended;    //!< Message appended after last packet data reply
+		/*! @}*/
+
+
+		mtHeadDataMsg(Message const& msg)
+		{
+			uint8_t const msgSequenceBitset = msg.data[0];
+			packetSequence   = msgSequenceBitset & 0xEF;
+			isLastInSequence = msgSequenceBitset & 0x80;
+
+			uint16_t const totalByteCount = msg.data[1] | (msg.data[2] << 8);
+
+			// We expect the device type to be '11', i.e. a Digital Img Sonar (hDIG).
+			TRITECH_MSG_EXPECT_BYTE_AT(0x0A, 3);
+
+			std::bitset<8> headStatus = msg.data[3];
+			hdPwrLoss          = headStatus[0];
+			motorErr           = headStatus[1];
+			dataRangeis0to80db = headStatus[4];
+			messageAppended    = headStatus[7];
+			
+
+
+
+
+		}
+	};
 	
 }
 

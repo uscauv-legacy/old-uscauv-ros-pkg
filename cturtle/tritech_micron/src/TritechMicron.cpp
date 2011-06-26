@@ -43,6 +43,9 @@ void TritechMicron::processByte(char byte)
   if(itsState == WaitingForAt) 
     if(byte == '@')
     {
+      // Tritech's datasheet refers to the first byte as '1' rather than '0', so let's push back a bogus byte here just
+      // to make reading the datasheet easier.
+      itsRawMsg.push_back(0);
       itsRawMsg.push_back(byte);
       itsState = ReadingHeader; 
       itsMsg = Message();
@@ -54,14 +57,14 @@ void TritechMicron::processByte(char byte)
   if(itsState == ReadingHeader)
   {
     // Ignore the 'Hex Length' section
-    if(itsRawMsg.size() < 6) return;
+    if(itsRawMsg.size() < 7) return;
 
-    if(itsRawMsg.size() == 6)  { itsMsg.binLength  = uint16_t(byte);      return; }
-    if(itsRawMsg.size() == 7)  { itsMsg.binLength |= uint16_t(byte) << 8; return; }
-    if(itsRawMsg.size() == 8)  { itsMsg.txNode = byte; return; }
-    if(itsRawMsg.size() == 9)  { itsMsg.rxNode = byte; return; }
-    if(itsRawMsg.size() == 10) { itsMsg.count  = byte; return; }
-    if(itsRawMsg.size() == 11) 
+    if(itsRawMsg.size() == 7)  { itsMsg.binLength  = uint16_t(byte);      return; }
+    if(itsRawMsg.size() == 8)  { itsMsg.binLength |= uint16_t(byte) << 8; return; }
+    if(itsRawMsg.size() == 9)  { itsMsg.txNode = byte; return; }
+    if(itsRawMsg.size() == 10) { itsMsg.rxNode = byte; return; }
+    if(itsRawMsg.size() == 11) { itsMsg.count  = byte; return; }
+    if(itsRawMsg.size() == 12) 
     {
       itsMsg.type = MessageType(byte);
       itsState = ReadingData;
@@ -75,12 +78,11 @@ void TritechMicron::processByte(char byte)
 
   if(itsState == ReadingData)
   {
-    if(itsRawMsg.size() - itsMsg.count == 11)
+    if(itsRawMsg.size() - itsMsg.count == 12)
       if(byte == 0x0A)
       {
         std::cout << "Message Finished" << std::endl;
-        itsMsg.data.resize(itsMsg.count-1);
-        std::copy(itsRawMsg.begin()+11, itsRawMsg.end()-1, itsMsg.data.begin());
+        itsMsg.data = itsRawMsg;
         processMessage(itsMsg);
         resetMessage();
       }
@@ -95,15 +97,21 @@ void TritechMicron::processByte(char byte)
 
 void TritechMicron::processMessage(tritech::Message msg)
 {
-//  std::cout << "Got Data: ";
-//  for(uint8_t byte : msg.data)
-//    printf("0x%x ", byte);
-//  std::cout << std::endl;
-
   if(msg.type == mtVersionData)
-  { mtVersionDataMsg parsedMsg(msg); parsedMsg.print(); }
+  {
+    mtVersionDataMsg parsedMsg(msg);
+    parsedMsg.print(); 
+  }
   else if(msg.type == mtAlive)
-  { mtAliveMsg parsedMsg(msg); parsedMsg.print(); }
+  {
+    mtAliveMsg parsedMsg(msg);
+    parsedMsg.print(); 
+  }
+  else if(msg.type == mtHeadData)
+  {
+//    mtHeadDataMsg parsedMsg(msg);
+//    parsedMsg.print(); 
+  }
   else
   {
     std::cerr << "Unhandled Message Type: " << msg.type << std::endl;
