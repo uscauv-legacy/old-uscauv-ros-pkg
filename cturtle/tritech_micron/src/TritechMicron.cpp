@@ -78,7 +78,7 @@ void TritechMicron::processByte(char byte)
 
   if(itsState == ReadingData)
   {
-    if(itsRawMsg.size() - itsMsg.count == 12)
+    if(int(itsMsg.binLength - (itsRawMsg.size() - 7)) == 0)
       if(byte == 0x0A)
       {
         std::cout << "Message Finished" << std::endl;

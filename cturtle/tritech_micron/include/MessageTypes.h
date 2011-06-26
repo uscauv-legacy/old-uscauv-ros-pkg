@@ -195,29 +195,112 @@ namespace tritech
 		bool messageAppended;    //!< Message appended after last packet data reply
 		/*! @}*/
 
+		enum sweepCode_t {Scanning_Normal, Scan_AtLeftLimit, Scan_AtRightLimit, Scan_AtCentre};
+		sweepCode_t sweepCode;
+
+		//! Head Control
+		/*! @{ */
+		struct headControl_t
+		{
+			bool adc8on;
+			bool cont;
+			bool scanright;
+			bool invert;
+			bool motoroff;
+			bool txoff;
+			bool spare;
+			bool chan2;
+			bool raw;
+			bool hasMotor;
+			bool applyOffset;
+			bool pingPong;
+			bool starteLLim;
+			bool replyASL;
+			bool replyThr;
+			bool ignoreSensor;
+		} headControl;
+		/*! @} */
+
+		int rangeScale;
+		enum rangeUnits_t {feet, fathoms, yards};
+		rangeUnits_t rangeUnits;
+
+		float stepSize_degrees;
+		float bearing_degrees; //!< The current bearing of the sonar head
+
 
 		mtHeadDataMsg(Message const& msg)
 		{
-			uint8_t const msgSequenceBitset = msg.data[0];
+			TRITECH_MSG_EXPECT_BYTE_AT('@', 1);
+			TRITECH_MSG_EXPECT_BYTE_AT(mtHeadData, 11);
+			uint8_t const msgSequenceBitset = msg.data[12];
 			packetSequence   = msgSequenceBitset & 0xEF;
 			isLastInSequence = msgSequenceBitset & 0x80;
 
-			uint16_t const totalByteCount = msg.data[1] | (msg.data[2] << 8);
+			uint16_t const totalByteCount = msg.data[14] | (msg.data[15] << 8);
 
 			// We expect the device type to be '11', i.e. a Digital Img Sonar (hDIG).
-			TRITECH_MSG_EXPECT_BYTE_AT(0x0A, 3);
+			TRITECH_MSG_EXPECT_BYTE_AT(0x0A, 16);
 
-			std::bitset<8> headStatus = msg.data[3];
+			std::bitset<8> headStatus = msg.data[17];
 			hdPwrLoss          = headStatus[0];
 			motorErr           = headStatus[1];
 			dataRangeis0to80db = headStatus[4];
 			messageAppended    = headStatus[7];
-			
 
+			switch(msg.data[18])
+			{
+				case 0: sweepCode = Scanning_Normal; break;
+				case 1: sweepCode = Scan_AtLeftLimit; break;
+				case 2: sweepCode = Scan_AtRightLimit; break;
+				case 5: sweepCode = Scan_AtCentre; break;
+				default:
+								std::cerr << __FUNCTION__ << ":" << __LINE__ <<
+									" - Unknown Sweep Code (" << msg.data[18] << ")" << std::endl;
+								break;
+			}
+
+			std::bitset<16> headCtrl = msg.data[19] | (uint16_t(msg.data[20]) << 8);
+			headControl.adc8on       = headCtrl[0];          
+      headControl.cont         = headCtrl[1];                     
+      headControl.scanright    = headCtrl[2];                           
+      headControl.invert       = headCtrl[3];                                    
+      headControl.motoroff     = headCtrl[4];                                           
+      headControl.txoff        = headCtrl[5];                                                     
+      headControl.spare        = headCtrl[6];                                                               
+      headControl.chan2        = headCtrl[7];                                                                         
+      headControl.raw          = headCtrl[8];
+      headControl.hasMotor     = headCtrl[9];
+      headControl.applyOffset  = headCtrl[10];
+      headControl.pingPong     = headCtrl[11];
+      headControl.starteLLim   = headCtrl[12];
+      headControl.replyASL     = headCtrl[13];
+      headControl.replyThr     = headCtrl[14];
+      headControl.ignoreSensor = headCtrl[15];
+
+			int rangeScale = ((uint16_t(msg.data[21]) | (uint16_t(msg.data[22]) << 8)) & 0xDFFF)*10;
+			uint8_t rangeTp = uint8_t(msg.data[22]) >> 6;
+			switch(rangeTp)
+			{
+				case 1: rangeUnits = feet; break;
+				case 2: rangeUnits = fathoms; break;
+				case 3: rangeUnits = yards; break;
+				default:
+								std::cerr << __FUNCTION__ << ":" << __LINE__ <<
+									" - Unknown range units Code (" << rangeTp << ")" << std::endl;
+								break;
+			}
+
+			stepSize_degrees = msg.data[40]/16.0 * 180.0/200.0;
+			bearing_degrees  = (uint16_t(msg.data[41]) | (uint16_t(msg.data[42]) << 8))/16.0 * 180.0/200.0;
 
 
 
 		}
+
+
+
+
 	};
 	
 }
