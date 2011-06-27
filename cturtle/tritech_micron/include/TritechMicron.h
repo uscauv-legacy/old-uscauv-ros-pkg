@@ -56,8 +56,14 @@ class TritechMicron
     void serialThreadMethod();
     std::thread itsSerialThread;
     StateType itsState;
-    std::vector<uint8_t> itsRawMsg; //!< The current message begin read in
+    
+    //! The current message begin read in
+    std::vector<uint8_t> itsRawMsg; 
+
     tritech::Message itsMsg;
+
+    //! Have we ever heard an mtAlive message from the sonar? 
+    bool hasHeardMtAlive;
 
     Serial itsSerial;
 
