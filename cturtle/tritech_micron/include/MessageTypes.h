@@ -66,6 +66,16 @@ namespace tritech
     uint8_t count;
     std::vector<uint8_t> data;
     tritech::MessageType type;
+
+		Message()
+		{
+			binLength = 0;
+			txNode = 0;
+			rxNode = 0;
+			count = 0;
+			data.clear();
+			type = mtNull;
+		}
   };
 
 	// ######################################################################
@@ -179,6 +189,14 @@ namespace tritech
 	};
 
 
+	// ######################################################################
+	// TODO: Make this thing actually configurable
+	static std::vector<uint8_t> mtHeadCommandMsg = {
+		0x40, 0x30, 0x30, 0x34, 0x43, 0x4C, 0x00, 0xFF, 0x02, 0x47, 0x13, 0x80, 0x02, 0x1D, 0x83, 0x23, 0x02,
+		0x99, 0x99, 0x99, 0x02, 0x66, 0x66, 0x66, 0x05, 0xA3, 0x70, 0x3D, 0x06, 0x70, 0x3D, 0x0A, 0x09, 0x28,
+		0x00, 0x3C, 0x00, 0x01, 0x00, 0xFF, 0x18, 0x51, 0x08, 0x54, 0x54, 0x5A, 0x00, 0x7D, 0x00, 0x19, 0x10,
+		0x8D, 0x00, 0x5A, 0x00, 0xE8, 0x03, 0x97, 0x03, 0x40, 0x06, 0x01, 0x00, 0x00, 0x00, 0x50, 0x51, 0x09,
+		0x08, 0x54, 0x54, 0x00, 0x00, 0x5A, 0x00, 0x7D, 0x00, 0x00, 0x00, 0x00, 0x00, 0x0A };
 
 	// ######################################################################
 	struct mtHeadDataMsg
@@ -244,10 +262,12 @@ namespace tritech
 			std::cout << "   Step Size (degrees): "       << stepSize_degrees << std::endl;
 			std::cout << "   Current Bearing (degrees): " << bearing_degrees << std::endl;
 
-			std::cout << "   Scanline [ ";
-			for(uint8_t c : scanLine)
-				std::cout << int(c) << " ";
-			std::cout << "]" << std::endl;
+			std::cout << "   Scanline size: " << scanLine.size() << std::endl;
+
+			//std::cout << "   Scanline [ ";
+			//for(uint8_t c : scanLine)
+			//	std::cout << int(c) << " ";
+			//std::cout << "]" << std::endl;
 		}
 
 		mtHeadDataMsg(Message const& msg)
@@ -356,6 +376,11 @@ namespace tritech
 		}
 	};
 }
+
+//// ######################################################################
+//struct mtHeadCommand
+//{
+//};
 
 #endif // TRITECHMICRON_MESSAGETYPES_H
 

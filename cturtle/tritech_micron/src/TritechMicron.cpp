@@ -29,6 +29,49 @@ using namespace tritech;
 TritechMicron::TritechMicron() 
 { resetMessage(); }
 
+// ######################################################################
+TritechMicron::~TritechMicron()
+{
+  itsRunning = false;
+  if(itsSerialThread.joinable())
+    itsSerialThread.join();
+}
+
+// ######################################################################
+void TritechMicron::connect(std::string const& devName)
+{
+  std::cout << "Configuring" << std::endl;
+  itsSerial.configure(
+      /*dev*/      devName.c_str(),
+      /*speed*/    115200,
+      /*format*/   "8N1",
+      /*flowSoft*/ false, 
+      /*flowHard*/ false,
+      /*timeout*/  0); itsSerial.perror(); std::cout << std::endl;
+  itsSerial.setBlocking(true);
+  std::cout << "Configured" << std::endl;
+
+  std::cout << "Connecting" << std::endl;
+  itsSerial.connect(); itsSerial.perror(); std::cout << std::endl;
+  std::cout << "Connected" << std::endl;
+
+  itsRunning = true;
+  itsSerialThread = std::thread([this](){serialThreadMethod();});
+}
+
+// ######################################################################
+void TritechMicron::serialThreadMethod()
+{
+  while(itsRunning)
+  {
+    uint8_t byte;
+    int bytesRead = itsSerial.read(&byte, 1);
+    if(bytesRead == 1) processByte(byte);
+    else { usleep(10000); }
+  }
+}
+
+// ######################################################################
 void TritechMicron::resetMessage()
 {
   itsMsg = Message();
@@ -37,12 +80,13 @@ void TritechMicron::resetMessage()
 }
 
 // ######################################################################
-void TritechMicron::processByte(char byte)
+void TritechMicron::processByte(uint8_t byte)
 {
 
   if(itsState == WaitingForAt) 
     if(byte == '@')
     {
+      itsRawMsg.clear();
       // Tritech's datasheet refers to the first byte as '1' rather than '0', so let's push back a bogus byte here just
       // to make reading the datasheet easier.
       itsRawMsg.push_back(0);

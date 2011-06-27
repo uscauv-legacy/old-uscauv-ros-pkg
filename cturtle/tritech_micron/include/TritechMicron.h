@@ -25,6 +25,9 @@
 #include "MessageTypes.h"
 #include <vector>
 #include <stdint.h>
+#include "Serial.h"
+#include <thread>
+#include <future>
 
 class TritechMicron
 {
@@ -38,17 +41,27 @@ class TritechMicron
     };
 
     TritechMicron();
+    ~TritechMicron();
 
-    void processByte(char byte);
+    void connect(std::string const& devName);
+
+    void processByte(uint8_t byte);
 
     void processMessage(tritech::Message msg);
 
     void resetMessage();
 
+
   //private:
+    void serialThreadMethod();
+    std::thread itsSerialThread;
     StateType itsState;
     std::vector<uint8_t> itsRawMsg; //!< The current message begin read in
     tritech::Message itsMsg;
+
+    Serial itsSerial;
+
+    bool itsRunning;
 
 };
 
