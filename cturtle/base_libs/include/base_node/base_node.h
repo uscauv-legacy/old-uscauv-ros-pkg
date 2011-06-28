@@ -47,20 +47,14 @@
 template<typename _BaseReconfigureType>
 struct ReconfigureSettings
 {
-	static bool reconfigureEnabled()
-	{
-		return true;
-	}
+	const static bool reconfigure_enabled = true;
 };
 
 // returns false if we're not using a custom reconfigure type
 template<>
 struct ReconfigureSettings<base_libs::EmptyConfig>
 {
-	static bool reconfigureEnabled()
-	{
-		return false;
-	}
+	const static bool reconfigure_enabled = false;
 };
 
 // define the default reconfigure type
@@ -84,7 +78,6 @@ public:
 	typedef dynamic_reconfigure::Server<_BaseReconfigureType> _DynamicReconfigureServerType;
 
 protected:
-	ros::Rate * loop_rate_;
 
 	/* dynamic reconfigure */
 	typename dynamic_reconfigure::Server<_BaseReconfigureType>::CallbackType reconfigure_callback_;
@@ -94,47 +87,68 @@ protected:
 
 	/* constructor params */
 	ros::NodeHandle nh_local_;
-	ros::MultiThreadedSpinner spinner_;
+	ros::AsyncSpinner spinner_;
+	ros::Rate * loop_rate_;
 	_DynamicReconfigureServerType * reconfigure_srv_;
 	bool ignore_reconfigure_;
+	bool running_;
 
 public:
 	BaseNode( ros::NodeHandle & nh, std::string reconfigure_ns = "reconfigure", uint threads = 3 ) :
-		nh_local_( nh ), spinner_( threads ), reconfigure_srv_( NULL ), ignore_reconfigure_( !ReconfigureSettings<_BaseReconfigureType>::reconfigureEnabled() )
+		nh_local_( "~" ), spinner_( threads ), loop_rate_( NULL ), reconfigure_srv_( NULL ), ignore_reconfigure_( !ReconfigureSettings<_BaseReconfigureType>::reconfigure_enabled ), running_( false )
 	{
 		reconfigure_initialized_ = ignore_reconfigure_;
 		if ( !ignore_reconfigure_ )
 		{
+			ROS_INFO( "Setting up reconfigure server" );
 			reconfigure_srv_ = new _DynamicReconfigureServerType( ros::NodeHandle ( nh_local_, reconfigure_ns ) );
 			reconfigure_callback_ = boost::bind( &BaseNode::reconfigureCB_0, this, _1, _2 );
 			reconfigure_srv_->setCallback( reconfigure_callback_ );
 		}
+		ROS_INFO(" Base node constructed." );
 	}
 
 	virtual ~BaseNode()
 	{
-		//
+		if( running_ )
+		{
+			interrupt();
+		}
 	}
 
 	virtual void spin( unsigned int mode = SpinModeId::SPIN, float frequency = 10.0 )
 	{
-		if ( mode == SpinModeId::SPIN ) spinner_.spin();
+		running_ = true;
+		if( loop_rate_ ) delete loop_rate_;
+		loop_rate_ = new ros::Rate( frequency );
+
+		if ( mode == SpinModeId::SPIN )
+		{
+			spinner_.start();
+		}
 		else if ( mode == SpinModeId::LOOP_SPIN_ONCE )
 		{
-			loop_rate_ = new ros::Rate( frequency );
-			while ( ros::ok() )
-			{
-				spinOnce();
-				ros::spinOnce();
-				loop_rate_->sleep();
-			}
+			//
 		}
-		else spin( SpinModeId::SPIN );
+		else ROS_WARN( "Invalid spin mode selected." );
+
+		while ( ros::ok() && running_ )
+		{
+			spinOnce();
+			ros::spinOnce();
+			loop_rate_->sleep();
+		}
 	}
 
 	virtual void spinOnce()
 	{
 		//
+	}
+
+	virtual void interrupt()
+	{
+		running_ = false;
+		spinner_.stop();
 	}
 
 protected:
@@ -147,8 +161,7 @@ protected:
 	{
 		if ( !ignore_reconfigure_ )
 		{
-			reconfigureCB( initial_config_params_, initial_config_level_ );
-			reconfigure_initialized_ = true;
+			reconfigureCB_0( initial_config_params_, initial_config_level_ );
 		}
 	}
 
@@ -158,6 +171,7 @@ private:
 		initial_config_params_ = config;
 		initial_config_level_ = level;
 		reconfigureCB( config, level );
+		reconfigure_initialized_ = true;
 	}
 };
 

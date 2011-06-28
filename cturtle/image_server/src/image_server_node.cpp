@@ -1,6 +1,6 @@
 /*******************************************************************************
  *
- *      image_server_nodelet
+ *      image_server_node
  * 
  *      Copyright (c) 2011, Edward T. Kaszubski ( ekaszubski@gmail.com )
  *      All rights reserved.
@@ -33,40 +33,36 @@
  *
  *******************************************************************************/
 
-#include <base_nodelet/base_nodelet.h>
 #include <image_server/image_server.h>
-#include <thread>
 
-namespace image_server
+void printUsage()
 {
-
-	class ImageServerNodelet : public BaseNodelet<ImageServer>
-	{
-	public:
-		ImageServerNodelet() :
-			BaseNodelet<ImageServer>()
-		{
-			//
-		}
-
-		void constructData()
-		{
-			data_ = new ImageServer( nh_local_ );
-		}
-
-		void spin()
-		{
-			data_->spin( SpinModeId::LOOP_SPIN_ONCE, data_->rate_ );
-		}
-
-		void interrupt()
-		{
-			//data_->interrupt();
-		}
-	};
-
+	printf( "\nUsage: image_server [ prefix start end digits ext rate loop ]\n" );
 }
 
-// Register the nodelet
-#include <pluginlib/class_list_macros.h>
-PLUGINLIB_DECLARE_CLASS(image_server, image_server_nodelet, image_server::ImageServerNodelet, nodelet::Nodelet)
+int main( int argc, char* argv[] )
+{
+	printf( "argc: %d", argc );
+	if ( argc < 2 )
+	{
+		printUsage();
+		return 0;
+	}
+
+	for ( int i = 1; i < argc; i++ )
+	{
+		if ( strcmp( argv[i], "-h" ) == 0 || strcmp( argv[i], "--help" ) == 0 )
+		{
+			printUsage();
+			return 0;
+		}
+	}
+
+	ros::init( argc, argv, "image_server" );
+	ros::NodeHandle nh;
+
+	ImageServer image_server( nh );
+	image_server.spin( SpinModeId::LOOP_SPIN_ONCE, image_server.rate_ );
+
+	return 0;
+}

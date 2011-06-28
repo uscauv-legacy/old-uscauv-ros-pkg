@@ -38,22 +38,30 @@
 
 #include <base_image_proc/base_image_proc.h>
 #include <image_loader/image_loader.h>
+#include <image_server/ImageServerConfig.h>
 
-class ImageServer : public BaseImageProc<>
+typedef image_server::ImageServerConfig _ReconfigureType;
+
+class ImageServer: public BaseImageProc<_ReconfigureType>
 {
 private:
 	ImageLoader image_loader_;
-
 	bool loop_;
 
 public:
 	double rate_;
+	bool last_next_image_state_;
+	bool last_prev_image_state_;
+	bool auto_advance_;unsigned int current_frame_;unsigned int direction_;
 
 	ImageServer( ros::NodeHandle & nh ) :
-		BaseImageProc<> ( nh ), image_loader_( nh_local_ )
+			BaseImageProc<_ReconfigureType>( nh ), image_loader_( nh_local_ ), loop_( false ), last_next_image_state_( false ), last_prev_image_state_( false ), auto_advance_( true ), current_frame_( 0 ), direction_( 0 )
 	{
-		nh_local_.param( "rate", rate_, 15.0 );
-		nh_local_.param( "loop", loop_, false );
+		nh_local_.param( "rate",
+		                 rate_,
+		                 15.0 );
+
+		initCfgParams();
 
 		image_loader_.loadImages();
 	}
@@ -64,18 +72,76 @@ public:
 
 	void spinOnce()
 	{
-		static int current_frame = 0;
-
-		if ( image_loader_.images_loaded_ && current_frame < image_loader_.image_cache_.size() )
+		if ( image_loader_.images_loaded_ && current_frame_ < image_loader_.image_cache_.size() )
 		{
-			ROS_INFO( "Publishing image %d", current_frame );
-			publishCvImage( image_loader_.image_cache_[current_frame] );
-			++current_frame;
+			ROS_INFO( "Publishing image %d", current_frame_ );
+			publishCvImage( image_loader_.image_cache_[current_frame_] );
+			if ( auto_advance_ )
+			{
+				switch ( direction_ )
+				{
+				case 0:
+					nextFrame();
+					break;
+				case 1:
+					prevFrame();
+					break;
+				}
+			}
+		}
+	}
+
+	void nextFrame()
+	{
+		if ( current_frame_ < image_loader_.image_cache_.size() - 1 )
+		{
+			++current_frame_;
+		}
+		else if ( loop_ )
+		{
+			current_frame_ = 0;
+		}
+	}
+
+	void prevFrame()
+	{
+		if ( current_frame_ > 0 && image_loader_.image_cache_.size() > 0 )
+		{
+			--current_frame_;
 		}
 		else if( loop_ )
 		{
-			current_frame = 0;
+			current_frame_ = image_loader_.image_cache_.size() - 1;
 		}
+	}
+
+	void reconfigureCB( _ReconfigureType &config,
+	                    uint32_t level )
+	{
+		loop_ = config.loop;
+		if( !reconfigure_initialized_ ) return;
+
+		auto_advance_ = config.auto_advance;
+		if ( auto_advance_ )
+		{
+			if ( config.next_image && !config.prev_image ) direction_ = 0;
+			else if ( !config.next_image && config.prev_image ) direction_ = 1;
+			else direction_ = 0;
+
+			return;
+		}
+
+		if ( last_next_image_state_ != config.next_image )
+		{
+			nextFrame();
+		}
+		else if ( last_prev_image_state_ != config.prev_image )
+		{
+			prevFrame();
+		}
+
+		last_next_image_state_ = config.next_image;
+		last_prev_image_state_ = config.prev_image;
 	}
 };
 
