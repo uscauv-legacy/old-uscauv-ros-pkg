@@ -1,0 +1,5 @@
+<launch>
+	<node pkg="color_classifier" type="color_classifier_node" name="color_classifier" output="screen" args="~image:=/image_server/output_image" >
+		<rosparam param="reconfigure" command="load" file="$(find color_classifier)/params/red_params.yaml" />
+	</node>
+</launch>
