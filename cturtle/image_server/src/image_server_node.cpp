@@ -59,7 +59,7 @@ int main( int argc, char* argv[] )
 	}
 
 	ros::init( argc, argv, "image_server" );
-	ros::NodeHandle nh;
+	ros::NodeHandle nh ( "~" );
 
 	ImageServer image_server( nh );
 	image_server.spin( SpinModeId::LOOP_SPIN_ONCE, image_server.rate_ );

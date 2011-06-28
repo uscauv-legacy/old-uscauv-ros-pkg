@@ -41,7 +41,7 @@ int main( int argc,
 	ros::init( argc,
 	           argv,
 	           "color_classifier" );
-	ros::NodeHandle nh;
+	ros::NodeHandle nh( "~" );
 
 	ColorClassifier color_classifier( nh );
 	color_classifier.spin();

@@ -92,6 +92,8 @@ public:
 	BaseImageProcCore( ros::NodeHandle & nh, std::string reconfigure_ns = "reconfigure", uint threads = 3, bool publish_image = true ) :
 		BaseNode<_ReconfigureType> ( nh, reconfigure_ns, threads ), image_transport_( this->nh_local_ ), new_image_( false ), ipl_image_( NULL )
 	{
+		ROS_INFO( "Setting up base_image_proc_core..." );
+
 		this->nh_local_.param( "image_transport", image_transport_type_, std::string( "raw" ) );
 		this->nh_local_.param( "publish_image", publish_image_, publish_image );
 
@@ -99,6 +101,8 @@ public:
 		camera_info_sub_ = this->nh_local_.subscribe( nh.resolveName( "camera_info" ), 1, &BaseImageProcCore::infoCB, this );
 
 		if ( publish_image_ ) output_image_pub_ = image_transport_.advertise( "output_image", 1 );
+
+		ROS_INFO( "Done setting up base_image_proc_core" );
 	}
 
 	virtual ~BaseImageProcCore()
@@ -126,7 +130,11 @@ private:
 	void imageCB_0( const sensor_msgs::ImageConstPtr& image_msg )
 	{
 		ROS_DEBUG( "got image" );
-		image_mutex_.lock();
+		if( !image_mutex_.try_lock() )
+		{
+			ROS_WARN( "Dropped image; could not lock image mutex" );
+			return;
+		}
 
 		image_msg_ = boost::const_pointer_cast<sensor_msgs::Image>( image_msg );
 		imageCB( image_msg );

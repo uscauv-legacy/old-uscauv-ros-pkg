@@ -1,4 +1,5 @@
-rosbuild_add_executable(color_classifier_node color_classifier_node.cpp)
+rosbuild_add_executable( color_classifier_node color_classifier_node.cpp )
+rosbuild_add_executable( trainer trainer.cpp )
 add_subdirectory( nodelets )
 
 #rosbuild_add_executable(thread_tester thread_tester.cpp)

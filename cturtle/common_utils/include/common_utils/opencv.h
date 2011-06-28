@@ -38,6 +38,7 @@
 
 #include <opencv/cv.h>
 #include <cxcore.h>
+#include "highgui.h"
 #include <sensor_msgs/Image.h>
 #include <cv_bridge/CvBridge.h>
 // for ImageTransport, Publisher

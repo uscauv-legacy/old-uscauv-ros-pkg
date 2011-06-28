@@ -69,16 +69,30 @@ public:
 	ImageLoader( ros::NodeHandle & nh ) :
 		images_loaded_( false )
 	{
+		ROS_INFO( "Setting up image_loader..." );
+
 		nh.param( "prefix", file_prefix_, std::string( "image" ) );
 		nh.param( "start", start_, 0 );
 		nh.param( "end", end_, 0 );
 		nh.param( "digits", digits_, 0 );
 		nh.param( "ext", file_ext_, std::string( ".png" ) );
+
+		ROS_INFO( "Done setting up image loader" );
+	}
+
+	~ImageLoader()
+	{
+		ROS_INFO( "Releasing image cache..." );
+		for( unsigned int i = 0; i < image_cache_.size(); ++i )
+		{
+			cvReleaseImage( &image_cache_[i] );
+		}
+		ROS_INFO( "Done releasing image cache" );
 	}
 
 	_ImageCache loadImages()
 	{
-		ROS_INFO( "Loading images %s %d %d %d %s", file_prefix_.c_str(), start_, end_, digits_, file_ext_.c_str() );
+		ROS_INFO( "Loading images %s %d %d %d %s ...", file_prefix_.c_str(), start_, end_, digits_, file_ext_.c_str() );
 		IplImage * img = NULL;
 		for ( int i = start_; i <= end_; i++ )
 		{
@@ -103,7 +117,7 @@ public:
 
 		images_loaded_ = true;
 
-		ROS_INFO( "done" );
+		ROS_INFO( "Done loading images" );
 
 		return image_cache_;
 	}

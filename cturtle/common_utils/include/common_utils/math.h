@@ -39,6 +39,7 @@
 #include <math.h>
 #include <stdlib.h>
 #include <time.h>
+#include <type_traits>
 
 namespace math_utils
 {
@@ -298,6 +299,20 @@ namespace math_utils
 			value1 = dec_accuracy ? value1 * scale : round( value1 * scale );
 			value2 = dec_accuracy ? value2 * scale : round( value2 * scale );
 		}
+	}
+
+	template<class __DataType>
+	static typename std::enable_if<std::is_floating_point<__DataType>::value, __DataType>::type
+	mod( const __DataType & numerator, const __DataType & denominator )
+	{
+		return fmod( numerator, denominator );
+	}
+
+	template<class __DataType>
+	static typename std::enable_if<!std::is_floating_point<__DataType>::value, __DataType>::type
+	mod( const __DataType & numerator, const __DataType & denominator )
+	{
+		return numerator % denominator;
 	}
 }
 

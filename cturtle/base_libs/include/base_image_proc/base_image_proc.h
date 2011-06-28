@@ -53,7 +53,13 @@ public:
 	BaseImageProc( ros::NodeHandle & nh, std::string reconfigure_ns = "reconfigure", std::string service_name = "service", uint threads = 3 ) :
 		BaseImageProcCore<_ReconfigureType, _ServiceType> ( nh, reconfigure_ns, threads )
 	{
+		ROS_INFO( "Setting up base_image_proc..." );
+
+		ROS_INFO( "Setting up service %s...", service_name );
 		service_srv_ = this->nh_local_.advertiseService( service_name, &BaseImageProc::serviceCB, this );
+		ROS_INFO( "Done setting up service %s", service_name );
+
+		ROS_INFO( "Done setting up base_image_proc" );
 	}
 
 	virtual ~BaseImageProc()
@@ -66,7 +72,7 @@ protected:
 	// called during serviceCB
 	virtual IplImage * processImage( IplImage * ipl_image, _ServiceRequest & req, _ServiceResponse & resp )
 	{
-		ROS_DEBUG( "Processed image in base class" );
+		ROS_WARN( "Processed image in base class" );
 		return ipl_image;
 	}
 
@@ -74,7 +80,7 @@ protected:
 	{
 		IplImage * _ipl_image = NULL;
 
-		this->image_mutex_.lock();
+		if( !this->image_mutex_.try_lock() ) return false;
 
 		// if the image hasn't changed, just use the last response
 		if ( !this->new_image_ )
@@ -115,7 +121,8 @@ public:
 	BaseImageProc( ros::NodeHandle & nh, std::string reconfigure_ns = "reconfigure", uint threads = 3 ) :
 		BaseImageProcCore<_ReconfigureType, std_srvs::Empty> ( nh, reconfigure_ns, threads )
 	{
-
+		ROS_INFO( "Setting up base_image_proc with no service..." );
+		ROS_INFO( "Done setting up base_image_proc..." );
 	}
 	virtual ~BaseImageProc()
 	{
@@ -127,20 +134,20 @@ protected:
 	// called at the end of imageCB
 	virtual IplImage * processImage( IplImage * ipl_image )
 	{
-		ROS_DEBUG( "Processed image in base class" );
+		ROS_WARN( "Processed image in base class" );
 		return ipl_image;
 	}
 
 	virtual void imageCB( const sensor_msgs::ImageConstPtr& image_msg )
 	{
-		if ( this->reconfigure_initialized_ )
+		if ( !this->ignore_reconfigure_ && this->reconfigure_initialized_ )
 		{
-			this->image_mutex_.lock();
+			this->new_image_ = true;
 			this->ipl_image_ = processImage( this->image_bridge_.imgMsgToCv( this->image_msg_ ) );
-			this->image_mutex_.unlock();
 
 			if ( this->publish_image_ ) this->publishCvImage( this->ipl_image_ );
 		}
+		else ROS_WARN( "Dropped image because the reconfigure params have not been set" );
 	}
 
 };

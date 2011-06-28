@@ -16,7 +16,7 @@
   <depend package="image_transport"/>
   <depend package="tf"/>
   <export>
-    <cpp cflags="-I${prefix}/include -I${prefix}/msg/cpp -I${prefix}/srv/cpp" lflags="-Wl,-rpath,${prefix}/lib -L${prefix}/lib -lcommon_utils"/>
+    <cpp cflags="-std=c++0x -I${prefix}/include -I${prefix}/msg/cpp -I${prefix}/srv/cpp" lflags="-Wl,-rpath,${prefix}/lib -L${prefix}/lib -lcommon_utils"/>
   </export>
 
 </package>

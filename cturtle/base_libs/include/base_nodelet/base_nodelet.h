@@ -38,45 +38,85 @@
 
 #include <nodelet/nodelet.h>
 #include <thread>
+#include <functional>
 
-template<class _DataType>
+template<class __DataType>
 class BaseNodelet: public nodelet::Nodelet
 {
+public:
+	typedef __DataType _DataType;
+	typedef BaseNodelet<__DataType> _BaseNodelet;
+	typedef std::function<void()> InterruptCallback;
+
 protected:
 	ros::NodeHandle nh_;
 	ros::NodeHandle nh_local_;
-	_DataType * data_;
+	InterruptCallback interrupt_callback_;
+	__DataType * data_;
 	std::thread * m_thread_;
 
 	volatile bool running_;
 
 public:
 	BaseNodelet() :
-	nodelet::Nodelet(), running_( false )
+	nodelet::Nodelet(), data_( NULL ), m_thread_( NULL ), running_( false )
 	{
-
+		ROS_INFO( "Setting up base_nodelet..." );
+		ROS_INFO( "Done setting up base_nodelet" );
 	}
 
 	virtual ~BaseNodelet()
 	{
-		delete data_;
+		ROS_INFO( "Shutting down base_nodelet..." );
 		if ( running_ && m_thread_ )
 		{
-			m_thread_->detach();
+			ROS_INFO( "Interrupting blocking processes..." );
+			if( interrupt_callback_ )
+			{
+				interrupt_callback_();
+				ROS_INFO( "Done interrupting blocking processes" );
+			}
+			else ROS_INFO( "No interrupt callback registered" );
+
+			ROS_INFO( "Stopping thread..." );
+			m_thread_->join();
+			ROS_INFO( "Done stopping thread" );
+
+			ROS_INFO( "Deleting data..." );
+			delete data_;
+			ROS_INFO( "Done deleting data" );
 		}
 		delete m_thread_;
+		ROS_INFO( "Done shutting down base_nodelet" );
+	}
+
+	template<class __CallerType>
+	void registerInterrupt( void(__CallerType::*callback)(), __CallerType* caller )
+	{
+		interrupt_callback_ = std::bind( callback, caller );
 	}
 
 	void onInit()
 	{
+		ROS_INFO( "Initializing..." );
+
+		ROS_INFO( "Getting nodehandles..." );
 		nh_ = getNodeHandle();
 		nh_local_ = getPrivateNodeHandle();
+		ROS_INFO( "Done getting nodehandles" );
 
+		ROS_INFO( "Constructing data..." );
 		constructData();
+		ROS_INFO( "Done constructing data" );
 
+
+		ROS_INFO( "Starting thread..." );
 		running_ = true;
 		m_thread_ = new std::thread( &BaseNodelet::spin,
 		                             this );
+		ROS_INFO( "Done starting thread" );
+
+		ROS_INFO( "Done initializing" );
 	}
 
 	virtual void constructData() = 0;

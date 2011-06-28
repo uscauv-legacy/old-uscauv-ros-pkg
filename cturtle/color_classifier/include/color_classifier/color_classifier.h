@@ -36,6 +36,9 @@
 #ifndef COLOR_CLASSIFIER_H_
 #define COLOR_CLASSIFIER_H_
 
+
+
+/* others */
 // for Mat
 #include <opencv/cv.h>
 #include <opencv/cxcore.h>
@@ -49,20 +52,11 @@
 
 typedef color_classifier::ColorClassifierConfig _ReconfigureType;
 typedef double _DataType;
-typedef Color<float, 3> _Color3f;
 
 class ColorClassifier: public BaseImageProc<_ReconfigureType>
 {
 
 public:
-	struct ThresholdedColor
-	{
-		_Color3f color;
-		float radius;
-		Vec<float, 3> weight;
-		bool enabled;
-	};
-
 	typedef std::array<ThresholdedColor, OutputColorRGB::NUM_COLORS> _ThresholdedColorArrayType;
 	typedef std::array<IplImage *, OutputColorRGB::NUM_COLORS> _IplImagePtrArrayType;
 	typedef std::array<sensor_msgs::CvBridge, OutputColorRGB::NUM_COLORS> _CvBridgeArrayType;
@@ -99,6 +93,8 @@ public:
 			image_transport_publishers_[i] = this->image_transport_.advertise( "components/" + OutputColorRGB::getColorName( i ),
 			                                                                   1 );
 		}
+
+		initCfgParams();
 	}
 
 	virtual ~ColorClassifier()
@@ -110,70 +106,89 @@ public:
 	void reconfigureCB( _ReconfigureType &config,
 	                    uint32_t level )
 	{
-		ROS_DEBUG( "Reconfigure successful" );
-
 		target_colors_[OutputColorRGB::Id::red].enabled = config.red_filter_enabled;
 		*target_colors_[OutputColorRGB::Id::red].color.i_ = config.red_hue;
 		*target_colors_[OutputColorRGB::Id::red].color.j_ = config.red_sat;
 		*target_colors_[OutputColorRGB::Id::red].color.k_ = config.red_val;
-		target_colors_[OutputColorRGB::Id::red].radius = config.red_radius;
+		target_colors_[OutputColorRGB::Id::red].threshold = config.red_threshold;
 		*target_colors_[OutputColorRGB::Id::red].weight.i_ = config.red_hue_weight;
 		*target_colors_[OutputColorRGB::Id::red].weight.j_ = config.red_sat_weight;
 		*target_colors_[OutputColorRGB::Id::red].weight.k_ = config.red_val_weight;
+		*target_colors_[OutputColorRGB::Id::red].variance.i_ = config.red_hue_variance;
+		*target_colors_[OutputColorRGB::Id::red].variance.j_ = config.red_sat_variance;
+		*target_colors_[OutputColorRGB::Id::red].variance.k_ = config.red_val_variance;
 
 		target_colors_[OutputColorRGB::Id::orange].enabled = config.orange_filter_enabled;
 		*target_colors_[OutputColorRGB::Id::orange].color.i_ = config.orange_hue;
 		*target_colors_[OutputColorRGB::Id::orange].color.j_ = config.orange_sat;
 		*target_colors_[OutputColorRGB::Id::orange].color.k_ = config.orange_val;
-		target_colors_[OutputColorRGB::Id::orange].radius = config.orange_radius;
+		target_colors_[OutputColorRGB::Id::orange].threshold = config.orange_threshold;
 		*target_colors_[OutputColorRGB::Id::orange].weight.i_ = config.orange_hue_weight;
 		*target_colors_[OutputColorRGB::Id::orange].weight.j_ = config.orange_sat_weight;
 		*target_colors_[OutputColorRGB::Id::orange].weight.k_ = config.orange_val_weight;
+		*target_colors_[OutputColorRGB::Id::orange].variance.i_ = config.orange_hue_variance;
+		*target_colors_[OutputColorRGB::Id::orange].variance.j_ = config.orange_sat_variance;
+		*target_colors_[OutputColorRGB::Id::orange].variance.k_ = config.orange_val_variance;
 
 		target_colors_[OutputColorRGB::Id::yellow].enabled = config.yellow_filter_enabled;
 		*target_colors_[OutputColorRGB::Id::yellow].color.i_ = config.yellow_hue;
 		*target_colors_[OutputColorRGB::Id::yellow].color.j_ = config.yellow_sat;
 		*target_colors_[OutputColorRGB::Id::yellow].color.k_ = config.yellow_val;
-		target_colors_[OutputColorRGB::Id::yellow].radius = config.yellow_radius;
+		target_colors_[OutputColorRGB::Id::yellow].threshold = config.yellow_threshold;
 		*target_colors_[OutputColorRGB::Id::yellow].weight.i_ = config.yellow_hue_weight;
 		*target_colors_[OutputColorRGB::Id::yellow].weight.j_ = config.yellow_sat_weight;
 		*target_colors_[OutputColorRGB::Id::yellow].weight.k_ = config.yellow_val_weight;
+		*target_colors_[OutputColorRGB::Id::yellow].variance.i_ = config.yellow_hue_variance;
+		*target_colors_[OutputColorRGB::Id::yellow].variance.j_ = config.yellow_sat_variance;
+		*target_colors_[OutputColorRGB::Id::yellow].variance.k_ = config.yellow_val_variance;
 
 		target_colors_[OutputColorRGB::Id::green].enabled = config.green_filter_enabled;
 		*target_colors_[OutputColorRGB::Id::green].color.i_ = config.green_hue;
 		*target_colors_[OutputColorRGB::Id::green].color.j_ = config.green_sat;
 		*target_colors_[OutputColorRGB::Id::green].color.k_ = config.green_val;
-		target_colors_[OutputColorRGB::Id::green].radius = config.green_radius;
+		target_colors_[OutputColorRGB::Id::green].threshold = config.green_threshold;
 		*target_colors_[OutputColorRGB::Id::green].weight.i_ = config.green_hue_weight;
 		*target_colors_[OutputColorRGB::Id::green].weight.j_ = config.green_sat_weight;
 		*target_colors_[OutputColorRGB::Id::green].weight.k_ = config.green_val_weight;
+		*target_colors_[OutputColorRGB::Id::green].variance.i_ = config.green_hue_variance;
+		*target_colors_[OutputColorRGB::Id::green].variance.j_ = config.green_sat_variance;
+		*target_colors_[OutputColorRGB::Id::green].variance.k_ = config.green_val_variance;
 
 		target_colors_[OutputColorRGB::Id::blue].enabled = config.blue_filter_enabled;
 		*target_colors_[OutputColorRGB::Id::blue].color.i_ = config.blue_hue;
 		*target_colors_[OutputColorRGB::Id::blue].color.j_ = config.blue_sat;
 		*target_colors_[OutputColorRGB::Id::blue].color.k_ = config.blue_val;
-		target_colors_[OutputColorRGB::Id::blue].radius = config.blue_radius;
+		target_colors_[OutputColorRGB::Id::blue].threshold = config.blue_threshold;
 		*target_colors_[OutputColorRGB::Id::blue].weight.i_ = config.blue_hue_weight;
 		*target_colors_[OutputColorRGB::Id::blue].weight.j_ = config.blue_sat_weight;
 		*target_colors_[OutputColorRGB::Id::blue].weight.k_ = config.blue_val_weight;
+		*target_colors_[OutputColorRGB::Id::blue].variance.i_ = config.blue_hue_variance;
+		*target_colors_[OutputColorRGB::Id::blue].variance.j_ = config.blue_sat_variance;
+		*target_colors_[OutputColorRGB::Id::blue].variance.k_ = config.blue_val_variance;
 
 		target_colors_[OutputColorRGB::Id::black].enabled = config.black_filter_enabled;
 		*target_colors_[OutputColorRGB::Id::black].color.i_ = config.black_hue;
 		*target_colors_[OutputColorRGB::Id::black].color.j_ = config.black_sat;
 		*target_colors_[OutputColorRGB::Id::black].color.k_ = config.black_val;
-		target_colors_[OutputColorRGB::Id::black].radius = config.black_radius;
+		target_colors_[OutputColorRGB::Id::black].threshold = config.black_threshold;
 		*target_colors_[OutputColorRGB::Id::black].weight.i_ = config.black_hue_weight;
 		*target_colors_[OutputColorRGB::Id::black].weight.j_ = config.black_sat_weight;
 		*target_colors_[OutputColorRGB::Id::black].weight.k_ = config.black_val_weight;
+		*target_colors_[OutputColorRGB::Id::black].variance.i_ = config.black_hue_variance;
+		*target_colors_[OutputColorRGB::Id::black].variance.j_ = config.black_sat_variance;
+		*target_colors_[OutputColorRGB::Id::black].variance.k_ = config.black_val_variance;
 
 		target_colors_[OutputColorRGB::Id::white].enabled = config.white_filter_enabled;
 		*target_colors_[OutputColorRGB::Id::white].color.i_ = config.white_hue;
 		*target_colors_[OutputColorRGB::Id::white].color.j_ = config.white_sat;
 		*target_colors_[OutputColorRGB::Id::white].color.k_ = config.white_val;
-		target_colors_[OutputColorRGB::Id::white].radius = config.white_radius;
+		target_colors_[OutputColorRGB::Id::white].threshold = config.white_threshold;
 		*target_colors_[OutputColorRGB::Id::white].weight.i_ = config.white_hue_weight;
 		*target_colors_[OutputColorRGB::Id::white].weight.j_ = config.white_sat_weight;
 		*target_colors_[OutputColorRGB::Id::white].weight.k_ = config.white_val_weight;
+		*target_colors_[OutputColorRGB::Id::white].variance.i_ = config.white_hue_variance;
+		*target_colors_[OutputColorRGB::Id::white].variance.j_ = config.white_sat_variance;
+		*target_colors_[OutputColorRGB::Id::white].variance.k_ = config.white_val_variance;
 
 		ms_spatial_radius_ = config.ms_spatial_radius;
 		ms_color_radius_ = config.ms_color_ratius;
@@ -187,8 +202,6 @@ public:
 		threshold_value_ = config.threshold_value;
 		threshold_max_value_ = config.threshold_max_value;
 		threshold_type_ = config.threshold_type;
-
-		this->reconfigure_initialized_ = true;
 	}
 
 	IplImage * processImage( IplImage * ipl_img )
@@ -259,15 +272,19 @@ public:
 
 					static std::array<float, 3> radii = { 90.0, 0.0, 0.0 };
 
-					*distance_pixel = target_colors_[color_index].color.distance( current_color,
-					                                                              radii,
-					                                                              target_colors_[color_index].weight.data_ ); //, weights );
+					*distance_pixel = 1.0 - target_colors_[color_index].color.distance( current_color,
+					                                                                    radii,
+					                                                                    target_colors_[color_index].weight.data_,
+					                                                                    target_colors_[color_index].variance.data_,
+					                                                                    DistanceType::GAUSSIAN ); //, weights );
 
-					if ( target_colors_[color_index].enabled && *distance_pixel < distance_pixel_min && *distance_pixel < target_colors_[color_index].radius )
+					if ( target_colors_[color_index].enabled && *distance_pixel < distance_pixel_min && *distance_pixel < target_colors_[color_index].threshold )
 					{
 						distance_pixel_min = *distance_pixel;
 						distance_pixel_min_index = color_index;
 					}
+
+					*distance_pixel *= 255.0;
 				}
 
 				OutputColorRGB::_CvColorType output_pixel = OutputColorRGB::getColorRGB( distance_pixel_min_index );
@@ -281,7 +298,6 @@ public:
 		// go through the processed images, optionally threshold each one, and publish them
 		for ( unsigned int color_index = 0; color_index < OutputColorRGB::NUM_COLORS; ++color_index )
 		{
-
 			if ( enable_thresholding_ )
 			{
 				cvThreshold( distance_images_[color_index],
@@ -290,6 +306,8 @@ public:
 				             threshold_max_value_,
 				             threshold_type_ );
 			}
+
+			//cvNormalize( distance_images_[color_index], distance_images_[color_index], 0.0, 255.0, CV_MINMAX );
 
 			opencv_utils::publishCvImage( distance_images_[color_index],
 			                              &image_transport_publishers_[color_index],

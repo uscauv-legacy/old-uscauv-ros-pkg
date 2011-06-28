@@ -95,29 +95,35 @@ protected:
 
 public:
 	BaseNode( ros::NodeHandle & nh, std::string reconfigure_ns = "reconfigure", uint threads = 3 ) :
-		nh_local_( "~" ), spinner_( threads ), loop_rate_( NULL ), reconfigure_srv_( NULL ), ignore_reconfigure_( !ReconfigureSettings<_BaseReconfigureType>::reconfigure_enabled ), running_( false )
+		nh_local_( nh ), spinner_( threads ), loop_rate_( NULL ), reconfigure_srv_( NULL ), ignore_reconfigure_( !ReconfigureSettings<_BaseReconfigureType>::reconfigure_enabled ), running_( false )
 	{
+		ROS_INFO( "Setting up base node..." );
 		reconfigure_initialized_ = ignore_reconfigure_;
 		if ( !ignore_reconfigure_ )
 		{
-			ROS_INFO( "Setting up reconfigure server" );
+			ROS_INFO( "Setting up reconfigure server..." );
 			reconfigure_srv_ = new _DynamicReconfigureServerType( ros::NodeHandle ( nh_local_, reconfigure_ns ) );
 			reconfigure_callback_ = boost::bind( &BaseNode::reconfigureCB_0, this, _1, _2 );
 			reconfigure_srv_->setCallback( reconfigure_callback_ );
+			ROS_INFO( "Done setting up reconfigure server" );
 		}
-		ROS_INFO(" Base node constructed." );
+		ROS_INFO( "Done setting up base node" );
 	}
 
 	virtual ~BaseNode()
 	{
+		ROS_INFO( "Shutting down base_node..." );
 		if( running_ )
 		{
 			interrupt();
 		}
+		ROS_INFO( "Done shutting down base_node" );
 	}
 
 	virtual void spin( unsigned int mode = SpinModeId::SPIN, float frequency = 10.0 )
 	{
+		ROS_INFO( "Spinner starting up at %f Hz with mode %u...", frequency, mode );
+
 		running_ = true;
 		if( loop_rate_ ) delete loop_rate_;
 		loop_rate_ = new ros::Rate( frequency );
@@ -147,8 +153,10 @@ public:
 
 	virtual void interrupt()
 	{
+		ROS_INFO( "Interrupting spinner..." );
 		running_ = false;
 		spinner_.stop();
+		ROS_INFO( "Done interrupting spinner" );
 	}
 
 protected:

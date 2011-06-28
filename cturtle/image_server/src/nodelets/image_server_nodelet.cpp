@@ -37,31 +37,35 @@
 #include <image_server/image_server.h>
 #include <thread>
 
+typedef ImageServer _DataType;
+typedef BaseNodelet<ImageServer> _BaseNodelet;
+
 namespace image_server
 {
-
-	class ImageServerNodelet : public BaseNodelet<ImageServer>
+	class ImageServerNodelet : public _BaseNodelet
 	{
 	public:
 		ImageServerNodelet() :
-			BaseNodelet<ImageServer>()
+			_BaseNodelet()
 		{
-			//
+			registerInterrupt( &ImageServerNodelet::interrupt, this );
 		}
 
 		void constructData()
 		{
+			if( data_ ) delete data_;
 			data_ = new ImageServer( nh_local_ );
 		}
 
 		void spin()
 		{
-			data_->spin( SpinModeId::LOOP_SPIN_ONCE, data_->rate_ );
+			if( data_ ) data_->spin( SpinModeId::LOOP_SPIN_ONCE, data_->rate_ );
 		}
 
 		void interrupt()
 		{
-			//data_->interrupt();
+			ROS_INFO( "image_server_nodelet interrupted" );
+			data_->interrupt();
 		}
 	};
 

@@ -127,31 +127,40 @@ public:
 	__DataType * k_;
 
 	Vec( const _ArrayType data ) :
-	_VecBase( data ), i_( &this->data_[0] ), j_( &this->data_[1] ), k_( &this->data_[2] )
+			_VecBase( data ), i_( &this->data_[0] ), j_( &this->data_[1] ), k_( &this->data_[2] )
 	{
 		//
 	}
 
-	Vec( const __DataType & i, const __DataType & j, const __DataType & k ) :
-	_VecBase( {	i, j, k } ), i_( &this->data_[0] ), j_( &this->data_[1] ), k_( &this->data_[2] )
+	Vec( const __DataType & i,
+	     const __DataType & j,
+	     const __DataType & k ) :
+			_VecBase( { i, j, k } ), i_( &this->data_[0] ), j_( &this->data_[1] ), k_( &this->data_[2] )
 	{
 		//
 	}
 
 	Vec() :
-	_VecBase(), i_( &this->data_[0] ), j_( &this->data_[1] ), k_( &this->data_[2] )
+			_VecBase(), i_( &this->data_[0] ), j_( &this->data_[1] ), k_( &this->data_[2] )
 	{
 
 	}
 };
 
+struct DistanceType
+{
+	const static _DimType EUCLIDIAN = 0;
+	const static _DimType GAUSSIAN = 1;
+};
+
 // default template for FeatureBase with decimal accuracy
-template<class __DataType, bool __HasDecAccuracy__ = math_utils::HasDecAccuracy<__DataType >::val>
+template<class __DataType>
 class FeatureBase
 {
 public:
+
 	typedef __DataType _DataType;
-	typedef FeatureBase<__DataType, __HasDecAccuracy__> _FeatureBase;
+	typedef FeatureBase<__DataType> _FeatureBase;
 
 	__DataType data_;
 
@@ -161,44 +170,46 @@ public:
 		//
 	}
 
-	__DataType distance( const _FeatureBase & other, const __DataType radius = __DataType( 0 ) )
+	__DataType distanceTo( const _FeatureBase & other, const __DataType & radius = __DataType( 0 ) ) const
 	{
-		__DataType dist = fabs( data_ - other.data_ );
-
-		if ( radius > 0 && dist > radius )
-		{
-			dist = radius - fmod( dist,
-			                      radius );
-		}
-		return dist;
-	}
-};
-
-// template specialization for FeatureBase without decimal accuracy
-template<class __DataType>
-class FeatureBase<__DataType, false>
-{
-public:
-	typedef __DataType _DataType;
-	typedef FeatureBase<__DataType, false> _FeatureBase;
-
-	__DataType data_;
-
-	FeatureBase( const __DataType & data = __DataType( 0 ) ) :
-			data_( data )
-	{
-		//
+		// 0 - 179 = -179
+		__DataType dist = other.data_ - data_;
+		if ( radius > 0 && fabs( dist ) > radius )
+	    {
+	    	dist = math_utils::mod( fabs( dist ),
+	    	                        radius ) - radius;
+	    }
+	    return dist;
 	}
 
-	__DataType distance( const _FeatureBase & other,
-	                     const __DataType radius = __DataType( 0 ) )
+	static __DataType caltulateEuclidianDistanceComponent( const __DataType & dist )
 	{
-		__DataType dist = fabs( data_ - other.data_ );
-		if ( radius > 0 && dist > radius )
-		{
-			dist = radius - ( dist % radius );
-		}
 		return dist;
+	}
+
+	template<class _WeightType>
+	static __DataType calculateGaussianDistanceComponent( const __DataType & dist, const _WeightType & variance )
+	{
+		if( variance == 0 ) return dist == 0 ? 1.0 : 0.0;
+		return /*( 1 / sqrt( 2 * M_PI * variance ) ) * */ pow( M_E, -pow( dist, 2 ) / ( 2 * variance ) );
+	}
+
+	template<class _WeightType>
+	static void calculateDistanceComponent( __DataType & total_distance, const _FeatureBase & current, const _FeatureBase & other, const __DataType & radius, const _WeightType & weight, const _WeightType & variance, _DimType distance_type, bool initialize_total_distance )
+	{
+		__DataType dist = current.distanceTo( other, radius );
+
+		switch( distance_type )
+		{
+		case DistanceType::EUCLIDIAN:
+			if( initialize_total_distance ) total_distance = 0.0;
+			total_distance += pow( caltulateEuclidianDistanceComponent( dist ) * weight, 2 );
+			break;
+		case DistanceType::GAUSSIAN:
+			if( initialize_total_distance ) total_distance = 0.0;
+			total_distance += calculateGaussianDistanceComponent( dist, variance ) * weight;
+			break;
+		}
 	}
 };
 
@@ -211,7 +222,6 @@ public:
 	typedef __DataType _DataType;
 	typedef Feature<_DataType, __Dim__> _Feature;
 	typedef FeatureBase<_DataType> _FeatureBase;
-	typedef float _WeightType;
 
 	Feature( const _ArrayType data ) :
 	_Vec()
@@ -228,53 +238,65 @@ public:
 
 	}
 
-	__DataType distance( const _Feature & other, _ArrayType & radii, std::array<_WeightType, __Dim__> & weights )
+	template<class _WeightType>
+	__DataType distance( const _Feature & other, _ArrayType & radii, std::array<_WeightType, __Dim__> & weights, std::array<_WeightType, __Dim__> variances = std::array<_WeightType, __Dim__>(), _DimType distance_type = DistanceType::EUCLIDIAN )
 	{
-		__DataType total_distance;
+		__DataType total_distance = 0;
+
+		_WeightType total_weight = 0.0;
+		for ( _DimType i = 0; i < __Dim__; ++i )
+		{
+			total_weight += weights[i];
+		}
+
+		const _WeightType weight_norm_scale = 1.0 / total_weight;
 
 		for ( _DimType i = 0; i < __Dim__; ++i )
 		{
-			total_distance += pow( this->data_[i].distance( other.data_[i], radii[i] ) * weights[i], 2 );
+			if( weights[i] > 0 ) _FeatureBase::calculateDistanceComponent( total_distance, this->data_[i], other.data_[i], radii[i], weight_norm_scale * weights[i], variances[i], distance_type, i == 0 );
 		}
 
 		return sqrt( total_distance );
 	}
 
-	__DataType distance( const _Feature & other, _ArrayType & radii, const _WeightType & uniform_weight = _WeightType( 1 ) )
+/*	template<class _WeightType>
+	__DataType distance( const _Feature & other, _ArrayType & radii, const _WeightType & uniform_weight = _WeightType( 1 ), _DimType distance_type = DistanceType::EUCLIDIAN )
 	{
 		__DataType total_distance;
 
 		for ( _DimType i = 0; i < __Dim__; ++i )
 		{
-			total_distance += pow( this->data_[i].distance( other.data_[i], radii[i] ) * uniform_weight, 2 );
+			_FeatureBase::calculateDistanceComponent( total_distance, this->data_[i], other.data_[i], radii[i], uniform_weight, distance_type, i == 0 );
 		}
 
 		return sqrt( total_distance );
 	}
 
-	__DataType distance( const _Feature & other, const __DataType & uniform_radius = __DataType( 0 ), const _WeightType & uniform_weight = _WeightType( 1 ) )
+	template<class _WeightType>
+	__DataType distance( const _Feature & other, const __DataType & uniform_radius = __DataType( 0 ), const _WeightType & uniform_weight = _WeightType( 1 ), _DimType distance_type = DistanceType::EUCLIDIAN )
 	{
 		__DataType total_distance;
 
 		for ( _DimType i = 0; i < __Dim__; ++i )
 		{
-			total_distance += pow( this->data_[i].distance( other.data_[i], uniform_radius ) * uniform_weight, 2 );
+			_FeatureBase::calculateDistanceComponent( total_distance, this->data_[i], other.data_[i], uniform_radius, uniform_weight, distance_type, i == 0 );
 		}
 
 		return sqrt( total_distance );
 	}
 
-	__DataType distance( const _Feature & other, const __DataType & uniform_radius, std::array<_WeightType, __Dim__> weights )
+	template<class _WeightType>
+	__DataType distance( const _Feature & other, const __DataType & uniform_radius, std::array<_WeightType, __Dim__> weights, _DimType distance_type = DistanceType::EUCLIDIAN )
 	{
 		__DataType total_distance;
 
 		for ( _DimType i = 0; i < __Dim__; ++i )
 		{
-			total_distance += pow( this->data_[i].distance( other.data_[i], uniform_radius ) * weights[i], 2 );
+			_FeatureBase::calculateDistanceComponent( total_distance, this->data_[i], other.data_[i], uniform_radius, weights[i], distance_type, i == 0 );
 		}
 
 		return sqrt( total_distance );
-	}
+	}*/
 };
 
 template<class __DataType>
@@ -294,9 +316,10 @@ public:
 		//
 	}
 
-	__DataType distance( const _Feature & other, __DataType radius = __DataType( 0 ) )
+	__DataType distance( const _Feature & other,
+	                     __DataType radius = __DataType( 0 ) )
 	{
-		return data_.distance( other.data_ );
+		return data_.distanceTo( other.data_, radius );
 	}
 };
 
@@ -370,35 +393,31 @@ struct OutputColorRGB
 };
 
 template<class __DataType = uchar, _DimType __Dim__ = 1>
-class Color: public Feature<__DataType, __Dim__>
-{
+class Color: public Feature<__DataType, __Dim__> {
 public:
-	typedef __DataType _DataType;
-	typedef std::array<__DataType, __Dim__> _ArrayType;
-	typedef Feature<__DataType, __Dim__> _Feature;
+typedef __DataType _DataType;
+typedef std::array<__DataType, __Dim__> _ArrayType;
+typedef Feature<__DataType, __Dim__> _Feature;
 
-	template<class __InputDataType>
-	Color( __InputDataType * data ) :
-		_Feature()
-	{
-		for( int i = 0; i < __Dim__; ++i )
-		{
-			this->data_[i] = (__DataType) data[i];
-		}
-		//std::copy( data, data + __Dim__, this->data_.begin() );
-	}
+template<class __InputDataType>
+Color( __InputDataType * data ) :
+_Feature()
+{
+	//std::memcpy( this->data_.begin(), data, __Dim__ * sizeof( __InputDataType ) );
+	std::copy( data, data + __Dim__, this->data_.begin() );
+}
 
-	Color( const _ArrayType data ) :
-		_Feature( data )
-	{
-		//
-	}
+Color( const _ArrayType data ) :
+_Feature( data )
+{
+	//
+}
 
-	Color() :
-	_Feature()
-	{
+Color() :
+_Feature()
+{
 
-	}
+}
 
 };
 
@@ -412,7 +431,7 @@ public:
 
 	template<class __InputDataType>
 	Color( const __InputDataType & data = __InputDataType( 0 ) ) :
-			_Feature( (__InputDataType)data )
+			_Feature( (__InputDataType ) data )
 	{
 		//
 	}
@@ -441,22 +460,24 @@ public:
 typedef ColorCv<cv::Vec3b> _ColorCv3b;
 typedef ColorCv<cv::Vec3f> _ColorCv3f;
 
+typedef Color<unsigned char, 3> _Color3b;
+typedef Color<float, 3> _Color3f;
+
 template<class __DataType, _DimType __Dim__ = 1>
-class Threshold: public Vec<__DataType, __Dim__>
-{
+class Threshold: public Vec<__DataType, __Dim__> {
 public:
-	typedef Vec<__DataType, __Dim__> _Vec;
-	typedef std::array<__DataType, __Dim__> _ArrayType;
+typedef Vec<__DataType, __Dim__> _Vec;
+typedef std::array<__DataType, __Dim__> _ArrayType;
 
-	Threshold( _ArrayType data ) : _Vec( data )
-	{
-		//
-	}
+Threshold( _ArrayType data ) : _Vec( data )
+{
+	//
+}
 
-	Threshold( ) : _Vec( )
-	{
-		// empty constructor sets all arguments to 0
-	}
+Threshold( ) : _Vec( )
+{
+	// empty constructor sets all arguments to 0
+}
 };
 
 template<class __DataType>
@@ -487,6 +508,27 @@ public:
 	{
 		// empty constructor sets all arguments at 0
 	}
+};
+
+template<class __DataType>
+__DataType normalizeHue( __DataType hue, __DataType min, __DataType max )
+{
+	__DataType result;
+	const __DataType radius = max - min;
+
+	if( hue > radius ) result = math_utils::mod( result, radius );
+	result += min;
+
+	return result;
+}
+
+struct ThresholdedColor
+{
+	_Color3f color;
+	float threshold;
+	Vec<float, 3> weight;
+	Vec<float, 3> variance;
+	bool enabled;
 };
 
 #endif /* COLORS_H_ */

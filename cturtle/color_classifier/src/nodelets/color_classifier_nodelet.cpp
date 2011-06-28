@@ -59,6 +59,11 @@ namespace color_classifier
 		{
 			data_->spin();
 		}
+
+		void interrupt()
+		{
+			data_->interrupt();
+		}
 	};
 
 }

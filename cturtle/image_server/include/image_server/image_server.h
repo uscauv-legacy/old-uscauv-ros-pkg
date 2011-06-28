@@ -52,7 +52,9 @@ public:
 	double rate_;
 	bool last_next_image_state_;
 	bool last_prev_image_state_;
-	bool auto_advance_;unsigned int current_frame_;unsigned int direction_;
+	bool auto_advance_;
+	unsigned int current_frame_;
+	unsigned int direction_;
 
 	ImageServer( ros::NodeHandle & nh ) :
 			BaseImageProc<_ReconfigureType>( nh ), image_loader_( nh_local_ ), loop_( false ), last_next_image_state_( false ), last_prev_image_state_( false ), auto_advance_( true ), current_frame_( 0 ), direction_( 0 )
@@ -62,8 +64,6 @@ public:
 		                 15.0 );
 
 		initCfgParams();
-
-		image_loader_.loadImages();
 	}
 
 	virtual ~ImageServer()
@@ -72,22 +72,29 @@ public:
 
 	void spinOnce()
 	{
-		if ( image_loader_.images_loaded_ && current_frame_ < image_loader_.image_cache_.size() )
+		if ( image_loader_.images_loaded_ )
 		{
-			ROS_INFO( "Publishing image %d", current_frame_ );
-			publishCvImage( image_loader_.image_cache_[current_frame_] );
-			if ( auto_advance_ )
+			if(current_frame_ < image_loader_.image_cache_.size() )
 			{
-				switch ( direction_ )
+				ROS_INFO( "Publishing image %d", current_frame_ );
+				publishCvImage( image_loader_.image_cache_[current_frame_] );
+				if ( auto_advance_ )
 				{
-				case 0:
-					nextFrame();
-					break;
-				case 1:
-					prevFrame();
-					break;
+					switch ( direction_ )
+					{
+					case 0:
+						nextFrame();
+						break;
+					case 1:
+						prevFrame();
+						break;
+					}
 				}
 			}
+		}
+		else
+		{
+			image_loader_.loadImages();
 		}
 	}
 
