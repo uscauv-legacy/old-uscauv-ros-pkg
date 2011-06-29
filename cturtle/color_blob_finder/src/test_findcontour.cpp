@@ -39,93 +39,92 @@
 
 int main( int argc, char* argv[] )
 {
-	if(argc != 3)
+	if ( argc != 3 )
 	{
 		std::cerr << "Usage: " << argv[0] << " buoy_template_file video_input_file or " << argv[0] << " buoy_template_file \"camera\"" << std::endl;
 		return -1;
 	}
-	int thresh1 = 30;
-	int thresh2 = 200;
-	int matchThresh = 200;
+	int thresh1 = 200;
+	int thresh2 = 100;
+	int matchThresh = 1;
+	cv::Moments moments;
+	//cv::HuMoments humoments;
 	cv::namedWindow( "Canny", CV_WINDOW_AUTOSIZE );
 	cv::namedWindow( "Input", CV_WINDOW_AUTOSIZE );
 	cv::createTrackbar( "Thresh1", "Canny", &thresh1, 255 );
 	cv::createTrackbar( "Thresh2", "Canny", &thresh2, 255 );
 	cv::createTrackbar( "MatchThresh", "Input", &matchThresh, 200 );
 
-	std::string templateImageName(argv[1]);
-	std::string videoName(argv[2]);
+	std::string templateImageName( argv[1] );
+	std::string videoName( argv[2] );
 
-	cv::Mat templateImageInput = cv::imread(templateImageName, 1);
-	if(templateImageInput.empty())
+	cv::Mat templateImageInput = cv::imread( templateImageName, 1 );
+	if ( templateImageInput.empty() )
 	{
 		std::cerr << "Could not open template file: " << templateImageName << std::endl;
 	}
 	cv::Mat templateImage;
-	cv::cvtColor(templateImageInput, templateImage, CV_RGB2GRAY);
-	cv::threshold(templateImage, templateImage, 10, 255, CV_THRESH_BINARY);
+	cv::cvtColor( templateImageInput, templateImage, CV_RGB2GRAY );
+	cv::threshold( templateImage, templateImage, 10, 255, CV_THRESH_BINARY );
 
 	std::vector<std::vector<cv::Point> > templatecontours;
-	cv::findContours(templateImage, templatecontours, CV_RETR_LIST, CV_CHAIN_APPROX_SIMPLE);
+	cv::findContours( templateImage, templatecontours, CV_RETR_LIST, CV_CHAIN_APPROX_SIMPLE );
 	cv::Mat dispImage = templateImageInput;
-	cv::drawContours(dispImage, templatecontours, -1, cv::Scalar(255,0,0), 5);
+	cv::drawContours( dispImage, templatecontours, -1, cv::Scalar( 255, 0, 0 ), 5 );
 
 	std::vector<cv::Point> templateContour = templatecontours[0];
 
 	cv::VideoCapture cap;
-	if(videoName == "camera")
-		cap.open(0);
-	else
-		cap.open(videoName);
-	if(!cap.isOpened()) 
+	if ( videoName == "camera" ) cap.open( 0 );
+	else cap.open( videoName );
+	if ( !cap.isOpened() )
 	{
 		std::cerr << "Could not open video" << std::endl;
 		return -1;
 	}
-	while(1)
+	while ( 1 )
 	{
 		cv::Mat inputFrame;
 		cap >> inputFrame;
 
 		cv::Mat bwInput;
-		cv::cvtColor(inputFrame, bwInput, CV_RGB2GRAY);
+		cv::cvtColor( inputFrame, bwInput, CV_RGB2GRAY );
 		cv::Mat cannyImage;
-		cv::Canny(bwInput, cannyImage, thresh1, thresh2);
+		cv::Canny( bwInput, cannyImage, thresh1, thresh2 );
 		std::vector<std::vector<cv::Point> > contours;
-		cv::findContours(cannyImage, contours,
-				CV_RETR_LIST, CV_CHAIN_APPROX_SIMPLE);
+		cv::findContours( cannyImage, contours, CV_RETR_LIST, CV_CHAIN_APPROX_SIMPLE );
 
 		std::cout << "found " << contours.size() << " contours" << std::endl;
-		if(contours.size())
-			cv::drawContours(inputFrame, contours,
-					-1, cv::Scalar(0,255,0), 1);
+		if ( contours.size() ) cv::drawContours( inputFrame, contours, -1, cv::Scalar( 0, 255, 0 ), 1 );
 
-		for(size_t i=0; i<contours.size(); ++i)
+		for ( size_t i = 0; i < contours.size(); ++i )
 		{
-			double matchQuality =
-				cv::matchShapes(cv::Mat(templateContour),
-						cv::Mat(contours[i]), CV_CONTOURS_MATCH_I2, 0);
+			double matchQuality = cv::matchShapes( cv::Mat( templateContour ), cv::Mat( contours[i] ), CV_CONTOURS_MATCH_I1, 0 );
 
-			if(matchQuality > matchThresh)
+
+			//First calculate object moments
+			moments = cv::moments( templateImage, 0 );
+			//Now calculate hu moments
+			//cv::GetHuMoments( &moments, &humoments );
+
+			std::cout << "match quality = " << matchQuality << std::endl;
+
+			if ( matchQuality < matchThresh )
 			{
 				std::cout << "match! quality = " << matchQuality << std::endl;
 				
 				std::vector<std::vector<cv::Point> > c; // Stupid Opencv...
-				c.push_back(contours[i]);
-				cv::drawContours(inputFrame, c,
-						-1, cv::Scalar(255,0,0), 5);
+				c.push_back( contours[i] );
+				cv::drawContours( inputFrame, c, -1, cv::Scalar( 255, 0, 0 ), 5 );
 			}
 		}
+
+		cv::imshow( "Template", dispImage );
+		cv::imshow( "Input", inputFrame );
+		cv::imshow( "Canny", cannyImage );
 		
-
-		cv::imshow("Template", dispImage);
-		cv::imshow("Input", inputFrame);
-		cv::imshow("Canny", cannyImage);
-
-		if(videoName == "camera")
-			cv::waitKey(50);
-		else
-			cv::waitKey();
+		if ( videoName == "camera" ) cv::waitKey( 50 );
+		else cv::waitKey();
 	}
 
 	return 0;
