@@ -24,6 +24,6 @@ set(LIBRARY_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/lib)
 #rosbuild_find_ros_package(dynamic_reconfigure)
 #include(${dynamic_reconfigure_PACKAGE_PATH}/cmake/cfgbuild.cmake)
 #gencfg()
-
+rosbuild_genmsg()
 add_subdirectory( src )
 add_subdirectory( test )
