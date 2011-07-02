@@ -191,7 +191,7 @@ public:
 	static __DataType calculateGaussianDistanceComponent( const __DataType & dist, const _WeightType & variance )
 	{
 		if( variance == 0 ) return dist == 0 ? 1.0 : 0.0;
-		return /*( 1 / sqrt( 2 * M_PI * variance ) ) * */ pow( M_E, -pow( dist, 2 ) / ( 2 * variance ) );
+		return ( 1 / sqrt( 2 * M_PI * variance ) ) * pow( M_E, -pow( dist, 2 ) / ( 2 * variance ) );
 	}
 
 	template<class _WeightType>
@@ -206,8 +206,8 @@ public:
 			total_distance += pow( caltulateEuclidianDistanceComponent( dist ) * weight, 2 );
 			break;
 		case DistanceType::GAUSSIAN:
-			if( initialize_total_distance ) total_distance = 0.0;
-			total_distance += calculateGaussianDistanceComponent( dist, variance ) * weight;
+			if( initialize_total_distance ) total_distance = 1.0;
+			total_distance *= calculateGaussianDistanceComponent( dist, variance );
 			break;
 		}
 	}
@@ -243,17 +243,17 @@ public:
 	{
 		__DataType total_distance = 0;
 
-		_WeightType total_weight = 0.0;
+		/*_WeightType total_weight = 0.0;
 		for ( _DimType i = 0; i < __Dim__; ++i )
 		{
 			total_weight += weights[i];
 		}
 
-		const _WeightType weight_norm_scale = 1.0 / total_weight;
+		const _WeightType weight_norm_scale = 1.0 / total_weight;*/
 
 		for ( _DimType i = 0; i < __Dim__; ++i )
 		{
-			if( weights[i] > 0 ) _FeatureBase::calculateDistanceComponent( total_distance, this->data_[i], other.data_[i], radii[i], weight_norm_scale * weights[i], variances[i], distance_type, i == 0 );
+			if( weights[i] > 0 ) _FeatureBase::calculateDistanceComponent( total_distance, this->data_[i], other.data_[i], radii[i], weights[i], variances[i], distance_type, i == 0 );
 		}
 
 		return sqrt( total_distance );
@@ -526,7 +526,6 @@ struct ThresholdedColor
 {
 	_Color3f color;
 	float threshold;
-	Vec<float, 3> weight;
 	Vec<float, 3> variance;
 	bool enabled;
 };
