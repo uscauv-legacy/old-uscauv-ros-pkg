@@ -46,7 +46,7 @@
 #include "highgui.h"
 //for CvBridge
 #include <cv_bridge/CvBridge.h>
-// for a ton of boost-related shit
+// for a ton of boost-related content
 #include <boost/thread.hpp>
 // for CameraInfo
 #include <sensor_msgs/CameraInfo.h>

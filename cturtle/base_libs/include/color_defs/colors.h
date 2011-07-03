@@ -462,6 +462,7 @@ typedef ColorCv<cv::Vec3f> _ColorCv3f;
 
 typedef Color<unsigned char, 3> _Color3b;
 typedef Color<float, 3> _Color3f;
+typedef Color<double, 3> _Color3d;
 
 template<class __DataType, _DimType __Dim__ = 1>
 class Threshold: public Vec<__DataType, __Dim__> {
@@ -524,9 +525,9 @@ __DataType normalizeHue( __DataType hue, __DataType min, __DataType max )
 
 struct ThresholdedColor
 {
-	_Color3f color;
-	float threshold;
-	Vec<float, 3> variance;
+	_Color3d color;
+	double threshold;
+	Vec<double, 3> variance;
 	bool enabled;
 };
 

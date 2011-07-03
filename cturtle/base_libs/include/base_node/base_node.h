@@ -94,7 +94,7 @@ protected:
 	bool running_;
 
 public:
-	BaseNode( ros::NodeHandle & nh, std::string reconfigure_ns = "reconfigure", uint threads = 3 ) :
+	BaseNode( const ros::NodeHandle & nh, const std::string & reconfigure_ns = "reconfigure", const uint & threads = 3 ) :
 		nh_local_( nh ), spinner_( threads ), loop_rate_( NULL ), reconfigure_srv_( NULL ), ignore_reconfigure_( !ReconfigureSettings<_BaseReconfigureType>::reconfigure_enabled ), running_( false )
 	{
 		ROS_INFO( "Setting up base node..." );
