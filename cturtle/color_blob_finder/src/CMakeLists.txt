@@ -1,1 +1,2 @@
-rosbuild_add_executable (test_findcontour test_findcontour.cpp)
+rosbuild_add_executable(color_blob_finder_node color_blob_finder_node.cpp)
+add_subdirectory( nodelets )

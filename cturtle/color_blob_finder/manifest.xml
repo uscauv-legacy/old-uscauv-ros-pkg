@@ -8,9 +8,13 @@
   <license>BSD</license>
   <review status="unreviewed" notes=""/>
   <url>http://ros.org/wiki/color_blob_finder</url>
-  <depend package="roscpp"/>
-  <depend package="opencv2"/>
-  <depend package="common_utils"/>
+  <depend package="base_libs"/>
+  <depend package="message_filters"/>
+
+  <export>
+    <nodelet plugin="${prefix}/nodelet_plugins.xml" />
+    <cpp cflags="-I${prefix}/include" lflags="-Wl,-rpath,${prefix}/lib -L${prefix}/lib -lcolor_blob_finder"/>
+  </export>
 </package>
 
 
