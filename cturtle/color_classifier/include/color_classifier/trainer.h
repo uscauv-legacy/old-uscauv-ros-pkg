@@ -46,8 +46,10 @@
 // calculate the mean and radius of the color components
 // find the minimum radius and maximum weights such that all pixels are found
 
+typedef BaseNode<> _BaseNode;
+
 template<class __ColorType>
-class Trainer : public BaseNode<>
+class Trainer : public _BaseNode
 {
 public:
 	typedef std::list<__ColorType> _PixelList;
@@ -56,14 +58,31 @@ public:
 	__ColorType mean_;
 	__ColorType variance_;
 
-	std::string src_image_uri_;
-	std::string mask_uri_;
+	std::string src_image_;
+	std::string mask_image_;
+	std::string color_name_;
+	std::vector<std::string> channel_names_;
+
+	ros::NodeHandle nh_reconfig_;
 
 	Trainer( ros::NodeHandle & nh ) :
-		BaseNode<>( nh )
+		_BaseNode( nh ), nh_reconfig_( ros::NodeHandle( nh_local_, "reconfigure" ) )
 	{
-		nh_local_.param("src_image_uri", src_image_uri_, std::string( "" ) );
-		nh_local_.param("mask_uri", mask_uri_, std::string( "" ) );
+		nh_local_.param("src_image", src_image_, std::string( "" ) );
+		nh_local_.param("mask_image", mask_image_, std::string( "" ) );
+		nh_local_.param("color_name", color_name_, std::string( "" ) );
+
+		std::string current_channel_name;
+		bool param_found = true;
+
+		for( unsigned int i = 0; param_found; ++i )
+		{
+			std::stringstream ss;
+			ss << "channel" << i << "_name";
+			param_found = nh_local_.getParam( ss.str(), current_channel_name );
+			if( !param_found ) current_channel_name = "";
+			channel_names_.push_back( current_channel_name );
+		}
 	}
 
 	// NOTE: modifies src_image
@@ -136,13 +155,13 @@ public:
 
 	void spinOnce()
 	{
-		ROS_INFO( "Attempting to open source image: %s...", src_image_uri_.c_str() );
-		IplImage * src_image = cvLoadImage( src_image_uri_.c_str() );
+		ROS_INFO( "Attempting to open source image: %s...", src_image_.c_str() );
+		IplImage * src_image = cvLoadImage( src_image_.c_str() );
 		if( src_image ) ROS_INFO( "Success." );
 		else ROS_INFO( "Failed." );
 
-		ROS_INFO( "Attempting to open mask image: %s", mask_uri_.c_str() );
-		IplImage * mask = cvLoadImage( mask_uri_.c_str(), CV_LOAD_IMAGE_GRAYSCALE );
+		ROS_INFO( "Attempting to open mask image: %s", mask_image_.c_str() );
+		IplImage * mask = cvLoadImage( mask_image_.c_str(), CV_LOAD_IMAGE_GRAYSCALE );
 		if( mask ) ROS_INFO( "Success." );
 		else ROS_INFO( "Failed." );
 
@@ -157,6 +176,14 @@ public:
 			printf( "----\n[%u]\n", i );
 			printf( "mean: %f\n", mean_.data_[i].data_ );
 			printf( "variance: %f\n", variance_.data_[i].data_ );
+
+			std::string current_param = color_name_ + "_" + channel_names_[i];
+			printf("Setting param: %s\n", current_param.c_str() );
+			current_param = color_name_ + "_" + channel_names_[i] + "_variance";
+			printf("Setting param: %s\n", current_param.c_str() );
+
+			nh_reconfig_.setParam( color_name_ + "_" + channel_names_[i], mean_.data_[i].data_ );
+			nh_reconfig_.setParam( color_name_ + "_" + channel_names_[i] + "_variance", variance_.data_[i].data_ );
 		}
 
 		interrupt();

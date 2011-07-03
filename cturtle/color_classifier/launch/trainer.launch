@@ -1,13 +1,17 @@
 <launch>
-	<!-- gui controls for the trainer -->
-	<node pkg="dynamic_reconfigure" type="reconfigure_gui" name="trainer_options" output="screen" />
+	<arg name="color" default="orange" />
+	<arg name="image_prefix" default="$(find seabee3_launch)/frames/frame0006" />
+	<arg name="image_ext" default=".jpg" />
+	<arg name="param_file" default="test_params" />
 	
-	<!-- the trainer -->
-	<node pkg="color_classifier" type="trainer" name="trainer_gui" args="image:=/image_server/output_image" output="screen"/>
+	<arg name="trainer_name" value="color_classifier_trainer" />
 	
-	<!-- image server which sends images to the trainer -->
-	<include file="$(find seabee3_launch)/seabee3_vision_tester.launch">
-		<!-- publish images at this frequency -->
-	</include>
-	<param name="/image_server/rate" type="double" value="0.05" />
+	<node pkg="color_classifier" type="trainer" name="$(arg trainer_name)" output="screen" args="_src_image:=$(arg image_prefix)$(arg image_ext) _mask_image:=$(arg image_prefix)_$(arg color)_mask$(arg image_ext) _color_name:=$(arg color) _channel0_name:=hue _channel1_name:=sat _channel2_name:=val" >
+		<rosparam param="reconfigure" command="load" file="$(find color_classifier)/params/test_params.yaml" />
+	</node>
+
+	<!-- $(find color_classifier)/params/$(arg param_file).yaml -->
+	<!-- /$(arg trainer_name)/reconfigure -->
+
+	<rosparam command="dump" file="$(find color_classifier)/params/$(arg param_file).yaml" param="/$(arg trainer_name)/reconfigure" />
 </launch>

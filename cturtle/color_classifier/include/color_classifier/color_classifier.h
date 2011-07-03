@@ -36,7 +36,8 @@
 #ifndef COLOR_CLASSIFIER_H_
 #define COLOR_CLASSIFIER_H_
 
-
+/* msgs */
+#include <base_libs/ComponentImageArray.h>
 
 /* others */
 // for Mat
@@ -60,16 +61,19 @@ public:
 	typedef std::array<ThresholdedColor, OutputColorRGB::NUM_COLORS> _ThresholdedColorArrayType;
 	typedef std::array<IplImage *, OutputColorRGB::NUM_COLORS> _IplImagePtrArrayType;
 	typedef std::array<sensor_msgs::CvBridge, OutputColorRGB::NUM_COLORS> _CvBridgeArrayType;
-	typedef std::array<image_transport::Publisher, OutputColorRGB::NUM_COLORS> _ImageTransportPublisherArrayType;
+
+	/* pubs */
+	ros::Publisher images_pub_;
 
 	/* reconfigure params */
 	_ThresholdedColorArrayType target_colors_;
 	_IplImagePtrArrayType distance_images_;
 	_CvBridgeArrayType image_bridges_;
-	_ImageTransportPublisherArrayType image_transport_publishers_;
 
 	double ms_spatial_radius_;
-	double ms_color_radius_;int ms_max_level_;int ms_max_iter_;
+	double ms_color_radius_;
+	int ms_max_level_;
+	int ms_max_iter_;
 	double ms_min_epsilon_;
 
 	bool enable_meanshift_;
@@ -87,19 +91,17 @@ public:
 	ColorClassifier( ros::NodeHandle & nh ) :
 			BaseImageProc<_ReconfigureType>( nh ), process_image_initialized_( false )
 	{
-		// create publishers
-		for ( unsigned int i = 0; i < image_transport_publishers_.size(); ++i )
-		{
-			image_transport_publishers_[i] = this->image_transport_.advertise( "components/" + OutputColorRGB::getColorName( i ),
-			                                                                   1 );
-		}
+		images_pub_ = nh_local_.advertise<base_libs::ComponentImageArray>( "images", 1 );
 
 		initCfgParams();
 	}
 
 	virtual ~ColorClassifier()
 	{
-		//
+		for ( _DimType i = 0; i < distance_images_.size(); ++ i )
+		{
+			cvReleaseImage( &distance_images_[i] );
+		}
 	}
 
 	// virtual
@@ -111,9 +113,9 @@ public:
 		*target_colors_[OutputColorRGB::Id::red].color.j_ = config.red_sat;
 		*target_colors_[OutputColorRGB::Id::red].color.k_ = config.red_val;
 		target_colors_[OutputColorRGB::Id::red].threshold = config.red_threshold;
-		*target_colors_[OutputColorRGB::Id::red].weight.i_ = config.red_hue_weight;
+		/**target_colors_[OutputColorRGB::Id::red].weight.i_ = config.red_hue_weight;
 		*target_colors_[OutputColorRGB::Id::red].weight.j_ = config.red_sat_weight;
-		*target_colors_[OutputColorRGB::Id::red].weight.k_ = config.red_val_weight;
+		*target_colors_[OutputColorRGB::Id::red].weight.k_ = config.red_val_weight;*/
 		*target_colors_[OutputColorRGB::Id::red].variance.i_ = config.red_hue_variance;
 		*target_colors_[OutputColorRGB::Id::red].variance.j_ = config.red_sat_variance;
 		*target_colors_[OutputColorRGB::Id::red].variance.k_ = config.red_val_variance;
@@ -123,9 +125,9 @@ public:
 		*target_colors_[OutputColorRGB::Id::orange].color.j_ = config.orange_sat;
 		*target_colors_[OutputColorRGB::Id::orange].color.k_ = config.orange_val;
 		target_colors_[OutputColorRGB::Id::orange].threshold = config.orange_threshold;
-		*target_colors_[OutputColorRGB::Id::orange].weight.i_ = config.orange_hue_weight;
+		/**target_colors_[OutputColorRGB::Id::orange].weight.i_ = config.orange_hue_weight;
 		*target_colors_[OutputColorRGB::Id::orange].weight.j_ = config.orange_sat_weight;
-		*target_colors_[OutputColorRGB::Id::orange].weight.k_ = config.orange_val_weight;
+		*target_colors_[OutputColorRGB::Id::orange].weight.k_ = config.orange_val_weight;*/
 		*target_colors_[OutputColorRGB::Id::orange].variance.i_ = config.orange_hue_variance;
 		*target_colors_[OutputColorRGB::Id::orange].variance.j_ = config.orange_sat_variance;
 		*target_colors_[OutputColorRGB::Id::orange].variance.k_ = config.orange_val_variance;
@@ -135,9 +137,9 @@ public:
 		*target_colors_[OutputColorRGB::Id::yellow].color.j_ = config.yellow_sat;
 		*target_colors_[OutputColorRGB::Id::yellow].color.k_ = config.yellow_val;
 		target_colors_[OutputColorRGB::Id::yellow].threshold = config.yellow_threshold;
-		*target_colors_[OutputColorRGB::Id::yellow].weight.i_ = config.yellow_hue_weight;
+		/**target_colors_[OutputColorRGB::Id::yellow].weight.i_ = config.yellow_hue_weight;
 		*target_colors_[OutputColorRGB::Id::yellow].weight.j_ = config.yellow_sat_weight;
-		*target_colors_[OutputColorRGB::Id::yellow].weight.k_ = config.yellow_val_weight;
+		*target_colors_[OutputColorRGB::Id::yellow].weight.k_ = config.yellow_val_weight;*/
 		*target_colors_[OutputColorRGB::Id::yellow].variance.i_ = config.yellow_hue_variance;
 		*target_colors_[OutputColorRGB::Id::yellow].variance.j_ = config.yellow_sat_variance;
 		*target_colors_[OutputColorRGB::Id::yellow].variance.k_ = config.yellow_val_variance;
@@ -147,9 +149,9 @@ public:
 		*target_colors_[OutputColorRGB::Id::green].color.j_ = config.green_sat;
 		*target_colors_[OutputColorRGB::Id::green].color.k_ = config.green_val;
 		target_colors_[OutputColorRGB::Id::green].threshold = config.green_threshold;
-		*target_colors_[OutputColorRGB::Id::green].weight.i_ = config.green_hue_weight;
+		/**target_colors_[OutputColorRGB::Id::green].weight.i_ = config.green_hue_weight;
 		*target_colors_[OutputColorRGB::Id::green].weight.j_ = config.green_sat_weight;
-		*target_colors_[OutputColorRGB::Id::green].weight.k_ = config.green_val_weight;
+		*target_colors_[OutputColorRGB::Id::green].weight.k_ = config.green_val_weight;*/
 		*target_colors_[OutputColorRGB::Id::green].variance.i_ = config.green_hue_variance;
 		*target_colors_[OutputColorRGB::Id::green].variance.j_ = config.green_sat_variance;
 		*target_colors_[OutputColorRGB::Id::green].variance.k_ = config.green_val_variance;
@@ -159,9 +161,9 @@ public:
 		*target_colors_[OutputColorRGB::Id::blue].color.j_ = config.blue_sat;
 		*target_colors_[OutputColorRGB::Id::blue].color.k_ = config.blue_val;
 		target_colors_[OutputColorRGB::Id::blue].threshold = config.blue_threshold;
-		*target_colors_[OutputColorRGB::Id::blue].weight.i_ = config.blue_hue_weight;
+		/**target_colors_[OutputColorRGB::Id::blue].weight.i_ = config.blue_hue_weight;
 		*target_colors_[OutputColorRGB::Id::blue].weight.j_ = config.blue_sat_weight;
-		*target_colors_[OutputColorRGB::Id::blue].weight.k_ = config.blue_val_weight;
+		*target_colors_[OutputColorRGB::Id::blue].weight.k_ = config.blue_val_weight;*/
 		*target_colors_[OutputColorRGB::Id::blue].variance.i_ = config.blue_hue_variance;
 		*target_colors_[OutputColorRGB::Id::blue].variance.j_ = config.blue_sat_variance;
 		*target_colors_[OutputColorRGB::Id::blue].variance.k_ = config.blue_val_variance;
@@ -171,9 +173,9 @@ public:
 		*target_colors_[OutputColorRGB::Id::black].color.j_ = config.black_sat;
 		*target_colors_[OutputColorRGB::Id::black].color.k_ = config.black_val;
 		target_colors_[OutputColorRGB::Id::black].threshold = config.black_threshold;
-		*target_colors_[OutputColorRGB::Id::black].weight.i_ = config.black_hue_weight;
+		/**target_colors_[OutputColorRGB::Id::black].weight.i_ = config.black_hue_weight;
 		*target_colors_[OutputColorRGB::Id::black].weight.j_ = config.black_sat_weight;
-		*target_colors_[OutputColorRGB::Id::black].weight.k_ = config.black_val_weight;
+		*target_colors_[OutputColorRGB::Id::black].weight.k_ = config.black_val_weight;*/
 		*target_colors_[OutputColorRGB::Id::black].variance.i_ = config.black_hue_variance;
 		*target_colors_[OutputColorRGB::Id::black].variance.j_ = config.black_sat_variance;
 		*target_colors_[OutputColorRGB::Id::black].variance.k_ = config.black_val_variance;
@@ -183,9 +185,9 @@ public:
 		*target_colors_[OutputColorRGB::Id::white].color.j_ = config.white_sat;
 		*target_colors_[OutputColorRGB::Id::white].color.k_ = config.white_val;
 		target_colors_[OutputColorRGB::Id::white].threshold = config.white_threshold;
-		*target_colors_[OutputColorRGB::Id::white].weight.i_ = config.white_hue_weight;
+		/**target_colors_[OutputColorRGB::Id::white].weight.i_ = config.white_hue_weight;
 		*target_colors_[OutputColorRGB::Id::white].weight.j_ = config.white_sat_weight;
-		*target_colors_[OutputColorRGB::Id::white].weight.k_ = config.white_val_weight;
+		*target_colors_[OutputColorRGB::Id::white].weight.k_ = config.white_val_weight;*/
 		*target_colors_[OutputColorRGB::Id::white].variance.i_ = config.white_hue_variance;
 		*target_colors_[OutputColorRGB::Id::white].variance.j_ = config.white_sat_variance;
 		*target_colors_[OutputColorRGB::Id::white].variance.k_ = config.white_val_variance;
@@ -210,11 +212,11 @@ public:
 
 		if ( !process_image_initialized_ )
 		{
-			for ( unsigned int i = 0; i < distance_images_.size(); ++i )
+			for ( _DimType i = 0; i < distance_images_.size(); ++ i )
 			{
 				distance_images_[i] = cvCreateImage( cvSize( ipl_img->width,
 				                                             ipl_img->height ),
-				                                     IPL_DEPTH_32F,
+				                                     IPL_DEPTH_64F,
 				                                     1 );
 			}
 
@@ -246,7 +248,9 @@ public:
 		            CV_BGR2HSV );
 
 		unsigned char * original_pixel;
-		float * distance_pixel;
+		double * distance_pixel;
+		std::array<double, 3> radii = { 90.0, 0.0, 0.0 };
+		std::array<double, 3> weights = { 1.0, 1.0, 1.0 };
 
 		// generate color distance image
 		for ( unsigned int y = 0; y < ipl_img->height; y++ )
@@ -257,24 +261,24 @@ public:
 				original_pixel = opencv_utils::getIplPixel<unsigned char>( ipl_img,
 				                                                           x,
 				                                                           y );
-				_Color3f current_color( original_pixel );
+				_Color3d current_color( original_pixel );
 
-				float distance_pixel_min = std::numeric_limits<float>::max();
+				double distance_pixel_min = std::numeric_limits<double>::max();
 				unsigned int distance_pixel_min_index = -1;
 
 				// calculate the distance from the current pixel's color to all our desired colors
 				for ( unsigned int color_index = 0; color_index < OutputColorRGB::NUM_COLORS; ++color_index )
 				{
+					// skip this image if it's not enabled
+					if( !target_colors_[color_index].enabled ) continue;
 
-					distance_pixel = opencv_utils::getIplPixel<float>( distance_images_[color_index],
+					distance_pixel = opencv_utils::getIplPixel<double>( distance_images_[color_index],
 					                                                   x,
 					                                                   y );
 
-					static std::array<float, 3> radii = { 90.0, 0.0, 0.0 };
-
 					*distance_pixel = 1.0 - target_colors_[color_index].color.distance( current_color,
 					                                                                    radii,
-					                                                                    target_colors_[color_index].weight.data_,
+					                                                                    weights,
 					                                                                    target_colors_[color_index].variance.data_,
 					                                                                    DistanceType::GAUSSIAN ); //, weights );
 
@@ -284,7 +288,7 @@ public:
 						distance_pixel_min_index = color_index;
 					}
 
-					*distance_pixel *= 255.0;
+					//*distance_pixel *= 255.0;
 				}
 
 				OutputColorRGB::_CvColorType output_pixel = OutputColorRGB::getColorRGB( distance_pixel_min_index );
@@ -298,6 +302,9 @@ public:
 		// go through the processed images, optionally threshold each one, and publish them
 		for ( unsigned int color_index = 0; color_index < OutputColorRGB::NUM_COLORS; ++color_index )
 		{
+			// skip this image if it's not enabled
+			if( !target_colors_[color_index].enabled ) continue;
+
 			if ( enable_thresholding_ )
 			{
 				cvThreshold( distance_images_[color_index],
@@ -307,12 +314,26 @@ public:
 				             threshold_type_ );
 			}
 
-			//cvNormalize( distance_images_[color_index], distance_images_[color_index], 0.0, 255.0, CV_MINMAX );
+			double * min = new double( 0 );
+			double * max = new double( 0 );
 
-			opencv_utils::publishCvImage( distance_images_[color_index],
-			                              &image_transport_publishers_[color_index],
-			                              &image_bridges_[color_index] );
+			cvMinMaxLoc( distance_images_[color_index], min, max );
 
+			printf( "[%d]\nmin %f\nmax %f\n", color_index, *min, *max );
+
+			delete min;
+			delete max;
+
+			cvNormalize( distance_images_[color_index], distance_images_[color_index], 0.0, 255.0, CV_MINMAX );
+
+			base_libs::ComponentImageArray::Ptr component_image_array_message( new base_libs::ComponentImageArray );
+
+			base_libs::ComponentImage component_image_msg;
+			component_image_msg.image = *image_bridges_[color_index].cvToImgMsg( distance_images_[color_index] );
+			component_image_msg.id = color_index;
+
+			component_image_array_message->images.push_back( component_image_msg );
+			images_pub_.publish( component_image_array_message );
 		}
 
 		return ipl_img;
