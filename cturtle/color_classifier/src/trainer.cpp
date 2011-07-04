@@ -41,7 +41,7 @@ int main( int argc, char ** argv )
 
 	ros::NodeHandle nh( "~" );
 
-	Trainer<_Color3f> trainer( nh );
+	Trainer trainer( nh );
 	trainer.spin( SpinModeId::LOOP_SPIN_ONCE );
 
 	return 0;

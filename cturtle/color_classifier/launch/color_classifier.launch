@@ -4,7 +4,7 @@
 	<arg name="name_prefix" default="color_classifier" />
 	<arg name="name_postfix" default="" />
 	<arg name="image" default="/image_server/output_image" />
-	<arg name="image_transport" default="" />
+	<arg name="image_transport" default="raw" />
 	
 	<arg name="name" value="$(arg name_prefix)$(arg name_postfix)" />
 

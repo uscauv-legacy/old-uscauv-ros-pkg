@@ -52,7 +52,7 @@
 #include <color_defs/colors.h>
 
 typedef color_classifier::ColorClassifierConfig _ReconfigureType;
-typedef float _DataType;
+typedef double _DataType;
 typedef ThresholdedColor<_DataType, 3> _ThresholdedColor;
 
 class ColorClassifier: public BaseImageProc<_ReconfigureType>
@@ -70,27 +70,16 @@ public:
 	_ThresholdedColorArrayType target_colors_;
 	_IplImagePtrArrayType distance_images_;
 	_CvBridgeArrayType image_bridges_;
-
-	double ms_spatial_radius_;
-	double ms_color_radius_;
-	int ms_max_level_;
-	int ms_max_iter_;
-	double ms_min_epsilon_;
-
-	bool enable_meanshift_;
-
-	bool enable_thresholding_;
-	double threshold_value_;
-	double threshold_max_value_;
-	unsigned char threshold_type_;
+	_ReconfigureType reconfigure_params_;
 
 	/* constructor params */
 	bool process_image_initialized_;
+	IplConvKernel * kernel_;
 
 public:
 
 	ColorClassifier( ros::NodeHandle & nh ) :
-			BaseImageProc<_ReconfigureType>( nh ), process_image_initialized_( false )
+			BaseImageProc<_ReconfigureType>( nh ), process_image_initialized_( false ), kernel_( cvCreateStructuringElementEx( 6, 6, 3, 3, CV_SHAPE_ELLIPSE ) )
 	{
 		images_pub_ = nh_local_.advertise<base_libs::ComponentImageArray>( "images", 1 );
 
@@ -103,12 +92,16 @@ public:
 		{
 			if( distance_images_[i] ) cvReleaseImage( &distance_images_[i] );
 		}
+
+		if( kernel_ ) cvReleaseStructuringElement( &kernel_ );
 	}
 
 	// virtual
 	void reconfigureCB( _ReconfigureType &config,
 	                    uint32_t level )
 	{
+		reconfigure_params_ = config;
+
 		target_colors_[OutputColorRGB::Id::red].enabled = config.red_filter_enabled;
 		*target_colors_[OutputColorRGB::Id::red].color.i_ = config.red_hue;
 		*target_colors_[OutputColorRGB::Id::red].color.j_ = config.red_sat;
@@ -192,19 +185,6 @@ public:
 		*target_colors_[OutputColorRGB::Id::white].variance.i_ = config.white_hue_variance;
 		*target_colors_[OutputColorRGB::Id::white].variance.j_ = config.white_sat_variance;
 		*target_colors_[OutputColorRGB::Id::white].variance.k_ = config.white_val_variance;
-
-		ms_spatial_radius_ = config.ms_spatial_radius;
-		ms_color_radius_ = config.ms_color_ratius;
-		ms_max_level_ = config.ms_max_level;
-		ms_max_iter_ = config.ms_max_iter;
-		ms_min_epsilon_ = config.ms_min_epsilon;
-
-		enable_meanshift_ = config.enable_meanshift;
-
-		enable_thresholding_ = config.enable_thresholding;
-		threshold_value_ = config.threshold_value;
-		threshold_max_value_ = config.threshold_max_value;
-		threshold_type_ = config.threshold_type;
 	}
 
 	IplImage * processImage( IplImage * ipl_img )
@@ -217,24 +197,24 @@ public:
 			{
 				distance_images_[i] = cvCreateImage( cvSize( ipl_img->width,
 				                                             ipl_img->height ),
-				                                     IPL_DEPTH_32F,
+				                                     IPL_DEPTH_8U,
 				                                     1 );
 			}
 
 			process_image_initialized_ = true;
 		}
 
-		if ( enable_meanshift_ )
+		if ( reconfigure_params_.enable_meanshift )
 		{
 			cvPyrMeanShiftFiltering( ipl_img,
 			                         ipl_img,
-			                         ms_spatial_radius_,
-			                         ms_color_radius_,
-			                         ms_max_level_,
+			                         reconfigure_params_.ms_spatial_radius,
+			                         reconfigure_params_.ms_color_radius,
+			                         reconfigure_params_.ms_max_level,
 			                         cvTermCriteria( CV_TERMCRIT_ITER + CV_TERMCRIT_EPS
 			                                         ,
-			                                         ms_max_iter_,
-			                                         ms_min_epsilon_ ) );
+			                                         reconfigure_params_.ms_max_iter,
+			                                         reconfigure_params_.ms_min_epsilon ) );
 		}
 
 		// desired image size: 160x120
@@ -249,7 +229,7 @@ public:
 		            CV_BGR2HSV );
 
 		unsigned char * original_pixel;
-		_DataType * distance_pixel;
+		unsigned char * probability_pixel;
 		std::array<_DataType, 3> radii = { 90.0, 0.0, 0.0 };
 		std::array<_DataType, 3> weights = { 1.0, 1.0, 1.0 };
 
@@ -264,8 +244,8 @@ public:
 				                                                           y );
 				Color<_DataType, 3> current_color( original_pixel );
 
-				_DataType distance_pixel_min = std::numeric_limits<_DataType>::max();
-				unsigned int distance_pixel_min_index = -1;
+				_DataType probability_pixel_max = std::numeric_limits<_DataType>::min();
+				unsigned int probability_pixel_max_index = -1;
 
 				// calculate the distance from the current pixel's color to all our desired colors
 				for ( unsigned int color_index = 0; color_index < OutputColorRGB::NUM_COLORS; ++color_index )
@@ -273,26 +253,28 @@ public:
 					// skip this image if it's not enabled
 					if( !target_colors_[color_index].enabled ) continue;
 
-					distance_pixel = opencv_utils::getIplPixel<_DataType>( distance_images_[color_index],
-					                                                   x,
-					                                                   y );
+					probability_pixel = opencv_utils::getIplPixel<unsigned char>( distance_images_[color_index],
+					                                                       x,
+					                                                       y );
 
-					*distance_pixel = 1.0 - target_colors_[color_index].color.distance( current_color,
-					                                                                    radii,
-					                                                                    weights,
-					                                                                    target_colors_[color_index].variance.data_,
-					                                                                    DistanceType::GAUSSIAN ); //, weights );
+					_DataType probability = target_colors_[color_index].color.distance( current_color,
+						                                                                 radii,
+						                                                              	 weights,
+						                                                              	 target_colors_[color_index].variance.data_,
+						                                                              	 DistanceType::GAUSSIAN );
 
-					if ( target_colors_[color_index].enabled && *distance_pixel < distance_pixel_min && *distance_pixel < target_colors_[color_index].threshold )
+					*probability_pixel = probability > target_colors_[color_index].threshold ? 255 : 0;
+
+					if ( target_colors_[color_index].enabled && probability > probability_pixel_max && *probability_pixel )
 					{
-						distance_pixel_min = *distance_pixel;
-						distance_pixel_min_index = color_index;
+						probability_pixel_max = probability;
+						probability_pixel_max_index = color_index;
 					}
 
 					//*distance_pixel *= 255.0;
 				}
 
-				OutputColorRGB::_CvColorType output_pixel = OutputColorRGB::getColorRGB( distance_pixel_min_index );
+				OutputColorRGB::_CvColorType output_pixel = OutputColorRGB::getColorRGB( probability_pixel_max_index );
 
 				original_pixel[0] = output_pixel[0];
 				original_pixel[1] = output_pixel[1];
@@ -308,7 +290,19 @@ public:
 			// skip this image if it's not enabled
 			if( !target_colors_[color_index].enabled ) continue;
 
-			const sensor_msgs::Image::ConstPtr & image = sensor_msgs::CvBridge::cvToImgMsg( distance_images_[color_index] );
+			IplImage * current_image = distance_images_[color_index];
+
+			cvMorphologyEx( current_image, current_image, 0, 0, CV_MOP_OPEN, reconfigure_params_.open_iterations );
+			cvMorphologyEx( current_image, current_image, 0, 0, CV_MOP_CLOSE, reconfigure_params_.close_iterations );
+
+
+			// erode the image to remove noise
+			//cvErode( current_image, current_image, kernel_, reconfigure_params_.open_iterations );
+
+			// dilate the image to restore blobs to approximately their original size
+			//cvDilate( current_image, current_image, kernel_, reconfigure_params_.close_iterations );
+
+			const sensor_msgs::Image::ConstPtr & image = sensor_msgs::CvBridge::cvToImgMsg( current_image );
 
 			base_libs::ComponentImage component_image_msg;
 			component_image_msg.image = *image;

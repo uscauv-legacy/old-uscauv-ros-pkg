@@ -39,6 +39,7 @@
 #include <base_node/base_node.h>
 #include <color_defs/colors.h>
 #include <common_utils/opencv.h>
+#include <common_utils/math.h>
 #include <list>
 #include <string>
 
@@ -47,16 +48,16 @@
 // find the minimum radius and maximum weights such that all pixels are found
 
 typedef BaseNode<> _BaseNode;
+typedef Color<double, 3> _ColorType;
 
-template<class __ColorType>
 class Trainer : public _BaseNode
 {
 public:
-	typedef std::list<__ColorType> _PixelList;
+	typedef std::list<_ColorType> _PixelList;
 
 	_PixelList pixels_;
-	__ColorType mean_;
-	__ColorType variance_;
+	_ColorType mean_;
+	_ColorType variance_;
 
 	std::string src_image_;
 	std::string mask_image_;
@@ -95,7 +96,7 @@ public:
 
 		unsigned char * src_image_pixel;
 		unsigned char * mask_pixel;
-		__ColorType origin;
+		_ColorType origin;
 
 		// extract all pixels (as indicated by the mask) from src_image
 		// sum up the color components
@@ -113,7 +114,7 @@ public:
 				                                                            x,
 				                                                            y );
 
-				__ColorType src_image_color( src_image_pixel );
+				_ColorType src_image_color( src_image_pixel );
 
 				pixels_.push_back( src_image_color );
 
@@ -134,11 +135,11 @@ public:
 		//if( mean_.data_[0].data_ < 0 ) mean_.data_[0].data_ += 180;
 
 		// calculate the raw variance for each color component
-		for( typename _PixelList::iterator pixel_it = pixels_.begin(); pixel_it != pixels_.end(); ++pixel_it )
+		for( _PixelList::iterator pixel_it = pixels_.begin(); pixel_it != pixels_.end(); ++pixel_it )
 		{
 			for ( unsigned int i = 0; i < src_image->nChannels; ++i )
 			{
-				FeatureBase<typename __ColorType::_DataType> color_rel_origin( origin.data_[i].distanceTo( pixel_it->data_[i], i == 0 ? 90.0 : 0.0 ) );
+				FeatureBase<_ColorType::_DataType> color_rel_origin( origin.data_[i].distanceTo( pixel_it->data_[i], i == 0 ? 90.0 : 0.0 ) );
 				variance_.data_[i].data_ += pow( mean_.data_[i].distanceTo( color_rel_origin, i == 0 ? 90.0 : 0.0 ), 2 );
 			}
 		}
@@ -170,12 +171,16 @@ public:
 
 		calculateStatistics( src_image, mask );
 
+		double suggested_threshold = 1.0;
+
 		// print statistics
 		for ( unsigned int i = 0; i < src_image->nChannels; ++i )
 		{
 			printf( "----\n[%u]\n", i );
-			printf( "mean: %f\n", mean_.data_[i].data_ );
-			printf( "variance: %f\n", variance_.data_[i].data_ );
+			printf( "mean: %.15f\n", mean_.data_[i].data_ );
+			printf( "variance: %.15f\n", variance_.data_[i].data_ );
+
+			suggested_threshold *= math_utils::gaussian( sqrt( variance_.data_[i].data_ ), variance_.data_[i].data_ );
 
 			std::string current_param = color_name_ + "_" + channel_names_[i];
 			printf("Setting param: %s\n", current_param.c_str() );
@@ -185,6 +190,8 @@ public:
 			nh_reconfig_.setParam( color_name_ + "_" + channel_names_[i], mean_.data_[i].data_ );
 			nh_reconfig_.setParam( color_name_ + "_" + channel_names_[i] + "_variance", variance_.data_[i].data_ );
 		}
+
+		printf( "Suggested threshold: %.15f\n", suggested_threshold );
 
 		interrupt();
 	}
