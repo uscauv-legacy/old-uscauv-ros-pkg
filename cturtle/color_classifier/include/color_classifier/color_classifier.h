@@ -52,13 +52,14 @@
 #include <color_defs/colors.h>
 
 typedef color_classifier::ColorClassifierConfig _ReconfigureType;
-typedef double _DataType;
+typedef float _DataType;
+typedef ThresholdedColor<_DataType, 3> _ThresholdedColor;
 
 class ColorClassifier: public BaseImageProc<_ReconfigureType>
 {
 
 public:
-	typedef std::array<ThresholdedColor, OutputColorRGB::NUM_COLORS> _ThresholdedColorArrayType;
+	typedef std::array<_ThresholdedColor, OutputColorRGB::NUM_COLORS> _ThresholdedColorArrayType;
 	typedef std::array<IplImage *, OutputColorRGB::NUM_COLORS> _IplImagePtrArrayType;
 	typedef std::array<sensor_msgs::CvBridge, OutputColorRGB::NUM_COLORS> _CvBridgeArrayType;
 
@@ -100,7 +101,7 @@ public:
 	{
 		for ( _DimType i = 0; i < distance_images_.size(); ++ i )
 		{
-			cvReleaseImage( &distance_images_[i] );
+			if( distance_images_[i] ) cvReleaseImage( &distance_images_[i] );
 		}
 	}
 
@@ -216,7 +217,7 @@ public:
 			{
 				distance_images_[i] = cvCreateImage( cvSize( ipl_img->width,
 				                                             ipl_img->height ),
-				                                     IPL_DEPTH_64F,
+				                                     IPL_DEPTH_32F,
 				                                     1 );
 			}
 
@@ -248,9 +249,9 @@ public:
 		            CV_BGR2HSV );
 
 		unsigned char * original_pixel;
-		double * distance_pixel;
-		std::array<double, 3> radii = { 90.0, 0.0, 0.0 };
-		std::array<double, 3> weights = { 1.0, 1.0, 1.0 };
+		_DataType * distance_pixel;
+		std::array<_DataType, 3> radii = { 90.0, 0.0, 0.0 };
+		std::array<_DataType, 3> weights = { 1.0, 1.0, 1.0 };
 
 		// generate color distance image
 		for ( unsigned int y = 0; y < ipl_img->height; y++ )
@@ -261,9 +262,9 @@ public:
 				original_pixel = opencv_utils::getIplPixel<unsigned char>( ipl_img,
 				                                                           x,
 				                                                           y );
-				_Color3d current_color( original_pixel );
+				Color<_DataType, 3> current_color( original_pixel );
 
-				double distance_pixel_min = std::numeric_limits<double>::max();
+				_DataType distance_pixel_min = std::numeric_limits<_DataType>::max();
 				unsigned int distance_pixel_min_index = -1;
 
 				// calculate the distance from the current pixel's color to all our desired colors
@@ -272,7 +273,7 @@ public:
 					// skip this image if it's not enabled
 					if( !target_colors_[color_index].enabled ) continue;
 
-					distance_pixel = opencv_utils::getIplPixel<double>( distance_images_[color_index],
+					distance_pixel = opencv_utils::getIplPixel<_DataType>( distance_images_[color_index],
 					                                                   x,
 					                                                   y );
 
@@ -299,44 +300,28 @@ public:
 			}
 		}
 
+		base_libs::ComponentImageArray::Ptr component_image_array_message( new base_libs::ComponentImageArray );
+
 		// go through the processed images, optionally threshold each one, and publish them
 		for ( unsigned int color_index = 0; color_index < OutputColorRGB::NUM_COLORS; ++color_index )
 		{
 			// skip this image if it's not enabled
 			if( !target_colors_[color_index].enabled ) continue;
 
-			if ( enable_thresholding_ )
-			{
-				cvThreshold( distance_images_[color_index],
-				             distance_images_[color_index],
-				             threshold_value_,
-				             threshold_max_value_,
-				             threshold_type_ );
-			}
-
-			double * min = new double( 0 );
-			double * max = new double( 0 );
-
-			cvMinMaxLoc( distance_images_[color_index], min, max );
-
-			printf( "[%d]\nmin %f\nmax %f\n", color_index, *min, *max );
-
-			delete min;
-			delete max;
-
-			cvNormalize( distance_images_[color_index], distance_images_[color_index], 0.0, 255.0, CV_MINMAX );
-
-			base_libs::ComponentImageArray::Ptr component_image_array_message( new base_libs::ComponentImageArray );
+			const sensor_msgs::Image::ConstPtr & image = sensor_msgs::CvBridge::cvToImgMsg( distance_images_[color_index] );
 
 			base_libs::ComponentImage component_image_msg;
-			component_image_msg.image = *image_bridges_[color_index].cvToImgMsg( distance_images_[color_index] );
+			component_image_msg.image = *image;
+			//component_image_msg.image.header = image_msg_->header;
 			component_image_msg.id = color_index;
 
 			component_image_array_message->images.push_back( component_image_msg );
-			images_pub_.publish( component_image_array_message );
 		}
 
+		images_pub_.publish( component_image_array_message );
+
 		return ipl_img;
+		//return distance_images_[1];
 	}
 
 };

@@ -1,15 +1,17 @@
 <launch>
 	<arg name="param_file_name" default="test_params" />
 	<arg name="enable_reconfigure" default="false" />
-	<arg name="color_classifier_name_prefix" default="color_classifier" />
-	<arg name="color_classifier_name_postfix" default="" />
+	<arg name="name_prefix" default="color_classifier" />
+	<arg name="name_postfix" default="" />
+	<arg name="image" default="/image_server/output_image" />
+	<arg name="image_transport" default="" />
 	
-	<arg name="color_classifier_name" value="$(arg color_classifier_name_prefix)$(arg color_classifier_name_postfix)" />
+	<arg name="name" value="$(arg name_prefix)$(arg name_postfix)" />
 
-	<node pkg="color_classifier" type="color_classifier_node" name="$(arg color_classifier_name)" output="screen" args="~image:=/image_server/output_image" >
+	<node pkg="color_classifier" type="color_classifier_node" name="$(arg name)" output="screen" args="~image:=$(arg image) _image_transport:=$(arg image_transport)" >
 		<rosparam param="reconfigure" command="load" file="$(find color_classifier)/params/$(arg param_file_name).yaml" />
 	</node>
 	<group if="$(arg enable_reconfigure)" >
-		<node pkg="dynamic_reconfigure" type="reconfigure_gui" name="$(arg color_classifier_name)_config" args="$(arg color_classifier_name)/reconfigure" />
+		<node pkg="dynamic_reconfigure" type="reconfigure_gui" name="$(arg name)_config" args="$(arg name)/reconfigure" />
 	</group>
 </launch>
