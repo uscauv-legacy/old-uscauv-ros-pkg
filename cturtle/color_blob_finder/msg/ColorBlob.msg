@@ -1,0 +1,2 @@
+int32 color_id
+color_blob_finder/Contour contour

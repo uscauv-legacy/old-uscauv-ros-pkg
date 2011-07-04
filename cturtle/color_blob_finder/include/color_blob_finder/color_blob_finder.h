@@ -60,6 +60,8 @@
 
 /* others */
 #include <base_node/base_node.h>
+// for a ton of boost-related content
+#include <boost/thread.hpp>
 
 typedef color_blob_finder::ColorBlobFinderConfig _ReconfigureType;
 typedef BaseNode<_ReconfigureType> _BaseNode;
@@ -84,7 +86,10 @@ public:
 	message_filters::Synchronizer<_SyncPolicy> sync_;
 	IplImage * current_image_;
 	IplImage * output_image_;
+	IplImage * current_image_converted_;
 	image_transport::ImageTransport image_transport_;
+	boost::mutex image_sources_mutex_;
+	sensor_msgs::CvBridge cv_bridge_;
 
 	/* dynamic reconfigure */
 	_ReconfigureType reconfigure_params_;
@@ -101,6 +106,7 @@ public:
 			                        source2_sub_ ),
 			                 current_image_( NULL ),
 			                 output_image_( NULL ),
+			                 current_image_converted_( NULL ),
 			                 image_transport_( nh_local_ )
 	{
 		sync_.registerCallback( boost::bind( &ColorBlobFinder::imageSourcesCB,
@@ -110,15 +116,25 @@ public:
 		color_blob_array_pub_ = nh_local_.advertise < color_blob_finder::ColorBlobArray > ( "color_blobs", 1 );
 		output_image_pub_ = image_transport_.advertise( "output_image",
 		                                                1 );
+
+		initCfgParams();
+
+		cv::namedWindow( "depth_display", CV_WINDOW_AUTOSIZE );
 	}
 
 	void imageSourcesCB( const _ImageArrayMessageType::ConstPtr & image_array_msg1,
 	                     const _ImageArrayMessageType::ConstPtr & image_array_msg2 )
 	{
+		printf("Got imageSourcesCB\n");
+		if( !image_sources_mutex_.try_lock() ) return;
+
 		std::vector<base_libs::ComponentImage> images;
 		color_blob_finder::ColorBlobArray::Ptr color_blobs( new color_blob_finder::ColorBlobArray );
 
-		images.reserve( image_array_msg1->images.size() + image_array_msg2->images.size() );
+		unsigned int total_images = image_array_msg1->images.size() + image_array_msg2->images.size();
+		images.reserve( total_images );
+
+		printf("Anticipating %u images\n", total_images );
 
 		for ( _DimType i = 0; i < image_array_msg1->images.size(); ++i )
 		{
@@ -132,19 +148,23 @@ public:
 		// for each image
 		for ( _DimType i = 0; i < images.size(); ++i )
 		{
-			sensor_msgs::Image::ConstPtr current_image_msg_ptr( &images[i].image );
-			IplImage current_image = (IplImage) cv_bridge::toCvShare( current_image_msg_ptr )->image;
-			IplImage * current_image_ptr = &current_image;
+			/*const sensor_msgs::Image::ConstPtr current_image_msg_ptr ( &images[i].image );
+			const IplImage current_image = IplImage ( cv_bridge::toCvShare( current_image_msg_ptr )->image );
+			const IplImage * current_image_ptr = &current_image;*/
+
+			cv_bridge_.fromImage( images[i].image );
+			const IplImage * current_image_ptr = cv_bridge_.toIpl();
+
 			std::vector<std::vector<cv::Point> > contours = processImage( current_image_ptr );
 
 			color_blob_finder::ColorBlob color_blob;
 			color_blob.color_id = images[i].id;
-			color_blob.header = images[i].image.header;
 
 			// for each contour
 			for ( _DimType j = 0; j < contours.size(); ++j )
 			{
 				color_blob_finder::Contour contour;
+				contour.header = images[i].image.header;
 				// for each point in the contour
 				for ( _DimType k = 0; k < contours[j].size(); ++k )
 				{
@@ -161,12 +181,16 @@ public:
 		}
 
 		color_blob_array_pub_.publish( color_blobs );
+		output_image_pub_.publish( sensor_msgs::CvBridge::cvToImgMsg( output_image_ ) );
+		printf("unlocking image_sources mutex\n");
+		image_sources_mutex_.unlock();
 	}
 
 	virtual ~ColorBlobFinder()
 	{
-		cvReleaseImage( &current_image_ );
-		cvReleaseImage( &output_image_ );
+		if( current_image_ ) cvReleaseImage( &current_image_ );
+		if( output_image_ ) cvReleaseImage( &output_image_ );
+		if( current_image_converted_ ) cvReleaseImage( &current_image_converted_ );
 	}
 
 	void reconfigureCB( _ReconfigureType &config,
@@ -175,38 +199,47 @@ public:
 		reconfigure_params_ = config;
 	}
 
-	std::vector<std::vector<cv::Point> > processImage( IplImage * ipl_image )
+	std::vector<std::vector<cv::Point> > processImage( const IplImage * ipl_image )
 	{
+		std::vector<std::vector<cv::Point> > contours;
 		if ( !current_image_ ) current_image_ = cvCreateImage( cvSize( ipl_image->width,
 		                                                               ipl_image->height ),
 		                                                       ipl_image->depth,
 		                                                       ipl_image->nChannels );
+
+		if ( !current_image_converted_ ) current_image_converted_ = cvCreateImage( cvSize( ipl_image->width,
+		                                                                                   ipl_image->height),
+		                                                                           IPL_DEPTH_8U,
+		                                                                           1 );
 		if ( !output_image_ ) output_image_ = cvCreateImage( cvSize( ipl_image->width,
 		                                                             ipl_image->height ),
 		                                                     IPL_DEPTH_8U,
 		                                                     3 );
 
-		cvCopy( ipl_image,
-		        current_image_ );
-
-		cv::Mat current_image_mat( current_image_ );
-		cv::Mat output_image_mat( output_image_ );
-
 		// our incoming probability images have a potentially very small probability range
-		cvNormalize( current_image_,
+		cvNormalize( ipl_image,
 		             current_image_,
 		             0.0,
 		             255.0,
 		             CV_MINMAX );
 
-		cvThreshold( current_image_,
-		             current_image_,
+		cvConvertScale( current_image_, current_image_converted_ );
+
+		if( reconfigure_params_.draw_distance_image ) cvCvtColor( current_image_converted_, output_image_, CV_GRAY2BGR );
+		else cvFillImage( output_image_, 0.0 );
+
+		cvThreshold( current_image_converted_,
+		             current_image_converted_,
 		             reconfigure_params_.threshold_value,
 		             reconfigure_params_.threshold_max_value,
 		             reconfigure_params_.threshold_type );
 
-		std::vector<std::vector<cv::Point> > contours;
-		cv::findContours( current_image_mat,
+		//cvCvtColor( current_image_converted_, output_image_, CV_GRAY2BGR );
+
+		cv::Mat current_image_converted_mat( current_image_converted_ );
+		cv::Mat output_image_mat( output_image_ );
+
+		cv::findContours( current_image_converted_mat,
 		                  contours,
 		                  CV_RETR_LIST,
 		                  CV_CHAIN_APPROX_SIMPLE );
@@ -220,9 +253,9 @@ public:
 		                  cv::Scalar( 0,
 		                              255,
 		                              0 ),
-		                  1 );
+		                  2 );
 
-		output_image_pub_.publish( sensor_msgs::CvBridge::cvToImgMsg( output_image_ ) );
+		//output_image_pub_.publish( sensor_msgs::CvBridge::cvToImgMsg( current_image_converted_ ) );
 
 		return contours;
 	}
