@@ -314,6 +314,11 @@ namespace math_utils
 	{
 		return numerator % denominator;
 	}
+
+	static double gaussian( const double & x, const double & variance )
+	{
+		return ( 1 / sqrt( 2 * M_PI * variance ) ) * pow( M_E, -pow( x, 2 ) / ( 2 * variance ) );
+	}
 }
 
 #endif /* MATH_H_ */

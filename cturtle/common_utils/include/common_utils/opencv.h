@@ -66,7 +66,7 @@ namespace opencv_utils
 		static sensor_msgs::CvBridge * temp_bridge = new sensor_msgs::CvBridge();
 		if ( !bridge ) bridge = temp_bridge;
 
-		static sensor_msgs::Image::Ptr image_message;
+		sensor_msgs::Image::Ptr image_message;
 		image_message = bridge->cvToImgMsg( ipl_img );
 
 		img_pub->publish( image_message );
@@ -79,6 +79,30 @@ namespace opencv_utils
 
 		publishCvImage( ipl_img, img_pub, bridge );
 	}
+
+	class ImagePublisher
+	{
+	public:
+		IplImage * image_;
+		sensor_msgs::CvBridge bridge_;
+		image_transport::Publisher publisher_;
+
+		ImagePublisher( IplImage * image = NULL, image_transport::Publisher publisher = image_transport::Publisher() ) :
+			image_( image ), publisher_( publisher )
+		{
+			//
+		}
+
+		~ImagePublisher()
+		{
+			if( image_ ) cvReleaseImage( &image_ );
+		}
+
+		void publish()
+		{
+			opencv_utils::publishCvImage( image_, &publisher_, &bridge_ );
+		}
+	};
 }
 
 #endif /* OPENCV_UTILS_H_ */

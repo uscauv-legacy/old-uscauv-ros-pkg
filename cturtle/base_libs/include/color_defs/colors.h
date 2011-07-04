@@ -191,7 +191,7 @@ public:
 	static __DataType calculateGaussianDistanceComponent( const __DataType & dist, const _WeightType & variance )
 	{
 		if( variance == 0 ) return dist == 0 ? 1.0 : 0.0;
-		return ( 1 / sqrt( 2 * M_PI * variance ) ) * pow( M_E, -pow( dist, 2 ) / ( 2 * variance ) );
+		return math_utils::gaussian( dist, variance );
 	}
 
 	template<class _WeightType>
