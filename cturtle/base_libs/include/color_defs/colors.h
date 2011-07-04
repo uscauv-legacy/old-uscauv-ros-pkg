@@ -523,11 +523,12 @@ __DataType normalizeHue( __DataType hue, __DataType min, __DataType max )
 	return result;
 }
 
+template<class __DataType, unsigned int __Dim__>
 struct ThresholdedColor
 {
-	_Color3d color;
-	double threshold;
-	Vec<double, 3> variance;
+	Color<__DataType, __Dim__> color;
+	__DataType threshold;
+	Vec<__DataType, __Dim__> variance;
 	bool enabled;
 };
 
