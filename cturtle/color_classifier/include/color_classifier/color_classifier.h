@@ -283,6 +283,7 @@ public:
 		}
 
 		base_libs::ComponentImageArray::Ptr component_image_array_message( new base_libs::ComponentImageArray );
+		component_image_array_message->header = image_msg_->header;
 
 		// go through the processed images, optionally threshold each one, and publish them
 		for ( unsigned int color_index = 0; color_index < OutputColorRGB::NUM_COLORS; ++color_index )
@@ -306,6 +307,7 @@ public:
 
 			base_libs::ComponentImage component_image_msg;
 			component_image_msg.image = *image;
+			component_image_msg.image.header = image_msg_->header;
 			//component_image_msg.image.header = image_msg_->header;
 			component_image_msg.id = color_index;
 
