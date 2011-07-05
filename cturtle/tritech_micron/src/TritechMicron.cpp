@@ -22,12 +22,17 @@
 #include "../include/MessageTypes.h"
 #include <iostream>
 #include <algorithm>
+#include <chrono>
     
 using namespace tritech;
 
 // ######################################################################
 TritechMicron::TritechMicron() 
-{ resetMessage(); }
+{
+  bool hasHeardMtAlive = false;
+  bool hasHeardMtVersionData = false;
+  resetMessage(); 
+}
 
 // ######################################################################
 TritechMicron::~TritechMicron()
@@ -38,38 +43,45 @@ TritechMicron::~TritechMicron()
 }
 
 // ######################################################################
-void TritechMicron::connect(std::string const& devName)
+bool TritechMicron::connect(std::string const& devName)
 {
-  std::cout << "Configuring" << std::endl;
-  itsSerial.configure(
-      /*dev*/      devName.c_str(),
-      /*speed*/    115200,
-      /*format*/   "8N1",
-      /*flowSoft*/ false, 
-      /*flowHard*/ false,
-      /*timeout*/  0); itsSerial.perror(); std::cout << std::endl;
-  std::cout << "Configured" << std::endl;
+  std::cout << "Connecting...";
 
-  std::cout << "Connecting" << std::endl;
-  itsSerial.connect(); itsSerial.perror(); std::cout << std::endl;
-
+  bool connectionSuccess = itsSerial.connect(devName, B115200); 
+  if(!connectionSuccess)
+  {
+    std::cerr << "Could not connect to serial port!" << std::endl;
+    return false;
+  }
   std::cout << "Connected" << std::endl;
 
-  int bytesWritten = itsSerial.write(mtRebootMsg);
-  std::cout << "wrote " << bytesWritten << " bytes" << std::endl;
+  sleep(1);
 
-  itsRunning = true;
-  itsSerialThread = std::thread([this](){serialThreadMethod();});
-  while(!hasHeardMtAlive)
+  auto start = std::chrono::monotonic_clock::now();
+  while(!hasHeardMtVersionData)
   {
-    usleep(1000000); 
-    std::cout << "Waiting for mtAlive message..." << std::endl;
+    // Send a new mtSendVersionMsg once a second
+    if(std::chrono::monotonic_clock::now()-start > std::chrono::seconds(1))
+    {
+      itsSerial.writeVector(mtSendVersionMsg);
+      start = std::chrono::monotonic_clock::now();
+    }
+
+    // Keep reading bytes from the serial port
+    std::vector<uint8_t> bytes = itsSerial.read(1);
+    if(bytes.size() > 0)
+      for(uint8_t const& byte : bytes) processByte(byte);
   }
-  std::cout << "Got mtAlive Message!" << std::endl;
-//  itsSerial.write(mtHeadCommandMsg);
-//  itsSerial.write(mtHeadCommandMsg);
-//  itsSerial.write(mtSendDataMsg);
-//  itsSerial.write(mtSendDataMsg);
+
+  itsSerial.writeVector(mtHeadCommandMsg);
+
+  while(1)
+  {
+  itsSerial.writeVector(mtSendDataMsg);
+  sleep(1);
+  }
+
+  return true;
 }
 
 // ######################################################################
@@ -77,10 +89,10 @@ void TritechMicron::serialThreadMethod()
 {
   while(itsRunning)
   {
-    uint8_t byte;
-    int bytesRead = itsSerial.read(&byte, 1);
-    std::cout << "Read " << bytesRead << " bytes" << std::endl;
-    if(bytesRead == 1) processByte(byte);
+    std::vector<uint8_t> bytes = itsSerial.read(1);
+    if(bytes.size() > 0)
+      for(uint8_t const& byte : bytes)
+        processByte(byte);
     else { usleep(100000); }
   }
 }
@@ -96,12 +108,9 @@ void TritechMicron::resetMessage()
 // ######################################################################
 void TritechMicron::processByte(uint8_t byte)
 {
-  std::cout << "got byte: " << int(byte) << std::endl;
-
   if(itsState == WaitingForAt) 
     if(byte == '@')
     {
-      std::cout << "----Message----" << std::endl;
       itsRawMsg.clear();
       // Tritech's datasheet refers to the first byte as '1' rather than '0', so let's push back a bogus byte here just
       // to make reading the datasheet easier.
@@ -111,6 +120,11 @@ void TritechMicron::processByte(uint8_t byte)
       itsMsg = Message();
       return;
     }
+    else
+    {
+      std::cout << "bogus byte: " << std::hex << int(byte) << std::endl;
+    }
+
 
   itsRawMsg.push_back(byte);
 
@@ -126,6 +140,7 @@ void TritechMicron::processByte(uint8_t byte)
     if(itsRawMsg.size() == 11) { itsMsg.count  = byte; return; }
     if(itsRawMsg.size() == 12) 
     {
+      std::cout << "MsgType: " << int(byte) << std::endl;
       itsMsg.type = MessageType(byte);
       itsState = ReadingData;
       return; 
@@ -160,17 +175,36 @@ void TritechMicron::processMessage(tritech::Message msg)
   if(msg.type == mtVersionData)
   {
     mtVersionDataMsg parsedMsg(msg);
-    parsedMsg.print(); 
+    if(hasHeardMtVersionData == false)
+    {
+      std::cout << "Received mtVersionData Message" << std::endl;
+      parsedMsg.print(); 
+    }
+    hasHeardMtVersionData = true;
   }
   else if(msg.type == mtAlive)
   {
     mtAliveMsg parsedMsg(msg);
+    if(hasHeardMtAlive == false)
+    {
+      std::cout << "Received mtAlive Message" << std::endl;
+      parsedMsg.print();
+      std::cout << "Msg bytes: [";
+      for(uint8_t b : msg.data)
+        std::cout << " 0x" << std::hex << int(b);
+      std::cout << " ]" << std::endl;
+    }
     hasHeardMtAlive = true;
   }
   else if(msg.type == mtHeadData)
   {
     mtHeadDataMsg parsedMsg(msg);
     parsedMsg.print(); 
+    std::cout << "Received mtHeadData Message" << std::endl;
+  }
+  else if(msg.type == mtBBUserData)
+  {
+    std::cout << "Received mtBBUserData Message" << std::endl;
   }
   else
   {

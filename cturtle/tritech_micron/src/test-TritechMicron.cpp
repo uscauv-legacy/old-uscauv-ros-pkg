@@ -2,10 +2,16 @@
 #include <iostream>
 #include <vector>
 
-int main()
+int main(int argc, char** argv)
 {
+  if(argc != 2)
+  {
+    std::cerr << "Usage: " << argv[0] << " serialdev" << std::endl;
+    return -1;
+  }
+
   TritechMicron micron;
-  micron.connect("/dev/ttyUSB0");
+  if(!micron.connect(argv[1])) return -1;
 
   while(1) 
   { usleep(100000); }

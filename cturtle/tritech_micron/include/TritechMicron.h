@@ -26,8 +26,8 @@
 #include <vector>
 #include <stdint.h>
 #include "Serial.h"
-#include <thread>
-#include <future>
+//#include <thread>
+#include <boost/thread.hpp>
 
 class TritechMicron
 {
@@ -43,7 +43,7 @@ class TritechMicron
     TritechMicron();
     ~TritechMicron();
 
-    void connect(std::string const& devName);
+    bool connect(std::string const& devName);
 
     void processByte(uint8_t byte);
 
@@ -54,7 +54,7 @@ class TritechMicron
 
   //private:
     void serialThreadMethod();
-    std::thread itsSerialThread;
+    boost::thread itsSerialThread;
     StateType itsState;
     
     //! The current message begin read in
@@ -65,7 +65,9 @@ class TritechMicron
     //! Have we ever heard an mtAlive message from the sonar? 
     bool hasHeardMtAlive;
 
-    Serial itsSerial;
+    bool hasHeardMtVersionData;
+
+    SerialPort itsSerial;
 
     bool itsRunning;
 
