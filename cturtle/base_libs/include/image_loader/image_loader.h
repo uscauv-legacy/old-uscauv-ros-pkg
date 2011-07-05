@@ -64,7 +64,7 @@ public:
 	bool images_loaded_;
 
 	std::string file_prefix_, file_ext_;
-	int start_, end_, digits_;
+	int start_, end_, digits_, width_, height_;
 
 	ImageLoader( ros::NodeHandle & nh ) :
 		images_loaded_( false )
@@ -76,6 +76,8 @@ public:
 		nh.param( "end", end_, 0 );
 		nh.param( "digits", digits_, 0 );
 		nh.param( "ext", file_ext_, std::string( ".png" ) );
+		nh.param( "width", width_, -1 );
+		nh.param( "height", height_, -1 );
 
 		ROS_INFO( "Done setting up image loader" );
 	}
@@ -107,7 +109,24 @@ public:
 			if ( img && img->width * img->height > 0 )
 			{
 				ROS_INFO( "Success: %dx%d", img->width, img->height );
-				image_cache_.push_back( img );
+				if( width_ > 0 || height_ > 0 )
+				{
+					double width = width_ > 0 ? width_ : img->width;
+					double height = height_ > 0 ? height_ : img->height;
+					// scale image, maintain aspect ratio
+					cv::Point2d scales( width / img->width, height / img->height );
+					double scale = img->width * scales.x <= width && img->height * scales.x <= height ? scales.x : scales.y;
+					IplImage * scaled_img = cvCreateImage( cvSize( img->width * scale, img->height * scale ), img->depth, img->nChannels );
+					ROS_INFO( "Scaling image to %dx%d", scaled_img->width, scaled_img->height );
+					cvResize( img, scaled_img, CV_INTER_CUBIC );
+
+					cvReleaseImage( &img );
+					image_cache_.push_back( scaled_img );
+				}
+				else
+				{
+					image_cache_.push_back( img );
+				}
 			}
 			else
 			{
