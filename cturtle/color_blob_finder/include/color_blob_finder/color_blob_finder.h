@@ -50,10 +50,14 @@
 // for CvBridge
 #include <cv_bridge/CvBridge.h>
 #include <cv_bridge/cv_bridge.h>
+#include <color_defs/colors.h>
 
 /* msgs */
 #include <base_libs/ComponentImageArray.h>
 #include <color_blob_finder/ColorBlobArray.h>
+
+/* srvs */
+#include <color_blob_finder/FindColorBlobs.h>
 
 /* cfgs */
 #include <color_blob_finder/ColorBlobFinderConfig.h>
@@ -67,8 +71,11 @@ typedef color_blob_finder::ColorBlobFinderConfig _ReconfigureType;
 typedef BaseNode<_ReconfigureType> _BaseNode;
 typedef std::vector<cv::Point> _Contour;
 typedef unsigned int _DimType;
+typedef color_blob_finder::FindColorBlobs _FindColorBlobsService;
 
 typedef base_libs::ComponentImageArray _ImageArrayMessageType;
+
+typedef color_blob_finder::ColorBlob _ColorBlobMessageType;
 
 typedef message_filters::sync_policies::ApproximateTime<_ImageArrayMessageType, _ImageArrayMessageType> _SyncPolicy;
 
@@ -83,12 +90,17 @@ public:
 	ros::Publisher color_blob_array_pub_;
 	image_transport::Publisher output_image_pub_;
 
+	/* service servers */
+	ros::ServiceServer find_color_blobs_svr_;
+
 	/* others */
 	message_filters::Synchronizer<_SyncPolicy> sync_;
 	IplImage * output_image_;
 	image_transport::ImageTransport image_transport_;
 	boost::mutex image_sources_mutex_;
 	sensor_msgs::CvBridge cv_bridge_;
+	std::vector<base_libs::ComponentImage> images_cache_;
+	bool new_image_;
 
 	/* dynamic reconfigure */
 	_ReconfigureType reconfigure_params_;
@@ -104,67 +116,67 @@ public:
 			                        source1_sub_,
 			                        source2_sub_ ),
 			                 output_image_( NULL ),
-			                 image_transport_( nh_local_ )
+			                 image_transport_( nh_local_ ),
+			                 new_image_( false )
 	{
 		sync_.registerCallback( boost::bind( &ColorBlobFinder::imageSourcesCB,
 		                                     this,
 		                                     _1,
 		                                     _2 ) );
-		color_blob_array_pub_ = nh_local_.advertise < color_blob_finder::ColorBlobArray > ( "color_blobs", 1 );
+
 		output_image_pub_ = image_transport_.advertise( "output_image",
 		                                                1 );
+		find_color_blobs_svr_ = nh_local_.advertiseService( "find_color_blobs", &ColorBlobFinder::findColorBlobsCB, this );
 
 		initCfgParams();
 
 		cv::namedWindow( "depth_display", CV_WINDOW_AUTOSIZE );
 	}
 
-	void imageSourcesCB( const _ImageArrayMessageType::ConstPtr & image_array_msg1,
-	                     const _ImageArrayMessageType::ConstPtr & image_array_msg2 )
+	bool findColorBlobsCB( _FindColorBlobsService::Request & req, _FindColorBlobsService::Response & resp )
 	{
-		printf("Got imageSourcesCB\n");
-		if( !image_sources_mutex_.try_lock() ) return;
+		if( !image_sources_mutex_.try_lock() || images_cache_.size() == 0 ) return false;
 
-		std::vector<base_libs::ComponentImage> images;
-		color_blob_finder::ColorBlobArray::Ptr color_blobs( new color_blob_finder::ColorBlobArray );
+		//color_blob_finder::ColorBlobArray::Ptr color_blobs( new color_blob_finder::ColorBlobArray );
 
-		unsigned int total_images = image_array_msg1->images.size() + image_array_msg2->images.size();
-		images.reserve( total_images );
-
-		printf("Anticipating %u images\n", total_images );
-
-		for ( _DimType i = 0; i < image_array_msg1->images.size(); ++i )
-		{
-			images.push_back( image_array_msg1->images[i] );
-		}
-		for ( _DimType i = 0; i < image_array_msg2->images.size(); ++i )
-		{
-			images.push_back( image_array_msg2->images[i] );
-		}
-
-		if( output_image_ ) cvFillImage( output_image_, 0.0 );
+		const static OutputColorRGB::_CvColorType background_color_vec = OutputColorRGB::getColorRGB( -1 );
+		const static CvScalar background_color = cvScalar( background_color_vec[0], background_color_vec[1], background_color_vec[2] );
+		if( output_image_ ) cvSet( output_image_, background_color );//cvFillImage( output_image_, 0.0 );
 
 		// for each image
-		for ( _DimType i = 0; i < images.size(); ++i )
+		for ( _DimType i = 0; i < images_cache_.size(); ++i )
 		{
+			// look at the color ID of each image; only process it if it matches one of the colors in the request
+			bool enable_current_color = false;
+			for( _DimType j = 0; j < req.colors.size(); ++j )
+			{
+				if( images_cache_[i].id == req.colors[j] )
+				{
+					enable_current_color = true;
+					break;
+				}
+			}
+
+			if( !enable_current_color ) continue;
+
 			/*const sensor_msgs::Image::ConstPtr current_image_msg_ptr ( &images[i].image );
 			const IplImage current_image = IplImage ( cv_bridge::toCvShare( current_image_msg_ptr )->image );
 			const IplImage * current_image_ptr = &current_image;*/
 
-			cv_bridge_.fromImage( images[i].image );
+			cv_bridge_.fromImage( images_cache_[i].image );
 			const IplImage * current_image_ptr = cv_bridge_.toIpl();
 
 			std::vector<_Contour> contours;
-			processImage( current_image_ptr, contours );
-
-			color_blob_finder::ColorBlob color_blob;
-			color_blob.color_id = images[i].id;
+			processImage( current_image_ptr, contours, images_cache_[i].id );
 
 			// for each contour
 			for ( _DimType j = 0; j < contours.size(); ++j )
 			{
+				color_blob_finder::ColorBlob color_blob;
+				color_blob.color_id = images_cache_[i].id;
+
 				color_blob_finder::Contour contour;
-				contour.header = images[i].image.header;
+				contour.header = images_cache_[i].image.header;
 				// for each point in the contour
 				for ( _DimType k = 0; k < contours[j].size(); ++k )
 				{
@@ -176,15 +188,42 @@ public:
 					contour.points.push_back( point );
 				}
 				color_blob.contour = contour;
+				resp.blobs.push_back( color_blob );
 			}
-			color_blobs->blobs.push_back( color_blob );
 		}
+
+		new_image_ = false;
+
+		image_sources_mutex_.unlock();
 
 		output_image_pub_.publish( sensor_msgs::CvBridge::cvToImgMsg( output_image_ ) );
 
-		color_blob_array_pub_.publish( color_blobs );
+		return true;
+	}
 
-		printf("unlocking image_sources mutex\n");
+	void imageSourcesCB( const _ImageArrayMessageType::ConstPtr & image_array_msg1,
+	                     const _ImageArrayMessageType::ConstPtr & image_array_msg2 )
+	{
+		if( !image_sources_mutex_.try_lock() ) return;
+
+		unsigned int total_images = image_array_msg1->images.size() + image_array_msg2->images.size();
+
+		new_image_ = total_images > 0;
+
+		images_cache_.clear();
+		images_cache_.reserve( total_images );
+
+		for ( _DimType i = 0; i < image_array_msg1->images.size(); ++i )
+		{
+			images_cache_.push_back( image_array_msg1->images[i] );
+		}
+		for ( _DimType i = 0; i < image_array_msg2->images.size(); ++i )
+		{
+			images_cache_.push_back( image_array_msg2->images[i] );
+		}
+
+		printf( "Updated image cache with %d images\n", total_images );
+
 		image_sources_mutex_.unlock();
 	}
 
@@ -199,7 +238,7 @@ public:
 		reconfigure_params_ = config;
 	}
 
-	void processImage( const IplImage * ipl_image, std::vector<_Contour> & contours )
+	void processImage( const IplImage * ipl_image, std::vector<_Contour> & contours, unsigned int color_id )
 	{
 		if ( !output_image_ ) output_image_ = cvCreateImage( cvSize( ipl_image->width,
 		                                                             ipl_image->height ),
@@ -216,14 +255,14 @@ public:
 		printf( "Found %zu contours\n",
 		        contours.size() );
 
+		const OutputColorRGB::_CvColorType & current_color = OutputColorRGB::getColorRGB( color_id );
+
 		cv::Mat output_image_mat( output_image_ );
 		cv::drawContours( output_image_mat,
 		                  contours,
 		                  -1,
-		                  cv::Scalar( 0,
-		                              255,
-		                              0 ),
-		                  2 );
+		                  cvScalar( current_color[0], current_color[1], current_color[2] ),
+		                  1 );
 	}
 };
 
