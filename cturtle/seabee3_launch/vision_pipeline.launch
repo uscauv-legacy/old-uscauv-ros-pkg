@@ -1,0 +1,38 @@
+<launch>
+	<arg name="show_reconfigure" default="true" />
+	<arg name="show_image" default="true" />
+
+	<include file="$(find image_server)/launch/image_server.launch" >
+		<arg name="show_reconfigure" value="$(arg show_reconfigure)" />
+		<arg name="show_image" value="$(arg show_image)" />
+		<arg name="name_postfix" value="_front" />
+		<arg name="width" value="320" />
+	</include>
+
+	<include file="$(find image_server)/launch/image_server.launch" >
+		<arg name="show_reconfigure" value="$(arg show_reconfigure)" />
+		<arg name="show_image" value="$(arg show_image)" />
+		<arg name="name_postfix" value="_down" />
+		<arg name="width" value="320" />
+	</include>
+
+	<include file="$(find color_classifier)/launch/color_classifier.launch" >
+		<arg name="show_reconfigure" value="$(arg show_reconfigure)" />
+		<arg name="show_image" value="$(arg show_image)" />
+		<arg name="name_postfix" value="_front" />
+		<arg name="image" value="/image_server_front/output_image" />
+	</include>
+
+	<include file="$(find color_classifier)/launch/color_classifier.launch" >
+		<arg name="show_reconfigure" value="$(arg show_reconfigure)" />
+		<arg name="show_image" value="$(arg show_image)" />
+		<arg name="name_postfix" value="_down" />
+		<arg name="image" value="/image_server_down/output_image" />
+	</include>
+
+	<include file="$(find color_blob_finder)/launch/color_blob_finder.launch" >
+		<arg name="show_image" value="$(arg show_image)" />
+		<arg name="source1" value="/color_classifier_front/images" />
+		<arg name="source2" value="/color_classifier_down/images" />
+	</include>
+</launch>
