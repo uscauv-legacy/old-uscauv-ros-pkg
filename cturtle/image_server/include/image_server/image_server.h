@@ -74,7 +74,7 @@ public:
 	{
 		if ( image_loader_.images_loaded_ )
 		{
-			if(current_frame_ < image_loader_.image_cache_.size() )
+			if ( current_frame_ < image_loader_.image_cache_.size() )
 			{
 				ROS_INFO( "Publishing image %d", current_frame_ );
 				publishCvImage( image_loader_.image_cache_[current_frame_] );
@@ -116,7 +116,7 @@ public:
 		{
 			--current_frame_;
 		}
-		else if( loop_ )
+		else if ( loop_ )
 		{
 			current_frame_ = image_loader_.image_cache_.size() - 1;
 		}
@@ -126,7 +126,7 @@ public:
 	                    uint32_t level )
 	{
 		loop_ = config.loop;
-		if( !reconfigure_initialized_ ) return;
+		if ( !reconfigure_initialized_ ) return;
 
 		auto_advance_ = config.auto_advance;
 		if ( auto_advance_ )
