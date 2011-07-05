@@ -50,7 +50,6 @@
 // for CvBridge
 #include <cv_bridge/CvBridge.h>
 #include <cv_bridge/cv_bridge.h>
-#include <color_defs/colors.h>
 
 /* msgs */
 #include <base_libs/ComponentImageArray.h>
@@ -64,12 +63,13 @@
 
 /* others */
 #include <base_node/base_node.h>
-// for a ton of boost-related content
+#include <color_defs/colors.h>
+#include <color_blob_finder/contour.h>
+// for mutex
 #include <boost/thread.hpp>
 
 typedef color_blob_finder::ColorBlobFinderConfig _ReconfigureType;
 typedef BaseNode<_ReconfigureType> _BaseNode;
-typedef std::vector<cv::Point> _Contour;
 typedef unsigned int _DimType;
 typedef color_blob_finder::FindColorBlobs _FindColorBlobsService;
 
@@ -112,7 +112,7 @@ public:
 			                 source2_sub_( nh_local_,
 			                               "source2",
 			                               1 ),
-			                 sync_( _SyncPolicy( 2 ),
+			                 sync_( _SyncPolicy( 10 ),
 			                        source1_sub_,
 			                        source2_sub_ ),
 			                 output_image_( NULL ),
@@ -129,13 +129,13 @@ public:
 		find_color_blobs_svr_ = nh_local_.advertiseService( "find_color_blobs", &ColorBlobFinder::findColorBlobsCB, this );
 
 		initCfgParams();
-
-		cv::namedWindow( "depth_display", CV_WINDOW_AUTOSIZE );
 	}
 
 	bool findColorBlobsCB( _FindColorBlobsService::Request & req, _FindColorBlobsService::Response & resp )
 	{
+		printf( "Got service request\n" );
 		if( !image_sources_mutex_.try_lock() || images_cache_.size() == 0 ) return false;
+		//image_sources_mutex_.lock();
 
 		//color_blob_finder::ColorBlobArray::Ptr color_blobs( new color_blob_finder::ColorBlobArray );
 
@@ -204,7 +204,12 @@ public:
 	void imageSourcesCB( const _ImageArrayMessageType::ConstPtr & image_array_msg1,
 	                     const _ImageArrayMessageType::ConstPtr & image_array_msg2 )
 	{
-		if( !image_sources_mutex_.try_lock() ) return;
+		printf( "Got images\n" );
+		if( !image_sources_mutex_.try_lock() )
+		{
+			printf( "Couldn't get lock; dropping images\n" );
+			return;
+		}
 
 		unsigned int total_images = image_array_msg1->images.size() + image_array_msg2->images.size();
 
