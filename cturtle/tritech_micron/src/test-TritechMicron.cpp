@@ -2,6 +2,12 @@
 #include <iostream>
 #include <vector>
 
+
+void processScanline(float angle, std::vector<uint8_t> scanline)
+{
+  std::cout << "Got Scanline: " << angle << std::endl;
+}
+
 int main(int argc, char** argv)
 {
   if(argc != 2)
@@ -10,7 +16,9 @@ int main(int argc, char** argv)
     return -1;
   }
 
-  TritechMicron micron;
+  TritechMicron micron(false);
+
+  micron.registerScanLineCallback(std::bind(processScanline, std::placeholders::_1, std::placeholders::_2));
   if(!micron.connect(argv[1])) return -1;
 
   while(1) 

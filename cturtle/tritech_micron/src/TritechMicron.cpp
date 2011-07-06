@@ -30,7 +30,7 @@ using namespace tritech;
 TritechMicron::TritechMicron(bool debugMode) :
   hasHeardMtAlive(false),
   hasHeardMtVersionData(false),
-  itsDebugMode(true)
+  itsDebugMode(debugMode)
 { resetMessage(); }
 
 // ######################################################################
@@ -82,9 +82,8 @@ bool TritechMicron::connect(std::string const& devName)
 }
 
 // ######################################################################
-void TritechMicron::registerScanLineCallback(std::function<void()>)
-{
-}
+void TritechMicron::registerScanLineCallback(std::function<void(float, std::vector<uint8_t>)> callback)
+{ itsScanLineCallback = callback; }
 
 // ######################################################################
 void TritechMicron::serialThreadMethod()
@@ -171,13 +170,6 @@ void TritechMicron::processByte(uint8_t byte)
 }
 
 // ######################################################################
-std::map<float, std::vector<uint8_t>> TritechMicron::scanLines()
-{
-  boost::lock_guard<boost::mutex> lock(itsMtx);
-  return itsScanLines;
-}
-
-// ######################################################################
 void TritechMicron::processMessage(tritech::Message msg)
 {
   if(msg.type == mtVersionData)
@@ -201,10 +193,8 @@ void TritechMicron::processMessage(tritech::Message msg)
     mtHeadDataMsg parsedMsg(msg);
     if(itsRunning) itsSerial.writeVector(mtSendDataMsg);
 
-    {
-      boost::lock_guard<boost::mutex> lock(itsMtx);
-      itsScanLines[parsedMsg.bearing_degrees] = parsedMsg.scanLine;
-    }
+    if(itsScanLineCallback)
+      itsScanLineCallback(parsedMsg.bearing_degrees, parsedMsg.scanLine);
 
     if(itsDebugMode) std::cout << "Received mtHeadData Message" << std::endl;
     if(itsDebugMode) parsedMsg.print(); 
