@@ -1,0 +1,19 @@
+<launch>
+	<arg name="name_prefix" default="tritech_micron" />
+	<arg name="name_postfix" default="" />
+	<arg name="simulate" default="false" />
+	
+	<arg name="name" value="$(arg name_prefix)$(arg name_postfix)" />
+
+	<node pkg="tritech_micron" type="tritech_micron_node" name="$(arg name)" output="screen" args="_simulate:=$(arg simulate)" >
+	</node>
+	
+	<node pkg="tf" type="static_transform_publisher" name="seabee3_base_link_to_tritech_micron" output="screen"
+	args="0.5 0 0 0 0 0 /seabee3/base_link /tritech_micron 100" />
+	
+	<arg name="show_reconfigure" default="true" />
+	<include file="$(find seabee3_launch)/dynamic_reconfigure.launch" >
+		<arg name="enable" value="$(arg show_reconfigure)" />
+		<arg name="name" value="$(arg name)" />
+	</include>
+</launch>

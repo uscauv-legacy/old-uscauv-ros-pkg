@@ -84,6 +84,8 @@ protected:
 	bool reconfigure_initialized_;
 	_BaseReconfigureType initial_config_params_;
 	uint32_t initial_config_level_;
+	_BaseReconfigureType reconfigure_params_;
+	uint32_t reconfigure_level_;
 
 	/* constructor params */
 	ros::NodeHandle nh_local_;
@@ -176,8 +178,8 @@ protected:
 private:
 	void reconfigureCB_0( _BaseReconfigureType &config, uint32_t level )
 	{
-		initial_config_params_ = config;
-		initial_config_level_ = level;
+		reconfigure_params_ = config;
+		reconfigure_level_ = level;
 		reconfigureCB( config, level );
 		reconfigure_initialized_ = true;
 	}

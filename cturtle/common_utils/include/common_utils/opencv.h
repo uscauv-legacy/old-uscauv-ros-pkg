@@ -63,11 +63,12 @@ namespace opencv_utils
 
 	static void publishCvImage( const IplImage * ipl_img, image_transport::Publisher * img_pub, sensor_msgs::CvBridge * bridge = NULL )
 	{
-		static sensor_msgs::CvBridge * temp_bridge = new sensor_msgs::CvBridge();
+		sensor_msgs::CvBridge * temp_bridge = new sensor_msgs::CvBridge();
 		if ( !bridge ) bridge = temp_bridge;
 
 		sensor_msgs::Image::Ptr image_message;
 		image_message = bridge->cvToImgMsg( ipl_img );
+		image_message->header.stamp = ros::Time::now();
 
 		img_pub->publish( image_message );
 	}

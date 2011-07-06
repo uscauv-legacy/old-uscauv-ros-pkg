@@ -1,0 +1,2 @@
+rosbuild_add_executable( tritech_micron_node tritech_micron_node.cpp )
+rosbuild_add_executable( scan_line_converter_node scan_line_converter_node.cpp )
