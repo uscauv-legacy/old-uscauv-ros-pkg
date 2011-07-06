@@ -22,6 +22,9 @@ class SerialPort
 
     bool connect(std::string dev, speed_t baudRate = B115200);
 
+    //! Is this serial port currently connected
+    bool connected();
+
     int writeVector(std::vector<uint8_t> const& bytes);
     std::vector<uint8_t> read(size_t bytes);
 

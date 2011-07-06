@@ -42,7 +42,8 @@ TritechMicron::~TritechMicron()
 }
 
 // ######################################################################
-bool TritechMicron::connect(std::string const& devName)
+bool TritechMicron::connect(std::string const& devName,
+    uint16_t nBins, float range, float VOS, mtHeadCommandMsg::stepAngleSize_t stepAngleSize)
 {
   if(itsDebugMode) std::cout << "Connecting...";
 
@@ -71,9 +72,8 @@ bool TritechMicron::connect(std::string const& devName)
   }
   if(itsDebugMode) std::cout << "----------Received mtVersionData----------" <<std::endl;
 
-  mtHeadCommandMsg headCommandMsg;
-  headCommandMsg.range = 20;
-  headCommandMsg.stepAngleSize = mtHeadCommandMsg::VeryLow;
+  // Setup the sonar configuration
+  mtHeadCommandMsg headCommandMsg(nBins, range, VOS, stepAngleSize);
   itsSerial.writeVector(headCommandMsg.construct());
 
   while(1)

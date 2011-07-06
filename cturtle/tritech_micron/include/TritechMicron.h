@@ -26,8 +26,8 @@
 #include <vector>
 #include <stdint.h>
 #include "Serial.h"
-//#include <thread>
 #include <boost/thread.hpp>
+#include "../include/MessageTypes.h"
 
 class TritechMicron
 {
@@ -36,8 +36,16 @@ class TritechMicron
 
     ~TritechMicron();
 
-    //! Connect to a Sonar device
-    bool connect(std::string const& devName);
+    //! Connect to a Sonar device, and configure it
+    /*! @param nBins The desired number of bins in each scanline
+        @param range The desired range (in meters)
+        @param VOS The velocity of sound in the current medium
+        @param stepAngleSize The angular resolution of each scan */
+    bool connect(std::string const& devName,
+        uint16_t nBins = 200,
+        float range = 10,
+        float VOS = 1500,
+        tritech::mtHeadCommandMsg::stepAngleSize_t stepAngleSize = tritech::mtHeadCommandMsg::Low);
 
     void resetMessage();
 

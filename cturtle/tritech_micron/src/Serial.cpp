@@ -14,6 +14,9 @@ SerialPort::~SerialPort()
 // ######################################################################
 bool SerialPort::connect(std::string dev, speed_t baudRate)
 {
+  if(itsFileDescriptor != -1) close(itsFileDescriptor);
+  itsFileDescriptor = -1;
+
   struct termios toptions;
 
   itsFileDescriptor = open(dev.c_str(), O_RDWR | O_NOCTTY | O_NDELAY);
@@ -25,6 +28,8 @@ bool SerialPort::connect(std::string dev, speed_t baudRate)
 
   if (tcgetattr(itsFileDescriptor, &toptions) < 0) 
   {
+    if(itsFileDescriptor != -1) close(itsFileDescriptor);
+    itsFileDescriptor = -1;
     perror("init_serialport: Couldn't get term attributes");
     return -1;
   }
@@ -52,6 +57,8 @@ bool SerialPort::connect(std::string dev, speed_t baudRate)
 
   if(tcsetattr(itsFileDescriptor, TCSANOW, &toptions) < 0) 
   {
+    if(itsFileDescriptor != -1) close(itsFileDescriptor);
+    itsFileDescriptor = -1;
     perror("init_serialport: Couldn't set term attributes");
     return -1;
   }
@@ -59,19 +66,27 @@ bool SerialPort::connect(std::string dev, speed_t baudRate)
 }
 
 // ######################################################################
+bool SerialPort::connected()
+{ return itsFileDescriptor != -1; }
+
+// ######################################################################
 int SerialPort::writeVector(std::vector<uint8_t> const& bytes)
 {
+  if(itsFileDescriptor == -1)
+  { std::cerr << "Cannot write to closed serial port" << std::endl; return -1; }
+
   int bytesWritten = ::write(itsFileDescriptor, &bytes[0], bytes.size());
   if(bytesWritten != bytes.size())
     std::cerr << "Error writing to serial port: " << strerror(errno) << std::endl;
   return bytesWritten;
 }
 
-
-
 // ######################################################################
 std::vector<uint8_t> SerialPort::read(size_t bytes)
 {
+  if(itsFileDescriptor == -1)
+  { std::cerr << "Cannot read from closed serial port" << std::endl; return std::vector<uint8_t>(); }
+
   std::vector<uint8_t> ret(bytes);
   int bytesRead = ::read(itsFileDescriptor, &ret[0], bytes);
 
@@ -83,3 +98,4 @@ std::vector<uint8_t> SerialPort::read(size_t bytes)
   ret.resize(bytesRead);
   return ret;
 }
+
