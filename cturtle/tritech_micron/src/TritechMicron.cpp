@@ -162,7 +162,7 @@ void TritechMicron::processByte(uint8_t byte)
       }
       else
       {
-        std::cerr << "Message finished, but no LF detected!" << std::endl;
+        if(itsDebugMode) std::cout << "Message finished, but no LF detected!" << std::endl;
         resetMessage();
         return;
       }
