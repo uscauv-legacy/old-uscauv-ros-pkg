@@ -47,7 +47,8 @@ class TritechMicron
         infrequently as possible */
     std::map<float, std::vector<uint8_t>> scanLines();
 
-    void registerScanLineCallback(std::function<void(float, std::vector<uint8_t>)> callback);
+    void registerScanLineCallback(
+        std::function<void(float/*angle*/, float/*meters per bin*/, std::vector<uint8_t>/*scanline*/)>);
 
   private:
 
@@ -95,7 +96,7 @@ class TritechMicron
     //! Should we be printing debugging information to the console? Warning, this is very noisy and slow.
     bool itsDebugMode;
 
-    std::function<void(float, std::vector<uint8_t>)> itsScanLineCallback;
+    std::function<void(float/*angle*/, float/*meters per bin*/, std::vector<uint8_t>/*scanline*/)> itsScanLineCallback;
 };
 
 #endif // TRITECHMICRON_TRITECHMICRON_H

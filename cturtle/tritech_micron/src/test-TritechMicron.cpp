@@ -3,9 +3,9 @@
 #include <vector>
 
 
-void processScanline(float angle, std::vector<uint8_t> scanline)
+void processScanline(float angle, float metersPerBin, std::vector<uint8_t> scanline)
 {
-  std::cout << "Got Scanline: " << angle << std::endl;
+  std::cout << "Got Scanline: " << angle << " " << scanline.size() << " bins @ " << metersPerBin << " meters/bin" << std::endl;
 }
 
 int main(int argc, char** argv)
@@ -16,9 +16,14 @@ int main(int argc, char** argv)
     return -1;
   }
 
-  TritechMicron micron(false);
+//  tritech::mtHeadCommandMsg msg;
+//  for(uint8_t b : msg.construct())
+//    std::cout << std::hex << int(b) << " ";
+//  std::cout << std::endl;
 
-  micron.registerScanLineCallback(std::bind(processScanline, std::placeholders::_1, std::placeholders::_2));
+  TritechMicron micron(true);
+
+  micron.registerScanLineCallback(std::bind(processScanline, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
   if(!micron.connect(argv[1])) return -1;
 
   while(1) 

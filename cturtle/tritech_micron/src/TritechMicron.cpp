@@ -55,6 +55,7 @@ bool TritechMicron::connect(std::string const& devName)
   if(itsDebugMode) std::cout << "Connected" << std::endl;
 
   sleep(1);
+  itsSerial.writeVector(mtRebootMsg);
 
   itsRunning = true;
   itsSerialThread = boost::thread(std::bind(&TritechMicron::serialThreadMethod, this));
@@ -65,12 +66,14 @@ bool TritechMicron::connect(std::string const& devName)
 
   while(!hasHeardMtVersionData)
   {
-    itsSerial.writeVector(mtSendDataMsg);
+    itsSerial.writeVector(mtSendVersionMsg);
     sleep(1);
   }
   if(itsDebugMode) std::cout << "----------Received mtVersionData----------" <<std::endl;
 
-  itsSerial.writeVector(mtHeadCommandMsg);
+  mtHeadCommandMsg headCommandMsg;
+  headCommandMsg.range = 20;
+  itsSerial.writeVector(headCommandMsg.construct());
 
   while(1)
   {
@@ -82,7 +85,7 @@ bool TritechMicron::connect(std::string const& devName)
 }
 
 // ######################################################################
-void TritechMicron::registerScanLineCallback(std::function<void(float, std::vector<uint8_t>)> callback)
+void TritechMicron::registerScanLineCallback(std::function<void(float, float, std::vector<uint8_t>)> callback)
 { itsScanLineCallback = callback; }
 
 // ######################################################################
@@ -124,7 +127,7 @@ void TritechMicron::processByte(uint8_t byte)
       return;
     }
     else
-      if(itsDebugMode) std::cout << "bogus byte: " << std::hex << int(byte) << std::endl;
+      if(itsDebugMode) std::cout << "bogus byte: " << std::hex << int(byte) << std::dec << std::endl;
 
 
   itsRawMsg.push_back(byte);
@@ -193,19 +196,25 @@ void TritechMicron::processMessage(tritech::Message msg)
     mtHeadDataMsg parsedMsg(msg);
     if(itsRunning) itsSerial.writeVector(mtSendDataMsg);
 
+    float range_meters;
+    switch(parsedMsg.rangeUnits)
+    {
+      case mtHeadDataMsg::meters:  range_meters = parsedMsg.rangeScale;          break;
+      case mtHeadDataMsg::feet:    range_meters = parsedMsg.rangeScale * 0.3048; break;
+      case mtHeadDataMsg::fathoms: range_meters = parsedMsg.rangeScale * 1.8288; break;
+      case mtHeadDataMsg::yards:   range_meters = parsedMsg.rangeScale * 0.9144; break;
+    }
+
+    float metersPerBin = range_meters / parsedMsg.scanLine.size();
     if(itsScanLineCallback)
-      itsScanLineCallback(parsedMsg.bearing_degrees, parsedMsg.scanLine);
+      itsScanLineCallback(parsedMsg.bearing_degrees, metersPerBin, parsedMsg.scanLine);
 
     if(itsDebugMode) std::cout << "Received mtHeadData Message" << std::endl;
     if(itsDebugMode) parsedMsg.print(); 
   }
   else if(msg.type == mtBBUserData)
-  {
-    if(itsDebugMode) std::cout << "Received mtBBUserData Message" << std::endl;
-  }
+  { if(itsDebugMode) std::cout << "Received mtBBUserData Message" << std::endl; }
   else
-  {
-    std::cerr << "Unhandled Message Type: " << msg.type << std::endl;
-  }
+  { std::cerr << "Unhandled Message Type: " << msg.type << std::endl; }
 }
 
