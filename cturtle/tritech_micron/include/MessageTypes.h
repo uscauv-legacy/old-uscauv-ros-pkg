@@ -216,7 +216,9 @@ namespace tritech
     float VOS;
 
     //! The size of each step of the sonar head
-    /*! Low:      1.8° 
+    /*! CrazyLow: 7.2° 
+        VeryLow:  3.6° 
+        Low:      1.8° 
         Medium:   0.9°
         High:     0.45°
         Ultimate: 0.225° */
