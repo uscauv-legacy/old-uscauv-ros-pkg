@@ -40,7 +40,7 @@ class TritechMicron
       ReadingData   = 2, //!< The header has been read, now we're just reading the data
     };
 
-    TritechMicron();
+    TritechMicron(bool debugMode = true);
     ~TritechMicron();
 
     bool connect(std::string const& devName);
@@ -70,6 +70,8 @@ class TritechMicron
     SerialPort itsSerial;
 
     bool itsRunning;
+
+    bool itsDebugMode;
 
 };
 

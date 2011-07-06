@@ -61,26 +61,10 @@ bool SerialPort::connect(std::string dev, speed_t baudRate)
 // ######################################################################
 int SerialPort::writeVector(std::vector<uint8_t> const& bytes)
 {
-  //int n = write(itsFileDescriptor, bytesBuffer, bytes.size());
-  //if(n != bytes.size())
-  //  std::cerr << "Error writing to serial port: " << strerror(errno) << std::endl;
-
-  //return n;
-  std::cout << "Writing Vector : ";
-  for(uint8_t byte : bytes)
-  {
-    write(itsFileDescriptor, &byte, 1);
-    std::cout << " " << std::hex << (int)byte;
-  }
-  std::cout << std::endl;
-
-  return bytes.size();
-
-
-//  int bytesWritten = ::write(itsFileDescriptor, &bytes[0], bytes.size());
-//  if(bytesWritten != bytes.size())
-//    std::cerr << "Error writing to serial port: " << strerror(errno) << std::endl;
-//  return bytesWritten;
+  int bytesWritten = ::write(itsFileDescriptor, &bytes[0], bytes.size());
+  if(bytesWritten != bytes.size())
+    std::cerr << "Error writing to serial port: " << strerror(errno) << std::endl;
+  return bytesWritten;
 }
 
 

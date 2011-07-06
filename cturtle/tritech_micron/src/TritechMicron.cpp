@@ -27,12 +27,11 @@
 using namespace tritech;
 
 // ######################################################################
-TritechMicron::TritechMicron() 
-{
-  bool hasHeardMtAlive = false;
-  bool hasHeardMtVersionData = false;
-  resetMessage(); 
-}
+TritechMicron::TritechMicron(bool debugMode) :
+  hasHeardMtAlive(false),
+  hasHeardMtVersionData(false),
+  itsDebugMode(true)
+{ resetMessage(); }
 
 // ######################################################################
 TritechMicron::~TritechMicron()
@@ -45,7 +44,7 @@ TritechMicron::~TritechMicron()
 // ######################################################################
 bool TritechMicron::connect(std::string const& devName)
 {
-  std::cout << "Connecting...";
+  if(itsDebugMode) std::cout << "Connecting...";
 
   bool connectionSuccess = itsSerial.connect(devName, B115200); 
   if(!connectionSuccess)
@@ -53,25 +52,23 @@ bool TritechMicron::connect(std::string const& devName)
     std::cerr << "Could not connect to serial port!" << std::endl;
     return false;
   }
-  std::cout << "Connected" << std::endl;
+  if(itsDebugMode) std::cout << "Connected" << std::endl;
 
   sleep(1);
 
-  auto start = std::chrono::monotonic_clock::now();
+  itsRunning = true;
+  itsSerialThread = boost::thread(std::bind(&TritechMicron::serialThreadMethod, this));
+
+  while(!hasHeardMtAlive) sleep(1);
+  if(itsDebugMode) std::cout << "----------Received mtAlive----------" <<std::endl;
+
+
   while(!hasHeardMtVersionData)
   {
-    // Send a new mtSendVersionMsg once a second
-    if(std::chrono::monotonic_clock::now()-start > std::chrono::seconds(1))
-    {
-      itsSerial.writeVector(mtSendVersionMsg);
-      start = std::chrono::monotonic_clock::now();
-    }
-
-    // Keep reading bytes from the serial port
-    std::vector<uint8_t> bytes = itsSerial.read(1);
-    if(bytes.size() > 0)
-      for(uint8_t const& byte : bytes) processByte(byte);
+    itsSerial.writeVector(mtSendDataMsg);
+    sleep(1);
   }
+  if(itsDebugMode) std::cout << "----------Received mtVersionData----------" <<std::endl;
 
   itsSerial.writeVector(mtHeadCommandMsg);
 
@@ -91,8 +88,10 @@ void TritechMicron::serialThreadMethod()
   {
     std::vector<uint8_t> bytes = itsSerial.read(1);
     if(bytes.size() > 0)
+    {
       for(uint8_t const& byte : bytes)
         processByte(byte);
+    }
     else { usleep(100000); }
   }
 }
@@ -121,9 +120,7 @@ void TritechMicron::processByte(uint8_t byte)
       return;
     }
     else
-    {
-      std::cout << "bogus byte: " << std::hex << int(byte) << std::endl;
-    }
+      if(itsDebugMode) std::cout << "bogus byte: " << std::hex << int(byte) << std::endl;
 
 
   itsRawMsg.push_back(byte);
@@ -140,7 +137,6 @@ void TritechMicron::processByte(uint8_t byte)
     if(itsRawMsg.size() == 11) { itsMsg.count  = byte; return; }
     if(itsRawMsg.size() == 12) 
     {
-      std::cout << "MsgType: " << int(byte) << std::endl;
       itsMsg.type = MessageType(byte);
       itsState = ReadingData;
       return; 
@@ -175,36 +171,29 @@ void TritechMicron::processMessage(tritech::Message msg)
   if(msg.type == mtVersionData)
   {
     mtVersionDataMsg parsedMsg(msg);
-    if(hasHeardMtVersionData == false)
-    {
-      std::cout << "Received mtVersionData Message" << std::endl;
-      parsedMsg.print(); 
-    }
     hasHeardMtVersionData = true;
+
+    if(itsDebugMode) std::cout << "Received mtVersionData Message" << std::endl;
+    if(itsDebugMode) parsedMsg.print(); 
   }
   else if(msg.type == mtAlive)
   {
     mtAliveMsg parsedMsg(msg);
-    if(hasHeardMtAlive == false)
-    {
-      std::cout << "Received mtAlive Message" << std::endl;
-      parsedMsg.print();
-      std::cout << "Msg bytes: [";
-      for(uint8_t b : msg.data)
-        std::cout << " 0x" << std::hex << int(b);
-      std::cout << " ]" << std::endl;
-    }
     hasHeardMtAlive = true;
+
+    if(itsDebugMode) std::cout << "Received mtAlive Message" << std::endl;
+    if(itsDebugMode) parsedMsg.print();
   }
   else if(msg.type == mtHeadData)
   {
     mtHeadDataMsg parsedMsg(msg);
-    parsedMsg.print(); 
-    std::cout << "Received mtHeadData Message" << std::endl;
+
+    if(itsDebugMode) std::cout << "Received mtHeadData Message" << std::endl;
+    if(itsDebugMode) parsedMsg.print(); 
   }
   else if(msg.type == mtBBUserData)
   {
-    std::cout << "Received mtBBUserData Message" << std::endl;
+    if(itsDebugMode) std::cout << "Received mtBBUserData Message" << std::endl;
   }
   else
   {
