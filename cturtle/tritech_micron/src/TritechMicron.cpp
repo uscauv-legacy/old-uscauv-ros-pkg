@@ -73,6 +73,7 @@ bool TritechMicron::connect(std::string const& devName)
 
   mtHeadCommandMsg headCommandMsg;
   headCommandMsg.range = 20;
+  headCommandMsg.stepAngleSize = mtHeadCommandMsg::VeryLow;
   itsSerial.writeVector(headCommandMsg.construct());
 
   while(1)

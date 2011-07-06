@@ -200,7 +200,7 @@ namespace tritech
   // ######################################################################
   struct mtHeadCommandMsg
   {
-    enum stepAngleSize_t {Low, Medium, High, Ultimate};
+    enum stepAngleSize_t {CrazyLow, VeryLow, Low, Medium, High, Ultimate};
 
     mtHeadCommandMsg(uint16_t _nBins = 200, float _range = 10, float _VOS = 1500, stepAngleSize_t _stepAngleSize = Low) :
       nBins(_nBins), range(_range), VOS(_VOS), stepAngleSize(_stepAngleSize)
@@ -239,10 +239,12 @@ namespace tritech
 
       switch(stepAngleSize)
       {
-        case Low:      msg[51] = 32; break;
-        case Medium:   msg[51] = 16; break;
-        case High:     msg[51] = 8;  break;
-        case Ultimate: msg[51] = 4;  break;
+        case CrazyLow: msg[51] = 128; break;
+        case VeryLow:  msg[51] = 64;  break;
+        case Low:      msg[51] = 32;  break;
+        case Medium:   msg[51] = 16;  break;
+        case High:     msg[51] = 8;   break;
+        case Ultimate: msg[51] = 4;   break;
       }
 
       msg[54] = nBins & 0x00FF;
