@@ -74,11 +74,16 @@ bool TritechMicron::connect(std::string const& devName)
 
   while(1)
   {
-  itsSerial.writeVector(mtSendDataMsg);
-  sleep(1);
+    itsSerial.writeVector(mtSendDataMsg);
+    sleep(1);
   }
 
   return true;
+}
+
+// ######################################################################
+void TritechMicron::registerScanLineCallback(std::function<void()>)
+{
 }
 
 // ######################################################################
@@ -166,6 +171,13 @@ void TritechMicron::processByte(uint8_t byte)
 }
 
 // ######################################################################
+std::map<float, std::vector<uint8_t>> TritechMicron::scanLines()
+{
+  boost::lock_guard<boost::mutex> lock(itsMtx);
+  return itsScanLines;
+}
+
+// ######################################################################
 void TritechMicron::processMessage(tritech::Message msg)
 {
   if(msg.type == mtVersionData)
@@ -187,6 +199,12 @@ void TritechMicron::processMessage(tritech::Message msg)
   else if(msg.type == mtHeadData)
   {
     mtHeadDataMsg parsedMsg(msg);
+    if(itsRunning) itsSerial.writeVector(mtSendDataMsg);
+
+    {
+      boost::lock_guard<boost::mutex> lock(itsMtx);
+      itsScanLines[parsedMsg.bearing_degrees] = parsedMsg.scanLine;
+    }
 
     if(itsDebugMode) std::cout << "Received mtHeadData Message" << std::endl;
     if(itsDebugMode) parsedMsg.print(); 

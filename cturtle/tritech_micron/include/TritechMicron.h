@@ -32,7 +32,38 @@
 class TritechMicron
 {
   public:
+    TritechMicron(bool debugMode = true);
 
+    ~TritechMicron();
+
+    //! Connect to a Sonar device
+    bool connect(std::string const& devName);
+
+    void resetMessage();
+
+    //! Get access to the scan lines that have been read by the sonar.
+    /*! Note that this method is thread safe and will lock the internal scan
+        line data structure, therefore one should call this method as
+        infrequently as possible */
+    std::map<float, std::vector<uint8_t>> scanLines();
+
+    void registerScanLineCallback(std::function<void()>);
+
+  private:
+
+    //! Process a single incoming byte (add it onto itsRawMsg, etc.)
+    void processByte(uint8_t byte);
+
+    //! Process an incoming message
+    void processMessage(tritech::Message msg);
+
+    //! The method being run by itsSerialThread
+    void serialThreadMethod();
+    
+    //! A thread that just spins and reads data from the serial port
+    boost::thread itsSerialThread;
+
+    //! Current state of the incoming protocol FSM
     enum StateType 
     {
       WaitingForAt  = 0, //!< Waiting for an @ to appear
@@ -40,39 +71,33 @@ class TritechMicron
       ReadingData   = 2, //!< The header has been read, now we're just reading the data
     };
 
-    TritechMicron(bool debugMode = true);
-    ~TritechMicron();
-
-    bool connect(std::string const& devName);
-
-    void processByte(uint8_t byte);
-
-    void processMessage(tritech::Message msg);
-
-    void resetMessage();
-
-
-  //private:
-    void serialThreadMethod();
-    boost::thread itsSerialThread;
+    //! The current state of the FSM controlling the parsing of the incoming protocol
     StateType itsState;
     
-    //! The current message begin read in
+    //! The current message buffer begin read in
     std::vector<uint8_t> itsRawMsg; 
 
+    //! The current incoming message begin constructed from itsRawMsg
     tritech::Message itsMsg;
 
     //! Have we ever heard an mtAlive message from the sonar? 
     bool hasHeardMtAlive;
 
+    //! Have we ever heard an mtVersionData from the sonar?
     bool hasHeardMtVersionData;
 
+    //! The actual serial port
     SerialPort itsSerial;
 
+    //! Are we currently running?
     bool itsRunning;
 
+    //! Should we be printing debugging information to the console? Warning, this is very noisy and slow.
     bool itsDebugMode;
 
+    std::map<float, std::vector<uint8_t>> itsScanLines;
+
+    boost::mutex itsMtx;
 };
 
 #endif // TRITECHMICRON_TRITECHMICRON_H
