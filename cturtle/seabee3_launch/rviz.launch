@@ -1,0 +1,14 @@
+<launch>
+	<arg name="enable" default="true" />
+	<arg name="use_config_file" default="false" />
+	<arg name="config_file" default="" />
+	
+	<group if="$(arg enable)" >
+		<group if="$(arg use_config_file)" >
+			<node pkg="rviz" type="rviz" name="rviz" output="screen" args="-d $(arg config_file)" />
+		</group>
+		<group unless="$(arg use_config_file)" >
+			<node pkg="rviz" type="rviz" name="rviz" output="screen" />
+		</group>
+	</group>
+</launch>

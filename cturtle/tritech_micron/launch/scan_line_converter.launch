@@ -1,10 +1,12 @@
 <launch>
 	<arg name="name_prefix" default="scan_line_converter" />
 	<arg name="name_postfix" default="" />
+	<arg name="scan_line" default="/tritech_micron/scan_line" />
+	<arg name="rate" default="10" />
 	
 	<arg name="name" value="$(arg name_prefix)$(arg name_postfix)" />
 
-	<node pkg="tritech_micron" type="scan_line_converter_node" name="$(arg name)" output="screen" args="~scan_line:=/tritech_micron/scan_line" >
+	<node pkg="tritech_micron" type="scan_line_converter_node" name="$(arg name)" output="screen" args="_rate:=$(arg rate) ~scan_line:=$(arg scan_line)" >
 	</node>
 	
 	<arg name="show_reconfigure" default="true" />

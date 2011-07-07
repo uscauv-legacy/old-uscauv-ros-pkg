@@ -81,13 +81,17 @@ public:
 		nh_local_.param( "num_bins", num_bins_, 200 );
 		nh_local_.param( "range", range_, 10.0 );
 		nh_local_.param( "velocity_of_sound", velocity_of_sound_, 1500.0 );
-		if( !simulate_ ) driver_ = new TritechMicronDriver( true );
 
-		driver_->registerScanLineCallback (std::bind( &TritechMicron::publish, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3 ) );
-		if( !driver_->connect( port_.c_str(), num_bins_, range_, velocity_of_sound_ ) )
+		if( !simulate_ )
 		{
-			ROS_ERROR( "Could not connect to device; simulating instead." );
-			simulate_ = true;
+			driver_ = new TritechMicronDriver( true );
+
+			driver_->registerScanLineCallback (std::bind( &TritechMicron::publish, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3 ) );
+			if( !driver_->connect( port_.c_str(), num_bins_, range_, velocity_of_sound_ ) )
+			{
+				ROS_ERROR( "Could not connect to device; simulating instead." );
+				simulate_ = true;
+			}
 		}
 	}
 
