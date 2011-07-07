@@ -40,7 +40,7 @@
 #include <common_utils/math.h>
 #include <tritech_micron/ScanLine.h>
 #include <tritech_micron/TritechMicronConfig.h>
-//#include <tritech_micron/TritechMicronDriver.h>
+#include <tritech_micron/tritech_micron_driver.h>
 
 typedef unsigned int _DimType;
 
@@ -57,20 +57,43 @@ class TritechMicron : public _BaseNode
 {
 public:
 	ros::Publisher scan_line_pub_;
-	std::string frame_id_;
-	bool simulate_;
 
+	/* params */
+	bool simulate_;
+	std::string frame_id_;
+	std::string port_;
+	int num_bins_;
+	double range_;
+	double velocity_of_sound_;
+
+	/* constructor params */
 	_AngleType scan_angle_;
 	ros::Time last_time_;
 
-	//TritechMicronDriver * driver_;
+	TritechMicronDriver * driver_;
 
-	TritechMicron( ros::NodeHandle & nh ) : _BaseNode( nh ), scan_angle_( 0 ), last_time_( ros::Time::now() )//, driver_( NULL )
+	TritechMicron( ros::NodeHandle & nh ) : _BaseNode( nh ), scan_angle_( 0 ), last_time_( ros::Time::now() ), driver_( NULL )
 	{
 		scan_line_pub_ = nh_local_.advertise<_ScanLineMsgType>( "scan_line", 1 );
 		nh_local_.param( "simulate", simulate_, false );
 		nh_local_.param( "frame_id", frame_id_, std::string( "/tritech_micron" ) );
-		//if( !simulate_ ) // construct driver
+		nh_local_.param( "port_", port_, std::string( "/dev/ttyS0" ) );
+		nh_local_.param( "num_bins", num_bins_, 200 );
+		nh_local_.param( "range", range_, 10.0 );
+		nh_local_.param( "velocity_of_sound", velocity_of_sound_, 1500.0 );
+		if( !simulate_ ) driver_ = new TritechMicronDriver( true );
+
+		driver_->registerScanLineCallback (std::bind( &TritechMicron::publish, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3 ) );
+		if( !driver_->connect( port_.c_str(), num_bins_, range_, velocity_of_sound_ ) )
+		{
+			ROS_ERROR( "Could not connect to device; simulating instead." );
+			simulate_ = true;
+		}
+	}
+
+	~TritechMicron()
+	{
+		if( driver_ ) delete driver_;
 	}
 
 	void publish( _AngleType scan_angle, _StepType bin_distance_step, _IntensityBinsRawType & intensity_bins )

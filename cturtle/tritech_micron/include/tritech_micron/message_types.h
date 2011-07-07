@@ -21,7 +21,7 @@
 #ifndef TRITECHMICRON_MESSAGETYPES_H
 #define TRITECHMICRON_MESSAGETYPES_H
 
-#include "TritechMicron.h"
+#include <tritech_micron/tritech_micron_driver.h>
 #include <iostream>
 #include <vector>
 #include <bitset>

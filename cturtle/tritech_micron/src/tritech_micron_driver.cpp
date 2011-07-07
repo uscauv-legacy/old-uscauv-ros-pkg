@@ -1,6 +1,6 @@
 // ######################################################################
 //
-//      TritechMicron - A protocol parser for Tritech Micron sonars.
+//      TritechMicronDriver - A protocol parser for Tritech Micron sonars.
 //      Copyright (C) 2011  Randolph Voorhies
 //
 //  This program is free software: you can redistribute it and/or modify
@@ -18,8 +18,8 @@
 //
 // ######################################################################
 
-#include "../include/TritechMicron.h"
-#include "../include/MessageTypes.h"
+#include <tritech_micron/tritech_micron_driver.h>
+#include <tritech_micron/message_types.h>
 #include <iostream>
 #include <algorithm>
 #include <chrono>
@@ -27,14 +27,14 @@
 using namespace tritech;
 
 // ######################################################################
-TritechMicron::TritechMicron(bool debugMode) :
+TritechMicronDriver::TritechMicronDriver(bool debugMode) :
   hasHeardMtAlive(false),
   hasHeardMtVersionData(false),
   itsDebugMode(debugMode)
 { resetMessage(); }
 
 // ######################################################################
-TritechMicron::~TritechMicron()
+TritechMicronDriver::~TritechMicronDriver()
 {
   itsRunning = false;
   if(itsSerialThread.joinable())
@@ -42,7 +42,7 @@ TritechMicron::~TritechMicron()
 }
 
 // ######################################################################
-bool TritechMicron::connect(std::string const& devName,
+bool TritechMicronDriver::connect(std::string const& devName,
     uint16_t nBins, float range, float VOS, mtHeadCommandMsg::stepAngleSize_t stepAngleSize)
 {
   if(itsDebugMode) std::cout << "Connecting...";
@@ -59,7 +59,7 @@ bool TritechMicron::connect(std::string const& devName,
   itsSerial.writeVector(mtRebootMsg);
 
   itsRunning = true;
-  itsSerialThread = boost::thread(std::bind(&TritechMicron::serialThreadMethod, this));
+  itsSerialThread = boost::thread(std::bind(&TritechMicronDriver::serialThreadMethod, this));
 
   while(!hasHeardMtAlive) sleep(1);
   if(itsDebugMode) std::cout << "----------Received mtAlive----------" <<std::endl;
@@ -86,26 +86,29 @@ bool TritechMicron::connect(std::string const& devName,
 }
 
 // ######################################################################
-void TritechMicron::registerScanLineCallback(std::function<void(float, float, std::vector<uint8_t>)> callback)
+void TritechMicronDriver::registerScanLineCallback(std::function<void(float, float, std::vector<uint8_t>)> callback)
 { itsScanLineCallback = callback; }
 
 // ######################################################################
-void TritechMicron::serialThreadMethod()
+void TritechMicronDriver::serialThreadMethod()
 {
   while(itsRunning)
   {
     std::vector<uint8_t> bytes = itsSerial.read(1);
     if(bytes.size() > 0)
     {
-      for(uint8_t const& byte : bytes)
-        processByte(byte);
+//      for(uint8_t const& byte : bytes)
+		for( unsigned int i = 0; i < bytes.size(); ++i )
+		{
+        	processByte(bytes[i]);
+		}
     }
     else { usleep(100000); }
   }
 }
 
 // ######################################################################
-void TritechMicron::resetMessage()
+void TritechMicronDriver::resetMessage()
 {
   itsMsg = Message();
   itsState = WaitingForAt;
@@ -113,7 +116,7 @@ void TritechMicron::resetMessage()
 }
 
 // ######################################################################
-void TritechMicron::processByte(uint8_t byte)
+void TritechMicronDriver::processByte(uint8_t byte)
 {
   if(itsState == WaitingForAt) 
     if(byte == '@')
@@ -174,7 +177,7 @@ void TritechMicron::processByte(uint8_t byte)
 }
 
 // ######################################################################
-void TritechMicron::processMessage(tritech::Message msg)
+void TritechMicronDriver::processMessage(tritech::Message msg)
 {
   if(msg.type == mtVersionData)
   {

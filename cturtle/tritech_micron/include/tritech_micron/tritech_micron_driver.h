@@ -1,6 +1,6 @@
 // ######################################################################
 //
-//      TritechMicron - A protocol parser for Tritech Micron sonars.
+//      TritechMicronDriver - A protocol parser for Tritech Micron sonars.
 //      Copyright (C) 2011  Randolph Voorhies
 //
 //  This program is free software: you can redistribute it and/or modify
@@ -21,20 +21,19 @@
 #ifndef TRITECHMICRON_TRITECHMICRON_H
 #define TRITECHMICRON_TRITECHMICRON_H
 
-#include "Constants.h"
-#include "MessageTypes.h"
+#include <tritech_micron/constants.h>
+#include <tritech_micron/message_types.h>
 #include <vector>
 #include <stdint.h>
-#include "Serial.h"
+#include <common_utils/serial.h>
 #include <boost/thread.hpp>
-#include "../include/MessageTypes.h"
 
-class TritechMicron
+class TritechMicronDriver
 {
   public:
-    TritechMicron(bool debugMode = true);
+    TritechMicronDriver(bool debugMode = true);
 
-    ~TritechMicron();
+    ~TritechMicronDriver();
 
     //! Connect to a Sonar device, and configure it
     /*! @param nBins The desired number of bins in each scanline

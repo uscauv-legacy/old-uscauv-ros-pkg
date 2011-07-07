@@ -1,4 +1,4 @@
-#include "../include/TritechMicron.h"
+#include <tritech_micron/tritech_micron_driver.h>
 #include <iostream>
 #include <vector>
 
@@ -21,7 +21,7 @@ int main(int argc, char** argv)
 //    std::cout << std::hex << int(b) << " ";
 //  std::cout << std::endl;
 
-  TritechMicron micron(true);
+  TritechMicronDriver micron(true);
 
   micron.registerScanLineCallback(std::bind(processScanline, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
   if(!micron.connect(argv[1])) return -1;
