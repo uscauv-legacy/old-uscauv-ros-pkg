@@ -35,34 +35,13 @@
 
 #include <image_server/image_server.h>
 
-void printUsage()
-{
-	printf( "\nUsage: image_server [ prefix start end digits ext rate loop ]\n" );
-}
-
 int main( int argc, char* argv[] )
 {
-	printf( "argc: %d", argc );
-	if ( argc < 2 )
-	{
-		printUsage();
-		return 0;
-	}
-
-	for ( int i = 1; i < argc; i++ )
-	{
-		if ( strcmp( argv[i], "-h" ) == 0 || strcmp( argv[i], "--help" ) == 0 )
-		{
-			printUsage();
-			return 0;
-		}
-	}
-
 	ros::init( argc, argv, "image_server" );
 	ros::NodeHandle nh ( "~" );
 
 	ImageServer image_server( nh );
-	image_server.spin( SpinModeId::LOOP_SPIN_ONCE, image_server.rate_ );
+	image_server.spin();
 
 	return 0;
 }

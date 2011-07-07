@@ -4,12 +4,13 @@
      color_blob_finder
 
   </description>
-  <author>Noah</author>
+  <author>Edward T. Kaszubski, Noah Olsman</author>
   <license>BSD</license>
   <review status="unreviewed" notes=""/>
   <url>http://ros.org/wiki/color_blob_finder</url>
   <depend package="base_libs"/>
   <depend package="message_filters"/>
+  <depend package="pluginlib"/>
 
   <export>
     <nodelet plugin="${prefix}/nodelet_plugins.xml" />

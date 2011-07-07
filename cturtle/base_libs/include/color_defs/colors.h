@@ -530,6 +530,11 @@ struct ThresholdedColor
 	__DataType threshold;
 	Vec<__DataType, __Dim__> variance;
 	bool enabled;
+
+	ThresholdedColor() : enabled( false )
+	{
+		//
+	}
 };
 
 #endif /* COLORS_H_ */

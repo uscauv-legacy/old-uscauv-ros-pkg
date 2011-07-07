@@ -4,7 +4,7 @@
      image_server
 
   </description>
-  <author>Rand Voorhies, Edward T. Kaszubski</author>
+  <author>Edward T. Kaszubski, Rand Voorhies</author>
   <license>BSD</license>
   <review status="unreviewed" notes=""/>
   <url>http://ros.org/wiki/image_server</url>

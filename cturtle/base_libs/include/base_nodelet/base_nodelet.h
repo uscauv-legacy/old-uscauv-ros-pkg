@@ -79,14 +79,14 @@ public:
 			else ROS_INFO( "No interrupt callback registered" );
 
 			ROS_INFO( "Stopping thread..." );
-			m_thread_->join();
+			if( m_thread_ ) m_thread_->join();
 			ROS_INFO( "Done stopping thread" );
 
 			ROS_INFO( "Deleting data..." );
-			delete data_;
+			if( data_ ) delete data_;
 			ROS_INFO( "Done deleting data" );
 		}
-		delete m_thread_;
+		if( m_thread_ ) delete m_thread_;
 		ROS_INFO( "Done shutting down base_nodelet" );
 	}
 

@@ -1,6 +1,6 @@
 /*******************************************************************************
  *
- *      color_classifier_nodelet
+ *      contour
  * 
  *      Copyright (c) 2011, Edward T. Kaszubski ( ekaszubski@gmail.com )
  *      All rights reserved.
@@ -15,7 +15,7 @@
  *        copyright notice, this list of conditions and the following disclaimer
  *        in the documentation and/or other materials provided with the
  *        distribution.
- *      * Neither the name of "color_classifier-RelWithDebInfo@color_classifier" nor the names of its
+ *      * Neither the name of "color_blob_finder-RelWithDebInfo@color_blob_finder" nor the names of its
  *        contributors may be used to endorse or promote products derived from
  *        this software without specific prior written permission.
  *      
@@ -33,42 +33,26 @@
  *
  *******************************************************************************/
 
-#include <base_nodelet/base_nodelet.h>
-#include <color_classifier/color_classifier.h>
-#include <thread>
+#ifndef CONTOUR_H_
+#define CONTOUR_H_
 
-typedef BaseNodelet<ColorClassifier> _BaseNodelet;
+#include <vector>
+#include <opencv/cv.h>
+#include <cxcore.h>
 
-namespace color_classifier
+#include <color_blob_finder/Contour.h>
+
+typedef std::vector<cv::Point> _Contour;
+typedef color_blob_finder::Contour _ContourMessage;
+
+void operator<< ( _Contour & contour, _ContourMessage & contour_msg )
 {
-	class ColorClassifierNodelet : public _BaseNodelet
-	{
-
-	public:
-		ColorClassifierNodelet() :
-			_BaseNodelet()
-		{
-			registerInterrupt( &ColorClassifierNodelet::interrupt, this );
-		}
-
-		void constructData()
-		{
-			data_ = new ColorClassifier( nh_local_ );
-		}
-
-		void spin()
-		{
-			if( data_ ) data_->spin();
-		}
-
-		void interrupt()
-		{
-			if( data_ ) data_->interrupt();
-		}
-	};
 
 }
 
-// Register the nodelet
-#include <pluginlib/class_list_macros.h>
-PLUGINLIB_DECLARE_CLASS(color_classifier, color_classifier_nodelet, color_classifier::ColorClassifierNodelet, nodelet::Nodelet )
+void operator<< ( _ContourMessage & contour_msg, _Contour & contour )
+{
+
+}
+
+#endif /* CONTOUR_H_ */

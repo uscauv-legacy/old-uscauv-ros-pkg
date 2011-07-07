@@ -42,7 +42,7 @@ int main( int argc, char ** argv )
 	ros::NodeHandle nh( "~" );
 
 	Trainer trainer( nh );
-	trainer.spin( SpinModeId::LOOP_SPIN_ONCE );
+	trainer.spin();
 
 	return 0;
 }

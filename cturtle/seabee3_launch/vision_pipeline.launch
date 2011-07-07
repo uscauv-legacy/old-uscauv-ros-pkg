@@ -1,22 +1,41 @@
 <launch>
+	<arg name="use_nodelets" default="false" />
+	<arg name="nodelet_manager_name" default="nodelet_manager" />
 	<arg name="show_reconfigure" default="true" />
 	<arg name="show_image" default="true" />
+	<arg name="use_image_servers" default="true" />
+	<arg name="image_servers_rate" default="10" />
+	<arg name="target_rate" value="15" />
 
-	<include file="$(find image_server)/launch/image_server.launch" >
-		<arg name="show_reconfigure" value="$(arg show_reconfigure)" />
-		<arg name="show_image" value="$(arg show_image)" />
-		<arg name="name_postfix" value="_front" />
-		<arg name="width" value="320" />
-	</include>
+	<group if="$(arg use_nodelets)" >
+		<include file="$(find seabee3_launch)/nodelet_manager.launch" >
+			<arg name="name" value="$(arg nodelet_manager_name)" />
+		</include>
+	</group>
 
-	<include file="$(find image_server)/launch/image_server.launch" >
-		<arg name="show_reconfigure" value="$(arg show_reconfigure)" />
-		<arg name="show_image" value="$(arg show_image)" />
-		<arg name="name_postfix" value="_down" />
-		<arg name="width" value="320" />
-	</include>
+	<group if="$(arg use_image_servers)" >
+		<include file="$(find image_server)/launch/image_server.launch" >
+			<arg name="rate" value="$(arg image_servers_rate)" />
+			<arg name="use_nodelets" value="$(arg use_nodelets)" />
+			<arg name="show_reconfigure" value="$(arg show_reconfigure)" />
+			<arg name="show_image" value="$(arg show_image)" />
+			<arg name="name_postfix" value="_front" />
+			<arg name="width" value="320" />
+		</include>
+
+		<include file="$(find image_server)/launch/image_server.launch" >
+			<arg name="rate" value="$(arg image_servers_rate)" />
+			<arg name="use_nodelets" value="$(arg use_nodelets)" />
+			<arg name="show_reconfigure" value="$(arg show_reconfigure)" />
+			<arg name="show_image" value="$(arg show_image)" />
+			<arg name="name_postfix" value="_down" />
+			<arg name="width" value="320" />
+		</include>
+	</group>
 
 	<include file="$(find color_classifier)/launch/color_classifier.launch" >
+		<arg name="rate" value="$(arg target_rate)" />
+		<arg name="use_nodelets" value="$(arg use_nodelets)" />
 		<arg name="show_reconfigure" value="$(arg show_reconfigure)" />
 		<arg name="show_image" value="$(arg show_image)" />
 		<arg name="name_postfix" value="_front" />
@@ -24,6 +43,8 @@
 	</include>
 
 	<include file="$(find color_classifier)/launch/color_classifier.launch" >
+		<arg name="rate" value="$(arg target_rate)" />
+		<arg name="use_nodelets" value="$(arg use_nodelets)" />
 		<arg name="show_reconfigure" value="$(arg show_reconfigure)" />
 		<arg name="show_image" value="$(arg show_image)" />
 		<arg name="name_postfix" value="_down" />
@@ -31,6 +52,8 @@
 	</include>
 
 	<include file="$(find color_blob_finder)/launch/color_blob_finder.launch" >
+		<arg name="rate" value="$(arg target_rate)" />
+		<arg name="use_nodelets" value="$(arg use_nodelets)" />
 		<arg name="show_image" value="$(arg show_image)" />
 		<arg name="source1" value="/color_classifier_front/images" />
 		<arg name="source2" value="/color_classifier_down/images" />

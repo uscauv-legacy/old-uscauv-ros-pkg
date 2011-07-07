@@ -37,7 +37,6 @@
 #include <image_server/image_server.h>
 #include <thread>
 
-typedef ImageServer _DataType;
 typedef BaseNodelet<ImageServer> _BaseNodelet;
 
 namespace image_server
@@ -59,7 +58,7 @@ namespace image_server
 
 		void spin()
 		{
-			if( data_ ) data_->spin( SpinModeId::LOOP_SPIN_ONCE, data_->rate_ );
+			if( data_ ) data_->spin();
 		}
 
 		void interrupt()

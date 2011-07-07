@@ -1,6 +1,6 @@
 /*******************************************************************************
  *
- *      color_classifier_nodelet
+ *      color_blob_finder_nodelet
  * 
  *      Copyright (c) 2011, Edward T. Kaszubski ( ekaszubski@gmail.com )
  *      All rights reserved.
@@ -15,7 +15,7 @@
  *        copyright notice, this list of conditions and the following disclaimer
  *        in the documentation and/or other materials provided with the
  *        distribution.
- *      * Neither the name of "color_classifier-RelWithDebInfo@color_classifier" nor the names of its
+ *      * Neither the name of "color_blob_finder-RelWithDebInfo@color_blob_finder" nor the names of its
  *        contributors may be used to endorse or promote products derived from
  *        this software without specific prior written permission.
  *      
@@ -34,26 +34,26 @@
  *******************************************************************************/
 
 #include <base_nodelet/base_nodelet.h>
-#include <color_classifier/color_classifier.h>
+#include <color_blob_finder/color_blob_finder.h>
 #include <thread>
 
-typedef BaseNodelet<ColorClassifier> _BaseNodelet;
+typedef BaseNodelet<ColorBlobFinder> _BaseNodelet;
 
-namespace color_classifier
+namespace color_blob_finder
 {
-	class ColorClassifierNodelet : public _BaseNodelet
+	class ColorBlobFinderNodelet : public _BaseNodelet
 	{
 
 	public:
-		ColorClassifierNodelet() :
+		ColorBlobFinderNodelet() :
 			_BaseNodelet()
 		{
-			registerInterrupt( &ColorClassifierNodelet::interrupt, this );
+			registerInterrupt( &ColorBlobFinderNodelet::interrupt, this );
 		}
 
 		void constructData()
 		{
-			data_ = new ColorClassifier( nh_local_ );
+			data_ = new ColorBlobFinder( nh_local_ );
 		}
 
 		void spin()
@@ -71,4 +71,4 @@ namespace color_classifier
 
 // Register the nodelet
 #include <pluginlib/class_list_macros.h>
-PLUGINLIB_DECLARE_CLASS(color_classifier, color_classifier_nodelet, color_classifier::ColorClassifierNodelet, nodelet::Nodelet )
+PLUGINLIB_DECLARE_CLASS(color_blob_finder, color_blob_finder_nodelet, color_blob_finder::ColorBlobFinderNodelet, nodelet::Nodelet )

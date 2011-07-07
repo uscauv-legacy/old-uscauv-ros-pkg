@@ -64,7 +64,7 @@ public:
 
 	virtual ~BaseImageProc()
 	{
-		//
+		this->image_mutex_.unlock();
 	}
 
 protected:
@@ -72,13 +72,17 @@ protected:
 	// called during serviceCB
 	virtual IplImage * processImage( IplImage * ipl_image, _ServiceRequest & req, _ServiceResponse & resp )
 	{
+		if( !this->running_ ) return ipl_image;
+
 		ROS_WARN( "Processed image in base class" );
 		return ipl_image;
 	}
 
 	bool serviceCB( _ServiceRequest & req, _ServiceResponse & resp )
 	{
-		IplImage * _ipl_image = NULL;
+		if( !this->running_ ) return false;
+		IplImage * new_image = NULL;
+		IplImage * result = NULL;
 
 		if( !this->image_mutex_.try_lock() ) return false;
 
@@ -93,12 +97,13 @@ protected:
 			this->new_image_ = false;
 
 			//IplImg is a more low-level open-cv image type
-			_ipl_image = this->image_bridge_.imgMsgToCv( this->image_msg_ );
+			new_image = this->image_bridge_.imgMsgToCv( this->image_msg_ );
 
 			// cv_img_ has the raw image data that should be analyzed
-			if ( this->reconfigure_initialized_ ) this->ipl_image_ = processImage( _ipl_image, req, resp );
+			if ( this->reconfigure_initialized_ ) result = processImage( new_image, req, resp );
 
-			if ( !this->ipl_image_ || ( this->ipl_image_->width == 0 && this->ipl_image_->height == 0 ) ) this->ipl_image_ = _ipl_image;
+			if ( result && result->width == 0 && result->height == 0 ) this->ipl_image_ = result;
+			else this->ipl_image_ = new_image;
 
 			// store the last response to save processing time
 			last_response_ = resp;
@@ -109,7 +114,7 @@ protected:
 		this->image_mutex_.unlock();
 
 		// notify ROS whether or not everything executed properly
-		return true;
+		return result;
 
 	}
 };
@@ -126,7 +131,7 @@ public:
 	}
 	virtual ~BaseImageProc()
 	{
-
+		this->image_mutex_.unlock();
 	}
 
 protected:
@@ -134,12 +139,14 @@ protected:
 	// called at the end of imageCB
 	virtual IplImage * processImage( IplImage * ipl_image )
 	{
+		if( !this->running_ ) return ipl_image;
 		ROS_WARN( "Processed image in base class" );
 		return ipl_image;
 	}
 
 	virtual void imageCB( const sensor_msgs::ImageConstPtr& image_msg )
 	{
+		if( !this->running_ ) return;
 		if ( !this->ignore_reconfigure_ && this->reconfigure_initialized_ )
 		{
 			this->new_image_ = true;

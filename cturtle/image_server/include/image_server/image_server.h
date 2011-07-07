@@ -46,23 +46,16 @@ class ImageServer: public BaseImageProc<_ReconfigureType>
 {
 private:
 	ImageLoader image_loader_;
-	bool loop_;
 
 public:
-	double rate_;
 	bool last_next_image_state_;
 	bool last_prev_image_state_;
-	bool auto_advance_;
 	unsigned int current_frame_;
 	unsigned int direction_;
 
 	ImageServer( ros::NodeHandle & nh ) :
-			BaseImageProc<_ReconfigureType>( nh ), image_loader_( nh_local_ ), loop_( false ), last_next_image_state_( false ), last_prev_image_state_( false ), auto_advance_( true ), current_frame_( 0 ), direction_( 0 )
+			BaseImageProc<_ReconfigureType>( nh ), image_loader_( nh_local_ ), last_next_image_state_( false ), last_prev_image_state_( false ), current_frame_( 0 ), direction_( 0 )
 	{
-		nh_local_.param( "rate",
-		                 rate_,
-		                 15.0 );
-
 		initCfgParams();
 	}
 
@@ -78,7 +71,7 @@ public:
 			{
 				ROS_INFO( "Publishing image %d", current_frame_ );
 				publishCvImage( image_loader_.image_cache_[current_frame_] );
-				if ( auto_advance_ )
+				if ( reconfigure_params_.auto_advance )
 				{
 					switch ( direction_ )
 					{
@@ -104,7 +97,7 @@ public:
 		{
 			++current_frame_;
 		}
-		else if ( loop_ )
+		else if ( reconfigure_params_.loop )
 		{
 			current_frame_ = 0;
 		}
@@ -116,7 +109,7 @@ public:
 		{
 			--current_frame_;
 		}
-		else if ( loop_ )
+		else if ( reconfigure_params_.loop )
 		{
 			current_frame_ = image_loader_.image_cache_.size() - 1;
 		}
@@ -125,11 +118,9 @@ public:
 	void reconfigureCB( _ReconfigureType &config,
 	                    uint32_t level )
 	{
-		loop_ = config.loop;
 		if ( !reconfigure_initialized_ ) return;
 
-		auto_advance_ = config.auto_advance;
-		if ( auto_advance_ )
+		if ( config.auto_advance )
 		{
 			if ( config.next_image && !config.prev_image ) direction_ = 0;
 			else if ( !config.next_image && config.prev_image ) direction_ = 1;

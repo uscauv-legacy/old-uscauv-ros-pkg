@@ -107,28 +107,33 @@ public:
 
 	virtual ~BaseImageProcCore()
 	{
-		//
+		image_mutex_.unlock();
+		camera_info_mutex_.unlock();
 	}
 
 protected:
 	virtual void imageCB( const sensor_msgs::ImageConstPtr& image_msg )
 	{
+		if( !this->running_ ) return;
 		new_image_ = true;
 	}
 
 	void publishCvImage( const cv::Mat & image_mat )
 	{
+		if( !this->running_ ) return;
 		opencv_utils::publishCvImage( image_mat, &output_image_pub_, &image_bridge_ );
 	}
 
 	void publishCvImage( const IplImage * ipl_image )
 	{
+		if( !this->running_ ) return;
 		opencv_utils::publishCvImage( ipl_image, &output_image_pub_, &image_bridge_ );
 	}
 
 private:
 	void imageCB_0( const sensor_msgs::ImageConstPtr& image_msg )
 	{
+		if( !this->running_ ) return;
 		ROS_DEBUG( "got image" );
 		if( !image_mutex_.try_lock() )
 		{
@@ -144,6 +149,7 @@ private:
 
 	void infoCB( const sensor_msgs::CameraInfoConstPtr& camera_info_msg )
 	{
+		if( !this->running_ ) return;
 		ROS_DEBUG( "got camera info" );
 		camera_info_mutex_.lock();
 

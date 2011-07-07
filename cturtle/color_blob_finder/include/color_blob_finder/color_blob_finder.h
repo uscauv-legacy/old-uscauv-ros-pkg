@@ -102,9 +102,6 @@ public:
 	std::vector<base_libs::ComponentImage> images_cache_;
 	bool new_image_;
 
-	/* dynamic reconfigure */
-	_ReconfigureType reconfigure_params_;
-
 	ColorBlobFinder( const ros::NodeHandle & nh ) :
 			_BaseNode( nh ), source1_sub_( nh_local_,
 			                               "source1",
@@ -129,6 +126,12 @@ public:
 		find_color_blobs_svr_ = nh_local_.advertiseService( "find_color_blobs", &ColorBlobFinder::findColorBlobsCB, this );
 
 		initCfgParams();
+	}
+
+	virtual ~ColorBlobFinder()
+	{
+		image_sources_mutex_.unlock();
+		if( output_image_ ) cvReleaseImage( &output_image_ );
 	}
 
 	bool findColorBlobsCB( _FindColorBlobsService::Request & req, _FindColorBlobsService::Response & resp )
@@ -230,17 +233,6 @@ public:
 		printf( "Updated image cache with %d images\n", total_images );
 
 		image_sources_mutex_.unlock();
-	}
-
-	virtual ~ColorBlobFinder()
-	{
-		if( output_image_ ) cvReleaseImage( &output_image_ );
-	}
-
-	void reconfigureCB( _ReconfigureType &config,
-	                    uint32_t level )
-	{
-		reconfigure_params_ = config;
 	}
 
 	void processImage( const IplImage * ipl_image, std::vector<_Contour> & contours, unsigned int color_id )

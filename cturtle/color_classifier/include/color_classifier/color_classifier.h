@@ -39,6 +39,9 @@
 /* msgs */
 #include <base_libs/ComponentImageArray.h>
 
+/* srvs */
+#include <color_classifier/SetEnabledColors.h>
+
 /* others */
 // for Mat
 #include <opencv/cv.h>
@@ -66,22 +69,25 @@ public:
 	/* pubs */
 	ros::Publisher images_pub_;
 
+	/* svrs */
+	ros::ServiceServer set_enabled_colors_svr_;
+
 	/* reconfigure params */
 	_ThresholdedColorArrayType target_colors_;
 	_IplImagePtrArrayType distance_images_;
 	_CvBridgeArrayType image_bridges_;
-	_ReconfigureType reconfigure_params_;
 
 	/* constructor params */
 	bool process_image_initialized_;
-	IplConvKernel * kernel_;
+	//IplConvKernel * kernel_;
 
 public:
 
 	ColorClassifier( ros::NodeHandle & nh ) :
-			BaseImageProc<_ReconfigureType>( nh ), process_image_initialized_( false ), kernel_( cvCreateStructuringElementEx( 6, 6, 3, 3, CV_SHAPE_ELLIPSE ) )
+			BaseImageProc<_ReconfigureType>( nh ), process_image_initialized_( false )//, kernel_( cvCreateStructuringElementEx( 6, 6, 3, 3, CV_SHAPE_ELLIPSE ) )
 	{
 		images_pub_ = nh_local_.advertise<base_libs::ComponentImageArray>( "images", 1 );
+		set_enabled_colors_svr_ = nh_local_.advertiseService( "set_enabled_colors", &ColorClassifier::setEnabledColorsCB, this );
 
 		initCfgParams();
 	}
@@ -93,16 +99,32 @@ public:
 			if( distance_images_[i] ) cvReleaseImage( &distance_images_[i] );
 		}
 
-		if( kernel_ ) cvReleaseStructuringElement( &kernel_ );
+		//if( kernel_ ) cvReleaseStructuringElement( &kernel_ );
+	}
+
+	bool setEnabledColorsCB( color_classifier::SetEnabledColors::Request & req, color_classifier::SetEnabledColors::Response & resp )
+	{
+
+		// disable everything
+		for( _DimType i = 0; i < OutputColorRGB::NUM_COLORS; ++i )
+		{
+			target_colors_[i].enabled = false;
+		}
+
+		// enable the colors in the request
+		for( _DimType i = 0; i < req.colors.size(); ++i )
+		{
+			target_colors_[req.colors[i]].enabled = true;
+		}
+
+		return true;
 	}
 
 	// virtual
 	void reconfigureCB( _ReconfigureType &config,
 	                    uint32_t level )
 	{
-		reconfigure_params_ = config;
-
-		target_colors_[OutputColorRGB::Id::red].enabled = config.red_filter_enabled;
+		//target_colors_[OutputColorRGB::Id::red].enabled = config.red_filter_enabled;
 		*target_colors_[OutputColorRGB::Id::red].color.i_ = config.red_hue;
 		*target_colors_[OutputColorRGB::Id::red].color.j_ = config.red_sat;
 		*target_colors_[OutputColorRGB::Id::red].color.k_ = config.red_val;
@@ -114,7 +136,7 @@ public:
 		*target_colors_[OutputColorRGB::Id::red].variance.j_ = config.red_sat_variance;
 		*target_colors_[OutputColorRGB::Id::red].variance.k_ = config.red_val_variance;
 
-		target_colors_[OutputColorRGB::Id::orange].enabled = config.orange_filter_enabled;
+		//target_colors_[OutputColorRGB::Id::orange].enabled = config.orange_filter_enabled;
 		*target_colors_[OutputColorRGB::Id::orange].color.i_ = config.orange_hue;
 		*target_colors_[OutputColorRGB::Id::orange].color.j_ = config.orange_sat;
 		*target_colors_[OutputColorRGB::Id::orange].color.k_ = config.orange_val;
@@ -126,7 +148,7 @@ public:
 		*target_colors_[OutputColorRGB::Id::orange].variance.j_ = config.orange_sat_variance;
 		*target_colors_[OutputColorRGB::Id::orange].variance.k_ = config.orange_val_variance;
 
-		target_colors_[OutputColorRGB::Id::yellow].enabled = config.yellow_filter_enabled;
+		//target_colors_[OutputColorRGB::Id::yellow].enabled = config.yellow_filter_enabled;
 		*target_colors_[OutputColorRGB::Id::yellow].color.i_ = config.yellow_hue;
 		*target_colors_[OutputColorRGB::Id::yellow].color.j_ = config.yellow_sat;
 		*target_colors_[OutputColorRGB::Id::yellow].color.k_ = config.yellow_val;
@@ -138,7 +160,7 @@ public:
 		*target_colors_[OutputColorRGB::Id::yellow].variance.j_ = config.yellow_sat_variance;
 		*target_colors_[OutputColorRGB::Id::yellow].variance.k_ = config.yellow_val_variance;
 
-		target_colors_[OutputColorRGB::Id::green].enabled = config.green_filter_enabled;
+		//target_colors_[OutputColorRGB::Id::green].enabled = config.green_filter_enabled;
 		*target_colors_[OutputColorRGB::Id::green].color.i_ = config.green_hue;
 		*target_colors_[OutputColorRGB::Id::green].color.j_ = config.green_sat;
 		*target_colors_[OutputColorRGB::Id::green].color.k_ = config.green_val;
@@ -150,7 +172,7 @@ public:
 		*target_colors_[OutputColorRGB::Id::green].variance.j_ = config.green_sat_variance;
 		*target_colors_[OutputColorRGB::Id::green].variance.k_ = config.green_val_variance;
 
-		target_colors_[OutputColorRGB::Id::blue].enabled = config.blue_filter_enabled;
+		//target_colors_[OutputColorRGB::Id::blue].enabled = config.blue_filter_enabled;
 		*target_colors_[OutputColorRGB::Id::blue].color.i_ = config.blue_hue;
 		*target_colors_[OutputColorRGB::Id::blue].color.j_ = config.blue_sat;
 		*target_colors_[OutputColorRGB::Id::blue].color.k_ = config.blue_val;
@@ -162,7 +184,7 @@ public:
 		*target_colors_[OutputColorRGB::Id::blue].variance.j_ = config.blue_sat_variance;
 		*target_colors_[OutputColorRGB::Id::blue].variance.k_ = config.blue_val_variance;
 
-		target_colors_[OutputColorRGB::Id::black].enabled = config.black_filter_enabled;
+		//target_colors_[OutputColorRGB::Id::black].enabled = config.black_filter_enabled;
 		*target_colors_[OutputColorRGB::Id::black].color.i_ = config.black_hue;
 		*target_colors_[OutputColorRGB::Id::black].color.j_ = config.black_sat;
 		*target_colors_[OutputColorRGB::Id::black].color.k_ = config.black_val;
@@ -174,7 +196,7 @@ public:
 		*target_colors_[OutputColorRGB::Id::black].variance.j_ = config.black_sat_variance;
 		*target_colors_[OutputColorRGB::Id::black].variance.k_ = config.black_val_variance;
 
-		target_colors_[OutputColorRGB::Id::white].enabled = config.white_filter_enabled;
+		//target_colors_[OutputColorRGB::Id::white].enabled = config.white_filter_enabled;
 		*target_colors_[OutputColorRGB::Id::white].color.i_ = config.white_hue;
 		*target_colors_[OutputColorRGB::Id::white].color.j_ = config.white_sat;
 		*target_colors_[OutputColorRGB::Id::white].color.k_ = config.white_val;
@@ -203,6 +225,17 @@ public:
 
 			process_image_initialized_ = true;
 		}
+
+		bool some_color_enabled = false;
+		for ( unsigned int i = 0; i < OutputColorRGB::NUM_COLORS; ++i )
+		{
+			if( target_colors_[i].enabled )
+			{
+				some_color_enabled = true;
+				break;
+			}
+		}
+		if( !some_color_enabled ) return ipl_img;
 
 		if ( reconfigure_params_.enable_meanshift )
 		{

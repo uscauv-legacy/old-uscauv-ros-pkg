@@ -42,6 +42,7 @@
 #include <dynamic_reconfigure/server.h>
 // for cfg code
 #include <base_node/../../cfg/cpp/base_libs/EmptyConfig.h>
+#include <boost/thread.hpp>
 
 // returns true if we're using a custom reconfigure type
 template<typename _BaseReconfigureType>
@@ -87,9 +88,11 @@ protected:
 	_BaseReconfigureType reconfigure_params_;
 	uint32_t reconfigure_level_;
 
+	/* params */
+	double rate_;
+
 	/* constructor params */
 	ros::NodeHandle nh_local_;
-	ros::AsyncSpinner spinner_;
 	ros::Rate * loop_rate_;
 	_DynamicReconfigureServerType * reconfigure_srv_;
 	bool ignore_reconfigure_;
@@ -97,9 +100,13 @@ protected:
 
 public:
 	BaseNode( const ros::NodeHandle & nh, const std::string & reconfigure_ns = "reconfigure", const uint & threads = 3 ) :
-		nh_local_( nh ), spinner_( threads ), loop_rate_( NULL ), reconfigure_srv_( NULL ), ignore_reconfigure_( !ReconfigureSettings<_BaseReconfigureType>::reconfigure_enabled ), running_( false )
+		nh_local_( nh ), loop_rate_( NULL ), reconfigure_srv_( NULL ), ignore_reconfigure_( !ReconfigureSettings<_BaseReconfigureType>::reconfigure_enabled ), running_( false )
 	{
 		ROS_INFO( "Setting up base node..." );
+
+		nh_local_.param( "rate", rate_, 10.0 );
+		loop_rate_ = new ros::Rate( rate_ );
+
 		reconfigure_initialized_ = ignore_reconfigure_;
 		if ( !ignore_reconfigure_ )
 		{
@@ -119,33 +126,32 @@ public:
 		{
 			interrupt();
 		}
+		if( loop_rate_ ) delete loop_rate_;
 		ROS_INFO( "Done shutting down base_node" );
 	}
 
-	virtual void spin( unsigned int mode = SpinModeId::SPIN, float frequency = 10.0 )
+	virtual void spin( unsigned int mode = SpinModeId::LOOP_SPIN_ONCE )
 	{
-		ROS_INFO( "Spinner starting up at %f Hz with mode %u...", frequency, mode );
+		ROS_INFO( "Spinner starting up at %f Hz with mode %u...", rate_, mode );
 
 		running_ = true;
-		if( loop_rate_ ) delete loop_rate_;
-		loop_rate_ = new ros::Rate( frequency );
 
 		if ( mode == SpinModeId::SPIN )
 		{
-			spinner_.start();
+			//
 		}
 		else if ( mode == SpinModeId::LOOP_SPIN_ONCE )
 		{
-			//
+			while ( ros::ok() && running_ )
+			{
+				spinOnce();
+				ros::spinOnce();
+				loop_rate_->sleep();
+			}
 		}
 		else ROS_WARN( "Invalid spin mode selected." );
 
-		while ( ros::ok() && running_ )
-		{
-			spinOnce();
-			ros::spinOnce();
-			loop_rate_->sleep();
-		}
+		ROS_INFO( "Leaving spin()" );
 	}
 
 	virtual void spinOnce()
@@ -157,7 +163,6 @@ public:
 	{
 		ROS_INFO( "Interrupting spinner..." );
 		running_ = false;
-		spinner_.stop();
 		ROS_INFO( "Done interrupting spinner" );
 	}
 
