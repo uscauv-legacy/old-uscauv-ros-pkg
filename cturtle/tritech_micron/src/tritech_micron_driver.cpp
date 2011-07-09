@@ -41,7 +41,8 @@ TritechMicronDriver::~TritechMicronDriver()
   if(itsSerialThread.joinable())
   {
     if(itsDebugMode) std::cout << "Joining..."; 
-    itsSerialThread.join();
+    try { itsSerialThread.detach(); }
+    catch(...) {/*screw you!*/}
     if(itsDebugMode) std::cout << "Joined"; 
   }
   if(itsDebugMode) std::cout << "Finished Destructor" << std::endl;
