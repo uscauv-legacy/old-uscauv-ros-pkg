@@ -11,6 +11,7 @@
   <depend package="base_libs"/>
   <depend package="message_filters"/>
   <depend package="pluginlib"/>
+  <depend package="nodelet"/>
 
   <export>
     <nodelet plugin="${prefix}/nodelet_plugins.xml" />

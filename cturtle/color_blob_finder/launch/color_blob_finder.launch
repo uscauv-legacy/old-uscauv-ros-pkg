@@ -15,7 +15,7 @@
 	<arg name="nodelet_type" value="$(arg pkg)_nodelet" />
 
 	<group unless="$(arg use_nodelets)" >
-		<node pkg="$(arg pkg)" type="$(arg node_type)" name="$(arg name)" output="screen" args="_rate:=$(arg rate) ~source1:=$(arg source1) ~source2:=$(arg source2)" >
+		<node pkg="$(arg pkg)" type="$(arg node_type)" name="$(arg name)" output="screen" args="_rate:=$(arg rate) _rate:=$(arg rate) ~source1:=$(arg source1) ~source2:=$(arg source2)" >
 			<rosparam unless="$(arg initialize)" param="reconfigure" command="load" file="$(find color_blob_finder)/params/$(arg param_file_name).yaml" />
 		</node>
 	</group>
