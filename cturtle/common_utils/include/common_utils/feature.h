@@ -37,8 +37,15 @@
 #define FEATURE_H_
 
 #include <common_utils/vec.h>
+#include <common_utils/math.h>
 
 typedef unsigned int _DimType;
+
+struct DistanceType
+{
+	const static _DimType EUCLIDIAN = 0;
+	const static _DimType GAUSSIAN = 1;
+};
 
 // default template for FeatureBase with decimal accuracy
 template<class __DataType>
@@ -63,7 +70,7 @@ public:
 		__DataType dist = other.data_ - data_;
 		if ( radius > 0 && fabs( dist ) > radius )
 	    {
-	    	dist = math_utils::mod( fabs( dist ),
+	    	dist = math_utils::mod( __DataType( fabs( dist ) ),
 	    	                        radius ) - radius;
 	    }
 	    return dist;
@@ -126,7 +133,7 @@ public:
 	}
 
 	template<class _WeightType>
-	__DataType distance( const _Feature & other, _ArrayType & radii, std::array<_WeightType, __Dim__> & weights, std::array<_WeightType, __Dim__> variances = std::array<_WeightType, __Dim__>(), _DimType distance_type = DistanceType::EUCLIDIAN )
+	__DataType distance( const _Feature & other, _ArrayType & radii, std::array<_WeightType, __Dim__> & weights, std::array<_WeightType, __Dim__> variances = std::array<_WeightType, __Dim__>(), _DimType distance_type = DistanceType::GAUSSIAN )
 	{
 		__DataType total_distance = 0;
 
@@ -143,23 +150,53 @@ public:
 			if( weights[i] > 0 ) _FeatureBase::calculateDistanceComponent( total_distance, this->data_[i], other.data_[i], radii[i], weights[i], variances[i], distance_type, i == 0 );
 		}
 
-		return sqrt( total_distance );
+		if( distance_type == DistanceType::EUCLIDIAN ) return sqrt( total_distance );
+
+		return total_distance;
 	}
 
-/*	template<class _WeightType>
-	__DataType distance( const _Feature & other, _ArrayType & radii, const _WeightType & uniform_weight = _WeightType( 1 ), _DimType distance_type = DistanceType::EUCLIDIAN )
+	template<class _WeightType>
+	__DataType distance( const _Feature & other, _ArrayType & radii, std::array<_WeightType, __Dim__> & weights )
 	{
-		__DataType total_distance;
+		__DataType total_distance = 0;
 
 		for ( _DimType i = 0; i < __Dim__; ++i )
 		{
-			_FeatureBase::calculateDistanceComponent( total_distance, this->data_[i], other.data_[i], radii[i], uniform_weight, distance_type, i == 0 );
+			if( weights[i] > 0 ) _FeatureBase::calculateDistanceComponent( total_distance, this->data_[i], other.data_[i], radii[i], weights[i], 0.0, DistanceType::EUCLIDIAN, i == 0 );
 		}
 
 		return sqrt( total_distance );
 	}
 
 	template<class _WeightType>
+	__DataType distance( const _Feature & other, _ArrayType & radii = _ArrayType(), const _WeightType & uniform_weight = 1.0 )
+	{
+		__DataType total_distance = 0;
+
+		if ( uniform_weight > 0 )
+		{
+			for ( _DimType i = 0; i < __Dim__; ++i )
+			{
+				_FeatureBase::calculateDistanceComponent( total_distance, this->data_[i], other.data_[i], radii[i], uniform_weight, 0.0, DistanceType::EUCLIDIAN, i == 0 );
+			}
+		}
+
+		return sqrt( total_distance );
+	}
+
+	__DataType distance( const _Feature & other )
+	{
+		__DataType total_distance = 0;
+
+		for ( _DimType i = 0; i < __Dim__; ++i )
+		{
+			_FeatureBase::calculateDistanceComponent( total_distance, this->data_[i], other.data_[i], 0.0, 1.0, 0.0, DistanceType::EUCLIDIAN, i == 0 );
+		}
+
+		return total_distance;
+	}
+
+	/*template<class _WeightType>
 	__DataType distance( const _Feature & other, const __DataType & uniform_radius = __DataType( 0 ), const _WeightType & uniform_weight = _WeightType( 1 ), _DimType distance_type = DistanceType::EUCLIDIAN )
 	{
 		__DataType total_distance;

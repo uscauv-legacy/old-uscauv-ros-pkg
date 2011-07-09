@@ -37,7 +37,6 @@
 #define COLORS_H_
 
 #include <opencv/cv.h>
-#include <common_utils/math.h>
 #include <string>
 #include <common_utils/feature.h>
 

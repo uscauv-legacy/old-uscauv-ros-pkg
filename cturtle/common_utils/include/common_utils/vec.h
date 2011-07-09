@@ -144,11 +144,4 @@ public:
 	}
 };
 
-struct DistanceType
-{
-	const static _DimType EUCLIDIAN = 0;
-	const static _DimType GAUSSIAN = 1;
-};
-
-
 #endif /* VEC_H_ */

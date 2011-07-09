@@ -40,6 +40,7 @@
 #include <stdlib.h>
 #include <time.h>
 #include <type_traits>
+#include <limits>
 
 namespace math_utils
 {
