@@ -12,7 +12,7 @@
 
 	<arg name="simulate" default="false" />
 	<arg name="frame_id" default="/tritech_micron" />
-	<arg name="port" default="/dev/ttyS0" />
+	<arg name="port" default="/dev/ttyUSB0" />
 	<arg name="num_bins" default="200" />
 	<arg name="range" default="10.0" />
 	<arg name="velocity_of_sound" default="1500.0" />
