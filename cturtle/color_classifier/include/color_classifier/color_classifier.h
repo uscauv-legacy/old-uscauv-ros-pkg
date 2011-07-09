@@ -52,7 +52,7 @@
 // for cfg code
 #include <color_classifier/ColorClassifierConfig.h>
 // for colors
-#include <color_defs/colors.h>
+#include <common_utils/colors.h>
 
 typedef color_classifier::ColorClassifierConfig _ReconfigureType;
 typedef double _DataType;

@@ -63,7 +63,7 @@
 
 /* others */
 #include <base_node/base_node.h>
-#include <color_defs/colors.h>
+#include <common_utils/colors.h>
 #include <color_blob_finder/contour.h>
 // for mutex
 #include <boost/thread.hpp>

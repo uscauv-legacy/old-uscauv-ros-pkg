@@ -5,29 +5,37 @@
 #include <errno.h> // Error number definitions
 #include <termios.h> // POSIX terminal control definitionss
 #include <time.h>   // time calls
-
 #include <string>
 #include <vector>
 #include <boost/thread.hpp>
 
+#ifndef SERIAL_H_
+#define SERIAL_H_
+
 class SerialPort
 {
 
-  public:
+public:
 
-    enum BlockingMode {Blocking, NonBlocking};
+	enum BlockingMode
+	{
+		Blocking, NonBlocking
+	};
 
-    SerialPort();
-    ~SerialPort();
+	SerialPort();
+	~SerialPort();
 
-    bool connect(std::string dev, speed_t baudRate = B115200);
+	bool connect( std::string dev,
+	              speed_t baudRate = B115200 );
 
-    //! Is this serial port currently connected
-    bool connected();
+	//! Is this serial port currently connected
+	bool connected();
 
-    int writeVector(std::vector<uint8_t> const& bytes);
-    std::vector<uint8_t> read(size_t bytes);
+	int writeVector( std::vector<uint8_t> const& bytes );
+	std::vector<uint8_t> read( size_t bytes );
 
-  private:
-    int itsFileDescriptor;
+private:
+	int itsFileDescriptor;
 };
+
+#endif /* SERIAL_H_ */

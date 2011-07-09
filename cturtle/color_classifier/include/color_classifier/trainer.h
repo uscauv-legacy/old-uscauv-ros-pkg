@@ -37,7 +37,7 @@
 #define TRAINER_H_
 
 #include <base_node/base_node.h>
-#include <color_defs/colors.h>
+#include <common_utils/colors.h>
 #include <common_utils/opencv.h>
 #include <common_utils/math.h>
 #include <list>

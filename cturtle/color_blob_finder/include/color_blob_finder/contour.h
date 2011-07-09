@@ -40,6 +40,7 @@
 #include <opencv/cv.h>
 #include <cxcore.h>
 
+/* msgs */
 #include <color_blob_finder/Contour.h>
 
 typedef std::vector<cv::Point> _Contour;

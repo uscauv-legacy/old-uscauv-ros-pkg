@@ -33,7 +33,7 @@
  *
  *******************************************************************************/
 
-#include <color_defs/colors.h>
+#include <common_utils/colors.h>
 
 // bgr
 OutputColorRGB::_CvColorType OutputColorRGB::Value::red     ( 0, 0, 255 );

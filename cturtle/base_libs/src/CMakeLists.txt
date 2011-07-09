@@ -8,7 +8,6 @@ rosbuild_add_library(${PROJECT_NAME} base_nodelet.cpp
 									 base_robot_driver.cpp
 									 base_teleop.cpp
 									 timeout_monitor.cpp
-									 colors.cpp
 									 image_loader.cpp)
 									 
 rosbuild_add_executable(test_base_image_proc test_base_image_proc.cpp)
