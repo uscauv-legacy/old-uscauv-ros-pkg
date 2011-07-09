@@ -36,16 +36,16 @@ TritechMicronDriver::TritechMicronDriver(bool debugMode) :
 // ######################################################################
 TritechMicronDriver::~TritechMicronDriver()
 {
-  if(itsDebugMode) std::cout << "Destructor" << std::endl;
+  std::cout << "Destructor" << std::endl;
   itsRunning = false;
   if(itsSerialThread.joinable())
   {
-    if(itsDebugMode) std::cout << "Joining..."; 
+    std::cout << "Joining..."; 
     try { itsSerialThread.detach(); }
     catch(...) {/*screw you!*/}
-    if(itsDebugMode) std::cout << "Joined"; 
+    std::cout << "Joined"; 
   }
-  if(itsDebugMode) std::cout << "Finished Destructor" << std::endl;
+  std::cout << "Finished Destructor" << std::endl;
 }
 
 // ######################################################################
@@ -99,7 +99,7 @@ void TritechMicronDriver::registerScanLineCallback(std::function<void(float, flo
 // ######################################################################
 void TritechMicronDriver::serialThreadMethod()
 {
-  while(itsRunning)
+  while(itsRunning == true)
   {
     std::vector<uint8_t> bytes = itsSerial.read(1);
     if(bytes.size() > 0)
@@ -109,7 +109,7 @@ void TritechMicronDriver::serialThreadMethod()
     }
     else { usleep(100000); }
   } 
-  if(itsDebugMode) std::cout << "serialThreadMethod Finished" <<std::endl;
+  std::cout << "serialThreadMethod Finished" <<std::endl;
 }
 
 // ######################################################################
