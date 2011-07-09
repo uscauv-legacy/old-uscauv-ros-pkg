@@ -76,18 +76,24 @@ public:
 	{
 		scan_line_pub_ = nh_local_.advertise<_ScanLineMsgType>( "scan_line", 1 );
 		nh_local_.param( "simulate", simulate_, false );
+		bool use_debug_mode;
+		nh_local_.param( "simulate", use_debug_mode, false );
 		nh_local_.param( "frame_id", frame_id_, std::string( "/tritech_micron" ) );
 		nh_local_.param( "port", port_, std::string( "/dev/ttyUSB0" ) );
 		nh_local_.param( "num_bins", num_bins_, 200 );
 		nh_local_.param( "range", range_, 10.0 );
 		nh_local_.param( "velocity_of_sound", velocity_of_sound_, 1500.0 );
 
+		std::string angle_step_size_name;
+		nh_local_.param( "angle_step_size", angle_step_size_name, std::string( "medium" ) );
+		tritech::mtHeadCommandMsg::stepAngleSize_t angle_step_size = getStepAngleSize( angle_step_size_name );
+
 		if( !simulate_ )
 		{
-			driver_ = new TritechMicronDriver( true );
+			driver_ = new TritechMicronDriver( use_debug_mode );
 
 			driver_->registerScanLineCallback (std::bind( &TritechMicron::publish, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3 ) );
-			if( !driver_->connect( port_.c_str(), num_bins_, range_, velocity_of_sound_ ) )
+			if( !driver_->connect( port_.c_str(), num_bins_, range_, velocity_of_sound_, angle_step_size ) )
 			{
 				ROS_ERROR( "Could not connect to device; simulating instead." );
 				simulate_ = true;
@@ -98,6 +104,18 @@ public:
 	~TritechMicron()
 	{
 		if( driver_ ) delete driver_;
+	}
+
+	static tritech::mtHeadCommandMsg::stepAngleSize_t getStepAngleSize( const std::string & name )
+	{
+		if( name == "crazy_low" ) return tritech::mtHeadCommandMsg::stepAngleSize_t::CrazyLow;
+		if( name == "very_low" ) return tritech::mtHeadCommandMsg::stepAngleSize_t::VeryLow;
+		if( name == "low" ) return tritech::mtHeadCommandMsg::stepAngleSize_t::Low;
+		if( name == "medium" ) return tritech::mtHeadCommandMsg::stepAngleSize_t::Medium;
+		if( name == "high" ) return tritech::mtHeadCommandMsg::stepAngleSize_t::High;
+		if( name == "ultimate" ) return tritech::mtHeadCommandMsg::stepAngleSize_t::Ultimate;
+
+		return tritech::mtHeadCommandMsg::stepAngleSize_t::Low;
 	}
 
 	void publish( _AngleType scan_angle, _StepType bin_distance_step, _IntensityBinsRawType & intensity_bins )
