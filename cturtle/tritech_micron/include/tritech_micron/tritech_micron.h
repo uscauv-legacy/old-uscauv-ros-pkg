@@ -77,7 +77,7 @@ public:
 		scan_line_pub_ = nh_local_.advertise<_ScanLineMsgType>( "scan_line", 1 );
 		nh_local_.param( "simulate", simulate_, false );
 		nh_local_.param( "frame_id", frame_id_, std::string( "/tritech_micron" ) );
-		nh_local_.param( "port_", port_, std::string( "/dev/ttyS0" ) );
+		nh_local_.param( "port", port_, std::string( "/dev/ttyUSB0" ) );
 		nh_local_.param( "num_bins", num_bins_, 200 );
 		nh_local_.param( "range", range_, 10.0 );
 		nh_local_.param( "velocity_of_sound", velocity_of_sound_, 1500.0 );
