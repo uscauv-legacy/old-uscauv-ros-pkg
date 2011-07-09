@@ -36,9 +36,15 @@ TritechMicronDriver::TritechMicronDriver(bool debugMode) :
 // ######################################################################
 TritechMicronDriver::~TritechMicronDriver()
 {
+  if(itsDebugMode) std::cout << "Destructor" << std::endl;
   itsRunning = false;
   if(itsSerialThread.joinable())
+  {
+    if(itsDebugMode) std::cout << "Joining..."; 
     itsSerialThread.join();
+    if(itsDebugMode) std::cout << "Joined"; 
+  }
+  if(itsDebugMode) std::cout << "Finished Destructor" << std::endl;
 }
 
 // ######################################################################
@@ -97,14 +103,12 @@ void TritechMicronDriver::serialThreadMethod()
     std::vector<uint8_t> bytes = itsSerial.read(1);
     if(bytes.size() > 0)
     {
-//      for(uint8_t const& byte : bytes)
-		for( unsigned int i = 0; i < bytes.size(); ++i )
-		{
-        	processByte(bytes[i]);
-		}
+      for(unsigned int i = 0; i < bytes.size(); ++i)
+        processByte(bytes[i]); 
     }
     else { usleep(100000); }
-  }
+  } 
+  if(itsDebugMode) std::cout << "serialThreadMethod Finished" <<std::endl;
 }
 
 // ######################################################################
