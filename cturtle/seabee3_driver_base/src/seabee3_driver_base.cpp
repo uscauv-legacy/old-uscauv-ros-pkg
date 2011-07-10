@@ -83,39 +83,39 @@ public:
 	{
 		pressure_calibrated_ = false;
 
-		nh_priv_.param( "surface_pressure", surface_pressure_, 908 );
-		nh_priv_.param( "port", port_, std::string( "/dev/ttyUSB0" ) );
+		nh_local_.param( "surface_pressure", surface_pressure_, 908 );
+		nh_local_.param( "port", port_, std::string( "/dev/ttyUSB0" ) );
 
 		ROS_INFO( "constructing new driver instance" );
 		bee_stem_3_driver_ = new BeeStem3Driver( port_ );
 
-		nh_priv_.param( "shooter/trigger_time", bee_stem_3_driver_->shooter_params_.trigger_time_, 50 );
-		nh_priv_.param( "shooter/trigger_value", bee_stem_3_driver_->shooter_params_.trigger_value_, 80 );
+		nh_local_.param( "shooter/trigger_time", bee_stem_3_driver_->shooter_params_.trigger_time_, 50 );
+		nh_local_.param( "shooter/trigger_value", bee_stem_3_driver_->shooter_params_.trigger_value_, 80 );
 
-		nh_priv_.param( "dropper1/trigger_time", bee_stem_3_driver_->dropper1_params_.trigger_time_, 50 );
-		nh_priv_.param( "dropper1/trigger_value", bee_stem_3_driver_->dropper1_params_.trigger_value_, 40 );
+		nh_local_.param( "dropper1/trigger_time", bee_stem_3_driver_->dropper1_params_.trigger_time_, 50 );
+		nh_local_.param( "dropper1/trigger_value", bee_stem_3_driver_->dropper1_params_.trigger_value_, 40 );
 
-		nh_priv_.param( "dropper2/trigger_time", bee_stem_3_driver_->dropper2_params_.trigger_time_, 50 );
-		nh_priv_.param( "dropper2/trigger_value", bee_stem_3_driver_->dropper2_params_.trigger_value_, 40 );
+		nh_local_.param( "dropper2/trigger_time", bee_stem_3_driver_->dropper2_params_.trigger_time_, 50 );
+		nh_local_.param( "dropper2/trigger_value", bee_stem_3_driver_->dropper2_params_.trigger_value_, 40 );
 
 		// try to grab this param from the high-level driver so the values are synced
-		nh_priv_.param( "/seabee3_driver/min_motor_value_", min_motor_value_, 15 );
+		nh_local_.param( "/seabee3_driver/min_motor_value_", min_motor_value_, 15 );
 
 		double thruster_dir;
 
-		nh_priv_.param( "speed_m1_dir", thruster_dir, 1.0 );
+		nh_local_.param( "speed_m1_dir", thruster_dir, 1.0 );
 		thruster_dir_cfg_[MotorControllerIDs::FWD_LEFT_THRUSTER] = thruster_dir;
-		nh_priv_.param( "speed_m2_dir", thruster_dir, 1.0 );
+		nh_local_.param( "speed_m2_dir", thruster_dir, 1.0 );
 		thruster_dir_cfg_[MotorControllerIDs::FWD_RIGHT_THRUSTER] = thruster_dir;
 
-		nh_priv_.param( "strafe_m1_dir", thruster_dir, 1.0 );
+		nh_local_.param( "strafe_m1_dir", thruster_dir, 1.0 );
 		thruster_dir_cfg_[MotorControllerIDs::STRAFE_FRONT_THRUSTER] = thruster_dir;
-		nh_priv_.param( "strafe_m2_dir", thruster_dir, 1.0 );
+		nh_local_.param( "strafe_m2_dir", thruster_dir, 1.0 );
 		thruster_dir_cfg_[MotorControllerIDs::STRAFE_BACK_THRUSTER] = thruster_dir;
 
-		nh_priv_.param( "depth_m1_dir", thruster_dir, 1.0 );
+		nh_local_.param( "depth_m1_dir", thruster_dir, 1.0 );
 		thruster_dir_cfg_[MotorControllerIDs::DEPTH_LEFT_THRUSTER] = thruster_dir;
-		nh_priv_.param( "depth_m2_dir", thruster_dir, 1.0 );
+		nh_local_.param( "depth_m2_dir", thruster_dir, 1.0 );
 		thruster_dir_cfg_[MotorControllerIDs::DEPTH_RIGHT_THRUSTER] = thruster_dir;
 
 		motor_cntl_sub_ = nh.subscribe( "/seabee3/motor_cntl", 1, &Seabee3DriverBase::motorCntlCB, this );
@@ -200,8 +200,6 @@ public:
 		extl_pressure_pub_.publish( extl_pressure_msg );
 		depth_pub_.publish( depth_msg );
 		kill_switch_pub_.publish( kill_switch_msg );
-
-		ros::Rate( 20 ).sleep();
 	}
 
 };
@@ -212,7 +210,7 @@ int main( int argc, char** argv )
 	ros::NodeHandle nh;
 	
 	Seabee3DriverBase seabee3_driver_base( nh );
-	seabee3_driver_base.spin( SpinModeId::LOOP_SPIN_ONCE );
+	seabee3_driver_base.spin();
 
 	return 0;
 }
