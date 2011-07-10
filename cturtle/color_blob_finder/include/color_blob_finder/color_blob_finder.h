@@ -180,16 +180,9 @@ public:
 
 				color_blob_finder::Contour contour;
 				contour.header = images_cache_[i].image.header;
-				// for each point in the contour
-				for ( _DimType k = 0; k < contours[j].size(); ++k )
-				{
-					color_blob_finder::Point2D point;
 
-					point.x = contours[j][k].x;
-					point.y = contours[j][k].y;
+				contour << contours[j];
 
-					contour.points.push_back( point );
-				}
 				color_blob.contour = contour;
 				resp.blobs.push_back( color_blob );
 			}

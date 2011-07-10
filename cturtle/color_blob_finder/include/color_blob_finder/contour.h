@@ -43,17 +43,41 @@
 /* msgs */
 #include <color_blob_finder/Contour.h>
 
+typedef unsigned int _DimType;
 typedef std::vector<cv::Point> _Contour;
 typedef color_blob_finder::Contour _ContourMessage;
+typedef color_blob_finder::Point2D _PointMsgType;
+typedef cv::Point _PointType;
 
-void operator<< ( _Contour & contour, _ContourMessage & contour_msg )
+void operator<<( _Contour & contour,
+                 _ContourMessage & contour_msg )
 {
+	contour.reserve( contour_msg.points.size() );
+	for ( _DimType i = 0; i < contour_msg.points.size(); ++i )
+	{
+		_PointType point;
 
+		point.x = contour_msg.points[i].x;
+		point.y = contour_msg.points[i].y;
+
+		contour.push_back( point );
+	}
 }
 
-void operator<< ( _ContourMessage & contour_msg, _Contour & contour )
+void operator<<( _ContourMessage & contour_msg,
+                 _Contour & contour )
 {
+	contour_msg.points.reserve( contour.size() );
 
+	for ( _DimType i = 0; i < contour.size(); ++i )
+	{
+		_PointMsgType point;
+
+		point.x = contour[i].x;
+		point.y = contour[i].y;
+
+		contour_msg.points.push_back( point );
+	}
 }
 
 #endif /* CONTOUR_H_ */
