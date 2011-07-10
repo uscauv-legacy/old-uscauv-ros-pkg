@@ -101,7 +101,7 @@ void TritechMicronDriver::serialThreadMethod()
 {
   while(itsRunning == true)
   {
-    std::vector<uint8_t> bytes = itsSerial.read(1);
+    std::vector<uint8_t> bytes = itsSerial.read(2048);
     if(bytes.size() > 0)
     {
       for(unsigned int i = 0; i < bytes.size(); ++i)
