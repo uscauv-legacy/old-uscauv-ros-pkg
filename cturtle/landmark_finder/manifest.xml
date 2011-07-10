@@ -8,17 +8,14 @@
   <license>BSD</license>
   <review status="unreviewed" notes=""/>
   <url>http://ros.org/wiki/landmark_finder</url>
-  <depend package="roscpp"/>
-  <depend package="rectangle_finder"/>
-  <depend package="color_segmenter"/>
-  <depend package="opencv2"/>
-  <depend package="tf"/>
-  <depend package="geometry_msgs"/>
-  <depend package="localization_defs" />
-  <depend package="visualization_msgs"/>
-  <depend package="image_transport" />
+  <depend package="base_libs"/>
+  <depend package="common_utils"/>
+  <depend package="localization_defs"/>
+  <depend package="color_blob_finder"/>
+  <depend package="contour_matcher"/>
+  <depend package="color_classifier"/>
   <export>
-    <cpp cflags="-I${prefix}/include -I${prefix}/msg/cpp -I${prefix}/srv/cpp" lflags="-L/{prefix}/lib"/>
+    <cpp cflags="-I${prefix}/include" lflags="-Wl,-rpath,${prefix}/lib -L${prefix}/lib -llandmark_finder"/>
   </export>
 
 </package>

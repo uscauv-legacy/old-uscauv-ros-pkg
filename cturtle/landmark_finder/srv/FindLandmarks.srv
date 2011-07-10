@@ -1,4 +1,3 @@
-int8 Type
-int8[] Ids
+landmark_finder/LandmarkDescription[] descriptions
 ----
-localization_defs/LandmarkArrayMsg Landmarks
+localization_defs/Landmark[] landmarks

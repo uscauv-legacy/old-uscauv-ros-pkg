@@ -23,7 +23,7 @@
   
   <export>
     <nodelet plugin="${prefix}/nodelet_plugins.xml" />
-    <cpp cflags="-std=c++0x -I${prefix}/include -I${prefix}/msg/cpp -I${prefix}/srv/cpp" lflags="-Wl,-rpath,${prefix}/lib -L${prefix}/lib -lcolor_classifer"/>
+    <cpp cflags="-std=c++0x -I${prefix}/include -I${prefix}/msg/cpp -I${prefix}/srv/cpp" lflags="-Wl,-rpath,${prefix}/lib -L${prefix}/lib"/>
   </export>
 
 </package>
