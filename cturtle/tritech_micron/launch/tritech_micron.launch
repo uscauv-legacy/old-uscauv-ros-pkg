@@ -27,10 +27,6 @@
 		<arg name="scan_line" value="$(arg name)/scan_line" />
 	</include>
 	
-	<include file="$(find tritech_micron)/launch/sonar_frame.launch" >
-		<arg name="frame_id" value="$(arg frame_id)" />
-	</include>
-	
 	<arg name="show_reconfigure" default="true" />
 	<include file="$(find seabee3_launch)/dynamic_reconfigure.launch" >
 		<arg name="enable" value="$(arg show_reconfigure)" />

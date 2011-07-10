@@ -48,7 +48,6 @@
 #include <cv_bridge/cv_bridge.h>
 #include <sensor_msgs/image_encodings.h>
 
-
 typedef unsigned int _DimType;
 
 typedef tritech_micron::ScanLineConverterConfig _ReconfigureType;
@@ -84,40 +83,47 @@ public:
 		                                                          1 );
 
 		point_cloud_pub_ = nh_local_.advertise<_PointCloudMsgType>( "point_cloud",
-		                                                           1 );
+		                                                            1 );
 
 		image_pub_ = nh_local_.advertise<sensor_msgs::Image>( "image",
-		                                                           1 );
+		                                                      1 );
 
-		scan_line_img_ = cvCreateImage(cvSize(500,500), IPL_DEPTH_8U, 1);
-		cvSet(scan_line_img_, cvScalar(0));
+		scan_line_img_ = cvCreateImage( cvSize( 500,
+		                                        500 ),
+		                                IPL_DEPTH_8U,
+		                                1 );
+		cvSet( scan_line_img_,
+		       cvScalar( 0 ) );
 
 		initCfgParams();
 	}
 
 	void scanLineCB( const _ScanLineMsgType::ConstPtr & scan_line_msg )
 	{
-		if(laser_scan_pub_.getNumSubscribers() > 0)
-			publishLaserScan( scan_line_msg );
+		if ( laser_scan_pub_.getNumSubscribers() > 0 ) publishLaserScan( scan_line_msg );
 
-		if(point_cloud_pub_.getNumSubscribers() > 0) 
-			publishPointCloud( scan_line_msg );
+		if ( point_cloud_pub_.getNumSubscribers() > 0 ) publishPointCloud( scan_line_msg );
 
-		if(image_pub_.getNumSubscribers() > 0)
-			publishImage( scan_line_msg ); 
+		if ( image_pub_.getNumSubscribers() > 0 ) publishImage( scan_line_msg );
 	}
 
 	void publishImage( const _ScanLineMsgType::ConstPtr & scan_line_msg )
 	{
-		float const spacing = (scan_line_img_->width/2 - 10) / scan_line_msg->bins.size() ;
-		float const angle   = math_utils::degToRad( scan_line_msg->angle );
-		float const s = spacing/2.0;
+		float const spacing = ( scan_line_img_->width / 2.0 - 10.0 ) / scan_line_msg->bins.size();
+		float const angle = math_utils::degToRad( scan_line_msg->angle );
+		float const s = spacing / 2.0;
 
-		for(size_t i=0; i<scan_line_msg->bins.size(); ++i)
+		for ( size_t i = 0; i < scan_line_msg->bins.size(); ++i )
 		{
-			int const x = spacing*i*cos(angle) + scan_line_img_->width/2;
-			int const y = spacing*i*sin(angle) + scan_line_img_->height/2;
-			cvRectangle(scan_line_img_, cvPoint(x-s, y-s), cvPoint(x+s, y+s), cvScalar(scan_line_msg->bins[i].intensity), CV_FILLED);
+			float const x = spacing * i * cos( angle ) + scan_line_img_->width / 2.0;
+			float const y = spacing * i * sin( angle ) + scan_line_img_->height / 2.0;
+			cvRectangle( scan_line_img_,
+			             cvPoint( x - s,
+			                      y - s ),
+			             cvPoint( x + s,
+			                      y + s ),
+			             cvScalar( scan_line_msg->bins[i].intensity ),
+			             CV_FILLED );
 		}
 
 		try
@@ -125,10 +131,12 @@ public:
 			cv_bridge::CvImage out_msg;
 			out_msg.encoding = sensor_msgs::image_encodings::TYPE_8UC1;
 			out_msg.image = scan_line_img_;
-			image_pub_.publish(out_msg);
+			image_pub_.publish( out_msg );
 		}
-		catch (cv_bridge::Exception& e)
-		{ ROS_ERROR("cv_bridge exception: %s", e.what()); }
+		catch ( cv_bridge::Exception& e )
+		{
+			ROS_ERROR( "cv_bridge exception: %s", e.what() );
+		}
 	}
 
 	void publishLaserScan( const _ScanLineMsgType::ConstPtr & scan_line_msg )
@@ -143,7 +151,7 @@ public:
 
 		for ( _DimType i = 0; i < scan_line_msg->bins.size(); ++i )
 		{
-			if( scan_line_msg->bins[i].distance < reconfigure_params_.min_distance_threshold ) continue;
+			if ( scan_line_msg->bins[i].distance < reconfigure_params_.min_distance_threshold ) continue;
 
 			if ( !reconfigure_params_.use_laser_threshold || scan_line_msg->bins[i].intensity >= reconfigure_params_.min_laser_intensity_threshold )
 			{
@@ -176,9 +184,10 @@ public:
 
 		for ( _DimType i = 0; i < scan_line_msg->bins.size(); ++i )
 		{
-			if( scan_line_msg->bins[i].distance < reconfigure_params_.min_distance_threshold ) continue;
+			if ( scan_line_msg->bins[i].distance < reconfigure_params_.min_distance_threshold ) continue;
 
-			if( !reconfigure_params_.use_point_cloud_threshold || scan_line_msg->bins[i].intensity >= reconfigure_params_.min_point_cloud_intensity_threshold )
+			if ( !reconfigure_params_.use_point_cloud_threshold
+			        || scan_line_msg->bins[i].intensity >= reconfigure_params_.min_point_cloud_intensity_threshold )
 			{
 				geometry_msgs::Point32 point;
 				point.x = scan_line_msg->bins[i].distance * cos( math_utils::degToRad( scan_line_msg->angle ) );

@@ -8,6 +8,8 @@
 
 	<node pkg="tritech_micron" type="scan_line_converter_node" name="$(arg name)" output="screen" args="_rate:=$(arg rate) ~scan_line:=$(arg scan_line)" >
 	</node>
+
+	<include file="$(find tritech_micron)/launch/sonar_frame.launch" />
 	
 	<arg name="show_reconfigure" default="true" />
 	<include file="$(find seabee3_launch)/dynamic_reconfigure.launch" >
