@@ -23,7 +23,7 @@ bool SerialPort::connect(std::string dev, speed_t baudRate)
   if (itsFileDescriptor == -1)  
   {
     perror("init_serialport: Unable to open port ");
-    return -1;
+    return false;
   }
 
   if (tcgetattr(itsFileDescriptor, &toptions) < 0) 
@@ -31,7 +31,7 @@ bool SerialPort::connect(std::string dev, speed_t baudRate)
     if(itsFileDescriptor != -1) close(itsFileDescriptor);
     itsFileDescriptor = -1;
     perror("init_serialport: Couldn't get term attributes");
-    return -1;
+    return false;
   }
 
   cfsetispeed(&toptions, baudRate);
@@ -60,8 +60,12 @@ bool SerialPort::connect(std::string dev, speed_t baudRate)
     if(itsFileDescriptor != -1) close(itsFileDescriptor);
     itsFileDescriptor = -1;
     perror("init_serialport: Couldn't set term attributes");
-    return -1;
+    return false;
   }
+
+	// flush the port
+	tcflush(itsFileDescriptor, TCIOFLUSH );
+
   return true;
 }
 
