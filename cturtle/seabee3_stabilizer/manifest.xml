@@ -1,0 +1,15 @@
+<package>
+  <description brief="seabee3_stabilizer">
+
+     seabee3_stabilizer
+
+  </description>
+  <author>John O'Hollaren</author>
+  <license>BSD</license>
+  <review status="unreviewed" notes=""/>
+  <url>http://ros.org/wiki/seabee3_stabilizer</url>
+  <depend package="base_libs"/>
+
+</package>
+
+
