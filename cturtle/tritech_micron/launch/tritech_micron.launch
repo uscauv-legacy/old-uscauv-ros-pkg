@@ -11,11 +11,11 @@
 	<arg name="nodelet_type" value="$(arg pkg)_nodelet" />
 
 	<arg name="simulate" default="false" />
-	<arg name="use_debug_mode" default="false" />
+	<arg name="use_debug_mode" default="true" />
 	<arg name="frame_id" default="/tritech_micron" />
 	<arg name="port" default="/dev/ttyUSB0" />
-	<arg name="num_bins" default="100" />
-	<arg name="range" default="1.0" />
+	<arg name="num_bins" default="400" />
+	<arg name="range" default="10.0" />
 	<arg name="velocity_of_sound" default="1500.0" />
 	<arg name="angle_step_size" default="low" />
 
@@ -27,8 +27,9 @@
 		<arg name="scan_line" value="$(arg name)/scan_line" />
 	</include>
 	
-	<node pkg="tf" type="static_transform_publisher" name="seabee3_base_link_to_tritech_micron" output="screen"
-	args="0.5 0 0 0 0 0 /seabee3/base_link $(arg frame_id) 100" />
+	<include file=$(find tritech_micron)/launch/sonar_frame.launch" >
+		<arg name="frame_id" value="$(arg frame_id)" />
+	</include>
 	
 	<arg name="show_reconfigure" default="true" />
 	<include file="$(find seabee3_launch)/dynamic_reconfigure.launch" >

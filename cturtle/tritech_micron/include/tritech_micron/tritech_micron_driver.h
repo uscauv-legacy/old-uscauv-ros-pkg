@@ -46,6 +46,9 @@ class TritechMicronDriver
         float VOS = 1500,
         tritech::mtHeadCommandMsg::stepAngleSize_t stepAngleSize = tritech::mtHeadCommandMsg::Low);
 
+    //! Disconnect from the Sonar device and kill all of our associated threads
+    void disconnect();
+
     void resetMessage();
 
     //! Get access to the scan lines that have been read by the sonar.

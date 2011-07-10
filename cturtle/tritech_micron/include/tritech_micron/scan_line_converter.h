@@ -94,8 +94,6 @@ public:
 		laser_scan_msg->angle_max = math_utils::degToRad( scan_line_msg->angle );
 		laser_scan_msg->range_min = scan_line_msg->bins.front().distance - 0.1;
 		laser_scan_msg->range_max = scan_line_msg->bins.back().distance + 0.1;
-		//laser_scan_msg->time_increment = 0.1;
-		//laser_scan_msg->scan_time = 0.1;
 
 		for ( _DimType i = 0; i < scan_line_msg->bins.size(); ++i )
 		{

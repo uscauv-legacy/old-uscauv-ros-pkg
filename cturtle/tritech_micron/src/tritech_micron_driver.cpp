@@ -35,8 +35,12 @@ TritechMicronDriver::TritechMicronDriver(bool debugMode) :
 
 // ######################################################################
 TritechMicronDriver::~TritechMicronDriver()
+{ disconnect(); }
+
+// ######################################################################
+void TritechMicronDriver::disconnect()
 {
-  std::cout << "Destructor" << std::endl;
+  std::cout << "Disconnecting" << std::endl;
   itsRunning = false;
   if(itsSerialThread.joinable())
   {
@@ -45,7 +49,8 @@ TritechMicronDriver::~TritechMicronDriver()
     catch(...) {/*screw you!*/}
     std::cout << "Joined"; 
   }
-  std::cout << "Finished Destructor" << std::endl;
+
+  std::cout << "Disconnected" << std::endl;
 }
 
 // ######################################################################
@@ -104,7 +109,7 @@ void TritechMicronDriver::serialThreadMethod()
     std::vector<uint8_t> bytes = itsSerial.read(2048);
     if(bytes.size() > 0)
     {
-      for(unsigned int i = 0; i < bytes.size(); ++i)
+      for(size_t i = 0; i < bytes.size(); ++i)
         processByte(bytes[i]); 
     }
     else { usleep(100000); }
@@ -124,6 +129,7 @@ void TritechMicronDriver::resetMessage()
 void TritechMicronDriver::processByte(uint8_t byte)
 {
   if(itsState == WaitingForAt) 
+  {
     if(byte == '@')
     {
       itsRawMsg.clear();
@@ -135,8 +141,8 @@ void TritechMicronDriver::processByte(uint8_t byte)
       itsMsg = Message();
       return;
     }
-    else
-      if(itsDebugMode) std::cout << "bogus byte: " << std::hex << int(byte) << std::dec << std::endl;
+    else if(itsDebugMode) std::cout << "bogus byte: " << std::hex << int(byte) << std::dec << std::endl;
+  }
 
 
   itsRawMsg.push_back(byte);
@@ -166,6 +172,7 @@ void TritechMicronDriver::processByte(uint8_t byte)
   if(itsState == ReadingData)
   {
     if(int(itsMsg.binLength - (itsRawMsg.size() - 7)) == 0)
+    {
       if(byte == 0x0A)
       {
         itsMsg.data = itsRawMsg;
@@ -178,6 +185,7 @@ void TritechMicronDriver::processByte(uint8_t byte)
         resetMessage();
         return;
       }
+    }
   }
 }
 

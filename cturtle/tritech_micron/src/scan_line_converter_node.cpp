@@ -33,7 +33,6 @@
  *
  *******************************************************************************/
 
-#include <ros/ros.h>
 #include <tritech_micron/scan_line_converter.h>
 
 int main( int argc, char ** argv )

@@ -354,11 +354,6 @@ namespace tritech
 			packetSequence   = msgSequenceBitset & 0xEF;
 			isLastInSequence = msgSequenceBitset & 0x80;
 
-			uint16_t const totalByteCount = msg.data[14] | (msg.data[15] << 8);
-
-			// We expect the device type to be '11', i.e. a Digital Img Sonar (hDIG).
-//			TRITECH_MSG_EXPECT_BYTE_AT(0x0A, 16);
-
 			std::bitset<8> headStatus = msg.data[17];
 			hdPwrLoss          = headStatus[0];
 			motorErr           = headStatus[1];
