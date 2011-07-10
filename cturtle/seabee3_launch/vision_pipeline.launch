@@ -5,7 +5,11 @@
 	<arg name="show_image" default="true" />
 	<arg name="use_image_servers" default="true" />
 	<arg name="image_servers_rate" default="10" />
-	<arg name="target_rate" value="15" />
+	<arg name="front_image_source" default="/image_server_front/output_image" />
+	<arg name="front_image_transport" default="raw" />
+	<arg name="down_image_source" default="/image_server_down/output_image" />
+	<arg name="down_image_transport" default="raw" />
+	<arg name="target_rate" default="10" />
 
 	<group if="$(arg use_nodelets)" >
 		<include file="$(find seabee3_launch)/nodelet_manager.launch" >
@@ -39,7 +43,8 @@
 		<arg name="show_reconfigure" value="$(arg show_reconfigure)" />
 		<arg name="show_image" value="$(arg show_image)" />
 		<arg name="name_postfix" value="_front" />
-		<arg name="image" value="/image_server_front/output_image" />
+		<arg name="image" value="$(arg front_image_source)" />
+		<arg name="image_transport" value="$(arg front_image_transport)" />
 	</include>
 
 	<include file="$(find color_classifier)/launch/color_classifier.launch" >
@@ -48,7 +53,8 @@
 		<arg name="show_reconfigure" value="$(arg show_reconfigure)" />
 		<arg name="show_image" value="$(arg show_image)" />
 		<arg name="name_postfix" value="_down" />
-		<arg name="image" value="/image_server_down/output_image" />
+		<arg name="image" value="$(arg down_image_source)" />
+		<arg name="image_transport" value="$(arg down_image_transport)" />
 	</include>
 
 	<include file="$(find color_blob_finder)/launch/color_blob_finder.launch" >
