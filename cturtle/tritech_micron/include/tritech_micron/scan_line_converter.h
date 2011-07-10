@@ -90,20 +90,21 @@ public:
 		                                                           1 );
 
 		scan_line_img_ = cvCreateImage(cvSize(500,500), IPL_DEPTH_8U, 1);
-		for(size_t y=0; y<scan_line_img_->height; ++y)
-			for(size_t x=0; y<scan_line_img_->width; ++x)
-				cvGet2D(scan_line_img_, x,y).val[0] = 0;
+		cvSet(scan_line_img_, cvScalar(0));
 
 		initCfgParams();
 	}
 
 	void scanLineCB( const _ScanLineMsgType::ConstPtr & scan_line_msg )
 	{
-		publishLaserScan( scan_line_msg );
+		if(laser_scan_pub_.getNumSubscribers() > 0)
+			publishLaserScan( scan_line_msg );
 
-		publishPointCloud( scan_line_msg );
+		if(point_cloud_pub_.getNumSubscribers() > 0) 
+			publishPointCloud( scan_line_msg );
 
-		if(image_pub_.getNumSubscribers()) publishImage( scan_line_msg ); 
+		if(image_pub_.getNumSubscribers() > 0)
+			publishImage( scan_line_msg ); 
 	}
 
 	void publishImage( const _ScanLineMsgType::ConstPtr & scan_line_msg )
