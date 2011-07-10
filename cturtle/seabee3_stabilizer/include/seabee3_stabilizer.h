@@ -1,9 +1,4 @@
-
-#include <string>
-
-using namespace std;
-
-class Stabilizer {
+#include <iostream>
 
 /*
   
@@ -18,13 +13,3 @@ class Stabilizer {
     b. publish corrective thruster command
 
 */
-
-  Stabilizer() {
-
-  }
-  
-  ~Stabilizer() {
-
-  }
-
-}
