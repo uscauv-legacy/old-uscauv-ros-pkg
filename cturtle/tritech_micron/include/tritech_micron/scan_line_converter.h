@@ -41,7 +41,13 @@
 #include <tritech_micron/ScanLine.h>
 #include <sensor_msgs/LaserScan.h>
 #include <sensor_msgs/PointCloud.h>
+#include <sensor_msgs/Image.h>
 #include <tritech_micron/ScanLineConverterConfig.h>
+#include <opencv2/opencv.hpp>
+#include <cv_bridge/CvBridge.h>
+#include <cv_bridge/cv_bridge.h>
+#include <sensor_msgs/image_encodings.h>
+
 
 typedef unsigned int _DimType;
 
@@ -62,6 +68,9 @@ public:
 	ros::Subscriber scan_line_sub_;
 	ros::Publisher laser_scan_pub_;
 	ros::Publisher point_cloud_pub_;
+	ros::Publisher image_pub_;
+
+	IplImage *scan_line_img_;
 
 	ScanLineConverter( ros::NodeHandle & nh ) :
 			_BaseNode( nh )
@@ -76,13 +85,49 @@ public:
 
 		point_cloud_pub_ = nh_local_.advertise<_PointCloudMsgType>( "point_cloud",
 		                                                           1 );
+
+		image_pub_ = nh_local_.advertise<sensor_msgs::Image>( "image",
+		                                                           1 );
+
+		scan_line_img_ = cvCreateImage(cvSize(500,500), IPL_DEPTH_8U, 1);
+		for(size_t y=0; y<scan_line_img_->height; ++y)
+			for(size_t x=0; y<scan_line_img_->width; ++x)
+				cvGet2D(scan_line_img_, x,y).val[0] = 0;
+
 		initCfgParams();
 	}
 
 	void scanLineCB( const _ScanLineMsgType::ConstPtr & scan_line_msg )
 	{
 		publishLaserScan( scan_line_msg );
+
 		publishPointCloud( scan_line_msg );
+
+		if(image_pub_.getNumSubscribers()) publishImage( scan_line_msg ); 
+	}
+
+	void publishImage( const _ScanLineMsgType::ConstPtr & scan_line_msg )
+	{
+		float const spacing = (scan_line_img_->width/2 - 10) / scan_line_msg->bins.size() ;
+		float const angle   = math_utils::degToRad( scan_line_msg->angle );
+		float const s = spacing/2.0;
+
+		for(size_t i=0; i<scan_line_msg->bins.size(); ++i)
+		{
+			int const x = spacing*i*cos(angle) + scan_line_img_->width/2;
+			int const y = spacing*i*sin(angle) + scan_line_img_->height/2;
+			cvRectangle(scan_line_img_, cvPoint(x-s, y-s), cvPoint(x+s, y+s), cvScalar(scan_line_msg->bins[i].intensity), CV_FILLED);
+		}
+
+		try
+		{
+			cv_bridge::CvImage out_msg;
+			out_msg.encoding = sensor_msgs::image_encodings::TYPE_8UC1;
+			out_msg.image = scan_line_img_;
+			image_pub_.publish(out_msg);
+		}
+		catch (cv_bridge::Exception& e)
+		{ ROS_ERROR("cv_bridge exception: %s", e.what()); }
 	}
 
 	void publishLaserScan( const _ScanLineMsgType::ConstPtr & scan_line_msg )

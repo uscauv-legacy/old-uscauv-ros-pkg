@@ -27,7 +27,7 @@
 		<arg name="scan_line" value="$(arg name)/scan_line" />
 	</include>
 	
-	<include file=$(find tritech_micron)/launch/sonar_frame.launch" >
+	<include file="$(find tritech_micron)/launch/sonar_frame.launch" >
 		<arg name="frame_id" value="$(arg frame_id)" />
 	</include>
 	
