@@ -21,7 +21,7 @@ Grid.Reference\ Frame=<Fixed Frame>
 Laser\ Scan.Alpha=1
 Laser\ Scan.Billboard\ Size=0.075
 Laser\ Scan.Color\ Transformer=Intensity
-Laser\ Scan.Decay\ Time=24
+Laser\ Scan.Decay\ Time=9
 Laser\ Scan.Enabled=1
 Laser\ Scan.Position\ Transformer=XYZ
 Laser\ Scan.Selectable=1
@@ -47,8 +47,8 @@ Laser\ Scan..IntensityMin\ Intensity=0
 Point\ Cloud.Alpha=1
 Point\ Cloud.Billboard\ Size=0.05
 Point\ Cloud.Color\ Transformer=Intensity
-Point\ Cloud.Decay\ Time=24
-Point\ Cloud.Enabled=1
+Point\ Cloud.Decay\ Time=9
+Point\ Cloud.Enabled=0
 Point\ Cloud.Position\ Transformer=XYZ
 Point\ Cloud.Selectable=1
 Point\ Cloud.Style=2
@@ -80,8 +80,8 @@ TF.Update\ Interval=0
 Tool\ 2D\ Nav\ GoalTopic=goal
 Tool\ 2D\ Pose\ EstimateTopic=initialpose
 Camera\ Type=rviz::OrbitViewController
-Camera\ Config=0.651001 3.45618 5.39727 0 0 0
-Property\ Grid\ State=selection=Point Cloud.Enabled.Point Cloud.Style;expanded=.Global Options,Grid.Enabled,TF.Enabled,TF./seabee3/base_link/seabee3/base_link,TF./tritech_micron/tritech_micron,TF.Enabled.TF.Tree,TF./seabee3/base_linkTree/seabee3/base_link,TF./tritech_micronTree/tritech_micron,Laser Scan.Enabled,Point Cloud.Enabled;scrollpos=0,26;splitterpos=236,476;ispageselected=1
+Camera\ Config=0.006 5.58118 4.01638 0 0 0
+Property\ Grid\ State=selection=Point Cloud.Enabled.Point Cloud.Billboard Size;expanded=.Global Options,Grid.Enabled,TF.Enabled,TF./seabee3/base_link/seabee3/base_link,TF./tritech_micron/tritech_micron,TF.Enabled.TF.Tree,TF./seabee3/base_linkTree/seabee3/base_link,TF./tritech_micronTree/tritech_micron,Laser Scan.Enabled,Point Cloud.Enabled;scrollpos=0,0;splitterpos=153,310;ispageselected=1
 [Display0]
 Name=Grid
 Package=rviz

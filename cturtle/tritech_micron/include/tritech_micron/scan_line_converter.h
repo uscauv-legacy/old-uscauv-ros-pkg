@@ -143,6 +143,8 @@ public:
 
 		for ( _DimType i = 0; i < scan_line_msg->bins.size(); ++i )
 		{
+			if( scan_line_msg->bins[i].distance < reconfigure_params_.min_distance_threshold ) continue;
+
 			if ( !reconfigure_params_.use_laser_threshold || scan_line_msg->bins[i].intensity >= reconfigure_params_.min_laser_intensity_threshold )
 			{
 				laser_scan_msg->intensities.push_back( scan_line_msg->bins[i].intensity / 255.0 );
@@ -174,6 +176,8 @@ public:
 
 		for ( _DimType i = 0; i < scan_line_msg->bins.size(); ++i )
 		{
+			if( scan_line_msg->bins[i].distance < reconfigure_params_.min_distance_threshold ) continue;
+
 			if( !reconfigure_params_.use_point_cloud_threshold || scan_line_msg->bins[i].intensity >= reconfigure_params_.min_point_cloud_intensity_threshold )
 			{
 				geometry_msgs::Point32 point;
