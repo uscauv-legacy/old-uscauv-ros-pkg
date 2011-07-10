@@ -50,10 +50,10 @@ protected:
 	TimeoutMonitor cmd_vel_tm_;
 
 public:
-	BaseRobotDriver( ros::NodeHandle & nh, std::string topic_name = "cmd_vel", uint threads = 3 ) :
-		BaseTfTranceiver<_ReconfigureType> ( nh, threads )
+	BaseRobotDriver( ros::NodeHandle & nh, std::string topic_name = "cmd_vel") :
+		BaseTfTranceiver<_ReconfigureType> ( nh )
 	{
-		this->nh_priv_.param( "cmd_vel_timeout", cmd_vel_timeout_, 0.5 );
+		this->nh_local_.param( "cmd_vel_timeout", cmd_vel_timeout_, 0.5 );
 
 		cmd_vel_sub_ = nh.subscribe( nh.resolveName( topic_name ), 1, &BaseRobotDriver::cmdVelCB_0, this );
 		cmd_vel_tm_.registerCallback( nh, &BaseRobotDriver::timeout_0, this, cmd_vel_timeout_ );

@@ -135,11 +135,11 @@ public:
 
 				motors_dir_cfg_.resize( 6 );
 
-				nh_priv_.param( "global_frame", global_frame_, std::string( "/landmark_map" ) );
+				nh_local_.param( "global_frame", global_frame_, std::string( "/landmark_map" ) );
 
-				nh_priv_.param( "cmd_vel_conversion", cmd_vel_conversion_mode_, CmdVelConversionType::pid );
+				nh_local_.param( "cmd_vel_conversion", cmd_vel_conversion_mode_, CmdVelConversionType::pid );
 
-				nh_priv_.param( "use_pid_assist", use_pid_assist_, false );
+				nh_local_.param( "use_pid_assist", use_pid_assist_, false );
 
 				if ( !nh.getParam( "/seabee3_teleop/speed_scale", cmd_vel_conversions[Axes::speed] ) ) cmd_vel_conversions[Axes::speed] = 1.0;
 				if ( !nh.getParam( "/seabee3_teleop/strafe_scale", cmd_vel_conversions[Axes::strafe] ) ) cmd_vel_conversions[Axes::strafe] = 1.0;
@@ -148,71 +148,71 @@ public:
 
 				// scale motor values to be within the following min+max value such that
 				// |D'| = [ motor_val_min, motor_val_max ]
-				nh_priv_.param( "motor_val_deadzone", motor_val_deadzone_, 5.0 );
-				nh_priv_.param( "motor_val_min", motor_val_min_, 20.0 );
-				nh_priv_.param( "motor_val_max", motor_val_max_, 100.0 );
+				nh_local_.param( "motor_val_deadzone", motor_val_deadzone_, 5.0 );
+				nh_local_.param( "motor_val_min", motor_val_min_, 20.0 );
+				nh_local_.param( "motor_val_max", motor_val_max_, 100.0 );
 
-				nh_priv_.param( "speed_err_cap", max_error_in_xyz_.x, 100.0 );
-				nh_priv_.param( "strafe_err_cap", max_error_in_xyz_.y, 100.0 );
-				nh_priv_.param( "depth_err_cap", max_error_in_xyz_.z, 100.0 );
+				nh_local_.param( "speed_err_cap", max_error_in_xyz_.x, 100.0 );
+				nh_local_.param( "strafe_err_cap", max_error_in_xyz_.y, 100.0 );
+				nh_local_.param( "depth_err_cap", max_error_in_xyz_.z, 100.0 );
 
-				nh_priv_.param( "roll_err_cap", max_error_in_rpy_.x, 25.0 );
-				nh_priv_.param( "pitch_err_cap", max_error_in_rpy_.y, 25.0 );
-				nh_priv_.param( "yaw_err_cap", max_error_in_rpy_.z, 25.0 );
+				nh_local_.param( "roll_err_cap", max_error_in_rpy_.x, 25.0 );
+				nh_local_.param( "pitch_err_cap", max_error_in_rpy_.y, 25.0 );
+				nh_local_.param( "yaw_err_cap", max_error_in_rpy_.z, 25.0 );
 
 				pid_controller_.applySettings( _SettingsArray( settings_array, &settings_array[6] ) );
 
-				/*nh_priv_.param( "pid/pos/X/p", pid_controller_.linear_x->settings.p, 2.5 );
-				nh_priv_.param( "pid/pos/X/i", pid_controller_.linear_x->settings.i, 0.05 );
-				nh_priv_.param( "pid/pos/X/d", pid_controller_.linear_x->settings.d, 0.2 );
+				/*nh_local_.param( "pid/pos/X/p", pid_controller_.linear_x->settings.p, 2.5 );
+				nh_local_.param( "pid/pos/X/i", pid_controller_.linear_x->settings.i, 0.05 );
+				nh_local_.param( "pid/pos/X/d", pid_controller_.linear_x->settings.d, 0.2 );
 
-				nh_priv_.param( "pid/pos/Y/p", pid_controller_.linear_y->settings.p, 2.5 );
-				nh_priv_.param( "pid/pos/Y/i", pid_controller_.linear_y->settings.i, 0.05 );
-				nh_priv_.param( "pid/pos/Y/d", pid_controller_.linear_y->settings.d, 0.2 );
+				nh_local_.param( "pid/pos/Y/p", pid_controller_.linear_y->settings.p, 2.5 );
+				nh_local_.param( "pid/pos/Y/i", pid_controller_.linear_y->settings.i, 0.05 );
+				nh_local_.param( "pid/pos/Y/d", pid_controller_.linear_y->settings.d, 0.2 );
 
-				nh_priv_.param( "pid/pos/Z/p", pid_controller_.linear_z->settings.p, 2.5 );
-				nh_priv_.param( "pid/pos/Z/i", pid_controller_.linear_z->settings.i, 0.05 );
-				nh_priv_.param( "pid/pos/Z/d", pid_controller_.linear_z->settings.d, 0.2 );
+				nh_local_.param( "pid/pos/Z/p", pid_controller_.linear_z->settings.p, 2.5 );
+				nh_local_.param( "pid/pos/Z/i", pid_controller_.linear_z->settings.i, 0.05 );
+				nh_local_.param( "pid/pos/Z/d", pid_controller_.linear_z->settings.d, 0.2 );
 
-				nh_priv_.param( "pid/ori/R/p", pid_controller_.angular_x->settings.p, 2.5 );
-				nh_priv_.param( "pid/ori/R/i", pid_controller_.angular_x->settings.i, 0.05 );
-				nh_priv_.param( "pid/ori/R/d", pid_controller_.angular_x->settings.d, 0.2 );
+				nh_local_.param( "pid/ori/R/p", pid_controller_.angular_x->settings.p, 2.5 );
+				nh_local_.param( "pid/ori/R/i", pid_controller_.angular_x->settings.i, 0.05 );
+				nh_local_.param( "pid/ori/R/d", pid_controller_.angular_x->settings.d, 0.2 );
 
-				nh_priv_.param( "pid/ori/P/p", pid_controller_.angular_y->settings.p, 2.5 );
-				nh_priv_.param( "pid/ori/P/i", pid_controller_.angular_y->settings.i, 0.05 );
-				nh_priv_.param( "pid/ori/P/d", pid_controller_.angular_y->settings.d, 0.2 );
+				nh_local_.param( "pid/ori/P/p", pid_controller_.angular_y->settings.p, 2.5 );
+				nh_local_.param( "pid/ori/P/i", pid_controller_.angular_y->settings.i, 0.05 );
+				nh_local_.param( "pid/ori/P/d", pid_controller_.angular_y->settings.d, 0.2 );
 
-				nh_priv_.param( "pid/ori/Y/p", pid_controller_.angular_z->settings.p, 2.5 );
-				nh_priv_.param( "pid/ori/Y/i", pid_controller_.angular_z->settings.i, 0.05 );
-				nh_priv_.param( "pid/ori/Y/d", pid_controller_.angular_z->settings.d, 0.2 );*/
+				nh_local_.param( "pid/ori/Y/p", pid_controller_.angular_z->settings.p, 2.5 );
+				nh_local_.param( "pid/ori/Y/i", pid_controller_.angular_z->settings.i, 0.05 );
+				nh_local_.param( "pid/ori/Y/d", pid_controller_.angular_z->settings.d, 0.2 );*/
 
-				//nh_priv_.param( "pid/i_max", pid_i_max_, 1.0 );
-				//nh_priv_.param( "pid/i_min", pid_i_min_, -1.0 );
+				//nh_local_.param( "pid/i_max", pid_i_max_, 1.0 );
+				//nh_local_.param( "pid/i_min", pid_i_min_, -1.0 );
 
-				nh_priv_.param( "speed_m1_dir", motors_dir_cfg_[Axes::speed].at( 1 ), 1.0 );
-				nh_priv_.param( "speed_m2_dir", motors_dir_cfg_[Axes::speed].at( 2 ), 1.0 );
+				nh_local_.param( "speed_m1_dir", motors_dir_cfg_[Axes::speed].at( 1 ), 1.0 );
+				nh_local_.param( "speed_m2_dir", motors_dir_cfg_[Axes::speed].at( 2 ), 1.0 );
 
-				nh_priv_.param( "strafe_m1_dir", motors_dir_cfg_[Axes::strafe].at( 1 ), 1.0 );
-				nh_priv_.param( "strafe_m2_dir", motors_dir_cfg_[Axes::strafe].at( 2 ), 1.0 );
+				nh_local_.param( "strafe_m1_dir", motors_dir_cfg_[Axes::strafe].at( 1 ), 1.0 );
+				nh_local_.param( "strafe_m2_dir", motors_dir_cfg_[Axes::strafe].at( 2 ), 1.0 );
 
-				nh_priv_.param( "depth_m1_dir", motors_dir_cfg_[Axes::depth].at( 1 ), 1.0 );
-				nh_priv_.param( "depth_m2_dir", motors_dir_cfg_[Axes::depth].at( 2 ), 1.0 );
+				nh_local_.param( "depth_m1_dir", motors_dir_cfg_[Axes::depth].at( 1 ), 1.0 );
+				nh_local_.param( "depth_m2_dir", motors_dir_cfg_[Axes::depth].at( 2 ), 1.0 );
 
-				nh_priv_.param( "roll_m1_dir", motors_dir_cfg_[Axes::roll].at( 1 ), 1.0 );
-				nh_priv_.param( "roll_m2_dir", motors_dir_cfg_[Axes::roll].at( 2 ), 1.0 );
+				nh_local_.param( "roll_m1_dir", motors_dir_cfg_[Axes::roll].at( 1 ), 1.0 );
+				nh_local_.param( "roll_m2_dir", motors_dir_cfg_[Axes::roll].at( 2 ), 1.0 );
 
-				nh_priv_.param( "pitch_m1_dir", motors_dir_cfg_[Axes::pitch].at( 1 ), 1.0 );
-				nh_priv_.param( "pitch_m2_dir", motors_dir_cfg_[Axes::pitch].at( 2 ), 1.0 );
+				nh_local_.param( "pitch_m1_dir", motors_dir_cfg_[Axes::pitch].at( 1 ), 1.0 );
+				nh_local_.param( "pitch_m2_dir", motors_dir_cfg_[Axes::pitch].at( 2 ), 1.0 );
 
-				nh_priv_.param( "yaw_m1_dir", motors_dir_cfg_[Axes::yaw].at( 1 ), -1.0 );
-				nh_priv_.param( "yaw_m2_dir", motors_dir_cfg_[Axes::yaw].at( 2 ), 1.0 );
+				nh_local_.param( "yaw_m1_dir", motors_dir_cfg_[Axes::yaw].at( 1 ), -1.0 );
+				nh_local_.param( "yaw_m2_dir", motors_dir_cfg_[Axes::yaw].at( 2 ), 1.0 );
 
-				nh_priv_.param( "speed_axis_dir", axis_dir_cfg_[Axes::speed], 1.0 );
-				nh_priv_.param( "strafe_axis_dir", axis_dir_cfg_[Axes::strafe], 1.0 );
-				nh_priv_.param( "depth_axis_dir", axis_dir_cfg_[Axes::depth], -1.0 );
-				nh_priv_.param( "roll_axis_dir", axis_dir_cfg_[Axes::roll], -1.0 );
-				nh_priv_.param( "pitch_axis_dir", axis_dir_cfg_[Axes::pitch], -1.0 );
-				nh_priv_.param( "yaw_axis_dir", axis_dir_cfg_[Axes::yaw], -1.0 );
+				nh_local_.param( "speed_axis_dir", axis_dir_cfg_[Axes::speed], 1.0 );
+				nh_local_.param( "strafe_axis_dir", axis_dir_cfg_[Axes::strafe], 1.0 );
+				nh_local_.param( "depth_axis_dir", axis_dir_cfg_[Axes::depth], -1.0 );
+				nh_local_.param( "roll_axis_dir", axis_dir_cfg_[Axes::roll], -1.0 );
+				nh_local_.param( "pitch_axis_dir", axis_dir_cfg_[Axes::pitch], -1.0 );
+				nh_local_.param( "yaw_axis_dir", axis_dir_cfg_[Axes::yaw], -1.0 );
 
 				//pid_controller_.linear.initPid( pid_i_min_, pid_i_max_ );
 				pid_controller_.reset();
@@ -622,8 +622,6 @@ public:
 
 				scaleMotorValues( motor_cntl_msg_ );
 				motor_cntl_pub_.publish( motor_cntl_msg_ );
-
-				ros::Rate( 20 ).sleep();
 			}
 		};
 
@@ -641,7 +639,7 @@ int main( int argc, char** argv )
 	ros::NodeHandle nh;
 	
 	Seabee3Driver seabee3_driver( nh );
-	seabee3_driver.spin( SpinModeId::LOOP_SPIN_ONCE );
+	seabee3_driver.spin();
 
 	return 0;
 }

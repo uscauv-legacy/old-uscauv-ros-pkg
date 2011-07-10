@@ -52,10 +52,8 @@ private:
 	int error_count_;
 
 public:
-	BaseTfTranceiver( ros::NodeHandle & nh,
-	                  uint threads = 3 ) :
-		BaseNode<_ReconfigureType> ( nh,
-		                             threads ), error_count_( 0 )
+	BaseTfTranceiver( ros::NodeHandle & nh ) :
+		BaseNode<_ReconfigureType> ( nh ), error_count_( 0 )
 	{
 		transform_listener_ = new tf::TransformListener;
 		transform_broadcaster_ = new tf::TransformBroadcaster;
