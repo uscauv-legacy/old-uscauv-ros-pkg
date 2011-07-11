@@ -82,7 +82,6 @@ public:
 
 		imu_msg_mutex_.unlock();
     
-    ROS_INFO("Current Pitch: %f", last_imu_msg_->ori.y);
 	}
 
 	// use last imu message to scale motor values
@@ -133,7 +132,7 @@ public:
     new_motor_cntl_msg->mask[7] = motor_cntl_msg->mask[7];
     new_motor_cntl_msg->mask[8] = motor_cntl_msg->mask[8];
 
-    ROS_INFO("\n\n\tScaled Factor: %f Percent\n\tMotor1: %i\n\tMotor3: %i\n\n", scale_factor * 100, motor1_value_scaled, motor3_value_scaled); 
+    ROS_INFO("\n\n\tCurrent Pitch: \t\t\t%f Degrees\n\tThruster Multiplier: \t\t%f Percent\n\tMotor1 Original Command: \t%i\n\tMotor3 Original Command: \t%i\n\tMotor1 Updated Command: \t%i\n\tMotor3 Updated Command: \t%i\n\n", last_imu_msg_->ori.y, scale_factor * 100, motor_cntl_msg->motors[1], motor_cntl_msg->motors[3], motor1_value_scaled, motor3_value_scaled); 
 
     // now publish these new motor control thrust values 
 		motor_cntl_pub_.publish( new_motor_cntl_msg );
