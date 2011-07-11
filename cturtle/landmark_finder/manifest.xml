@@ -14,8 +14,10 @@
   <depend package="color_blob_finder"/>
   <depend package="contour_matcher"/>
   <depend package="color_classifier"/>
+  <depend package="camera_interpolation"/>
+
   <export>
-    <cpp cflags="-I${prefix}/include" lflags="-Wl,-rpath,${prefix}/lib -L${prefix}/lib -llandmark_finder"/>
+    <cpp cflags="-std=c++0x -I${prefix}/include" lflags="-Wl,-rpath,${prefix}/lib -L${prefix}/lib -llandmark_finder"/>
   </export>
 
 </package>
