@@ -68,7 +68,7 @@ public:
 
 	Seabee3Stabilizer( ros::NodeHandle & nh ) : _BaseNode( nh )
 	{
-		imu_sub_ = nh_local_.subscribe( "/xsens/custom_data", 1, &Seabee3Stabilizer::imuCB, this );
+		imu_sub_ = nh_local_.subscribe( "/xsens/data_calibrated", 1, &Seabee3Stabilizer::imuCB, this );
 		motor_cntl_sub_ = nh_local_.subscribe( "/seabee3/motor_cntl_raw", 1, &Seabee3Stabilizer::motorCntlCB, this );
 		motor_cntl_pub_ = nh_local_.advertise<_MotorCntlMsgType>( "/seabee3/motor_cntl", 1 );
 	}
@@ -81,7 +81,8 @@ public:
 		last_imu_msg_ = imu_msg;
 
 		imu_msg_mutex_.unlock();
-
+    
+    ROS_INFO("Current Pitch: %f", last_imu_msg_->ori.y);
 	}
 
 	// use last imu message to scale motor values
@@ -104,14 +105,14 @@ public:
     // if pitch is 90 degrees off from the nominal value, seabee must stop completely
     // for values in between 0 and 90, scale the speed down linearly
     scale_factor = ( 1 - delta_pitch / 90 );
-    ROS_INFO("STABILIZER - Fwd Thrusters Scaled Down by: %f Percent", scale_factor * 100); 
 
     // create new forward motor commands based on scale factor
     // the forward motors are 1 and 3
-    motor1_value_scaled = floor( motor_cntl_msg->motors[1] * scale_factor );
+    motor1_value_scaled = motor_cntl_msg->motors[1] * scale_factor;
     motor3_value_scaled = floor( motor_cntl_msg->motors[3] * scale_factor );
 
     // create new array of motor commands 
+    new_motor_cntl_msg->motors[0] = motor_cntl_msg->motors[0]; 
     new_motor_cntl_msg->motors[1] = motor1_value_scaled;
     new_motor_cntl_msg->motors[2] = motor_cntl_msg->motors[2]; 
     new_motor_cntl_msg->motors[3] = motor3_value_scaled;
@@ -120,7 +121,19 @@ public:
     new_motor_cntl_msg->motors[6] = motor_cntl_msg->motors[6]; 
     new_motor_cntl_msg->motors[7] = motor_cntl_msg->motors[7]; 
     new_motor_cntl_msg->motors[8] = motor_cntl_msg->motors[8]; 
-    new_motor_cntl_msg->motors[9] = motor_cntl_msg->motors[9]; 
+
+    // now pass the mask through the exact same as it was before
+    new_motor_cntl_msg->mask[0] = motor_cntl_msg->mask[0];
+    new_motor_cntl_msg->mask[1] = motor_cntl_msg->mask[1];
+    new_motor_cntl_msg->mask[2] = motor_cntl_msg->mask[2];
+    new_motor_cntl_msg->mask[3] = motor_cntl_msg->mask[3];
+    new_motor_cntl_msg->mask[4] = motor_cntl_msg->mask[4];
+    new_motor_cntl_msg->mask[5] = motor_cntl_msg->mask[5];
+    new_motor_cntl_msg->mask[6] = motor_cntl_msg->mask[6];
+    new_motor_cntl_msg->mask[7] = motor_cntl_msg->mask[7];
+    new_motor_cntl_msg->mask[8] = motor_cntl_msg->mask[8];
+
+    ROS_INFO("\n\n\tScaled Factor: %f Percent\n\tMotor1: %i\n\tMotor3: %i\n\n", scale_factor * 100, motor1_value_scaled, motor3_value_scaled); 
 
     // now publish these new motor control thrust values 
 		motor_cntl_pub_.publish( new_motor_cntl_msg );
