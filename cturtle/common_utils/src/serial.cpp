@@ -12,6 +12,12 @@ SerialPort::~SerialPort()
 }
 
 // ######################################################################
+void SerialPort::disconnect()
+{
+  if(itsFileDescriptor != -1) close(itsFileDescriptor);
+}
+
+// ######################################################################
 bool SerialPort::connect(std::string dev, speed_t baudRate)
 {
   if(itsFileDescriptor != -1) close(itsFileDescriptor);

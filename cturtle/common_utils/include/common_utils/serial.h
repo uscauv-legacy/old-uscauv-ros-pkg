@@ -25,11 +25,14 @@ public:
 	SerialPort();
 	~SerialPort();
 
-	bool connect( std::string dev,
-	              speed_t baudRate = B115200 );
+  //! Connect to the serial port
+	bool connect(std::string dev, speed_t baudRate = B115200);
 
 	//! Is this serial port currently connected
 	bool connected();
+
+  //! Close down our opened file descriptor
+  void disconnect();
 
 	int writeVector( std::vector<uint8_t> const& bytes );
 	std::vector<uint8_t> read( size_t bytes );
