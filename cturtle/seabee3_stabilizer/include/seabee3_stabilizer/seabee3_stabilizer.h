@@ -39,6 +39,10 @@
 #include <seabee3_driver_base/MotorCntl.h>
 #include <xsens_node/Imu.h>
 #include <base_node/base_node.h>
+#include <math.h>
+
+#define CORRECTIVE_SENSITIVITY    1.0
+#define NOMINAL_PITCH             0.0
 
 typedef unsigned int _DimType;
 typedef BaseNode<> _BaseNode;
@@ -51,6 +55,12 @@ public:
 	ros::Subscriber imu_sub_;
 	ros::Subscriber motor_cntl_sub_;
 	ros::Publisher motor_cntl_pub_;
+
+  float delta_pitch;
+  float scale_factor; 
+
+  int motor1_value_scaled;
+  int motor3_value_scaled;
 
 	boost::mutex imu_msg_mutex_;
 	_ImuMsgType::ConstPtr last_imu_msg_;
@@ -70,6 +80,7 @@ public:
 		last_imu_msg_ = imu_msg;
 
 		imu_msg_mutex_.unlock();
+
 	}
 
 	// use last imu message to scale motor values
@@ -77,13 +88,40 @@ public:
 	{
 		_MotorCntlMsgType::Ptr new_motor_cntl_msg( new _MotorCntlMsgType );
 
+    // find difference between current pitch and nominal pitch 
 		imu_msg_mutex_.lock();
-
-		// TODO: read IMU values from last_imu_msg_ and calculate scalar for motor values here
-		// TODO: to see the IMU and MotorCntl message definitions, type 'rosmsg show <package_name>/<message_name>' in a terminal; note: 'xsens_node/Imu' 'seabee3_driver_base/MotorCntl'
-
+    delta_pitch = abs( last_imu_msg_->ori.y - NOMINAL_PITCH ); 
 		imu_msg_mutex_.unlock();
 
+    // we want the sub to stop if pitch is > 90. if its 91, we still want it to stop
+    // so make 90 the hard limit
+    if (delta_pitch > 90.0)
+      delta_pitch = 90.0;
+
+    // slow down seabee based on how far off it is pitching
+    // if pitch is 0 degrees off from the nominal value, just pass the velocity value through
+    // if pitch is 90 degrees off from the nominal value, seabee must stop completely
+    // for values in between 0 and 90, scale the speed down linearly
+    scale_factor = ( 1 - delta_pitch / 90 );
+    ROS_INFO("Stability Correction, Forward Thrusters Scaled Down by:\t%f percent", scale_factor * 100); 
+
+    // create new forward motor commands based on scale factor
+    // the forward motors are 1 and 3
+    motor1_value_scaled = floor( motor_cntl_msg->motors[1] * scale_factor * CORRECTIVE_SENSITIVITY );
+    motor3_value_scaled = floor( motor_cntl_msg->motors[3] * scale_factor * CORRECTIVE_SENSITIVITY );
+
+    // create new array of motor commands 
+    new_motor_cntl_msg->motors[1] = motor1_value_scaled;
+    new_motor_cntl_msg->motors[2] = motor_cntl_msg->motors[2]; 
+    new_motor_cntl_msg->motors[3] = motor3_value_scaled;
+    new_motor_cntl_msg->motors[4] = motor_cntl_msg->motors[4]; 
+    new_motor_cntl_msg->motors[5] = motor_cntl_msg->motors[5]; 
+    new_motor_cntl_msg->motors[6] = motor_cntl_msg->motors[6]; 
+    new_motor_cntl_msg->motors[7] = motor_cntl_msg->motors[7]; 
+    new_motor_cntl_msg->motors[8] = motor_cntl_msg->motors[8]; 
+    new_motor_cntl_msg->motors[9] = motor_cntl_msg->motors[9]; 
+
+    // now publish these new motor control thrust values 
 		motor_cntl_pub_.publish( new_motor_cntl_msg );
 	}
 };
