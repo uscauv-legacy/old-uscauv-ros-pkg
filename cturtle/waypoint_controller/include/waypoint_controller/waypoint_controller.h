@@ -42,23 +42,97 @@
 
 typedef BaseNode<> _BaseNode;
 typedef waypoint_controller::SetBehavior _SetBehavior;
+geometry_msgs::vector3 operator+( geometry_msgs::vector3& a, geometry_msgs::vector3& a )
+{
+	geometry_msgs::vector3 c;
+	c.x = a.x + b.x;
+	c.y = a.y + b.y;
+	c.z = a.z + b.z;
+	return c;
+}
 
-class WaypointController : public _BaseNode
+geometry_msgs::vector3 operator*( double a, geometry_msgs::vector3& b )
+{
+	geometry_msgs::vector3 c;
+	c.x = a * b.x;
+	c.y = a * b.y;
+	c.z = a * b.z;
+	return c;
+}
+class WaypointController: public _BaseNode
 {
 public:
 	ros::ServiceServer set_behavior_svr_;
 
-	WaypointController( ros::NodeHandle & nh ) : _BaseNode( nh )
+	WaypointController( ros::NodeHandle & nh ) :
+		_BaseNode( nh )
 	{
 		set_behavior_svr_ = nh_local_.advertiseService( "set_behavior", &WaypointController::setBehaviorCB, this );
 	}
+	int val[];
+
+	geometry_msgs::vector3 vec[]; //0 = position, 1 = orientation, 2 = area
 
 	bool setBehaviorCB( _SetBehavior::Request & req, _SetBehavior::Response & resp )
 	{
-		return false;
+		for ( i = 0; i < req.flags.size(); i++ )
+		{
+			if ( req.flags[i].values.empty() ) val[0] = 0;
+			else val = req.flags[i].values;
+
+			switch ( req.flags[i].behavior )
+			{
+			case 0: //position behavior
+				vec[0] = req.flags[i].vector + val[0] * currentPosition; //if val[0]=0 then it sets absolute coordinates, if val[0]=1 then it is relative coordinates
+				if ( req.flags[i].operation == 0 ) moveTo( vec[0] );
+				else if ( req.flags[i].operation == 2 ) clear( vec[0], 0, val[0] );
+			}
+			return true;
+
+			case 1: //orientation behavior
+			if ( val[0] )
+			{ //set based on angle
+				vec[1] = req.flags[i].vector + val[1] * currentAngle;
+				if ( req.flags[i].operation == 0 ) turnTo( vec[1] );
+				else if ( req.flags[i].operation == 2 ) clear( vec[1], 1, val[1] );
+			}
+			else
+			{ // turn based on last position
+				turnTo( angleBetween( vec[0], currentPosition ) );
+			}
+			return true;
+
+			case 2:
+			vec[2] = req.flags[i].vector;
+			if ( req.flags[i].operation == 1 )
+			{
+				if ( val[0] ) setArea( vec[2], vec[0] );
+				else setArea( vec[2], currentPosition );
+			}
+			else if ( req.flags[i].operation == 2 ) clear( vec[2], 2, val[0] );
+			return true;
+
+			default:
+			return false;
+		}
 	}
-
 };
-
+void clear( geometry_msgs::vector3 & vector, const int & behavior, const int & value )
+{
+	switch ( behavior )
+	{
+	case 0:
+		if ( value ) vector = currentPosition;
+		else vector = 0 * vector;
+		break;
+	case 1:
+		if ( value ) vector = currentAngle;
+		else vector = 0 * vector;
+		break;
+	case 2:
+		vector = 0 * vector;
+		break;
+	}
+}
 
 #endif /* WAYPOINT_CONTROLLER_H_ */

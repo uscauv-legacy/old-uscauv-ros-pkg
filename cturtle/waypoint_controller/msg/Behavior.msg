@@ -1,8 +1,8 @@
 uint8 POSITION_FLAG =    0 # moves seabee to the specified absolute position ( 0 ) or relative position ( 1 )
 uint8 ORIENTATION_FLAG = 1 # makes seabee face the specified orientation ( 0 ) or the last position ( 1 )
+						   # second values specifies absolute orientation ( 0 ) or relativel orientation ( 1 )
 uint8 AREA_FLAG =        2 # limits movements to the specified area; centered at the last position ( 0 )
-                           #                                         centered at 'vector' ( 1 )
-                           #                                         centered at the current position ( 2 )
+                           #                                         centered at the current position ( 1 )
 uint8 SEARCH_FLAG =      3 # search (will describe later)
 
 BehaviorFlag[] flags
@@ -19,7 +19,7 @@ BehaviorFlag[] flags
 #       values = { 1 }        # calculate angle to the last position and face it
 #
 # example: move to given absolute position 
-# flag: operation = 1         # 'execute' operation
+# flag: operation = 0         # 'execute' operation
 #       behavior = 0          # 'position' behavior
 #       vector = { x, y, z }  # the position to move to
 #       values = { 0 }        # use absolute position
