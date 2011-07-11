@@ -1,0 +1,14 @@
+[xsens_node/IMUData]:
+geometry_msgs/Vector3 accel
+geometry_msgs/Vector3 gyro
+geometry_msgs/Vector3 mag
+geometry_msgs/Vector3 ori
+
+================================================================================
+MSG: geometry_msgs/Vector3
+# This represents a vector in free space. 
+
+float64 x
+float64 y
+float64 z
+

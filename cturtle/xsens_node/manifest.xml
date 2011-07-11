@@ -16,8 +16,10 @@
   <depend package="tf"/>
   <depend package="libxsens"/>
   <depend package="base_libs"/>
+  <depend package="rosbag"/>
   <export>
     <cpp cflags="-I${prefix}/include -I${prefix}/msg/cpp -I${prefix}/srv/cpp" lflags="-L/{prefix}/lib"/>
+    <rosbag migration_rule_file="rosbag_migration/IMUData_to_Imu.bmr"/>
   </export>
 </package>
 
