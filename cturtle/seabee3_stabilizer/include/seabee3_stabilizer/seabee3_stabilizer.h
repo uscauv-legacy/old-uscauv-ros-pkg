@@ -41,7 +41,8 @@
 #include <base_node/base_node.h>
 #include <math.h>
 
-#define CORRECTIVE_SENSITIVITY    1.0
+// the IMU may be tilted inside of seabee so that 0.0 degrees isn't
+// the nominal ideal pitch value, this constant can adjust that
 #define NOMINAL_PITCH             0.0
 
 typedef unsigned int _DimType;
@@ -95,7 +96,7 @@ public:
 
     // we want the sub to stop if pitch is > 90. if its 91, we still want it to stop
     // so make 90 the hard limit
-    if (delta_pitch > 90.0)
+    if (delta_pitch > 90.0 )
       delta_pitch = 90.0;
 
     // slow down seabee based on how far off it is pitching
@@ -103,12 +104,12 @@ public:
     // if pitch is 90 degrees off from the nominal value, seabee must stop completely
     // for values in between 0 and 90, scale the speed down linearly
     scale_factor = ( 1 - delta_pitch / 90 );
-    ROS_INFO("Stability Correction, Forward Thrusters Scaled Down by:\t%f percent", scale_factor * 100); 
+    ROS_INFO("STABILIZER - Fwd Thrusters Scaled Down by: %f Percent", scale_factor * 100); 
 
     // create new forward motor commands based on scale factor
     // the forward motors are 1 and 3
-    motor1_value_scaled = floor( motor_cntl_msg->motors[1] * scale_factor * CORRECTIVE_SENSITIVITY );
-    motor3_value_scaled = floor( motor_cntl_msg->motors[3] * scale_factor * CORRECTIVE_SENSITIVITY );
+    motor1_value_scaled = floor( motor_cntl_msg->motors[1] * scale_factor );
+    motor3_value_scaled = floor( motor_cntl_msg->motors[3] * scale_factor );
 
     // create new array of motor commands 
     new_motor_cntl_msg->motors[1] = motor1_value_scaled;
