@@ -75,16 +75,16 @@ public:
 
 	bool setBehaviorCB( _SetBehavior::Request & req, _SetBehavior::Response & resp )
 	{
-		for ( i = 0; i < req.flags.size(); i++ )
+		for ( i = 0; i < req.flags.size(); i++ ) //iterates through all flags in req
 		{
-			if ( req.flags[i].values.empty() ) val[0] = 0;
+			if ( req.flags[i].values.empty() ) val[0] = 0; //if value isn't set, default to 0
 			else val = req.flags[i].values;
 
 			switch ( req.flags[i].behavior )
 			{
 			case 0: //position behavior
 				vec[0] = req.flags[i].vector + val[0] * currentPosition; //if val[0]=0 then it sets absolute coordinates, if val[0]=1 then it is relative coordinates
-				if ( req.flags[i].operation == 0 ) moveTo( vec[0] );
+				if ( req.flags[i].operation == 0 ) moveTo( vec[0] ); //moves to last saved position
 				else if ( req.flags[i].operation == 2 ) clear( vec[0], 0, val[0] );
 			}
 			return true;
@@ -92,8 +92,8 @@ public:
 			case 1: //orientation behavior
 			if ( val[0] )
 			{ //set based on angle
-				vec[1] = req.flags[i].vector + val[1] * currentAngle;
-				if ( req.flags[i].operation == 0 ) turnTo( vec[1] );
+				vec[1] = req.flags[i].vector + val[1] * currentAngle; //if val[0]=0 then it sets absolute orientation, if val[0]=1 then it is relative orientation
+				if ( req.flags[i].operation == 0 ) turnTo( vec[1] ); //turns to last saved orienation
 				else if ( req.flags[i].operation == 2 ) clear( vec[1], 1, val[1] );
 			}
 			else
@@ -102,18 +102,18 @@ public:
 			}
 			return true;
 
-			case 2:
+			case 2: //area behavior
 			vec[2] = req.flags[i].vector;
 			if ( req.flags[i].operation == 1 )
 			{
-				if ( val[0] ) setArea( vec[2], vec[0] );
-				else setArea( vec[2], currentPosition );
+				if ( val[0] ) setArea( vec[2], vec[0] ); //centers at last position
+				else setArea( vec[2], currentPosition ); //centers at current position
 			}
 			else if ( req.flags[i].operation == 2 ) clear( vec[2], 2, val[0] );
 			return true;
 
 			default:
-			return false;
+			return false; //returns false only if an invalid behavior argument was passed in the message
 		}
 	}
 };
@@ -123,14 +123,14 @@ void clear( geometry_msgs::vector3 & vector, const int & behavior, const int & v
 	{
 	case 0:
 		if ( value ) vector = currentPosition;
-		else vector = 0 * vector;
+		else vector = 0 * vector; //sets vector to 0,0,0
 		break;
 	case 1:
 		if ( value ) vector = currentAngle;
-		else vector = 0 * vector;
+		else vector = 0 * vector; //sets vector to 0,0,0
 		break;
 	case 2:
-		vector = 0 * vector;
+		vector = 0 * vector; //sets vector to 0,0,0
 		break;
 	}
 }
