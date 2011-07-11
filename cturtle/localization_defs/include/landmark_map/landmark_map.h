@@ -1,17 +1,14 @@
 /*******************************************************************************
  *
- *      localization_particle
- *
- *      Copyright (c) 2010,
- *
- *      Edward T. Kaszubski (ekaszubski@gmail.com)
- *
+ *      LandmarkMapServer
+ * 
+ *      Copyright (c) 2010, Edward T. Kaszubski (ekaszubski@gmail.com)
  *      All rights reserved.
  *
  *      Redistribution and use in source and binary forms, with or without
  *      modification, are permitted provided that the following conditions are
  *      met:
- *
+ *      
  *      * Redistributions of source code must retain the above copyright
  *        notice, this list of conditions and the following disclaimer.
  *      * Redistributions in binary form must reproduce the above
@@ -21,7 +18,7 @@
  *      * Neither the name of the USC Underwater Robotics Team nor the names of its
  *        contributors may be used to endorse or promote products derived from
  *        this software without specific prior written permission.
- *
+ *      
  *      THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
  *      "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
  *      LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
@@ -36,4 +33,31 @@
  *
  *******************************************************************************/
 
-#include <localization_tools/LocalizationParticle.h>
+#ifndef LANDMARK_MAP_H_
+#define LANDMARK_MAP_H_
+
+#include <vector>
+#include <landmark_map/landmark.h>
+#include <localization_defs/LandmarkMap.h>
+#include <opencv/cv.h>
+
+class LandmarkMap
+{
+public:
+	LandmarkMap( cv::Point2d dim = cv::Point2d( 0.0, 0.0 ) );
+	LandmarkMap( std::vector<Landmark> landmarks, cv::Point2d dim );
+	LandmarkMap( const localization_defs::LandmarkMapMsg & msg );
+	LandmarkMap( Landmark l );
+	LandmarkMap( std::vector<Landmark> l );
+
+	void addLandmark( const Landmark l );
+	std::vector<Landmark> fetchLandmarksByType( const int type ) const;
+	std::vector<Landmark> fetchWaypointsByType( const int type ) const;
+	std::vector<visualization_msgs::Marker> createMarkerArray( const std::string & frame ) const;
+	localization_defs::LandmarkMapMsg createMsg() const;
+
+	std::vector<Landmark> landmarks_;
+	cv::Point2d dim_;
+};
+
+#endif /* LANDMARK_MAP_H_ */

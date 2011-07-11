@@ -41,10 +41,10 @@
 
 #include <opencv/cv.h>
 #include <visualization_msgs/Marker.h>
-#include <localization_defs/LandmarkMsg.h>
-#include <mathy_math/mathy_math.h>
+#include <localization_defs/Landmark.h>
+#include <common_utils/math.h>
 #include <string>
-#include <tf/tf.h>
+#include <common_utils/tf.h>
 #include <sstream>
 
 class Landmark

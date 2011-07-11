@@ -1,6 +1,6 @@
 /*******************************************************************************
  *
- *      landmark_sensor
+ *      localization_particle
  *
  *      Copyright (c) 2010,
  *
@@ -36,4 +36,4 @@
  *
  *******************************************************************************/
 
-#include <localization_tools/LandmarkSensor.h>
+#include <localization_tools/localization_particle.h>

@@ -36,7 +36,7 @@
  *
  *******************************************************************************/
 
-#include <landmark_map/LandmarkMap.h>
+#include <landmark_map/landmark_map.h>
 
 LandmarkMap::LandmarkMap( cv::Point2d dim )
 {

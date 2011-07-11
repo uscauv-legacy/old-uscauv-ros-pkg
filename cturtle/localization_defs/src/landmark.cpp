@@ -36,7 +36,7 @@
  *
  *******************************************************************************/
 
-#include <landmark_map/Landmark.h>
+#include <landmark_map/landmark.h>
 
 Landmark::Landmark( cv::Point3d center, double orientation, cv::Point3d dim, int shapeType )
 {

@@ -40,11 +40,11 @@
 #define LANDMARK_SENSOR_H_
 
 #include <vector>
-#include <localization_tools/LocalizationParticle.h>
-#include <landmark_map/LandmarkMap.h>
+#include <localization_tools/localization_particle.h>
+#include <landmark_map/landmark_map.h>
 //#include <sonar_node/SonarScanArray.h>
-#include <localization_defs/LandmarkArrayMsg.h>
-#include <mathy_math/mathy_math.h> //includes <math.h>
+#include <localization_defs/LandmarkArray.h>
+#include <common_utils/math.h> //includes <math.h>
 //used to convert sensor data into particle weights
 template<typename _T>
 class LandmarkSensor
