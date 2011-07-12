@@ -160,40 +160,46 @@ public:
         find_pipelines_req_.candidate_contours.push_back( find_color_blobs_resp.blobs[i].contour );
 		}
 
-		_MatchContoursService::Response match_contours_resp;
-		if ( !match_contours_cli_.call( match_contours_req_,
-		                                match_contours_resp ) ) return;
+    _LandmarkArrayMsgType::Ptr landmark_array_msg( new _LandmarkArrayMsgType );
 
-		_LandmarkArrayMsgType::Ptr landmark_array_msg( new _LandmarkArrayMsgType );
-		for ( _DimType i = 0; i < match_contours_resp.matched_contours.size(); ++i )
-		{
-			int num_matches = 0;
-			for ( _DimType j = 0; j < match_contours_resp.matched_contours[i].match_qualities.size(); ++j )
-			{
-				if ( match_contours_resp.matched_contours[i].match_qualities[j] < min_match_thresholds_[i] ) num_matches++;
-			}
-
-			if ( num_matches > 0 )
-			{
-				// reproject to 3D
-
-
-				// add new landmark to resp
-				_LandmarkMsgType landmark_msg;
-				landmark_array_msg->landmarks.push_back( landmark_msg );
-			}
-		}
-
-		_FindPipelinesService::Response find_pipelines_resp;
-    if(find_pipelines_cli_.call(find_pipelines_req_, find_pipelines_resp))
+    // Try to match contours
+    if(match_contours_req_.candidate_contours.size() > 0)
     {
-      for(_DimType i=0; i<find_pipelines_resp.found_pipelines.size(); ++i)
+      _MatchContoursService::Response match_contours_resp;
+      if ( match_contours_cli_.call(match_contours_req_, match_contours_resp) )
       {
-        // Do awesome stuff here...
+        for ( _DimType i = 0; i < match_contours_resp.matched_contours.size(); ++i )
+        {
+          int num_matches = 0;
+          for ( _DimType j = 0; j < match_contours_resp.matched_contours[i].match_qualities.size(); ++j )
+          {
+            if ( match_contours_resp.matched_contours[i].match_qualities[j] < min_match_thresholds_[i] ) num_matches++;
+          }
+
+          if ( num_matches > 0 )
+          {
+            // reproject to 3D
+
+            // add new landmark to resp
+            _LandmarkMsgType landmark_msg;
+            landmark_array_msg->landmarks.push_back( landmark_msg );
+          }
+        }
       }
     }
 
-   
+    // Try to find pipelines
+    if(find_pipelines_req_.candidate_contours.size() > 0)
+    {
+      _FindPipelinesService::Response find_pipelines_resp;
+      if(find_pipelines_cli_.call(find_pipelines_req_, find_pipelines_resp))
+      {
+        for(_DimType i=0; i<find_pipelines_resp.found_pipelines.size(); ++i)
+        {
+          // Do awesome stuff here...
+        }
+      }
+    }
 
 		landmarks_pub_.publish( landmark_array_msg );
 	}

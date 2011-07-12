@@ -64,4 +64,10 @@
 		<arg name="source1" value="/color_classifier_front/images" />
 		<arg name="source2" value="/color_classifier_down/images" />
 	</include>
+
+  <node pkg="landmark_finder" type="landmark_finder_node" name="landmark_finder" output="screen" args="" />
+
+	<include file="$(find pipeline_finder)/launch/pipeline_finder.launch" >
+	</include>
+
 </launch>
