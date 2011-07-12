@@ -13,6 +13,7 @@
   <depend package="localization_defs"/>
   <depend package="color_blob_finder"/>
   <depend package="contour_matcher"/>
+  <depend package="pipeline_finder"/>
   <depend package="color_classifier"/>
   <depend package="camera_interpolation"/>
 

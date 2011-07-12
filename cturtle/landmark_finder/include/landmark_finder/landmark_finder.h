@@ -39,6 +39,8 @@
 #include <base_node/base_node.h>
 #include <color_blob_finder/FindColorBlobs.h>
 #include <contour_matcher/MatchContours.h>
+#include <pipeline_finder/Pipeline.h>
+#include <pipeline_finder/FindPipelines.h>
 #include <localization_defs/LandmarkArray.h>
 //#include <localization_defs/landmark_map.h>
 #include <landmark_finder/SetEnabledLandmarks.h>
@@ -55,6 +57,7 @@ typedef BaseNode<_ReconfigureType> _BaseNode;
 typedef landmark_finder::SetEnabledLandmarks _SetEnabledLandmarksService;
 typedef color_blob_finder::FindColorBlobs _FindColorBlobsService;
 typedef contour_matcher::MatchContours _MatchContoursService;
+typedef pipeline_finder::FindPipelines _FindPipelinesService;
 typedef localization_defs::Landmark _LandmarkMsgType;
 typedef localization_defs::LandmarkArray _LandmarkArrayMsgType;
 
@@ -73,6 +76,7 @@ public:
 	ros::ServiceServer set_enabled_landmarks_svr_;
 	ros::ServiceClient find_color_blobs_cli_;
 	ros::ServiceClient match_contours_cli_;
+	ros::ServiceClient find_pipelines_cli_;
 	ros::Publisher landmarks_pub_;
 
 	_TemplateContours template_contours_;
@@ -82,6 +86,7 @@ public:
 	// these are updated each time setEnabledLandmarksCB is called
 	_FindColorBlobsService::Request find_color_blobs_req_;
 	_MatchContoursService::Request match_contours_req_;
+	_FindPipelinesService::Request find_pipelines_req_;
 
 	LandmarkFinder( ros::NodeHandle & nh ) :
 			_BaseNode( nh )
@@ -93,6 +98,8 @@ public:
 		find_color_blobs_cli_ = nh_local_.serviceClient<_FindColorBlobsService>( "find_color_blobs" );
 
 		match_contours_cli_ = nh_local_.serviceClient<_MatchContoursService>( "match_contours" );
+
+		find_pipelines_cli_ = nh_local_.serviceClient<_FindPipelinesService>( "find_pipelines" );
 
 		landmarks_pub_ = nh_local_.advertise<_LandmarkArrayMsgType>( "landmarks",
 		                                                             1 );
@@ -109,7 +116,8 @@ public:
 	                            _SetEnabledLandmarksService::Response & resp )
 	{
 		find_color_blobs_req_ = {};
-		match_contours_req_ = {};
+		match_contours_req_   = {};
+		find_pipelines_req_   = {};
 
 		for( _DimType i = 0; i < enabled_types_.size(); ++i )
 		{
@@ -127,8 +135,7 @@ public:
 
 		for( _DimType i = 0; i < enabled_types_.size(); ++i )
 		{
-			if( enabled_types_[i] ) appendTemplateContours( match_contours_req_.template_contours,
-			            			                        i );
+			if( enabled_types_[i] ) appendTemplateContours( match_contours_req_.template_contours, i );
 		}
 
 		return true;
@@ -144,10 +151,13 @@ public:
 		}
 
 		match_contours_req_.candidate_contours.clear();
+		find_pipelines_req_.candidate_contours.clear();
 
 		for ( _DimType i = 0; i < find_color_blobs_resp.blobs.size(); ++i )
 		{
 			match_contours_req_.candidate_contours.push_back( find_color_blobs_resp.blobs[i].contour );
+      if(find_color_blobs_resp.blobs[i].contour.header.frame_id == "camera_down")
+        find_pipelines_req_.candidate_contours.push_back( find_color_blobs_resp.blobs[i].contour );
 		}
 
 		_MatchContoursService::Response match_contours_resp;
@@ -173,6 +183,17 @@ public:
 				landmark_array_msg->landmarks.push_back( landmark_msg );
 			}
 		}
+
+		_FindPipelinesService::Response find_pipelines_resp;
+    if(find_pipelines_cli_.call(find_pipelines_req_, find_pipelines_resp))
+    {
+      for(_DimType i=0; i<find_pipelines_resp.found_pipelines.size(); ++i)
+      {
+        // Do awesome stuff here...
+      }
+    }
+
+   
 
 		landmarks_pub_.publish( landmark_array_msg );
 	}
