@@ -152,7 +152,7 @@ public:
 
 		if( distance_type == DistanceType::EUCLIDIAN ) return sqrt( total_distance );
 
-		return total_distance;
+		return sqrt( total_distance );
 	}
 
 	template<class _WeightType>
