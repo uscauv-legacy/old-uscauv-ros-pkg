@@ -42,58 +42,77 @@
 
 typedef unsigned int _DimType;
 typedef BaseNode<> _BaseNode;
+typedef pipeline_finder::FindPipelines _FindPipelinesService;
+typedef pipeline_finder::Pipeline _FindPipelinesMsgType;
+
 
 class PipelineFinder: public _BaseNode
 {
-public:
-	ros::ServiceServer match_contours_svr_;
+  private:
+    ros::ServiceServer find_pipelines_svr_;
 
-	PipelineFinder( ros::NodeHandle & nh ) :
-			_BaseNode( nh )
-	{
-		find_pipelines_svr_ = nh_local_.advertiseService( "find_pipelines",
-		                                                  &PipelineFinder::findPipelinesCB,
-		                                                  this );
-	}
+  public:
+    ros::ServiceServer match_contours_svr_;
 
-	bool findPipelinesCB( _FindPipelinesService::Request & req,
-	                       _FindPipelinesService::Response & resp )
-	{
-    return true;
-//		std::vector<_Contour> candidate_contours( req.candidate_contours.size() );
-//
-//		// convert incoming contours
-//		for ( _DimType i = 0; i < req.candidate_contours.size(); ++i )
-//		{
-//			candidate_contours[i] << req.candidate_contours[i];
-//		}
-//
-//		std::vector<_Contour> template_contours( req.template_contours.size() );
-//
-//		for ( _DimType i = 0; i < req.template_contours.size(); ++i )
-//		{
-//			template_contours[i] << req.template_contours[i];
-//		}
-//
-//		// calculate similarity
-//		resp.matched_contours.reserve( candidate_contours.size() );
-//		for ( _DimType i = 0; i < candidate_contours.size(); ++i )
-//		{
-//			_MatchedContourMsgType matched_contour_msg;
-//			matched_contour_msg.match_qualities.reserve( template_contours.size() );
-//
-//			for ( _DimType j = 0; j < template_contours.size(); ++j )
-//			{
-//				matched_contour_msg.match_qualities.push_back( cv::matchShapes( cv::Mat( template_contours[j] ),
-//				                                                                cv::Mat( candidate_contours[i] ),
-//				                                                                CV_CONTOURS_MATCH_I2,
-//				                                                                0 ) );
-//			}
-//
-//			resp.matched_contours.push_back( matched_contour_msg );
-//		}
-//
-//		return true;
-//	}
+    PipelineFinder( ros::NodeHandle & nh ) :
+      _BaseNode( nh )
+  {
+    find_pipelines_svr_ = nh_local_.advertiseService( "find_pipelines",
+        &PipelineFinder::findPipelinesCB,
+        this );
+  }
+
+    bool findPipelinesCB( _FindPipelinesService::Request & req,
+        _FindPipelinesService::Response & resp )
+    {
+      ROS_INFO("Let's match some pipelines!");
+      return true;
+      //		std::vector<_Contour> candidate_contours( req.candidate_contours.size() );
+      //
+      //		// convert incoming contours
+      //		for ( _DimType i = 0; i < req.candidate_contours.size(); ++i )
+      //		{
+      //			candidate_contours[i] << req.candidate_contours[i];
+      //		}
+      //
+      //		std::vector<_Contour> template_contours( req.template_contours.size() );
+      //
+      //		for ( _DimType i = 0; i < req.template_contours.size(); ++i )
+      //		{
+      //			template_contours[i] << req.template_contours[i];
+      //		}
+      //
+      //		// calculate similarity
+      //		resp.matched_contours.reserve( candidate_contours.size() );
+      //		for ( _DimType i = 0; i < candidate_contours.size(); ++i )
+      //		{
+      //			_MatchedContourMsgType matched_contour_msg;
+      //			matched_contour_msg.match_qualities.reserve( template_contours.size() );
+      //
+      //			for ( _DimType j = 0; j < template_contours.size(); ++j )
+      //			{
+      //				matched_contour_msg.match_qualities.push_back( cv::matchShapes( cv::Mat( template_contours[j] ),
+      //				                                                                cv::Mat( candidate_contours[i] ),
+      //				                                                                CV_CONTOURS_MATCH_I2,
+      //				                                                                0 ) );
+      //			}
+      //
+      //			resp.matched_contours.push_back( matched_contour_msg );
+      //		}
+      //
+      //		return true;
+      //	}
+   }
 };
+
+int main( int argc, char ** argv )
+{
+	ros::init( argc, argv, "contour_matcher" );
+	ros::NodeHandle nh( "~" );
+
+	PipelineFinder pipeline_finder( nh );
+	pipeline_finder.spin();
+
+	return 0;
+}
 

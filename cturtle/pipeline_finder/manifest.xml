@@ -9,6 +9,8 @@
   <review status="unreviewed" notes=""/>
   <url>http://ros.org/wiki/pipeline_finder</url>
   <depend package="base_libs"/>
+  <depend package="color_blob_finder"/>
+  <depend package="opencv2"/>
   
   <cpp cflags="-std=c++0x"/>
   
