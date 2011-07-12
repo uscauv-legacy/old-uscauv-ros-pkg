@@ -42,4 +42,6 @@ int main( int argc, char ** argv )
 
 	ImageArrayViewer image_array_viewer( nh );
 	image_array_viewer.spin();
+
+	return 0;
 }
