@@ -107,7 +107,8 @@ public:
 		// load template contours here
 	}
 
-	virtual void reconfigureCB( _ReconfigureType &config, uint32_t level )
+	virtual void reconfigureCB( _ReconfigureType &config,
+	                            uint32_t level )
 	{
 		min_match_thresholds_[0] = config.buoy_min_match_threshold;
 	}
@@ -115,9 +116,12 @@ public:
 	bool setEnabledLandmarksCB( _SetEnabledLandmarksService::Request & req,
 	                            _SetEnabledLandmarksService::Response & resp )
 	{
-		find_color_blobs_req_ = {};
-		match_contours_req_   = {};
-		find_pipelines_req_   = {};
+		find_color_blobs_req_ =
+		{};
+		match_contours_req_ =
+		{};
+		find_pipelines_req_ =
+		{};
 
 		for( _DimType i = 0; i < enabled_types_.size(); ++i )
 		{
@@ -126,6 +130,7 @@ public:
 
 		for ( _DimType i = 0; i < req.descriptions.size(); ++i )
 		{
+			printf("Processing description: %d %d\n", req.descriptions[i].type, req.descriptions[i].color );
 			// we don't have to worry about duplicate colors; the color blob finder will handle it for us
 			find_color_blobs_req_.colors.push_back( req.descriptions[i].color );
 
@@ -143,12 +148,24 @@ public:
 
 	void spinOnce()
 	{
-		_FindColorBlobsService::Response find_color_blobs_resp;
-		if( !find_color_blobs_cli_.call( find_color_blobs_req_, find_color_blobs_resp ) || find_color_blobs_resp.blobs.size() == 0 )
+		if( find_color_blobs_req_.colors.size() == 0 )
 		{
-			ROS_WARN( "No color blobs found..." );
+			ROS_WARN( "No landmark types enabled." );
 			return;
 		}
+
+		_FindColorBlobsService::Response find_color_blobs_resp;
+		if( find_color_blobs_cli_.call( find_color_blobs_req_, find_color_blobs_resp ) )
+		{
+			if( find_color_blobs_resp.blobs.size() == 0 )
+			{
+				ROS_WARN( "No color blobs found." );
+				return;
+			}
+		}
+		else ROS_WARN( "Could not connect to color blob finder" );
+
+		_LandmarkArrayMsgType::Ptr landmark_array_msg( new _LandmarkArrayMsgType );
 
 		match_contours_req_.candidate_contours.clear();
 		find_pipelines_req_.candidate_contours.clear();
@@ -156,61 +173,51 @@ public:
 		for ( _DimType i = 0; i < find_color_blobs_resp.blobs.size(); ++i )
 		{
 			match_contours_req_.candidate_contours.push_back( find_color_blobs_resp.blobs[i].contour );
-      if(find_color_blobs_resp.blobs[i].contour.header.frame_id == "camera_down")
-        find_pipelines_req_.candidate_contours.push_back( find_color_blobs_resp.blobs[i].contour );
+			if( find_color_blobs_resp.blobs[i].contour.header.frame_id == "camera_down" ) find_pipelines_req_.candidate_contours.push_back( find_color_blobs_resp.blobs[i].contour );
 		}
 
-    _LandmarkArrayMsgType::Ptr landmark_array_msg( new _LandmarkArrayMsgType );
+		_MatchContoursService::Response match_contours_resp;
+		if ( match_contours_cli_.call( match_contours_req_, match_contours_resp ) )
+		{
+			if( match_contours_resp.matched_contours.size() == 0 ) ROS_WARN( "No contours returned." );
 
-    // Try to match contours
-    //if(match_contours_req_.candidate_contours.size() > 0)
-    {
-      _MatchContoursService::Response match_contours_resp;
-      ROS_INFO("Trying to match pipelines");
-      if ( match_contours_cli_.call(match_contours_req_, match_contours_resp) )
-      {
-        ROS_INFO("Matched Pipelines!");
-        for ( _DimType i = 0; i < match_contours_resp.matched_contours.size(); ++i )
-        {
-          int num_matches = 0;
-          for ( _DimType j = 0; j < match_contours_resp.matched_contours[i].match_qualities.size(); ++j )
-          {
-            if ( match_contours_resp.matched_contours[i].match_qualities[j] < min_match_thresholds_[i] ) num_matches++;
-          }
+			for ( _DimType i = 0; i < match_contours_resp.matched_contours.size(); ++i )
+			{
+				int num_matches = 0;
+				for ( _DimType j = 0; j < match_contours_resp.matched_contours[i].match_qualities.size(); ++j )
+				{
+					if ( match_contours_resp.matched_contours[i].match_qualities[j] < min_match_thresholds_[i] ) num_matches++;
+				}
 
-          if ( num_matches > 0 )
-          {
-            // reproject to 3D
+				if ( num_matches > 0 )
+				{
+					// reproject to 3D
 
-            // add new landmark to resp
-            _LandmarkMsgType landmark_msg;
-            landmark_array_msg->landmarks.push_back( landmark_msg );
-          }
-        }
-      }
-      else
-        ROS_INFO("Failed to match pipelines");
-    }
+					// add new landmark to resp
+					_LandmarkMsgType landmark_msg;
+					landmark_array_msg->landmarks.push_back( landmark_msg );
+				}
+			}
+		}
+		else ROS_WARN( "Could not connect to contour matcher" );
 
-    // Try to find pipelines
-    if(find_pipelines_req_.candidate_contours.size() > 0)
-    {
-      _FindPipelinesService::Response find_pipelines_resp;
-      if(find_pipelines_cli_.call(find_pipelines_req_, find_pipelines_resp))
-      {
-        for(_DimType i=0; i<find_pipelines_resp.found_pipelines.size(); ++i)
-        {
-          // Do awesome stuff here...
-        }
-      }
-    }
+		_FindPipelinesService::Response find_pipelines_resp;
+		if( find_pipelines_cli_.call( find_pipelines_req_, find_pipelines_resp ) )
+		{
+			if( find_pipelines_resp.found_pipelines.size() == 0 ) ROS_WARN( "No pipelines found." );
+			for( _DimType i = 0; i < find_pipelines_resp.found_pipelines.size(); ++i )
+			{
+				// Do awesome stuff here...
+			}
+		}
+		else ROS_WARN( "Could not connect to pipe finder" );
 
-		landmarks_pub_.publish( landmark_array_msg );
+		if( landmark_array_msg->landmarks.size() > 0 ) landmarks_pub_.publish( landmark_array_msg );
+		else ROS_WARN( "No landmarks found." );
 	}
 
 	// given a landmark id, append all known template contours for this landmark to the list of template contours
-	void appendTemplateContours( std::vector<_ContourMessage> & template_contours,
-	                             int landmark_id )
+	void appendTemplateContours( std::vector<_ContourMessage> & template_contours, int landmark_id )
 	{
 		for ( _DimType i = 0; i < template_contours_[landmark_id].size(); ++i )
 		{

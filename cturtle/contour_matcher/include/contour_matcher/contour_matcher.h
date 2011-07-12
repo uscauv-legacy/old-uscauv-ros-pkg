@@ -64,6 +64,7 @@ public:
 	bool matchCountoursCB( _MatchContoursService::Request & req,
 	                       _MatchContoursService::Response & resp )
 	{
+		printf( "Got request with %zu template contours and %zu candidate contours\n", req.template_contours.size(), req.candidate_contours.size() );
 		std::vector<_Contour> candidate_contours( req.candidate_contours.size() );
 
 		// convert incoming contours
@@ -81,7 +82,7 @@ public:
 
 		// calculate similarity
 		resp.matched_contours.reserve( candidate_contours.size() );
-		for ( _DimType i = 0; i < candidate_contours.size(); ++i )
+		for ( _DimType i = 0; i < candidate_contours.size() && template_contours.size() > 0; ++i )
 		{
 			_MatchedContourMsgType matched_contour_msg;
 			matched_contour_msg.match_qualities.reserve( template_contours.size() );

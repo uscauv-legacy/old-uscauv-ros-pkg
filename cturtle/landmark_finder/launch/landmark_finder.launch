@@ -1,0 +1,24 @@
+<launch>
+	<arg name="rate" default="10" />
+	<arg name="initialize" default="false" />
+	<arg name="param_file_name" default="default_params" />
+	<arg name="name_prefix" default="landmark_finder" />
+	<arg name="name_postfix" default="" />
+	<arg name="find_color_blobs" default="/color_blob_finder/find_color_blobs" />
+	<arg name="match_contours" default="/contour_matcher/match_contours" />
+	<arg name="find_pipes" default="/pipe_finder/find_pipes" />
+	
+	<arg name="name" value="$(arg name_prefix)$(arg name_postfix)" />
+	<arg name="pkg" value="landmark_finder" />
+	<arg name="node_type" value="$(arg pkg)_node" />
+
+	<node pkg="$(arg pkg)" type="$(arg node_type)" name="$(arg name)" output="screen" args="_rate:=$(arg rate) ~find_color_blobs:=$(arg find_color_blobs) ~match_contours:=$(arg match_contours) ~find_pipes:=$(arg find_pipes)" >
+		<rosparam unless="$(arg initialize)" param="reconfigure" command="load" file="$(find color_blob_finder)/params/$(arg param_file_name).yaml" />
+	</node>
+
+	<arg name="show_reconfigure" default="true" />
+	<include file="$(find seabee3_launch)/dynamic_reconfigure.launch" >
+		<arg name="enable" value="$(arg show_reconfigure)" />
+		<arg name="name" value="$(arg name)" />
+	</include>
+</launch>
