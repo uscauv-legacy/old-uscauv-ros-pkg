@@ -1,0 +1,3 @@
+color_blob_finder/Contour[] candidate_contours
+---
+pipeline_finder/Pipeline[] found_pipelines
