@@ -57,9 +57,7 @@ class PipelineFinder: public _BaseNode
     PipelineFinder( ros::NodeHandle & nh ) :
       _BaseNode( nh )
   {
-    find_pipelines_svr_ = nh_local_.advertiseService( "find_pipelines",
-        &PipelineFinder::findPipelinesCB,
-        this );
+    find_pipelines_svr_ = nh_local_.advertiseService( "find_pipelines", &PipelineFinder::findPipelinesCB, this );
   }
 
     bool findPipelinesCB( _FindPipelinesService::Request & req,

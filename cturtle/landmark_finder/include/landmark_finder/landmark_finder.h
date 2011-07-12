@@ -163,11 +163,13 @@ public:
     _LandmarkArrayMsgType::Ptr landmark_array_msg( new _LandmarkArrayMsgType );
 
     // Try to match contours
-    if(match_contours_req_.candidate_contours.size() > 0)
+    //if(match_contours_req_.candidate_contours.size() > 0)
     {
       _MatchContoursService::Response match_contours_resp;
+      ROS_INFO("Trying to match pipelines");
       if ( match_contours_cli_.call(match_contours_req_, match_contours_resp) )
       {
+        ROS_INFO("Matched Pipelines!");
         for ( _DimType i = 0; i < match_contours_resp.matched_contours.size(); ++i )
         {
           int num_matches = 0;
@@ -186,6 +188,8 @@ public:
           }
         }
       }
+      else
+        ROS_INFO("Failed to match pipelines");
     }
 
     // Try to find pipelines
