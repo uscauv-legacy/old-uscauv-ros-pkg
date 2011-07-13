@@ -81,7 +81,7 @@ public:
 		                 simulate_,
 		                 false );
 		bool use_debug_mode;
-		nh_local_.param( "simulate",
+		nh_local_.param( "use_debug_mode",
 		                 use_debug_mode,
 		                 false );
 		nh_local_.param( "frame_id",
