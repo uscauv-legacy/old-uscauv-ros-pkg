@@ -76,7 +76,7 @@ public:
 	{
 		last_update_time_ = ros::Time( -1 );
 
-		nh_priv_.param( "global_frame", global_frame_, std::string( "/landmark_map" ) );
+		nh_local_.param( "global_frame", global_frame_, std::string( "/landmark_map" ) );
 
 		motor_cntl_sub_ = nh.subscribe( "/seabee3/motor_cntl", 1, &OdomNode::motorCntlCB, this );
 		imu_sub_ = nh.subscribe( "/xsens/custom_data", 1, &OdomNode::imuCB, this );
@@ -186,8 +186,6 @@ public:
 		}
 
 		last_update_time_ = ros::Time::now();
-
-		ros::Rate( 100 ).sleep();
 	}
 };
 
@@ -197,7 +195,7 @@ int main( int argc, char** argv )
 	ros::NodeHandle nh;
 
 	OdomNode odom_node( nh );
-	odom_node.spin( SpinModeId::LOOP_SPIN_ONCE );
+	odom_node.spin();
 
 	return 0;
 }
