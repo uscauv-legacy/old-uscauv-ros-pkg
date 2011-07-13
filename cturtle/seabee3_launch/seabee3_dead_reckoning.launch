@@ -1,3 +1,5 @@
 <launch>
-	<node pkg="dead_reckoning_odom" type="odom_node" name="odom_node" />
+<!--	<include file="$(find seabee3_machines)/client-server.machine" />-->
+
+	<node pkg="dead_reckoning_odom" type="odom_node" name="odom_node" output="screen" args="_rate:=100" />
 </launch>
