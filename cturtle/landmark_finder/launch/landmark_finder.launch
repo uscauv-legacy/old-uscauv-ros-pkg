@@ -6,13 +6,20 @@
 	<arg name="name_postfix" default="" />
 	<arg name="find_color_blobs" default="/color_blob_finder/find_color_blobs" />
 	<arg name="match_contours" default="/contour_matcher/match_contours" />
-	<arg name="find_pipes" default="/pipe_finder/find_pipes" />
+	<arg name="find_pipelines" default="/pipeline_finder/find_pipelines" />
+	<arg name="prefix" default="$(find landmark_finder)/templates/template" />
+	<arg name="ext" default=".jpg" />
+	<arg name="digits" default="2" />
+	<arg name="start" default="0" />
+	<arg name="end" default="0" />
+	<arg name="width" default="-1" />
+	<arg name="height" default="-1" />
 	
 	<arg name="name" value="$(arg name_prefix)$(arg name_postfix)" />
 	<arg name="pkg" value="landmark_finder" />
 	<arg name="node_type" value="$(arg pkg)_node" />
 
-	<node pkg="$(arg pkg)" type="$(arg node_type)" name="$(arg name)" output="screen" args="_rate:=$(arg rate) ~find_color_blobs:=$(arg find_color_blobs) ~match_contours:=$(arg match_contours) ~find_pipes:=$(arg find_pipes)" >
+	<node pkg="$(arg pkg)" type="$(arg node_type)" name="$(arg name)" output="screen" args="_rate:=$(arg rate) ~find_color_blobs:=$(arg find_color_blobs) ~match_contours:=$(arg match_contours) ~find_pipelines:=$(arg find_pipelines) _prefix:=$(arg prefix) _ext:='$(arg ext)' _digits:=$(arg digits) _start:=$(arg start) _end:=$(arg end) _width:=$(arg width) _height:=$(arg height)" >
 		<rosparam unless="$(arg initialize)" param="reconfigure" command="load" file="$(find color_blob_finder)/params/$(arg param_file_name).yaml" />
 	</node>
 
