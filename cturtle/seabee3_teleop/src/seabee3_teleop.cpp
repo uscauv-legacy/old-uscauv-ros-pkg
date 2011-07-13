@@ -77,7 +77,7 @@ public:
 		nh_local_.param( "dead_man", dead_man_, 4 );
 		nh_local_.param( "next_firing_device", f_dev_inc_, 0 );
 		nh_local_.param( "prev_firing_device", f_dev_dec_, 1 );
-		nh_local_.param( "fire_defice", fire_dev_, 5 );
+		nh_local_.param( "fire_device", fire_dev_, 5 );
 		nh_local_.param( "reset_pose", reset_pose_, 9 );
 
 		nh_local_.param( "speed_scale", speed_scale_, 1.0 );
