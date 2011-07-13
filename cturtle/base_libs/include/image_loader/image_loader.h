@@ -65,9 +65,10 @@ public:
 
 	std::string file_prefix_, file_ext_;
 	int start_, end_, digits_, width_, height_;
+	int load_flag_;
 
-	ImageLoader( ros::NodeHandle & nh ) :
-		images_loaded_( false )
+	ImageLoader( ros::NodeHandle & nh, int load_flag = CV_LOAD_IMAGE_COLOR ) :
+		images_loaded_( false ), load_flag_( load_flag )
 	{
 		ROS_INFO( "Setting up image_loader..." );
 
@@ -104,7 +105,7 @@ public:
 
 
 			ROS_INFO( "Attempting to open %s", filename.str().c_str() );
-			img = cvLoadImage( filename.str().c_str() );
+			img = cvLoadImage( filename.str().c_str(), load_flag_ );
 
 			if ( img && img->width * img->height > 0 )
 			{
