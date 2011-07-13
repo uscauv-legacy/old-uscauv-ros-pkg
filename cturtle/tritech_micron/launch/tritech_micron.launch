@@ -17,7 +17,7 @@
 	<arg name="num_bins" default="400" />
 	<arg name="range" default="10.0" />
 	<arg name="velocity_of_sound" default="1500.0" />
-	<arg name="angle_step_size" default="low" />
+	<arg name="angle_step_size" default="crazy_low" />
 
 	<node pkg="$(arg pkg)" type="$(arg node_type)" name="$(arg name)" output="screen" args="_rate:=$(arg rate) _use_debug_mode:=$(arg use_debug_mode) _simulate:=$(arg simulate) _frame_id:=$(arg frame_id) _port:=$(arg port) _num_bins:=$(arg num_bins) _range:=$(arg range) _velocity_of_sound:=$(arg velocity_of_sound) _angle_step_size:=$(arg angle_step_size)" >
 	</node>

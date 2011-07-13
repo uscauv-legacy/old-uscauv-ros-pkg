@@ -157,7 +157,7 @@ public:
 		_ScanLineMsgType::Ptr scan_line_msg( new _ScanLineMsgType );
 		scan_line_msg->header.stamp = ros::Time::now();
 		scan_line_msg->header.frame_id = frame_id_;
-		scan_line_msg->angle = scan_angle;
+		scan_line_msg->angle = scan_angle - 180.0;
 		scan_line_msg->bin_distance_step = bin_distance_step;
 
 		scan_line_msg->bins.reserve( intensity_bins.size() );
