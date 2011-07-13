@@ -59,7 +59,7 @@ protected:
 
 public:
 	BaseTeleop( ros::NodeHandle & nh, std::string topic_name = "cmd_vel" ) :
-		BaseNode<_ReconfigureType> ( nh, 1 )
+		BaseNode<_ReconfigureType> ( nh )
 	{
 		joy_sub_ = nh.subscribe( nh.resolveName( "/joy" ), 1, &BaseTeleop::joyCB_0, this );
 		cmd_vel_pub_ = nh.advertise<geometry_msgs::Twist> ( topic_name, 1 );

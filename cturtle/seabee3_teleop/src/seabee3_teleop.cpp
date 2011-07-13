@@ -59,7 +59,7 @@ private:
 
 	geometry_msgs::Twist last_cmd_vel_;
 
-	ros::ServiceClient shooter_cli_, dropper1_cli_, dropper2_cli_, reset_pose_cli_;
+	ros::ServiceClient shooter1_cli_, shooter2_cli_, dropper1_cli_, dropper2_cli_, reset_pose_cli_;
 	seabee3_driver_base::FiringDeviceAction device_action_;
 	bool button_action_busy_, keep_alive_;
 	int button_action_id_, axis_action_id_;
@@ -69,30 +69,31 @@ public:
 	Seabee3Teleop( ros::NodeHandle & nh ) :
 		BaseTeleop<>( nh, "/seabee3/cmd_vel" ), current_device_( 0 ), button_action_busy_( false ), button_action_id_( -1 ), axis_action_id_( -1 )
 	{
-		nh_priv_.param( "speed", speed_, 1 );
-		nh_priv_.param( "strafe", strafe_, 0 );
-		nh_priv_.param( "depth", depth_, 4 );
-		nh_priv_.param( "heading", heading_, 3 );
+		nh_local_.param( "speed", speed_, 1 );
+		nh_local_.param( "strafe", strafe_, 0 );
+		nh_local_.param( "depth", depth_, 4 );
+		nh_local_.param( "heading", heading_, 3 );
 
-		nh_priv_.param( "dead_man", dead_man_, 4 );
-		nh_priv_.param( "next_firing_device", f_dev_inc_, 0 );
-		nh_priv_.param( "prev_firing_device", f_dev_dec_, 1 );
-		nh_priv_.param( "fire_defice", fire_dev_, 5 );
-		nh_priv_.param( "reset_pose", reset_pose_, 9 );
+		nh_local_.param( "dead_man", dead_man_, 4 );
+		nh_local_.param( "next_firing_device", f_dev_inc_, 0 );
+		nh_local_.param( "prev_firing_device", f_dev_dec_, 1 );
+		nh_local_.param( "fire_defice", fire_dev_, 5 );
+		nh_local_.param( "reset_pose", reset_pose_, 9 );
 
-		nh_priv_.param( "speed_scale", speed_scale_, 1.0 );
-		nh_priv_.param( "strafe_scale", strafe_scale_, 1.0 );
-		nh_priv_.param( "depth_scale", depth_scale_, 1.0 );
-		nh_priv_.param( "heading_scale", heading_scale_, 1.0 );
+		nh_local_.param( "speed_scale", speed_scale_, 1.0 );
+		nh_local_.param( "strafe_scale", strafe_scale_, 1.0 );
+		nh_local_.param( "depth_scale", depth_scale_, 1.0 );
+		nh_local_.param( "heading_scale", heading_scale_, 1.0 );
 
-		nh_priv_.param( "keep_alive_period", keep_alive_period_, 0.25 );
+		nh_local_.param( "keep_alive_period", keep_alive_period_, 0.25 );
 
-		shooter_cli_ = nh_priv_.serviceClient<seabee3_driver_base::FiringDeviceAction> ( "/seabee3/shooter_action" );
-		dropper1_cli_ = nh_priv_.serviceClient<seabee3_driver_base::FiringDeviceAction> ( "/seabee3/dropper1_action" );
-		dropper2_cli_ = nh_priv_.serviceClient<seabee3_driver_base::FiringDeviceAction> ( "/seabee3/dropper2_action" );
-		reset_pose_cli_ = nh_priv_.serviceClient<std_srvs::Empty> ( "/seabee3/reset_pose" );
+		shooter1_cli_ = nh_local_.serviceClient<seabee3_driver_base::FiringDeviceAction> ( "/seabee3/shooter1_action" );
+		shooter2_cli_ = nh_local_.serviceClient<seabee3_driver_base::FiringDeviceAction> ( "/seabee3/shooter2_action" );
+		dropper1_cli_ = nh_local_.serviceClient<seabee3_driver_base::FiringDeviceAction> ( "/seabee3/dropper1_action" );
+		dropper2_cli_ = nh_local_.serviceClient<seabee3_driver_base::FiringDeviceAction> ( "/seabee3/dropper2_action" );
+		reset_pose_cli_ = nh_local_.serviceClient<std_srvs::Empty> ( "/seabee3/reset_pose" );
 
-		timer_ = nh_priv_.createTimer( ros::Duration( keep_alive_period_ ), &Seabee3Teleop::keepAlive, this );
+		timer_ = nh_local_.createTimer( ros::Duration( keep_alive_period_ ), &Seabee3Teleop::keepAlive, this );
 		timer_.start();
 	}
 
@@ -104,8 +105,11 @@ public:
 
 		switch ( current_device_ )
 		{
-		case movement_common::FiringDeviceIDs::shooter:
-			shooter_cli_.call( device_action_ );
+		case movement_common::FiringDeviceIDs::shooter1:
+			shooter1_cli_.call( device_action_ );
+			break;
+		case movement_common::FiringDeviceIDs::shooter2:
+			shooter2_cli_.call( device_action_ );
 			break;
 		case movement_common::FiringDeviceIDs::dropper_stage1:
 			dropper1_cli_.call( device_action_ );
@@ -207,7 +211,7 @@ public:
 int main( int argc, char** argv )
 {
 	ros::init( argc, argv, "seabee3_teleop" );
-	ros::NodeHandle nh;
+	ros::NodeHandle nh( "~" );
 	
 	Seabee3Teleop seabee3_teleop( nh );
 	seabee3_teleop.spin();
