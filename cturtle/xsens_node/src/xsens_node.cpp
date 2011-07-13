@@ -304,8 +304,6 @@ public:
 		imu_pub_.publish( imu_msg );
 		custom_imu_pub_.publish( custom_imu_msg );
 		//imu_pub_raw_.publish( msg_raw );
-
-		ros::Rate( 110 ).sleep();
 	}
 };
 
@@ -315,7 +313,7 @@ int main( int argc, char** argv )
 	ros::NodeHandle nh;
 
 	XSensNode xsens_node( nh );
-	xsens_node.spin( SpinModeId::LOOP_SPIN_ONCE );
+	xsens_node.spin();
 	
 	return 0;
 }
