@@ -175,7 +175,6 @@ public:
 
 	void spinOnce()
 	{
-		std::cout << "Spinning; status: " << ros::isShuttingDown() << " " << ros::ok() << std::endl;
 		if ( !simulate_ ) return;
 
 		ros::Time now = ros::Time::now();

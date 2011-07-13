@@ -70,6 +70,10 @@ public:
 	ros::Publisher image_pub_;
 
 	IplImage *scan_line_img_;
+	float min_laser_distance_, max_laser_distance_, angular_distance_, last_scan_angle_;
+	int last_angular_direction_;
+
+	_LaserScanMsgType laser_scan_msg_;
 
 	ScanLineConverter( ros::NodeHandle & nh ) :
 			_BaseNode( nh )
@@ -96,6 +100,19 @@ public:
 		       cvScalar( 0 ) );
 
 		initCfgParams();
+
+		clearLaserStats();
+	}
+
+	void clearLaserStats()
+	{
+		laser_scan_msg_.ranges.clear();
+		laser_scan_msg_.intensities.clear();
+		min_laser_distance_ = std::numeric_limits<float>::max();
+		max_laser_distance_ = std::numeric_limits<float>::min();
+		angular_distance_ = 0;
+		last_scan_angle_ = 0;
+		last_angular_direction_ = 0;
 	}
 
 	void scanLineCB( const _ScanLineMsgType::ConstPtr & scan_line_msg )
@@ -141,34 +158,79 @@ public:
 
 	void publishLaserScan( const _ScanLineMsgType::ConstPtr & scan_line_msg )
 	{
-		_LaserScanMsgType::Ptr laser_scan_msg( new _LaserScanMsgType );
-		laser_scan_msg->header = scan_line_msg->header;
-		laser_scan_msg->angle_increment = math_utils::degToRad( 0 );
-		laser_scan_msg->angle_min = math_utils::degToRad( scan_line_msg->angle );
-		laser_scan_msg->angle_max = math_utils::degToRad( scan_line_msg->angle );
-		laser_scan_msg->range_min = scan_line_msg->bins.front().distance - 0.1;
-		laser_scan_msg->range_max = scan_line_msg->bins.back().distance + 0.1;
+		_IntensityBinMsgType bin = getThresholdedScanLine( scan_line_msg );
+		if( bin.intensity == 0 && bin.distance == 0 )
+		{
+			ROS_WARN( "Dropping current scan line message; could not find acceptable bin." );
+			return;
+		}
 
+		if( laser_scan_msg_.ranges.size() == 0 )
+		{
+			laser_scan_msg_.angle_min = math_utils::degToRad( scan_line_msg->angle );
+			laser_scan_msg_.header = scan_line_msg->header;
+			last_scan_angle_ = scan_line_msg->angle;
+			last_angular_direction_ = 0;
+		}
+
+		// 170 -> -170 = 20
+		// -170 -> 170 = -20
+
+		float angular_distance_inc;
+
+		if( last_scan_angle_ > 90 && scan_line_msg->angle < -90 ) angular_distance_inc = ( 180 - last_scan_angle_ ) + ( scan_line_msg->angle + 180 );
+		else if( last_scan_angle_ < -90 && scan_line_msg->angle > 90 ) angular_distance_inc = ( -180 - last_scan_angle_ ) + ( scan_line_msg->angle - 180 );
+		else angular_distance_inc = scan_line_msg->angle - last_scan_angle_;
+
+		int angular_direction = angular_distance_inc > 0 ? 1 : angular_distance_inc < 0 ? -1 : 0;
+
+		angular_distance_ += angular_distance_inc;
+
+		printf( "%f %f %f %f %d\n", laser_scan_msg_.angle_min, scan_line_msg->angle, last_scan_angle_, angular_distance_, angular_direction );
+
+		last_scan_angle_ = scan_line_msg->angle;
+
+		laser_scan_msg_.intensities.push_back( bin.intensity / 255.0 );
+		laser_scan_msg_.ranges.push_back( bin.distance );
+
+		if( scan_line_msg->bins.front().distance < min_laser_distance_ ) min_laser_distance_ = scan_line_msg->bins.front().distance;
+		if( scan_line_msg->bins.back().distance > max_laser_distance_ ) max_laser_distance_ = scan_line_msg->bins.back().distance;
+
+		if( fabs( angular_distance_ ) >= 300 || ( angular_direction != last_angular_direction_ && angular_direction != 0 && last_angular_direction_ != 0 ) )
+		{
+			// gather statistics
+			laser_scan_msg_.angle_max = math_utils::degToRad( scan_line_msg->angle );
+			laser_scan_msg_.angle_increment = math_utils::degToRad( angular_distance_ / laser_scan_msg_.ranges.size() );
+			laser_scan_msg_.range_min = min_laser_distance_;
+			laser_scan_msg_.range_max = max_laser_distance_;
+
+			laser_scan_msg_.scan_time = ( scan_line_msg->header.stamp - laser_scan_msg_.header.stamp ).toSec();
+			laser_scan_msg_.time_increment = laser_scan_msg_.scan_time / laser_scan_msg_.ranges.size();
+
+			// publish
+			if ( laser_scan_msg_.ranges.size() > 0 ) laser_scan_pub_.publish( _LaserScanMsgType::Ptr( new _LaserScanMsgType( laser_scan_msg_ ) ) );
+			clearLaserStats();
+		}
+
+		if( angular_direction != 0 ) last_angular_direction_ = angular_direction;
+	}
+
+	_IntensityBinMsgType getThresholdedScanLine( const _ScanLineMsgType::ConstPtr & scan_line_msg )
+	{
 		for ( _DimType i = 0; i < scan_line_msg->bins.size(); ++i )
 		{
 			if ( scan_line_msg->bins[i].distance < reconfigure_params_.min_distance_threshold ) continue;
 
-			if ( !reconfigure_params_.use_laser_threshold || scan_line_msg->bins[i].intensity >= reconfigure_params_.min_laser_intensity_threshold )
+			/*if ( !reconfigure_params_.use_laser_threshold || scan_line_msg->bins[i].intensity >= reconfigure_params_.min_laser_intensity_threshold )
 			{
 				laser_scan_msg->intensities.push_back( scan_line_msg->bins[i].intensity / 255.0 );
 				laser_scan_msg->ranges.push_back( scan_line_msg->bins[i].distance );
-			}
+			}*/
 
-			if ( reconfigure_params_.use_laser_threshold && scan_line_msg->bins[i].intensity >= reconfigure_params_.min_laser_intensity_threshold )
-			{
-				// for visualization, at least two laser scans must be sent out...for whatever reason
-				laser_scan_msg->intensities.push_back( scan_line_msg->bins[i].intensity / 255.0 );
-				laser_scan_msg->ranges.push_back( scan_line_msg->bins[i].distance );
-				break;
-			}
+			if ( scan_line_msg->bins[i].intensity >= reconfigure_params_.min_laser_intensity_threshold ) return scan_line_msg->bins[i];
 		}
 
-		if ( laser_scan_msg->ranges.size() > 0 ) laser_scan_pub_.publish( laser_scan_msg );
+		return _IntensityBinMsgType();
 	}
 
 	void publishPointCloud( const _ScanLineMsgType::ConstPtr & scan_line_msg )
