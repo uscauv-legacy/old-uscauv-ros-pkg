@@ -97,7 +97,7 @@ private:
 
 	int drift_calibration_steps_, ori_calibration_steps_;
 
-	ros::NodeHandle nh_priv_;
+	ros::NodeHandle nh_local_;
 	ros::Publisher imu_pub_;
 	ros::Publisher custom_imu_pub_;
 	ros::Publisher is_calibrated_pub_;
@@ -111,16 +111,16 @@ public:
 	XSensNode( ros::NodeHandle & nh ) :
 		BaseNode<> ( nh )
 	{
-		nh_priv_.param( "port", port_, std::string( "/dev/ttyUSB0" ) );
-		nh_priv_.param( "frame_id", frame_id_, std::string( "imu" ) );
-		nh_priv_.param( "autocalibrate", autocalibrate_, true );
-		nh_priv_.param( "orientation_stdev", orientation_stdev_, 0.035 );
-		nh_priv_.param( "angular_velocity_stdev", angular_velocity_stdev_, 0.012 );
-		nh_priv_.param( "linear_acceleration_stdev", linear_acceleration_stdev_, 0.098 );
-		nh_priv_.param( "max_drift_rate", max_drift_rate_, 0.001 );
-		nh_priv_.param( "assume_calibrated", assume_calibrated_, false );
-		nh_priv_.param( "drift_calibration_steps", drift_calibration_steps_, 550 );
-		nh_priv_.param( "ori_calibration_steps", ori_calibration_steps_, 110 );
+		nh_local_.param( "port", port_, std::string( "/dev/ttyUSB0" ) );
+		nh_local_.param( "frame_id", frame_id_, std::string( "imu" ) );
+		nh_local_.param( "autocalibrate", autocalibrate_, true );
+		nh_local_.param( "orientation_stdev", orientation_stdev_, 0.035 );
+		nh_local_.param( "angular_velocity_stdev", angular_velocity_stdev_, 0.012 );
+		nh_local_.param( "linear_acceleration_stdev", linear_acceleration_stdev_, 0.098 );
+		nh_local_.param( "max_drift_rate", max_drift_rate_, 0.001 );
+		nh_local_.param( "assume_calibrated", assume_calibrated_, false );
+		nh_local_.param( "drift_calibration_steps", drift_calibration_steps_, 550 );
+		nh_local_.param( "ori_calibration_steps", ori_calibration_steps_, 110 );
 
 		drift_calibrated_ = true;
 
@@ -310,7 +310,7 @@ public:
 int main( int argc, char** argv )
 {
 	ros::init( argc, argv, "xsens_node" );
-	ros::NodeHandle nh;
+	ros::NodeHandle nh ( "~" );
 
 	XSensNode xsens_node( nh );
 	xsens_node.spin();
