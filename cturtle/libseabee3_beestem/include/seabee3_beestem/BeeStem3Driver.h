@@ -89,9 +89,10 @@ public:
 
 	bool dropper1_ready_;
 	bool dropper2_ready_;
-	bool shooter_ready_;
+	bool shooter1_ready_;
+	bool shooter2_ready_;
 
-	FiringDeviceParams shooter_params_, dropper1_params_, dropper2_params_;
+	FiringDeviceParams shooter1_params_, shooter2_params_, dropper1_params_, dropper2_params_;
 
 private:
 	BeeStem3 * bee_stem_3_;

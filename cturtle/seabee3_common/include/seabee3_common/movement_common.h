@@ -55,12 +55,13 @@ namespace movement_common
 		const int DROPPER_STAGE2 = 8;
 	};
 
-	const static int NUM_FIRING_DEVICES = 3;
+	const static int NUM_FIRING_DEVICES = 4;
 	namespace FiringDeviceIDs
 	{
-		const int shooter = 0;
-		const int dropper_stage1 = 1;
-		const int dropper_stage2 = 2;
+		const int shooter1 = 0;
+		const int shooter2 = 1;
+		const int dropper_stage1 = 2;
+		const int dropper_stage2 = 3;
 	};
 
 	namespace Axes

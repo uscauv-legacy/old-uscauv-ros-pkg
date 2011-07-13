@@ -62,7 +62,8 @@ private:
 
 	ros::ServiceServer dropper1_action_srv_;
 	ros::ServiceServer dropper2_action_srv_;
-	ros::ServiceServer shooter_action_srv_;
+	ros::ServiceServer shooter1_action_srv_;
+	ros::ServiceServer shooter2_action_srv_;
 
 	BeeStem3Driver * bee_stem_3_driver_;
 	std::string port_;
@@ -89,8 +90,11 @@ public:
 		ROS_INFO( "constructing new driver instance" );
 		bee_stem_3_driver_ = new BeeStem3Driver( port_ );
 
-		nh_local_.param( "shooter/trigger_time", bee_stem_3_driver_->shooter_params_.trigger_time_, 50 );
-		nh_local_.param( "shooter/trigger_value", bee_stem_3_driver_->shooter_params_.trigger_value_, 80 );
+		nh_local_.param( "shooter1/trigger_time", bee_stem_3_driver_->shooter1_params_.trigger_time_, 50 );
+		nh_local_.param( "shooter1/trigger_value", bee_stem_3_driver_->shooter1_params_.trigger_value_, -75 );
+
+		nh_local_.param( "shooter2/trigger_time", bee_stem_3_driver_->shooter2_params_.trigger_time_, 50 );
+		nh_local_.param( "shooter2/trigger_value", bee_stem_3_driver_->shooter2_params_.trigger_value_, 75 );
 
 		nh_local_.param( "dropper1/trigger_time", bee_stem_3_driver_->dropper1_params_.trigger_time_, 50 );
 		nh_local_.param( "dropper1/trigger_value", bee_stem_3_driver_->dropper1_params_.trigger_value_, 40 );
@@ -127,7 +131,8 @@ public:
 
 		dropper1_action_srv_ = nh.advertiseService( "/seabee3/dropper1_action", &Seabee3DriverBase::dropper1ActionCB, this );
 		dropper2_action_srv_ = nh.advertiseService( "/seabee3/dropper2_action", &Seabee3DriverBase::dropper2ActionCB, this );
-		shooter_action_srv_ = nh.advertiseService( "/seabee3/shooter_action", &Seabee3DriverBase::shooterActionCB, this );
+		shooter1_action_srv_ = nh.advertiseService( "/seabee3/shooter1_action", &Seabee3DriverBase::shooter1ActionCB, this );
+		shooter2_action_srv_ = nh.advertiseService( "/seabee3/shooter2_action", &Seabee3DriverBase::shooter2ActionCB, this );
 	}
 
 	float getDepthFromPressure( int pressure )
@@ -173,9 +178,14 @@ public:
 		return executeFiringDeviceAction( req, res, FiringDeviceIDs::dropper_stage2 );
 	}
 
-	bool shooterActionCB( seabee3_driver_base::FiringDeviceAction::Request &req, seabee3_driver_base::FiringDeviceAction::Response &res )
+	bool shooter1ActionCB( seabee3_driver_base::FiringDeviceAction::Request &req, seabee3_driver_base::FiringDeviceAction::Response &res )
 	{
-		return executeFiringDeviceAction( req, res, FiringDeviceIDs::shooter );
+		return executeFiringDeviceAction( req, res, FiringDeviceIDs::shooter1 );
+	}
+
+	bool shooter2ActionCB( seabee3_driver_base::FiringDeviceAction::Request &req, seabee3_driver_base::FiringDeviceAction::Response &res )
+	{
+		return executeFiringDeviceAction( req, res, FiringDeviceIDs::shooter2 );
 	}
 
 	virtual void spinOnce()
