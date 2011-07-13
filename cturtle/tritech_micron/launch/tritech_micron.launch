@@ -29,7 +29,7 @@
 	</include>
 	
 	<arg name="enable_scan_line_converter" default="true" />
-	<group if="$(arg enable_scan_line_converter)" />
+	<group if="$(arg enable_scan_line_converter)" >
 	<arg name="show_image" default="true" />
 	<include file="$(find tritech_micron)/launch/scan_line_converter.launch" >
 		<arg name="rate" value="$(arg rate)" />
