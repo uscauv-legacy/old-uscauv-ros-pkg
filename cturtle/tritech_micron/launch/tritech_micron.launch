@@ -22,15 +22,18 @@
 	<node pkg="$(arg pkg)" type="$(arg node_type)" name="$(arg name)" output="screen" args="_rate:=$(arg rate) _use_debug_mode:=$(arg use_debug_mode) _simulate:=$(arg simulate) _frame_id:=$(arg frame_id) _port:=$(arg port) _num_bins:=$(arg num_bins) _range:=$(arg range) _velocity_of_sound:=$(arg velocity_of_sound) _angle_step_size:=$(arg angle_step_size)" >
 	</node>
 
-	<include file="$(find tritech_micron)/launch/scan_line_converter.launch" >
-		<arg name="rate" value="$(arg rate)" />
-		<arg name="scan_line" value="$(arg name)/scan_line" />
-	</include>
-	
 	<arg name="show_reconfigure" default="true" />
 	<include file="$(find seabee3_launch)/dynamic_reconfigure.launch" >
 		<arg name="enable" value="$(arg show_reconfigure)" />
 		<arg name="name" value="$(arg name)" />
+	</include>
+
+	<arg name="show_image" default="true" />
+	<include file="$(find tritech_micron)/launch/scan_line_converter.launch" >
+		<arg name="rate" value="$(arg rate)" />
+		<arg name="scan_line" value="$(arg name)/scan_line" />
+		<arg name="show_image" value="$(arg show_image)" />
+		<arg name="show_reconfigure" value="$(arg show_reconfigure)" />
 	</include>
 
 	<arg name="show_rviz" default="true" />
