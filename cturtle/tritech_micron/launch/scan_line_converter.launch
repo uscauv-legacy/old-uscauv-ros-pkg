@@ -11,6 +11,13 @@
 
 	<include file="$(find tritech_micron)/launch/sonar_frame.launch" />
 	
+	<arg name="show_image" default="true" />
+	<include file="$(find seabee3_launch)/image_view.launch" >
+		<arg name="enable" value="$(arg show_image)" />
+		<arg name="name" value="$(arg name)" />
+		<arg name="image" value="image" />
+	</include>
+
 	<arg name="show_reconfigure" default="true" />
 	<include file="$(find seabee3_launch)/dynamic_reconfigure.launch" >
 		<arg name="enable" value="$(arg show_reconfigure)" />
