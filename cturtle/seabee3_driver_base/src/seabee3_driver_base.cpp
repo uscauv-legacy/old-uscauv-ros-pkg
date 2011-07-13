@@ -217,7 +217,7 @@ public:
 int main( int argc, char** argv )
 {
 	ros::init( argc, argv, "seabee3_driver_base" );
-	ros::NodeHandle nh;
+	ros::NodeHandle nh( "~" );
 	
 	Seabee3DriverBase seabee3_driver_base( nh );
 	seabee3_driver_base.spin();

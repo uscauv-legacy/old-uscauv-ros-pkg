@@ -125,14 +125,14 @@ void BeeStem3Driver::fireDevice( int device_id )
 	switch ( device_id )
 	{
 	case FiringDeviceIDs::shooter1:
-		std::cout << "Firing torpedo!" << std::endl;
+		std::cout << "Firing torpedo! " << shooter1_params_.trigger_time_ << std::endl;
 		bee_stem_3_->setThruster( MotorControllerIDs::SHOOTER, shooter1_params_.trigger_value_ );
 		usleep( shooter1_params_.trigger_time_ * 1000 );
 		bee_stem_3_->setThruster( MotorControllerIDs::SHOOTER, 0 );
 		shooter1_ready_= false;
 		break;
 	case FiringDeviceIDs::shooter2:
-		std::cout << "Firing torpedo!" << std::endl;
+		std::cout << "Firing torpedo! " << shooter2_params_.trigger_time_ << std::endl;
 		bee_stem_3_->setThruster( MotorControllerIDs::SHOOTER, shooter2_params_.trigger_value_ );
 		usleep( shooter2_params_.trigger_time_ * 1000 );
 		bee_stem_3_->setThruster( MotorControllerIDs::SHOOTER, 0 );
