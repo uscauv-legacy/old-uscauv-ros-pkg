@@ -236,11 +236,7 @@ public:
 		                                                     3 );
 
 		cv::Mat current_image_mat( ipl_image );
-
-		cv::findContours( current_image_mat,
-		                  contours,
-		                  CV_RETR_LIST,
-		                  CV_CHAIN_APPROX_SIMPLE );
+		findContours( current_image_mat, contours );
 
 		printf( "Found %zu contours\n",
 		        contours.size() );

@@ -80,4 +80,12 @@ void operator<<( _ContourMessage & contour_msg,
 	}
 }
 
+void findContours( cv::Mat & image, std::vector<_Contour> & contours )
+{
+		cv::findContours( image,
+		                  contours,
+		                  CV_RETR_LIST,
+		                  CV_CHAIN_APPROX_SIMPLE );
+}
+
 #endif /* CONTOUR_H_ */

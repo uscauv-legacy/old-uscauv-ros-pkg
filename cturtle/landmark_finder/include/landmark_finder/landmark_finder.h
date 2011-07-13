@@ -47,6 +47,7 @@
 #include <color_blob_finder/contour.h>
 #include <array>
 #include <landmark_finder/LandmarkFinderConfig.h>
+#include <image_loader/image_loader.h>
 
 typedef unsigned int _DimType;
 
@@ -88,8 +89,10 @@ public:
 	_MatchContoursService::Request match_contours_req_;
 	_FindPipelinesService::Request find_pipelines_req_;
 
+	ImageLoader image_loader_;
+
 	LandmarkFinder( ros::NodeHandle & nh ) :
-			_BaseNode( nh )
+			_BaseNode( nh ), image_loader_( nh_local_, CV_LOAD_IMAGE_GRAYSCALE )
 	{
 		set_enabled_landmarks_svr_ = nh_local_.advertiseService( "set_enabled_landmarks",
 		                                                         &LandmarkFinder::setEnabledLandmarksCB,
@@ -104,7 +107,10 @@ public:
 		landmarks_pub_ = nh_local_.advertise<_LandmarkArrayMsgType>( "landmarks",
 		                                                             1 );
 
-		// load template contours here
+		/*find_color_blobs_req_.colors = { 1 };
+		image_array_pub = nh_local_.advertise( "template_images" );
+
+		template_contours[0].push_back( )*/
 	}
 
 	virtual void reconfigureCB( _ReconfigureType &config,
@@ -148,6 +154,26 @@ public:
 
 	void spinOnce()
 	{
+		// load template images and extract contours from them
+		/*if( !image_loader_.images_loaded_ )
+		{
+			image_loader_.loadImages();
+
+			for( _DimType i = 0; i < image_loader_.image_cache_.size(); ++i )
+			{
+				std::vector<_Contour> contours;
+				cv::Mat image_mat( image_loader_.image_cache_[i] );
+				findContours( image_mat, contours );
+
+				for( _DimType j = 0; j < contours.size(); ++j )
+				{
+					_ContourMessage contour_msg;
+					contour_msg << contours[j];
+					template_contours_[i].push_back( contour_msg );
+				}
+			}
+		}*/
+
 		if( find_color_blobs_req_.colors.size() == 0 )
 		{
 			ROS_WARN( "No landmark types enabled." );
