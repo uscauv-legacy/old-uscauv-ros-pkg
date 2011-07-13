@@ -10,6 +10,5 @@
 	<arg name="node_type" value="$(arg pkg)_node" />
 	<arg name="nodelet_type" value="$(arg pkg)_nodelet" />
 
-	<node pkg="$(arg pkg)" type="$(arg node_type)" name="$(arg name)" output="screen" machine="$(env ROS_SERVER_MACHINE)" args="_rate:=$(arg rate) />
-
+	<node pkg="$(arg pkg)" type="$(arg node_type)" name="$(arg name)" output="screen" machine="$(env ROS_SERVER_MACHINE)" args="_rate:=$(arg rate)" />
 </launch>
