@@ -6,7 +6,7 @@ from django.conf.urls.defaults import patterns, include, url
 
 urlpatterns = patterns('',
     # Examples:
-    # url(r'^$', 'seabee_gui.views.home', name='home'),
+    url(r'^$', 'seabee_gui.views.main'),
     # url(r'^seabee_gui/', include('seabee_gui.foo.urls')),
 
     # Uncomment the admin/doc line below to enable admin documentation:
