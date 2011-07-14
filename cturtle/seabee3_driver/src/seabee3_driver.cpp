@@ -222,11 +222,11 @@ public:
 
 				resetMotorCntlMsg();
 
-				motor_cntl_pub_ = nh.advertise<seabee3_driver_base::MotorCntl> ( "/seabee3/motor_cntl", 1 );
-				physics_state_sub_ = nh.subscribe( "/seabee3/physics_state", 1, &Seabee3Driver::physicsStateCB, this );
+				motor_cntl_pub_ = nh_local_.advertise<seabee3_driver_base::MotorCntl> ( "motor_cntl", 1 );
+				physics_state_sub_ = nh_local_.subscribe( "/seabee3/physics_state", 1, &Seabee3Driver::physicsStateCB, this );
 
-				reset_pose_srv_ = nh.advertiseService( "/seabee3/reset_pose", &Seabee3Driver::resetPoseCB, this );
-				set_desired_pose_srv_ = nh.advertiseService( "/seabee3/set_desired_pose", &Seabee3Driver::setDesiredPoseCB, this );
+				reset_pose_srv_ = nh_local_.advertiseService( "/seabee3/reset_pose", &Seabee3Driver::resetPoseCB, this );
+				set_desired_pose_srv_ = nh_local_.advertiseService( "/seabee3/set_desired_pose", &Seabee3Driver::setDesiredPoseCB, this );
 
 				//set current xyz to 0, desired RPY to current RPY
 				resetPose();
@@ -568,17 +568,18 @@ public:
 
 					error_in_rpy_.z = math_utils::angleDistRel( math_utils::radToDeg( desired_pose_.angular.z ), math_utils::radToDeg( current_pose_.angular.z ) );
 
-					//printf("error x %f y %f z %f r %f p %f y %f\n", error_in_xyz_.x, error_in_xyz_.y, error_in_xyz_.z, error_in_rpy_.x, error_in_rpy_.y, error_in_rpy_.z );
+					printf("error x %f y %f z %f r %f p %f y %f\n", error_in_xyz_.x, error_in_xyz_.y, error_in_xyz_.z, error_in_rpy_.x, error_in_rpy_.y, error_in_rpy_.z );
 
 					math_utils::capValue( error_in_rpy_.z, max_error_in_rpy_.z );
 
-					//printf( "error x %f y %f z %f r %f p %f y %f\n", error_in_xyz_.x, error_in_xyz_.y, error_in_xyz_.z, error_in_rpy_.x, error_in_rpy_.y, error_in_rpy_.z );
+					printf( "error x %f y %f z %f r %f p %f y %f\n", error_in_xyz_.x, error_in_xyz_.y, error_in_xyz_.z, error_in_rpy_.x, error_in_rpy_.y, error_in_rpy_.z );
 
 					double depth_motor_value = axis_dir_cfg_[Axes::depth] * pid_controller_.linear_z->update( error_in_xyz_.z );
 					double yaw_motor_value = axis_dir_cfg_[Axes::yaw] * pid_controller_.angular_z->update( error_in_rpy_.z );
 
-					//printf( "depth %f yaw %f\n", depth_motor_value, yaw_motor_value );
+					printf( "depth %f yaw %f\n", depth_motor_value, yaw_motor_value );
 
+					printf( "depth moto value: %f yaw motor value %f\n" );
 
 					math_utils::capValue( depth_motor_value, 100.0 );
 					math_utils::capValue( yaw_motor_value, 100.0 );

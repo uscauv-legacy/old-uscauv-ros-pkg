@@ -39,7 +39,7 @@
 #include <seabee3_driver_base/MotorCntl.h>
 #include <xsens_node/Imu.h>
 #include <base_node/base_node.h>
-#include <math.h>
+#include <common_utils/math.h>
 
 // the IMU may be tilted inside of seabee so that 0.0 degrees isn't
 // the nominal ideal pitch value, this constant can adjust that
@@ -64,7 +64,7 @@ public:
   int motor3_value_scaled;
 
 	boost::mutex imu_msg_mutex_;
-	_ImuMsgType::ConstPtr last_imu_msg_;
+	_ImuMsgType last_imu_msg_;
 
 	Seabee3Stabilizer( ros::NodeHandle & nh ) : _BaseNode( nh )
 	{
@@ -78,7 +78,7 @@ public:
 	{
 		if( !imu_msg_mutex_.try_lock() ) return;
 
-		last_imu_msg_ = imu_msg;
+		last_imu_msg_ = *imu_msg;
 
 		imu_msg_mutex_.unlock();
     
@@ -91,7 +91,7 @@ public:
 
     // find difference between current pitch and nominal pitch 
 		imu_msg_mutex_.lock();
-    delta_pitch = abs( last_imu_msg_->ori.y - NOMINAL_PITCH ); 
+    delta_pitch = abs( math_utils::radToDeg( last_imu_msg_.ori.y ) - NOMINAL_PITCH ); 
 		imu_msg_mutex_.unlock();
 
     // we want the sub to stop if pitch is > 90. if its 91, we still want it to stop
@@ -103,12 +103,12 @@ public:
     // if pitch is 0 degrees off from the nominal value, just pass the velocity value through
     // if pitch is 90 degrees off from the nominal value, seabee must stop completely
     // for values in between 0 and 90, scale the speed down linearly
-    scale_factor = ( 1 - delta_pitch / 90 );
+    scale_factor = ( 1 - delta_pitch / 90.0 );
 
     // create new forward motor commands based on scale factor
     // the forward motors are 1 and 3
-    motor1_value_scaled = motor_cntl_msg->motors[1] * scale_factor;
-    motor3_value_scaled = floor( motor_cntl_msg->motors[3] * scale_factor );
+    motor1_value_scaled = round( motor_cntl_msg->motors[1] * scale_factor );
+    motor3_value_scaled = round( motor_cntl_msg->motors[3] * scale_factor );
 
     // create new array of motor commands 
     new_motor_cntl_msg->motors[0] = motor_cntl_msg->motors[0]; 
