@@ -233,8 +233,25 @@ public:
 				if ( num_matches > 0 )
 				{
 					// reproject to 3D
-
-
+					// Noah's code for 3D project, probably want to move where variables are defined
+					// and need to define input diameter and contour.
+					//Replace with some way of iterating through landmarks found.
+					DistanceInterpolation::_PixelDistanceType pixels;
+					DistanceInterpolation::_MetricDistanceType diameter;
+					DistanceInterpolation::_IORType ior;
+					CvMemStorage* storage = cvCreateMemStorage(0);
+					if(inWater()) ior = 1.33; //need an argument to say whether or not we are in water
+					else ior = 1.0;
+					CvBox2D box;
+					_ContourMessage lmcontour_msg = match_contours_req_.candidate_contours[i];
+					_Contour lmcontour; //landmark contour
+					lmcontour<<lmcontour_msg;
+					box = cvminAreaRect(lmcontour,storage);
+					pixels = box.size.width;
+					double z = distance_interpolation.distanceToFeature( pixels, diameter, ior );
+					cv::Point2d box_pixel_center(round(box.center.x),round(box.center.y));
+					cv::Point3d ray =  model.projectPixelTo3dRay(box_pixel_center);
+					cv::Point3d landmark_location3D = ray * z;
 					// add new landmark to resp
 					_LandmarkMsgType landmark_msg;
 					landmark_array_msg->landmarks.push_back( landmark_msg );
