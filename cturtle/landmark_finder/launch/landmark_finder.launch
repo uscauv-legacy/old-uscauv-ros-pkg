@@ -8,7 +8,7 @@
 	<arg name="match_contours" default="/contour_matcher/match_contours" />
 	<arg name="find_pipelines" default="/pipeline_finder/find_pipelines" />
 	<arg name="prefix" default="$(find landmark_finder)/templates/template" />
-	<arg name="ext" default=".jpg" />
+	<arg name="ext" default=".png" />
 	<arg name="digits" default="2" />
 	<arg name="start" default="0" />
 	<arg name="end" default="0" />

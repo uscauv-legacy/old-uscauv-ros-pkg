@@ -41,13 +41,15 @@
 #include <contour_matcher/MatchContours.h>
 #include <pipeline_finder/Pipeline.h>
 #include <pipeline_finder/FindPipelines.h>
-#include <localization_defs/LandmarkArray.h>
-//#include <localization_defs/landmark_map.h>
+//#include <localization_defs/LandmarkArray.h>
+#include <localization_defs/landmark_map.h>
 #include <landmark_finder/SetEnabledLandmarks.h>
 #include <color_blob_finder/contour.h>
 #include <array>
 #include <landmark_finder/LandmarkFinderConfig.h>
 #include <image_loader/image_loader.h>
+#include <image_geometry/pinhole_camera_model.h>
+#include <camera_interpolation/distance_interpolation.h>
 
 typedef unsigned int _DimType;
 
@@ -107,6 +109,8 @@ public:
 		landmarks_pub_ = nh_local_.advertise<_LandmarkArrayMsgType>( "landmarks",
 		                                                             1 );
 
+		cv::namedWindow( "output", 0 );
+
 		/*find_color_blobs_req_.colors = { 1 };
 		image_array_pub = nh_local_.advertise( "template_images" );
 
@@ -155,7 +159,7 @@ public:
 	void spinOnce()
 	{
 		// load template images and extract contours from them
-		/*if( !image_loader_.images_loaded_ )
+		if( !image_loader_.images_loaded_ )
 		{
 			image_loader_.loadImages();
 
@@ -165,6 +169,16 @@ public:
 				cv::Mat image_mat( image_loader_.image_cache_[i] );
 				findContours( image_mat, contours );
 
+				printf(" Found %zu contours in template image (%dx%d)\n", contours.size(), image_loader_.image_cache_[i]->depth, image_loader_.image_cache_[i]->nChannels );
+
+				/*IplImage * output_image = cvCreateImage( cvGetSize( image_loader_.image_cache_[i] ), IPL_DEPTH_8U, 3 );
+				cv::Mat output_image_mat( output_image );
+
+				cv::drawContours( output_image_mat, contours, -1, cvScalar( 0, 255, 0 ), 1 );
+
+				cv::imshow( "output", output_image_mat );
+				cvWaitKey( 25 );*/
+
 				for( _DimType j = 0; j < contours.size(); ++j )
 				{
 					_ContourMessage contour_msg;
@@ -172,7 +186,7 @@ public:
 					template_contours_[i].push_back( contour_msg );
 				}
 			}
-		}*/
+		}
 
 		if( find_color_blobs_req_.colors.size() == 0 )
 		{
@@ -212,12 +226,14 @@ public:
 				int num_matches = 0;
 				for ( _DimType j = 0; j < match_contours_resp.matched_contours[i].match_qualities.size(); ++j )
 				{
+					printf( "match quality: %f\n", match_contours_resp.matched_contours[i].match_qualities[j] );
 					if ( match_contours_resp.matched_contours[i].match_qualities[j] < min_match_thresholds_[i] ) num_matches++;
 				}
 
 				if ( num_matches > 0 )
 				{
 					// reproject to 3D
+
 
 					// add new landmark to resp
 					_LandmarkMsgType landmark_msg;
@@ -245,9 +261,10 @@ public:
 	// given a landmark id, append all known template contours for this landmark to the list of template contours
 	void appendTemplateContours( std::vector<_ContourMessage> & template_contours, int landmark_id )
 	{
+		printf( "Appending %zu contours for landmark with id %d\n", template_contours_[landmark_id].size(), landmark_id );
 		for ( _DimType i = 0; i < template_contours_[landmark_id].size(); ++i )
 		{
-			template_contours.push_back( template_contours[i] );
+			template_contours.push_back( template_contours_[landmark_id][i] );
 		}
 	}
 };
