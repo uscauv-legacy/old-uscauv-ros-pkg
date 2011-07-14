@@ -78,9 +78,9 @@ public:
 
 		nh_local_.param( "global_frame", global_frame_, std::string( "/landmark_map" ) );
 
-		motor_cntl_sub_ = nh.subscribe( "/seabee3/motor_cntl", 1, &OdomNode::motorCntlCB, this );
-		imu_sub_ = nh.subscribe( "/xsens/custom_data", 1, &OdomNode::imuCB, this );
-		depth_sub_ = nh.subscribe( "/seabee3/depth", 1, &OdomNode::depthCB, this );
+		motor_cntl_sub_ = nh_local_.subscribe( "motor_cntl", 1, &OdomNode::motorCntlCB, this );
+		imu_sub_ = nh_local_.subscribe( "/xsens/custom_data", 1, &OdomNode::imuCB, this );
+		depth_sub_ = nh_local_.subscribe( "/seabee3/depth", 1, &OdomNode::depthCB, this );
 	}
 
 	float getSimpleSpeed( int pwr, int translate )
@@ -101,7 +101,7 @@ public:
 
 	void depthCB( const seabee3_driver_base::DepthConstPtr & msg )
 	{
-		current_pose_.linear.z = msg->value;
+		current_pose_.linear.z = -msg->value;
 	}
 
 	void motorCntlCB( const seabee3_driver_base::MotorCntlConstPtr & msg )
