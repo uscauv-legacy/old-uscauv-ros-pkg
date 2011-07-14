@@ -21,6 +21,16 @@ public:
 		set_desired_heading_cli_ = nh_priv_.serviceClient<seabee3_common::SetDesiredPose> ( "/seabee3/set_desired_pose" );
 	}
 
+	void sleep( float duration )
+	{
+		ros::Time end_time = ros::Time::now() + ros::Duration( duration );
+		while ( ros::ok() && ros::Time::now() < end_time )
+		{
+			ros::Rate( 10 ).sleep();
+			ros::spinOnce();
+		}
+	}
+
 	void setVelocity( float velocity, float duration )
 	{
 		if( !ros::ok() ) return;
@@ -65,23 +75,30 @@ public:
 	void spin()
 	{
 		static float forward_velocity = 0.5;
+		static float reverse_velocity = -0.3;
+		static float reverse_duration = 1.0;
 		while ( ros::ok() )
 		{
-			setVelocity( 0, 2 );
 			setYaw( 0, 4 );
 			setVelocity( forward_velocity, 8 );
 
+			setVelocity( reverse_velocity, reverse_duration );
 			setVelocity( 0, 2 );
 			setYaw( 90, 4 );
 			setVelocity( forward_velocity, 8 );
 
+			setVelocity( reverse_velocity, reverse_duration );
 			setVelocity( 0, 2 );
 			setYaw( 180, 4 );
 			setVelocity( forward_velocity, 8 );
 
+			setVelocity( reverse_velocity, reverse_duration );
 			setVelocity( 0, 2 );
 			setYaw( 270, 4 );
 			setVelocity( forward_velocity, 8 );
+
+			setVelocity( reverse_velocity, reverse_duration );
+			setVelocity( 0, 2 );
 		}
 	}
 

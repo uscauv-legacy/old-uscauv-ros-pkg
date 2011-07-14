@@ -12,6 +12,7 @@
   <depend package="roscpp"/>
   <depend package="base_libs"/>
   <depend package="seabee3_common"/>
+  <depend package="seabee3_driver_base"/>
   
   <!-- not linking dependencies, but we want to make sure these are compiled and ready to go -->
   <!-- can't link against seabee3_driver...maybe because it has no messages or libs? <depend package="seabee3_driver"/> -->

@@ -1,24 +1,39 @@
 #include <base_node/base_node.h>
 #include <geometry_msgs/Twist.h>
 #include <common_utils/math.h>
+#include <common_utils/tf.h>
 
-// srvs
-#include <seabee3_common/SetDesiredPose.h> // for SetDesiredPose
-class SquareMovement : public BaseNode<>
+// msgs
+#include <seabee3_driver_base/KillSwitch.h>
+
+class GateDemo : public BaseNode<>
 {
 
 protected:
 	geometry_msgs::Twist cmd_vel_;
-	seabee3_common::SetDesiredPose set_desired_pose_;
 	ros::Publisher cmd_vel_pub_;
+	ros::Subscriber kill_switch_sub_;
 	ros::ServiceClient set_desired_heading_cli_;
 
+	double forward_velocity_;
+	double depth_;
+	double forward_time_;
+	double dive_time_;
+
+	bool started_;
+	bool running_;
+
 public:
-	SquareMovement( ros::NodeHandle & nh ) :
-		BaseNode<> ( nh )
+	GateDemo( ros::NodeHandle & nh ) :
+		BaseNode<> ( nh ), started_( false ), running_( false )
 	{
-		cmd_vel_pub_ = nh.advertise<geometry_msgs::Twist> ( "/seabee3/cmd_vel", 1 );
-		set_desired_heading_cli_ = nh_priv_.serviceClient<seabee3_common::SetDesiredPose> ( "/seabee3/set_desired_pose" );
+		nh_local_.param( "forward_velocity", forward_velocity_, 0.3 );
+		nh_local_.param( "forward_time", forward_time_, 30.0 );
+		nh_local_.param( "depth", depth_, 1.7 );
+		nh_local_.param( "dive_time", dive_time_, 8.0 );
+
+		cmd_vel_pub_ = nh_local_.advertise<geometry_msgs::Twist> ( "/seabee3/cmd_vel", 1 );
+		kill_switch_sub_ = nh_local_.subscribe( "seabee3/kill_switch", 1, &GateDemo::killSwitchCB, this );
 	}
 
 	void setVelocity( float velocity, float duration )
@@ -40,21 +55,23 @@ public:
 		}
 	}
 
-	void setYaw( float yaw, float duration )
+	void killSwitchCB( const seabee3_driver_base::KillSwitch::ConstPtr & kill_switch_msg )
 	{
-		if( !ros::ok() ) return;
+		if( !kill_switch_msg->is_killed && !started_ )
+		{
+			started_ = true;
+			tf::Transform current_pose;
+			tf_utils::fetchTfFrame( current_pose, "/landark_map", "/seabee3/current_pose" );
+			
+			tf::Transform desired_pose( current_pose.getRotation(), tf::Vector3( 0, 0, -depth_ ) );
+			tf_utils::publishTfFrame( desired_pose, "/landmark_map", "/seabee3/desired_pose" );
+			running_ = true;
+		}
+	}
 
-		printf( "Setting yaw to %f for %f\n", yaw, duration );
+	void sleep( float duration )
+	{
 		ros::Time end_time = ros::Time::now() + ros::Duration( duration );
-
-		// mode defaults to absolute
-		// enable the mask for yaw
-		set_desired_pose_.request.ori.mask.z = 1;
-		// set the yaw
-		set_desired_pose_.request.ori.values.z = common_utils/math::degToRad( yaw );
-		// publish
-		set_desired_heading_cli_.call( set_desired_pose_.request, set_desired_pose_.response );
-
 		while ( ros::ok() && ros::Time::now() < end_time )
 		{
 			ros::Rate( 10 ).sleep();
@@ -64,12 +81,21 @@ public:
 
 	void spin()
 	{
-		static float forward_velocity = 0.5;
-		while ( !killed() )
+		while ( true )
 		{
-			setVelocity( 0, 2 );
-			setYaw( current_heading(), 4 );
-			setVelocity( forward_velocity, 30 );
+			if( running_ )
+			{
+				// wait while we dive
+				sleep( dive_time_ );
+	
+				// drive forward for 30 seconds
+				setVelocity( forward_velocity_, forward_time_ );
+
+				// surface
+				tf::Transform desired_pose( tf_utils::ZERO_QUAT, tf::Vector3( 0, 0, 0 ) );
+				tf_utils::publishTfFrame( desired_pose, "/landmark_map", "/seabee3/desired_pose" );
+				return;
+			}
 		}
 	}
 
@@ -78,10 +104,10 @@ public:
 int main( int argc, char ** argv )
 {
 	ros::init( argc, argv, "gate_demo" );
-	ros::NodeHandle nh;
+	ros::NodeHandle nh( "~" );
 
-	SquareMovement square_movement( nh );
-	square_movement.spin();
+	GateDemo gate_demo( nh );
+	gate_demo.spin();
 
 	return 0;
 }
