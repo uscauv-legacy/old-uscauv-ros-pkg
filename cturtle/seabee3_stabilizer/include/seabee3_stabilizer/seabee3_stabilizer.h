@@ -68,9 +68,9 @@ public:
 
 	Seabee3Stabilizer( ros::NodeHandle & nh ) : _BaseNode( nh )
 	{
-		imu_sub_ = nh_local_.subscribe( "/xsens/data_calibrated", 1, &Seabee3Stabilizer::imuCB, this );
-		motor_cntl_sub_ = nh_local_.subscribe( "/seabee3/motor_cntl_raw", 1, &Seabee3Stabilizer::motorCntlCB, this );
-		motor_cntl_pub_ = nh_local_.advertise<_MotorCntlMsgType>( "/seabee3/motor_cntl", 1 );
+		imu_sub_ = nh_local_.subscribe( "imu_data", 1, &Seabee3Stabilizer::imuCB, this );
+		motor_cntl_sub_ = nh_local_.subscribe( "motor_cntl_raw", 1, &Seabee3Stabilizer::motorCntlCB, this );
+		motor_cntl_pub_ = nh_local_.advertise<_MotorCntlMsgType>( "motor_cntl", 1 );
 	}
 
 	// store last IMU message; this callback is finished
@@ -132,7 +132,7 @@ public:
     new_motor_cntl_msg->mask[7] = motor_cntl_msg->mask[7];
     new_motor_cntl_msg->mask[8] = motor_cntl_msg->mask[8];
 
-    ROS_INFO("\n\n\tCurrent Pitch: \t\t\t%f Degrees\n\tThruster Multiplier: \t\t%f Percent\n\tMotor1 Original Command: \t%i\n\tMotor3 Original Command: \t%i\n\tMotor1 Updated Command: \t%i\n\tMotor3 Updated Command: \t%i\n\n", last_imu_msg_->ori.y, scale_factor * 100, motor_cntl_msg->motors[1], motor_cntl_msg->motors[3], motor1_value_scaled, motor3_value_scaled); 
+//    ROS_INFO("\n\n\tCurrent Pitch: \t\t\t%f Degrees\n\tThruster Multiplier: \t\t%f Percent\n\tMotor1 Original Command: \t%i\n\tMotor3 Original Command: \t%i\n\tMotor1 Updated Command: \t%i\n\tMotor3 Updated Command: \t%i\n\n", last_imu_msg_->ori.y, scale_factor * 100, motor_cntl_msg->motors[1], motor_cntl_msg->motors[3], motor1_value_scaled, motor3_value_scaled); 
 
     // now publish these new motor control thrust values 
 		motor_cntl_pub_.publish( new_motor_cntl_msg );

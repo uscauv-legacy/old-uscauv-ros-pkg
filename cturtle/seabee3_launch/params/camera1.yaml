@@ -17,7 +17,6 @@ bayer_pattern: rggb
 binning_x: 0
 binning_y: 0
 brightness: 255.0
-camera_info_url: ''
 exposure: 0.0
 focus: 0.0
 format7_color_coding: mono8
@@ -26,7 +25,6 @@ frame_id: /camera
 frame_rate: 15.0
 gain: 40.0
 gamma: 2.2000000000000002
-guid: 00b09d010090f9d5
 hue: 0.0
 iris: 8.0
 iso_speed: 400
