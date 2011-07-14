@@ -1,0 +1,96 @@
+<html>
+<head>
+
+	<title>USC - SeaBee Feed</title>
+	<script src="http://ajax.googleapis.com/ajax/libs/jquery/1.5.1/jquery.min.js"></script>
+	<script src="http://ajax.cdnjs.com/ajax/libs/underscore.js/1.1.4/underscore-min.js"></script>
+	<script src="http://ajax.cdnjs.com/ajax/libs/backbone.js/0.3.3/backbone-min.js"></script>
+	<script src="static/js/app.js"></script>
+	
+	<script type="text/javascript">
+	</script>
+
+<style>
+
+body {
+	height: 100%;
+	overflow:hidden;
+}
+
+div#content {
+	//border:1px grey solid;
+	min-width:320px;
+	max-width: 700px;
+	overflow:auto;
+	margin: 0 auto;
+}
+
+div#mainView {
+	width:61.7%;
+	overflow:hidden;
+	background-color:blue;
+	float:left;
+	position:relative;
+}
+
+div#mainView img#frameAspectRatio{
+	width:100%;
+	opacity:0;
+}
+
+h1 {
+	position:absolute;
+	width: 100%;
+	text-align:center;
+}
+
+h2 {
+	font-size:1em;
+	font-weight:normal;
+	margin:0;
+	color:#333;
+	text-align:center;
+}
+
+div.sideBar {
+	width: 19%;
+	//background-color:green;
+	float:left;
+}
+
+input {
+	margin: 0 auto;
+	width:90%;
+	margin-left:5%;
+	font-size:24px;
+	text-align:center;
+}
+
+</style>
+
+</head>
+<body>
+
+<div id=content>
+	<div class="sideBar">
+		<h2>heading</h2>
+		<input id="heading-display" type="text" DISABLED/>
+	</div>
+	<div id="mainView">
+		<h1>[ no feed ]</h1>
+		<img id="frameAspectRatio" src='css/320x240AspectRatio.png' />
+	</div>
+	<div class="sideBar">
+	<h2>int. pressure</h2>
+		<input id="intPressure-display" type="text" DISABLED/>
+	<h2>ext. pressure</h2>
+		<input id="extPressure-display" type="text" DISABLED/>
+	</div>
+</div>
+
+<!--<input type="button" id="manual-update" value="update"/>-->
+
+
+</body>
+
+</html>

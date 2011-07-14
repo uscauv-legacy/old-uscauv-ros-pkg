@@ -105,7 +105,7 @@ ROOT_URLCONF = 'seabee_http.urls'
 TEMPLATE_DIRS = (
     # Put strings here, like "/home/html/django_templates" or "C:/www/django/templates".
     # Always use forward slashes, even on Windows.
-    # Don't forget to use absolute paths, not relative paths.
+    '/home/mmontalbo/workspace/seabee3-ros-pkg/memcached_service/src/seabee_http/seabee_gui/templates'
 )
 
 INSTALLED_APPS = (

@@ -1,17 +1,10 @@
 from django.conf.urls.defaults import patterns, include, url
 
-# Uncomment the next two lines to enable the admin:
-# from django.contrib import admin
-# admin.autodiscover()
-
 urlpatterns = patterns('',
-    # Examples:
     url(r'^$', 'seabee_gui.views.main'),
-    # url(r'^seabee_gui/', include('seabee_gui.foo.urls')),
-
-    # Uncomment the admin/doc line below to enable admin documentation:
-    # url(r'^admin/doc/', include('django.contrib.admindocs.urls')),
-
-    # Uncomment the next line to enable the admin:
-    # url(r'^admin/', include(admin.site.urls)),
+    url(r'^data/$', 'seabee_gui.views.data'),
 )
+
+urlpatterns += patterns('',
+        (r'^static/(?P<path>.*)$', 'django.views.static.serve', {'document_root': '/home/mmontalbo/workspace/seabee3-ros-pkg/memcached_service/src/seabee_http/seabee_gui/static'}),
+    )
