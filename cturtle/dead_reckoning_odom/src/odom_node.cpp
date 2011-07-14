@@ -192,7 +192,7 @@ public:
 int main( int argc, char** argv )
 {
 	ros::init( argc, argv, "dead_reckoning_odom" );
-	ros::NodeHandle nh;
+	ros::NodeHandle nh( "~" );
 
 	OdomNode odom_node( nh );
 	odom_node.spin();

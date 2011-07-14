@@ -636,7 +636,7 @@ const Seabee3Driver::_Settings Seabee3Driver::settings_array[6] = {
 int main( int argc, char** argv )
 {
 	ros::init( argc, argv, "seabee3_driver" );
-	ros::NodeHandle nh;
+	ros::NodeHandle nh( "~" );
 	
 	Seabee3Driver seabee3_driver( nh );
 	seabee3_driver.spin();
