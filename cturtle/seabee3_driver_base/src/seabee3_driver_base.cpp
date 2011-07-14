@@ -69,7 +69,8 @@ private:
 	filters::MovingAverageFilter<float, 5> depth_filter_;
 	BeeStem3Driver * bee_stem_3_driver_;
 	std::string port_;
-	int surface_pressure_;
+	double surface_pressure_;
+	double montalbos_per_meter_;
 	bool pressure_calibrated_;
 
 	// used to decode motor values
@@ -85,8 +86,8 @@ public:
 	{
 		pressure_calibrated_ = false;
 
-		nh_local_.param( "surface_pressure", surface_pressure_, 908 );
-		nh_local_.param( "montalbos_per_meter", montalbos_per_meter_, 33 );
+		nh_local_.param( "surface_pressure", surface_pressure_, 900.0 );
+		nh_local_.param( "montalbos_per_meter", montalbos_per_meter_, 35.7 );
 
 		nh_local_.param( "port", port_, std::string( "/dev/ttyUSB0" ) );
 
