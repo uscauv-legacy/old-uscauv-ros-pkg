@@ -27,7 +27,6 @@ rosbuild_genmsg()
 rosbuild_gensrv()
 
 add_subdirectory( src )
-
 #link_directories("${PROJECT_SOURCE_DIR}/../libseabee3_beestem/lib")
 
 #if (UNIX AND NOT WIN32)

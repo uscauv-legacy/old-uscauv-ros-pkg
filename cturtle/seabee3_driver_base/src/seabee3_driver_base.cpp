@@ -45,6 +45,7 @@
 #include <seabee3_driver_base/Pressure.h> // for outgoing Pressure
 //srvs
 #include <seabee3_driver_base/FiringDeviceAction.h> // for FiringDeviceAction
+#include <common_utils/filters.h>
 
 using namespace movement_common;
 class Seabee3DriverBase: public BaseNode<>
@@ -65,6 +66,7 @@ private:
 	ros::ServiceServer shooter1_action_srv_;
 	ros::ServiceServer shooter2_action_srv_;
 
+	filters::MovingAverageFilter<float,10> depth_filter_;
 	BeeStem3Driver * bee_stem_3_driver_;
 	std::string port_;
 	int surface_pressure_;
@@ -204,8 +206,7 @@ public:
 		}
 
 		bee_stem_3_driver_->readKillSwitch( kill_switch_msg.is_killed );
-		depth_msg.value = getDepthFromPressure( extl_pressure_msg.value );
-
+		depth_msg.value = depth_filter_.update( getDepthFromPressure( extl_pressure_msg.value ) );
 		intl_pressure_pub_.publish( intl_pressure_msg );
 		extl_pressure_pub_.publish( extl_pressure_msg );
 		depth_pub_.publish( depth_msg );

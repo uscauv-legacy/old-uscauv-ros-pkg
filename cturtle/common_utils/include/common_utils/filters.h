@@ -1,8 +1,8 @@
 /*******************************************************************************
  *
- *      core
+ *      filters
  * 
- *      Copyright (c) 2011, edward
+ *      Copyright (c) 2011, Noah Olsman olsman@usc.edu
  *      All rights reserved.
  *
  *      Redistribution and use in source and binary forms, with or without
@@ -15,7 +15,7 @@
  *        copyright notice, this list of conditions and the following disclaimer
  *        in the documentation and/or other materials provided with the
  *        distribution.
- *      * Neither the name of "interaction-ros-pkg" nor the names of its
+ *      * Neither the name of "seabee3-ros-pkg" nor the names of its
  *        contributors may be used to endorse or promote products derived from
  *        this software without specific prior written permission.
  *      
@@ -33,19 +33,46 @@
  *
  *******************************************************************************/
 
-#ifndef CORE_H_
-#define CORE_H_
+#ifndef FILTERS_H_
+#define FILTERS_H_
+#include <common_utils/math.h>
+#include <deque>
+#include <stdio.h>
 
-#include "math.h"
-#include "time.h"
-#include "opencv.h"
-#include "tf.h"
-#include "operators.h"
-//#include "gtest.h"
-#include "colors.h"
-#include "feature.h"
-#include "vec.h"
-#include "serial.h"
-#include "filters.h"
+namespace filters
+{
+	typedef unsigned int _DimType;
 
-#endif /* CORE_H_ */
+	template<class __DataType, _DimType __Dim__>
+	class MovingAverageFilter
+	{
+	public:
+		typedef std::deque<__DataType> _Array;
+		typedef typename _Array::iterator _ArrayIterator;
+		const static _DimType dim_ = __Dim__;
+
+		_Array cache_;
+
+		MovingAverageFilter( )
+		{
+			//
+		}
+
+		__DataType update( __DataType current_value )
+		{
+			cache_.push_back( current_value );
+
+			// make sure the size of the queue is '__Dim__'
+			if( cache_.size() > __Dim__ ) cache_.pop_front();
+			__DataType avg = 0;
+			for( _ArrayIterator it = cache_.begin(); it != cache_.end(); ++it )
+			{
+				// 'it' is a pointer, so the current element is *it
+				avg += *it;
+			}
+			avg /= cache_.size();
+			return avg;
+		}
+	};
+}
+#endif /* FILTERS_H_ */
