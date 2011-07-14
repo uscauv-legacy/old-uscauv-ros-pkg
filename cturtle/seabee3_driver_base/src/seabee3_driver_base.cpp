@@ -79,7 +79,6 @@ private:
 
 public:
 	//#define SURFACE_PRESSURE 908
-	const static int PRESSURE_DEPTH_SLOPE = 33;
 
 	Seabee3DriverBase( ros::NodeHandle & nh ) :
 		BaseNode<> ( nh )
@@ -87,6 +86,8 @@ public:
 		pressure_calibrated_ = false;
 
 		nh_local_.param( "surface_pressure", surface_pressure_, 908 );
+		nh_local_.param( "montalbos_per_meter", montalbos_per_meter_, 33 );
+
 		nh_local_.param( "port", port_, std::string( "/dev/ttyUSB0" ) );
 
 		ROS_INFO( "constructing new driver instance" );
@@ -139,7 +140,7 @@ public:
 
 	float getDepthFromPressure( int pressure )
 	{
-		return (float) ( pressure - surface_pressure_ ) / PRESSURE_DEPTH_SLOPE;
+		return (float) ( pressure - surface_pressure_ ) / montalbos_per_meter_;
 	}
 
 	void motorCntlCB( const seabee3_driver_base::MotorCntlConstPtr & msg )
