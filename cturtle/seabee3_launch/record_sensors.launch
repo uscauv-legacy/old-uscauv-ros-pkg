@@ -1,0 +1,3 @@
+<launch>
+	<node pkg="rosbag" type="rosbag" name="rosbag" args="record /xsens/custom_data /xsens/data /camera2/image_color/compressed /tritech_micron/scan_lines /seabee3/intl_pressure /seabee3/extl_pressure /seabee3/motor_cntl /seabee3/depth /tf" />
+</launch>
