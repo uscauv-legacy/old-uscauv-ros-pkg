@@ -66,7 +66,7 @@ private:
 	ros::ServiceServer shooter1_action_srv_;
 	ros::ServiceServer shooter2_action_srv_;
 
-	filters::MovingAverageFilter<float,100> depth_filter_;
+	filters::MovingAverageFilter<float, 5> depth_filter_;
 	BeeStem3Driver * bee_stem_3_driver_;
 	std::string port_;
 	int surface_pressure_;
