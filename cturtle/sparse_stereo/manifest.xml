@@ -17,6 +17,9 @@
   <depend package="driver_base" />
   <depend package="image_geometry" />
   <depend package="base_libs" />
+  <depend package="visualization_msgs" />
+  <depend package="eigen" />
+  <depend package="pcl" />
   <export>
     <cpp cflags="-I${prefix}/include -I${prefix}/msg/cpp -I${prefix}/srv/cpp" lflags="-Wl,-rpath,${prefix}/lib -L${prefix}/lib -lsparse_stereo"/>
   </export>

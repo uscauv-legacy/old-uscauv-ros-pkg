@@ -233,7 +233,7 @@ virtual _StorageDataType update( _StorageDataType error, _TimeDataType dt, bool 
 // calculate dt automatically
 virtual _StorageDataType update( _StorageDataType error )
 {
-	//printf( "update( %f )\n", error );
+	printf( "update( %f )\n", error );
 
 	if ( !time_initialized ) updateTime();
 	else update( error, updateTime(), false );

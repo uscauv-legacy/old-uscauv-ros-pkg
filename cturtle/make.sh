@@ -1,5 +1,5 @@
 #!/bin/bash
-SOURCE_PATH="/opt/ros/cturtle/setup.sh"
+SOURCE_PATH=~/.bashrc
 
 source $SOURCE_PATH
 

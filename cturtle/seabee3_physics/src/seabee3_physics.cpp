@@ -52,7 +52,7 @@ class Seabee3Physics: public BaseTfTranceiver<>
 {
 public:
 	typedef movement_common::MotorControllerIDs _MotorControllerIDs;
-	typedef movement_common::NUM_MOTOR_CONTROLLERS _NUM_MOTOR_CONTROLLERS;
+	const static int _NUM_MOTOR_CONTROLLERS = movement_common::NUM_MOTOR_CONTROLLERS;
 
 private:
 	std::vector<geometry_msgs::Twist> thruster_transforms_;
@@ -89,7 +89,7 @@ public:
 		updateThrusterTransforms();
 
 		motor_cntl_sub_ = nh.subscribe( "/seabee3/motor_cntl", 1, &Seabee3Physics::motorCntlCB, this );
-		physics_state_pub_ = nh.advertise<movement_common::PhysicsState> ( "/seabee3/physics_state", 1 );
+		physics_state_pub_ = nh.advertise<seabee3_common::PhysicsState> ( std::string( "/seabee3/physics_state" ), 1 );
 
 
 		// Build the broadphase
@@ -187,7 +187,7 @@ public:
 
 		publishTfFrame( trans, "/landmark_map", "/seabee3/base_link" );
 
-		movement_common::PhysicsState physics_state_msg;
+		seabee3_common::PhysicsState physics_state_msg;
 		physics_state_msg.mass.linear.x = physics_state_msg.mass.linear.y = physics_state_msg.mass.linear.z = 100;
 		physics_state_msg.mass.angular.x = seabee_body_->getInvInertiaTensorWorld()[0][0];
 		physics_state_msg.mass.angular.y = seabee_body_->getInvInertiaTensorWorld()[1][1];
@@ -252,7 +252,7 @@ int main( int argc, char** argv )
 	ros::NodeHandle nh;
 
 	Seabee3Physics physModel( nh );
-	physModel.spin( SpinModeId::loop_spin_once );
+	physModel.spin( SpinModeId::LOOP_SPIN_ONCE );
 
 	return 0;
 }

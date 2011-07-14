@@ -225,7 +225,7 @@ int main( int argc, char* argv[] )
 	// make sure the requested file was found
 	if ( !landmark_map_server.success_ ) return 1;
 
-	landmark_map_server.spin( SpinModeId::loop_spin_once );
+	landmark_map_server.spin( SpinModeId::LOOP_SPIN_ONCE );
 	
 	return 0;
 }

@@ -38,12 +38,12 @@
 		<param name="pid/linear/x/d" type="double" value="0.6" />
 		
 		<param name="pid/linear/y/p" type="double" value="500.0" />
-		<param name="pid/linear/Y/i" type="double" value="0.01" />
-		<param name="pid/linear/Y/d" type="double" value="0.6" />
+		<param name="pid/linear/y/i" type="double" value="0.01" />
+		<param name="pid/linear/y/d" type="double" value="0.6" />
 		
-		<param name="pid/linear/z/p" type="double" value="50.0" />
-		<param name="pid/linear/z/i" type="double" value="0.01" />
-		<param name="pid/linear/z/d" type="double" value="0.6" />
+		<param name="pid/linear/z/p" type="double" value="80.0" />
+		<param name="pid/linear/z/i" type="double" value="0.001" />
+		<param name="pid/linear/z/d" type="double" value="0.2" />
 		
 		<param name="pid/angular/x/p" type="double" value="2.5" />
 		<param name="pid/angular/x/i" type="double" value="0.05" />
