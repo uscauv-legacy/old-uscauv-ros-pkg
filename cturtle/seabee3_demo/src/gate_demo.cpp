@@ -1,6 +1,6 @@
 #include <base_node/base_node.h>
 #include <geometry_msgs/Twist.h>
-#include <mathy_math/mathy_math.h>
+#include <common_utils/math.h>
 
 // srvs
 #include <seabee3_common/SetDesiredPose.h> // for SetDesiredPose
@@ -51,7 +51,7 @@ public:
 		// enable the mask for yaw
 		set_desired_pose_.request.ori.mask.z = 1;
 		// set the yaw
-		set_desired_pose_.request.ori.values.z = MathyMath::degToRad( yaw );
+		set_desired_pose_.request.ori.values.z = common_utils/math::degToRad( yaw );
 		// publish
 		set_desired_heading_cli_.call( set_desired_pose_.request, set_desired_pose_.response );
 
@@ -65,23 +65,11 @@ public:
 	void spin()
 	{
 		static float forward_velocity = 0.5;
-		while ( ros::ok() )
+		while ( !killed() )
 		{
 			setVelocity( 0, 2 );
-			setYaw( 0, 4 );
-			setVelocity( forward_velocity, 8 );
-
-			setVelocity( 0, 2 );
-			setYaw( 90, 4 );
-			setVelocity( forward_velocity, 8 );
-
-			setVelocity( 0, 2 );
-			setYaw( 180, 4 );
-			setVelocity( forward_velocity, 8 );
-
-			setVelocity( 0, 2 );
-			setYaw( 270, 4 );
-			setVelocity( forward_velocity, 8 );
+			setYaw( current_heading(), 4 );
+			setVelocity( forward_velocity, 30 );
 		}
 	}
 
@@ -89,7 +77,7 @@ public:
 
 int main( int argc, char ** argv )
 {
-	ros::init( argc, argv, "square_movement" );
+	ros::init( argc, argv, "gate_demo" );
 	ros::NodeHandle nh;
 
 	SquareMovement square_movement( nh );
