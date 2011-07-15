@@ -348,7 +348,13 @@ public:
 			{
 				// mode = 0 -> desired = value
 				// mode = 1 -> desired += value
-				if ( mask != 0.0 ) desired = value + ( mode == 1.0 ? desired : 0.0 );
+				if ( mask != 0.0 ) //desired = value + ( mode == 1.0 ? desired : 0.0 );
+        {
+          if(mode == 0.0)
+          { desired = value; }
+          else
+          { desired += value; }
+        }
 			}
 
 			void setDesiredPose( geometry_msgs::Vector3 & mask, geometry_msgs::Vector3 & desired, geometry_msgs::Vector3 & value, geometry_msgs::Vector3 & mode )
@@ -365,6 +371,28 @@ public:
 				return true;
 			}
 
+			bool setDesiredPoseCB( seabee3_common::SetDesiredPose::Request & req, seabee3_common::SetDesiredPose::Response & resp )
+			{
+        // If the incoming request's mode is set to non-zero, then the request is for a relative angle. Here, setDesiredPose will
+        // ensure that desired_pose_'s angles are always absolute after it is called.
+				setDesiredPose( req.ori.mask, desired_pose_.angular, req.ori.values, req.ori.mode );
+
+				geometry_msgs::Vector3 velocity = req.pos.values;
+
+        // Set the desired pose 'carrot' by rotating the forward and strafing velocities by the desired angle
+				req.pos.values.x = velocity.x * cos( desired_pose_.angular.z ) - velocity.y * sin( desired_pose_.angular.z );
+				req.pos.values.y = velocity.x * sin( desired_pose_.angular.z ) + velocity.y * cos( desired_pose_.angular.z );
+
+        // Make desired_pose_'s position absolute
+				setDesiredPose( req.pos.mask, desired_pose_.linear, req.pos.values, req.pos.mode );
+
+				// publish the pose
+				desired_pose_ >> desired_pose_tf_;
+				publishTfFrame( desired_pose_tf_, global_frame_, "/seabee3/desired_pose" );
+
+				return true;
+			}
+
 			// set the current pose to the desired pose to zero out all errors
 			void resetPose()
 			{
@@ -375,24 +403,6 @@ public:
 
 				// publish the pose
 				publishTfFrame( desired_pose_tf_, global_frame_, "/seabee3/desired_pose" );
-			}
-
-			bool setDesiredPoseCB( seabee3_common::SetDesiredPose::Request & req, seabee3_common::SetDesiredPose::Response & resp )
-			{
-				setDesiredPose( req.ori.mask, desired_pose_.angular, req.ori.values, req.ori.mode );
-
-				geometry_msgs::Vector3 velocity = req.pos.values;
-
-				req.pos.values.x = velocity.x * cos( desired_pose_.angular.z ) - velocity.y * sin( desired_pose_.angular.z );
-				req.pos.values.y = velocity.x * sin( desired_pose_.angular.z ) + velocity.y * cos( desired_pose_.angular.z );
-
-				setDesiredPose( req.pos.mask, desired_pose_.linear, req.pos.values, req.pos.mode );
-
-				desired_pose_ >> desired_pose_tf_;
-				// publish the pose
-				publishTfFrame( desired_pose_tf_, global_frame_, "/seabee3/desired_pose" );
-
-				return true;
 			}
 
 			void requestChangeInDesiredPose( const geometry_msgs::Twist & msg )
