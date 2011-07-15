@@ -46,8 +46,11 @@
 #include <seabee3_common/movement_common.h>
 #include <seabee3_driver_base/MotorCntl.h>
 #include <seabee3_common/PhysicsState.h>
+#include <seabee3_physics/Seabee3PhysicsConfig.h>
 
-class Seabee3Physics: public BaseTfTranceiver<>
+typedef seabee3_physics::Seabee3PhysicsConfig _ReconfigureType;
+
+class Seabee3Physics: public BaseTfTranceiver<_ReconfigureType>
 {
 public:
 	const static int _NUM_MOTOR_CONTROLLERS = movement_common::NUM_MOTOR_CONTROLLERS;
@@ -69,16 +72,15 @@ private:
 	ros::Subscriber motor_cntl_sub_;
 	ros::Publisher physics_state_pub_;
 	std::vector<int> thruster_vals_;
-  double thrust_to_force_;
 
 	ros::Time last_call_;
 
+
 public:
 	Seabee3Physics( ros::NodeHandle &nh ) :
-		BaseTfTranceiver<> ( nh ), thruster_transforms_( _NUM_MOTOR_CONTROLLERS ), thruster_transform_name_prefix_( "/seabee3/thruster" ), thruster_vals_(
+		BaseTfTranceiver<_ReconfigureType> ( nh ), thruster_transforms_( _NUM_MOTOR_CONTROLLERS ), thruster_transform_name_prefix_( "/seabee3/thruster" ), thruster_vals_(
 				_NUM_MOTOR_CONTROLLERS )
 	{
-    thrust_to_force_ = 0.05;
 		publishTfFrame( tf::Transform( tf::Quaternion( 0, 0, 0 ), tf::Vector3( 0, 0, 0 ) ), "/landmark_map", "/seabee3/physics_link" );
 
 		ros::Duration( 0.5 ).sleep(); //wait for this frame to register on the network
@@ -121,12 +123,11 @@ public:
 		btRigidBody::btRigidBodyConstructionInfo seabee_body_ci( seabee_mass, seabee_motion_state_, seabee_shape_, seabee_inertia );
 		seabee_body_ = new btRigidBody( seabee_body_ci );
 		seabee_body_->setActivationState( DISABLE_DEACTIVATION );
+    seabee_body_->setDamping(.018, 0);
+
 		dynamics_world_->addRigidBody( seabee_body_ );
 
 		last_call_ = ros::Time::now();
-
-    nh_local_.param("thrust_to_force", thrust_to_force_, 0.05);
-    ROS_INFO("Thrust to force is %f", thrust_to_force_);
 	}
 
 	~Seabee3Physics()
@@ -162,7 +163,7 @@ public:
            i == movement_common::MotorControllerIDs::DROPPER_STAGE2 ||
            i == movement_common::MotorControllerIDs::SHOOTER ) continue;
 
-			float thrust = thruster_vals_[i] * thrust_to_force_; //* 0.05;
+			float thrust = thruster_vals_[i] * reconfigure_params_.thrust_to_force;
 			geometry_msgs::Vector3 pos = thruster_transforms_[i].linear;
 			geometry_msgs::Vector3 ori = thruster_transforms_[i].angular;
 
@@ -183,39 +184,18 @@ public:
 			seabee_body_->applyForce( force_tf * force, rel_pos );
 		}
 
-
-		////Noah's code to implement drag force
 		btVector3 lin_v_ = seabee_body_->getLinearVelocity();
-    // THIS WAS 1000.0, but the drag strength was orders of magnitude greater than the thruster force
-		float rho = 100.00; //density of water kg/m^3
-		float cd = 1.15; // coefficient of drag on the face of a cylinder
-		float pi = 3.14159;
-		float seabee_r_squared = .01; //approximation of seabee's radius squared in meters
-		float A = pi * seabee_r_squared; //reference area (circular face of cylinder)
-		//below is the formula for the drag force, it is in the direction of the velocity vector and
-		// is a function of v^2
-    double drag_strength = lin_v_.length2() * ( rho * cd * A ) / 2.0;
-    //drag_strength = -1.0*std::min(drag_strength, lin_v_.length());
-    drag_strength *= -1.0;
-		btVector3 force_drag = drag_strength * lin_v_.normalized();
-
-    // If force drag is full of nans, then we should just zero it out
+    btVector3 force_drag =  -lin_v_*reconfigure_params_.drag_constant;
     if(force_drag[0] != force_drag[0])
-    {
-      force_drag[0] = 0.0;
-      force_drag[1] = 0.0;
-      force_drag[2] = 0.0;
-    }
-
-    ROS_INFO("Drag Force: %f ... Thruster Force: %f", drag_strength, lin_v_.length());
-    ROS_INFO("Drag Vector: %f, %f, %f", force_drag[0],  force_drag[1], force_drag[2]);
+    { force_drag[0] = 0.0; force_drag[1] = 0.0; force_drag[2] = 0.0; }
+		seabee_body_->applyForce(force_drag, seabee_body_->getCenterOfMassPosition() );
     ROS_INFO("lin_v_       %f, %f, %f", lin_v_[0], lin_v_[1], lin_v_[2]);
-
-		seabee_body_->applyForce( force_drag, seabee_body_->getCenterOfMassPosition() );
+    ROS_INFO("Drag Force: %f ... Sub Speed: %f", force_drag.length(), lin_v_.length());
 
 
 		double dt = ( ros::Time::now() - last_call_ ).toSec();
 
+    //seabee_body_->applyDamping(dt);
 
 		// Step the physics simulation
 		dynamics_world_->stepSimulation( dt, 50, 1.0 / rate_ );
