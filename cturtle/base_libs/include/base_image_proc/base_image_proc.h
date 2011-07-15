@@ -37,8 +37,9 @@
 #define BASE_IMAGE_PROC_H_
 
 #include <base_image_proc/base_image_proc_core.h>
+#include <base_libs/Null.h>
 
-template<typename _ReconfigureType = BaseNodeTypes::_DefaultReconfigureType, typename _ServiceType = std_srvs::Empty>
+template<typename _ReconfigureType = BaseNodeTypes::_DefaultReconfigureType, typename _ServiceType = base_libs::Null>
 class BaseImageProc : public BaseImageProcCore<_ReconfigureType, _ServiceType>
 {
 public:
@@ -55,9 +56,9 @@ public:
 	{
 		ROS_INFO( "Setting up base_image_proc..." );
 
-		ROS_INFO( "Setting up service %s...", service_name );
+		ROS_INFO( "Setting up service %s...", service_name.c_str() );
 		service_srv_ = this->nh_local_.advertiseService( service_name, &BaseImageProc::serviceCB, this );
-		ROS_INFO( "Done setting up service %s", service_name );
+		ROS_INFO( "Done setting up service %s", service_name.c_str() );
 
 		ROS_INFO( "Done setting up base_image_proc" );
 	}
@@ -84,7 +85,11 @@ protected:
 		IplImage * new_image = NULL;
 		IplImage * result = NULL;
 
-		if( !this->image_mutex_.try_lock() ) return false;
+		if( !this->image_mutex_.try_lock() ) 
+    {
+      ROS_WARN("Failed to get lock on image_mutex");
+      return false;
+    }
 
 		// if the image hasn't changed, just use the last response
 		if ( !this->new_image_ )
@@ -120,11 +125,11 @@ protected:
 };
 
 template<typename _ReconfigureType>
-class BaseImageProc<_ReconfigureType, std_srvs::Empty> : public BaseImageProcCore<_ReconfigureType, std_srvs::Empty>
+class BaseImageProc<_ReconfigureType, base_libs::Null> : public BaseImageProcCore<_ReconfigureType, base_libs::Null>
 {
 public:
 	BaseImageProc( ros::NodeHandle & nh, std::string reconfigure_ns = "reconfigure", uint threads = 3 ) :
-		BaseImageProcCore<_ReconfigureType, std_srvs::Empty> ( nh, reconfigure_ns, threads )
+		BaseImageProcCore<_ReconfigureType, base_libs::Null> ( nh, reconfigure_ns, threads )
 	{
 		ROS_INFO( "Setting up base_image_proc with no service..." );
 		ROS_INFO( "Done setting up base_image_proc..." );

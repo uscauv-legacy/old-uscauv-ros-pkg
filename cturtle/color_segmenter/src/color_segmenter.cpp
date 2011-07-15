@@ -44,11 +44,12 @@
 #include <color_segmenter/FindBlobs.h>
 // for ColorSegmenter reconfigure types
 #include <color_segmenter/ColorSegmenterConfig.h>
+#include <std_srvs/Empty.h>
 #include <deque>
 #include <vector>
 #include <queue>
 
-typedef BaseImageProc<color_segmenter::ColorSegmenterConfig, color_segmenter::FindBlobs> _BaseImageProc;
+typedef BaseImageProc<color_segmenter::ColorSegmenterConfig, std_srvs::Empty> _BaseImageProc;
 
 class ColorSegmenter: public _BaseImageProc
 {

@@ -54,6 +54,7 @@
 #include <image_geometry/pinhole_camera_model.h>
 // for the DoSomething service
 #include <std_srvs/Empty.h>
+#include <base_libs/Null.h>
 
 /* others */
 #include <base_node/base_node.h>
