@@ -141,21 +141,11 @@ public:
 		delete seabee_body_;
 	}
 
-  //void callback(seabee3_physics::Seabee3PhysicsConfig &config, uint32_t level)
-  //{
-  //  ROS_INFO("Changing thrust-to-force: %f", config.thrustToForce);
-  //  thrust_to_force_ = config.thrustToForce;
-  //}
-
-
 	void spinOnce()
 	{
 		//updateThrusterTransforms();
 
 		seabee_body_->clearForces();
-
-    ROS_WARN("TAKE THIS THE FUCK OUT!!!!! - %s:%d", __FUNCTION__, __LINE__); thruster_vals_[movement_common::MotorControllerIDs::FWD_RIGHT_THRUSTER] = 50; thruster_vals_[movement_common::MotorControllerIDs::FWD_LEFT_THRUSTER] = 50;
-
 
 		for ( size_t i = 0; i < _NUM_MOTOR_CONTROLLERS; i++ )
 		{
