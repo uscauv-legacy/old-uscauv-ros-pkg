@@ -187,7 +187,7 @@ public:
 		////Noah's code to implement drag force
 		btVector3 lin_v_ = seabee_body_->getLinearVelocity();
     // THIS WAS 1000.0, but the drag strength was orders of magnitude greater than the thruster force
-		float rho = 1000.0; //density of water kg/m^3
+		float rho = 100.00; //density of water kg/m^3
 		float cd = 1.15; // coefficient of drag on the face of a cylinder
 		float pi = 3.14159;
 		float seabee_r_squared = .01; //approximation of seabee's radius squared in meters
@@ -195,7 +195,8 @@ public:
 		//below is the formula for the drag force, it is in the direction of the velocity vector and
 		// is a function of v^2
     double drag_strength = lin_v_.length2() * ( rho * cd * A ) / 2.0;
-    drag_strength = -1.0*std::min(drag_strength, lin_v_.length());
+    //drag_strength = -1.0*std::min(drag_strength, lin_v_.length());
+    drag_strength *= -1.0;
 		btVector3 force_drag = drag_strength * lin_v_.normalized();
 
     // If force drag is full of nans, then we should just zero it out
