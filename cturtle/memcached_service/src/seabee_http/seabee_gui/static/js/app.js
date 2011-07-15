@@ -1,6 +1,6 @@
 (function() {
-  var ConfigModel, SeaBeeFeedController, SeaBeeSensorsView, init, verticallyPositionHack;
-  var __hasProp = Object.prototype.hasOwnProperty, __extends = function(child, parent) {
+  var EMPTY_VALUE, SeaBeeDataModel, SeaBeeFeedController, SeaBeeSensorsView, init, verticallyPositionHack;
+  var __bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; }, __hasProp = Object.prototype.hasOwnProperty, __extends = function(child, parent) {
     for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; }
     function ctor() { this.constructor = child; }
     ctor.prototype = parent.prototype;
@@ -8,43 +8,47 @@
     child.__super__ = parent.prototype;
     return child;
   };
-  ConfigModel = (function() {
-    __extends(ConfigModel, Backbone.Model);
-    function ConfigModel() {
-      ConfigModel.__super__.constructor.apply(this, arguments);
+  EMPTY_VALUE = 'n/a';
+  SeaBeeDataModel = (function() {
+    __extends(SeaBeeDataModel, Backbone.Model);
+    function SeaBeeDataModel() {
+      this.start_updating = __bind(this.start_updating, this);
+      SeaBeeDataModel.__super__.constructor.apply(this, arguments);
     }
-    ConfigModel.prototype.initialize = function() {
-      return this.set({
-        'intPressure': 'N/A',
-        'extPressure': 'N/A',
-        'heading': 'N/A'
-      });
+    SeaBeeDataModel.prototype.defaults = {
+      'ext_pressure': EMPTY_VALUE,
+      'int_pressure': EMPTY_VALUE,
+      'heading': EMPTY_VALUE
     };
-    return ConfigModel;
+    SeaBeeDataModel.prototype.url = function() {
+      return '/data/';
+    };
+    SeaBeeDataModel.prototype.start_updating = function() {
+      return setInterval(__bind(function() {
+        return this.fetch();
+      }, this), 300);
+    };
+    return SeaBeeDataModel;
   })();
   SeaBeeSensorsView = (function() {
     __extends(SeaBeeSensorsView, Backbone.View);
     function SeaBeeSensorsView() {
+      this.render = __bind(this.render, this);
       SeaBeeSensorsView.__super__.constructor.apply(this, arguments);
     }
     SeaBeeSensorsView.prototype.initialize = function() {
       this.model.view = this;
       $("#heading-display").val(this.model.get('heading'));
-      $("#intPressure-display").val(this.model.get('intPressure'));
-      return $("#extPressure-display").val(this.model.get('extPressure'));
+      $("#intPressure-display").val(this.model.get('int_pressure'));
+      return $("#extPressure-display").val(this.model.get('ext_pressure'));
     };
     SeaBeeSensorsView.prototype.events = {
       "click #manual-update": "render"
     };
     SeaBeeSensorsView.prototype.render = function() {
-      this.model.set({
-        'intPressure': 'update',
-        'extPressure': 'update',
-        heading: 'update'
-      });
       $("#heading-display").val(this.model.get('heading'));
-      $("#intPressure-display").val(this.model.get('intPressure'));
-      return $("#extPressure-display").val(this.model.get('extPressure'));
+      $("#intPressure-display").val(this.model.get('int_pressure'));
+      return $("#extPressure-display").val(this.model.get('ext_pressure'));
     };
     return SeaBeeSensorsView;
   })();
@@ -55,11 +59,13 @@
     }
     SeaBeeFeedController.prototype.initialize = function() {
       var model, sensor_view;
-      model = new ConfigModel;
-      return sensor_view = new SeaBeeSensorsView({
+      model = new SeaBeeDataModel;
+      model.start_updating();
+      sensor_view = new SeaBeeSensorsView({
         'el': $('body'),
         'model': model
       });
+      return model.bind("change", sensor_view.render);
     };
     return SeaBeeFeedController;
   })();

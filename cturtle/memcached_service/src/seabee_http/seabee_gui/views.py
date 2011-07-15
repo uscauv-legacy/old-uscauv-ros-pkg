@@ -1,5 +1,4 @@
 from django.http import HttpResponse
-from django.utils import simplejson as json
 from django.shortcuts import render_to_response
 
 import memcache
