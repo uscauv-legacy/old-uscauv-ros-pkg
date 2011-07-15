@@ -176,11 +176,6 @@ public:
 	void publishLaserScan( const _ScanLineMsgType::ConstPtr & scan_line_msg )
 	{
 		_IntensityBinMsgType bin = getThresholdedScanLine( scan_line_msg );
-		if( bin.intensity == 0 && bin.distance == 0 )
-		{
-			ROS_WARN( "Dropping current scan line message; could not find acceptable bin." );
-			return;
-		}
 
 		if( laser_scan_msg_.ranges.size() == 0 )
 		{
@@ -217,12 +212,13 @@ public:
 		{
 			// gather statistics
 			laser_scan_msg_.angle_max = math_utils::degToRad( scan_line_msg->angle );
-			laser_scan_msg_.angle_increment = math_utils::degToRad( angular_distance_ / laser_scan_msg_.ranges.size() );
+			laser_scan_msg_.angle_increment = laser_scan_msg_.ranges.size() > 1 ? math_utils::degToRad( angular_distance_ / ( laser_scan_msg_.ranges.size() - 1 ) ) : 0;
 			laser_scan_msg_.range_min = min_laser_distance_;
 			laser_scan_msg_.range_max = max_laser_distance_;
 
 			laser_scan_msg_.scan_time = ( scan_line_msg->header.stamp - laser_scan_msg_.header.stamp ).toSec();
-			laser_scan_msg_.time_increment = laser_scan_msg_.scan_time / laser_scan_msg_.ranges.size();
+			//laser_scan_msg_.header.stamp = ros::Time::now() - ( scan_line_msg->header.stamp - laser_scan_msg_.header.stamp );
+			laser_scan_msg_.time_increment = laser_scan_msg_.ranges.size() > 1 ? laser_scan_msg_.scan_time / ( laser_scan_msg_.ranges.size() - 1 ) : 0;
 
 			// publish
 			if ( laser_scan_msg_.ranges.size() > 0 ) laser_scan_pub_.publish( _LaserScanMsgType::Ptr( new _LaserScanMsgType( laser_scan_msg_ ) ) );
