@@ -15,5 +15,9 @@
 	<!-- back strafe -->
 	<node pkg="tf" type="static_transform_publisher" name="thruster5_tf" args="-0.3 0 0 0 0 0 /seabee3/base_link /seabee3/thruster5 1" />
 	
-	<node pkg="seabee3_physics" type="seabee3_physics" name="seabee3_physics" output="screen" />
+	<node pkg="seabee3_physics" type="seabee3_physics" name="seabee3_physics" output="screen">
+  <rosparam>
+    thrust_to_force: 0.05
+  </rosparam>
+  </node>
 </launch>

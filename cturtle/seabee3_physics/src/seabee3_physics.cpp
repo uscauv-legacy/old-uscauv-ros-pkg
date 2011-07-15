@@ -125,7 +125,8 @@ public:
 
 		last_call_ = ros::Time::now();
 
-    nh_local_.param("thrust_to_force_", thrust_to_force_, 0.05);
+    nh_local_.param("thrust_to_force", thrust_to_force_, 0.05);
+    ROS_INFO("Thrust to force is %f", thrust_to_force_);
 	}
 
 	~Seabee3Physics()
@@ -152,6 +153,9 @@ public:
 
 		seabee_body_->clearForces();
 
+    ROS_WARN("TAKE THIS THE FUCK OUT!!!!! - %s:%d", __FUNCTION__, __LINE__); thruster_vals_[movement_common::MotorControllerIDs::FWD_RIGHT_THRUSTER] = 50; thruster_vals_[movement_common::MotorControllerIDs::FWD_LEFT_THRUSTER] = 50;
+
+
 		for ( size_t i = 0; i < _NUM_MOTOR_CONTROLLERS; i++ )
 		{
 			if ( i == movement_common::MotorControllerIDs::DROPPER_STAGE1 ||
@@ -165,7 +169,6 @@ public:
 			btVector3 force;
 			force.setY( thrust );
 
-
 			// Y P R
 			btTransform force_tf( btQuaternion( ori.z, ori.y, ori.x ) );
 
@@ -175,22 +178,40 @@ public:
 			rel_pos.setZ( pos.z );
 
 
-			//ROS_INFO( "MOTOR%Zu THRUST: %f (%f,%f,%f) @ (%f,%f,%f)", motorIdx, thrust, force.x(), force.y(), force.z(), rel_pos.x(), rel_pos.y(), rel_pos.z() );
+			ROS_INFO( "MOTOR%Zu THRUST: %f (%f,%f,%f) @ (%f,%f,%f)", i, thrust, force.x(), force.y(), force.z(), rel_pos.x(), rel_pos.y(), rel_pos.z() );
 
 			seabee_body_->applyForce( force_tf * force, rel_pos );
 		}
 
-		//Noah's code to implement drag force
+
+		////Noah's code to implement drag force
 		btVector3 lin_v_ = seabee_body_->getLinearVelocity();
-		float rho = 1000; //density of water kg/m^3
+    // THIS WAS 1000.0, but the drag strength was orders of magnitude greater than the thruster force
+		float rho = 1000.0; //density of water kg/m^3
 		float cd = 1.15; // coefficient of drag on the face of a cylinder
 		float pi = 3.14159;
 		float seabee_r_squared = .01; //approximation of seabee's radius squared in meters
 		float A = pi * seabee_r_squared; //reference area (circular face of cylinder)
 		//below is the formula for the drag force, it is in the direction of the velocity vector and
 		// is a function of v^2
-		btVector3 force_drag = ( rho * cd * A ) * lin_v_.length2() * lin_v_.normalized() / -2;
+    double drag_strength = lin_v_.length2() * ( rho * cd * A ) / 2.0;
+    drag_strength = -1.0*std::min(drag_strength, lin_v_.length());
+		btVector3 force_drag = drag_strength * lin_v_.normalized();
+
+    // If force drag is full of nans, then we should just zero it out
+    if(force_drag[0] != force_drag[0])
+    {
+      force_drag[0] = 0.0;
+      force_drag[1] = 0.0;
+      force_drag[2] = 0.0;
+    }
+
+    ROS_INFO("Drag Force: %f ... Thruster Force: %f", drag_strength, lin_v_.length());
+    ROS_INFO("Drag Vector: %f, %f, %f", force_drag[0],  force_drag[1], force_drag[2]);
+    ROS_INFO("lin_v_       %f, %f, %f", lin_v_[0], lin_v_[1], lin_v_[2]);
+
 		seabee_body_->applyForce( force_drag, seabee_body_->getCenterOfMassPosition() );
+
 
 		double dt = ( ros::Time::now() - last_call_ ).toSec();
 
@@ -204,7 +225,7 @@ public:
 		//code to factor in drag
 
 
-		//printf( "Body Pos: %f %f %f\n", trans.getOrigin().getX(), trans.getOrigin().getY(), trans.getOrigin().getZ() );
+		printf( "Body Pos: %f %f %f\n", trans.getOrigin().getX(), trans.getOrigin().getY(), trans.getOrigin().getZ() );
 
 		publishTfFrame( trans, "/landmark_map", "/seabee3/physics_link" );
 
