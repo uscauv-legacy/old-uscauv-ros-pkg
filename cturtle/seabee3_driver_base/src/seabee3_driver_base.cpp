@@ -45,7 +45,8 @@
 #include <seabee3_driver_base/Pressure.h> // for outgoing Pressure
 //srvs
 #include <seabee3_driver_base/FiringDeviceAction.h> // for FiringDeviceAction
-#include <common_utils/filters.h>
+#include <common_utils/tf.h>
+#include <xsens_node/Imu.h>
 
 using namespace movement_common;
 class Seabee3DriverBase: public BaseNode<>
@@ -55,6 +56,7 @@ public:
 
 private:
 	ros::Subscriber motor_cntl_sub_;
+	ros::Subscriber imu_sub_;
 
 	ros::Publisher intl_pressure_pub_;
 	ros::Publisher extl_pressure_pub_;
@@ -66,7 +68,6 @@ private:
 	ros::ServiceServer shooter1_action_srv_;
 	ros::ServiceServer shooter2_action_srv_;
 
-//	filters::MovingAverageFilter<float, 5> depth_filter_;
 	BeeStem3Driver * bee_stem_3_driver_;
 	std::string port_;
 	double surface_pressure_;
@@ -77,6 +78,10 @@ private:
 	_ThrusterArrayCfg thruster_dir_cfg_;
 
 	int min_motor_value_;
+
+	tf::Transform current_pose_tf_;
+
+	geometry_msgs::Twist current_pose_;
 
 public:
 	//#define SURFACE_PRESSURE 908
@@ -127,6 +132,7 @@ public:
 		thruster_dir_cfg_[MotorControllerIDs::DEPTH_RIGHT_THRUSTER] = thruster_dir;
 
 		motor_cntl_sub_ = nh.subscribe( "/seabee3/motor_cntl", 1, &Seabee3DriverBase::motorCntlCB, this );
+		imu_sub_ = nh_local_.subscribe( "/xsens/custom_data", 10, &Seabee3DriverBase::imuCB, this );
 
 		intl_pressure_pub_ = nh.advertise<seabee3_driver_base::Pressure> ( "/seabee3/intl_pressure", 1 );
 		extl_pressure_pub_ = nh.advertise<seabee3_driver_base::Pressure> ( "/seabee3/extl_pressure", 1 );
@@ -137,6 +143,15 @@ public:
 		dropper2_action_srv_ = nh.advertiseService( "/seabee3/dropper2_action", &Seabee3DriverBase::dropper2ActionCB, this );
 		shooter1_action_srv_ = nh.advertiseService( "/seabee3/shooter1_action", &Seabee3DriverBase::shooter1ActionCB, this );
 		shooter2_action_srv_ = nh.advertiseService( "/seabee3/shooter2_action", &Seabee3DriverBase::shooter2ActionCB, this );
+	}
+
+	void imuCB( const xsens_node::ImuConstPtr & msg )
+	{
+		current_pose_.angular.x = msg->ori.x;
+		current_pose_.angular.y = msg->ori.y;
+		current_pose_.angular.z = msg->ori.z;
+
+		publishGivens();
 	}
 
 	float getDepthFromPressure( int pressure )
@@ -192,6 +207,12 @@ public:
 		return executeFiringDeviceAction( req, res, FiringDeviceIDs::shooter2 );
 	}
 
+	void publishGivens()
+	{
+		current_pose_ >> current_pose_tf_;
+		tf_utils::publishTfFrame( current_pose_tf_, "/landmark_map", "/seabee3/base_link_givens" );
+	}
+
 	virtual void spinOnce()
 	{
 		seabee3_driver_base::Pressure intl_pressure_msg;
@@ -201,19 +222,17 @@ public:
 
 		bee_stem_3_driver_->readPressure( intl_pressure_msg.value, extl_pressure_msg.value );
 
-		if ( !pressure_calibrated_ )
-		{
-			surface_pressure_ = extl_pressure_msg.value;
-			pressure_calibrated_ = true;
-		}
-
 		bee_stem_3_driver_->readKillSwitch( kill_switch_msg.is_killed );
-//		depth_msg.value = depth_filter_.update( getDepthFromPressure( extl_pressure_msg.value ) );
 		depth_msg.value = getDepthFromPressure( extl_pressure_msg.value );
+
+		current_pose_.linear.z = depth_msg.value;
+
+		publishGivens();
+
 		intl_pressure_pub_.publish( intl_pressure_msg );
 		extl_pressure_pub_.publish( extl_pressure_msg );
 		depth_pub_.publish( depth_msg );
-		kill_switch_pub_.publish( kill_switch_msg );
+		kill_switch_pub_.publish( kill_switch_msg );		
 	}
 
 };
