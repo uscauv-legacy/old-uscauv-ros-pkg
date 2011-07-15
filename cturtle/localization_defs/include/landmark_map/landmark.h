@@ -139,10 +139,10 @@ public:
 
 	Landmark( cv::Point3d center = cv::Point3d( 0.0, 0.0, 0.0 ), double orientation = 0.0, cv::Point3d dim = cv::Point3d( 1.0, 1.0, 1.0 ), int shapeType = visualization_msgs::Marker::ARROW );
 
-	static Landmark parseMessage( const localization_defs::LandmarkMsg & msg );
+	static Landmark parseMessage( const localization_defs::Landmark & msg );
 
 	visualization_msgs::Marker createMarker( const std::string & frame, const int id, const std::string & ns_ext = "" ) const;
-	localization_defs::LandmarkMsg createMsg() const;
+	localization_defs::Landmark createMsg() const;
 
 	cv::Point3d center_; //position relative to the center of the map (which is always the origin, <0, 0, 0>)
 	double orientation_;

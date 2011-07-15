@@ -94,7 +94,7 @@ visualization_msgs::Marker Landmark::createMarker( const std::string & frame, co
 	marker.pose.position.y = center_.y;
 	marker.pose.position.z = center_.z;
 	
-	tf::Quaternion fromEuler( MathyMath::degToRad( orientation_ ), 0, 0 );
+	tf::Quaternion fromEuler( math_utils::degToRad( orientation_ ), 0, 0 );
 	
 	marker.pose.orientation.x = fromEuler.x();
 	marker.pose.orientation.y = fromEuler.y();
@@ -117,15 +117,15 @@ visualization_msgs::Marker Landmark::createMarker( const std::string & frame, co
 	return marker;
 }
 
-localization_defs::LandmarkMsg Landmark::createMsg() const
+localization_defs::Landmark Landmark::createMsg() const
 {
-	localization_defs::LandmarkMsg msg;
+	localization_defs::Landmark msg;
 	
-	msg.center.x = center_.x;
-	msg.center.y = center_.y;
-	msg.center.z = center_.z;
+	msg.pose.linear.x = center_.x;
+	msg.pose.linear.y = center_.y;
+	msg.pose.linear.z = center_.z;
 	
-	msg.ori = orientation_;
+	msg.pose.angular.z = orientation_;
 	
 	msg.color = color_;
 	
@@ -136,19 +136,19 @@ localization_defs::LandmarkMsg Landmark::createMsg() const
 	return msg;
 }
 
-Landmark Landmark::parseMessage( const localization_defs::LandmarkMsg & msg )
+Landmark Landmark::parseMessage( const localization_defs::Landmark & msg )
 {
 	if ( msg.type == Landmark::LandmarkType::Buoy )
 	{
-		return LandmarkTypes::Buoy( cv::Point3d( msg.center.x, msg.center.y, msg.center.z ), msg.ori, msg.color );
+		return LandmarkTypes::Buoy( cv::Point3d( msg.pose.linear.x, msg.pose.linear.y, msg.pose.linear.z ), msg.pose.angular.z, msg.color );
 	}
 	else if ( msg.type == Landmark::LandmarkType::Pinger )
 	{
-		return LandmarkTypes::Pinger( cv::Point3d( msg.center.x, msg.center.y, msg.center.z ), msg.ori, msg.id );
+		return LandmarkTypes::Pinger( cv::Point3d( msg.pose.linear.x, msg.pose.linear.y, msg.pose.linear.z ), msg.pose.angular.z, msg.id );
 	}
 	else if ( msg.type == Landmark::LandmarkType::Pipe )
 	{
-		return LandmarkTypes::Pipe( cv::Point3d( msg.center.x, msg.center.y, msg.center.z ), msg.ori );
+		return LandmarkTypes::Pipe( cv::Point3d( msg.pose.linear.x, msg.pose.linear.y, msg.pose.linear.z ), msg.pose.angular.z );
 	}
 	return Landmark();
 }

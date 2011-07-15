@@ -19,4 +19,4 @@ set(LIBRARY_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/lib)
 rosbuild_genmsg()
 rosbuild_gensrv()
 
-#add_subdirectory( src )
+add_subdirectory( src )
