@@ -126,21 +126,38 @@ public:
 
 	void publishImage( const _ScanLineMsgType::ConstPtr & scan_line_msg )
 	{
+    static double last_angle=-1;
+    static double angle_diff=-1;
+
 		float const spacing = ( scan_line_img_->width / 2.0 - 10.0 ) / scan_line_msg->bins.size();
 		float const angle = math_utils::degToRad( scan_line_msg->angle );
-		float const s = spacing / 2.0;
+		float const s = spacing/2.0;// * 30.0;
 
-		for ( size_t i = 0; i < scan_line_msg->bins.size(); ++i )
+    if(last_angle == -1) 
+    {
+      last_angle = angle; return; 
+    }
+    if(angle_diff == -1)
+    {
+      angle_diff = angle - last_angle;
+      if(angle_diff > M_PI/8.0) 
+      {
+        angle_diff = -1; 
+        return;
+      }
+    }
+
+		for ( size_t i = 3; i < scan_line_msg->bins.size()-3; ++i )
 		{
+      int val = scan_line_msg->bins[i].intensity;
 			float const x = spacing * i * cos( angle ) + scan_line_img_->width / 2.0;
 			float const y = spacing * i * sin( angle ) + scan_line_img_->height / 2.0;
-			cvRectangle( scan_line_img_,
-			             cvPoint( x - s,
-			                      y - s ),
-			             cvPoint( x + s,
-			                      y + s ),
-			             cvScalar( scan_line_msg->bins[i].intensity ),
-			             CV_FILLED );
+
+			float const last_x = spacing * i * cos( angle-angle_diff ) + scan_line_img_->width / 2.0;
+			float const last_y = spacing * i * sin( angle-angle_diff ) + scan_line_img_->height / 2.0;
+
+      cvLine(scan_line_img_, cvPoint(x,y), cvPoint(last_x, last_y), cvScalar(val), s);
+			//cvCircle( scan_line_img_, cvPoint(x, y), s, cvScalar(val), CV_FILLED );
 		}
 
 		try
@@ -151,9 +168,9 @@ public:
 			image_pub_.publish( out_msg );
 		}
 		catch ( cv_bridge::Exception& e )
-		{
-			ROS_ERROR( "cv_bridge exception: %s", e.what() );
-		}
+		{ ROS_ERROR( "cv_bridge exception: %s", e.what() ); }
+
+    last_angle = angle;
 	}
 
 	void publishLaserScan( const _ScanLineMsgType::ConstPtr & scan_line_msg )

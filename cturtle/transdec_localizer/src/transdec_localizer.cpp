@@ -37,21 +37,48 @@
  *******************************************************************************/
 
 #include <base_image_proc/base_image_proc.h>
+#include <transdec_localizer/TransdecLocalizerConfig.h>
 
-typedef BaseImageProc<BaseNodeTypes::_DefaultReconfigureType, std_srvs::Empty> _BaseImageProc;
+typedef BaseImageProc<transdec_localizer::TransdecLocalizerConfig, std_srvs::Empty> _BaseImageProc;
 
 class TransdecLocalizer: public _BaseImageProc
 {
   public:
     // ######################################################################
     TransdecLocalizer(ros::NodeHandle & nh) : _BaseImageProc(nh)
-    { initCfgParams(); }
+    { 
+      initCfgParams(); 
+    }
 
     // ######################################################################
     IplImage* processImage( IplImage * ipl_img, _ServiceRequest & req, _ServiceResponse & resp )
     { 
-      ROS_INFO("Got dis image");
-      return NULL;
+      cv::Mat mat(ipl_img);
+
+      std::vector<cv::Vec3f> circles;
+      int minRadius = reconfigure_params_.minRadius;
+      int maxRadius = reconfigure_params_.maxRadius;
+      double minDist = reconfigure_params_.minDist;
+      int cannythresh1 = reconfigure_params_.cannythresh1;
+      int cannythresh2 = reconfigure_params_.cannythresh2;
+      int houghthresh1 = reconfigure_params_.houghthresh1;
+      int houghthresh2 = reconfigure_params_.houghthresh2;
+
+      cv::Canny(mat, mat, cannythresh1, cannythresh2);
+      cv::HoughCircles(mat, circles, CV_HOUGH_GRADIENT, 1, minDist, houghthresh1, houghthresh2, minRadius, maxRadius);
+
+      ROS_INFO("Found %lu circles", circles.size());
+
+      for(size_t i=0; i<circles.size(); ++i)
+      {
+        cv::Point center(cvRound(circles[i][0]), cvRound(circles[i][1]));
+        int radius = cvRound(circles[i][2]);
+        cv::circle(mat, center, radius, cv::Scalar(255), 3, 8, 0);
+        cv::line(mat, center+cv::Point(-radius,0), center+cv::Point(radius,0), cv::Scalar(255),2);
+        cv::line(mat, center+cv::Point(0,-radius), center+cv::Point(0,radius), cv::Scalar(255),2);
+      }
+
+      return ipl_img;
     }
 
     // ######################################################################
