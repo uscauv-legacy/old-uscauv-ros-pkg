@@ -39,7 +39,6 @@
 
 #include <ros/ros.h>
 #include <tf/tf.h>
-#include <tf/transform_listener.h>
 #include "btBulletDynamicsCommon.h"
 #include <base_tf_tranceiver/base_tf_tranceiver.h>
 #include <vector>
@@ -51,15 +50,11 @@
 class Seabee3Physics: public BaseTfTranceiver<>
 {
 public:
-	typedef movement_common::MotorControllerIDs _MotorControllerIDs;
 	const static int _NUM_MOTOR_CONTROLLERS = movement_common::NUM_MOTOR_CONTROLLERS;
 
 private:
 	std::vector<geometry_msgs::Twist> thruster_transforms_;
 	std::string thruster_transform_name_prefix_;
-
-	// The update rate
-	float rate_;
 
 	// Bullet related stuff
 	btBroadphaseInterface *broadphase_;
@@ -79,7 +74,7 @@ private:
 
 public:
 	Seabee3Physics( ros::NodeHandle &nh ) :
-		BaseTfTranceiver<> ( nh ), thruster_transforms_( _NUM_MOTOR_CONTROLLERS ), thruster_transform_name_prefix_( "/seabee3/thruster" ), rate_( 60 ), thruster_vals_(
+		BaseTfTranceiver<> ( nh ), thruster_transforms_( _NUM_MOTOR_CONTROLLERS ), thruster_transform_name_prefix_( "/seabee3/thruster" ), thruster_vals_(
 				_NUM_MOTOR_CONTROLLERS )
 	{
 		publishTfFrame( tf::Transform( tf::Quaternion( 0, 0, 0 ), tf::Vector3( 0, 0, 0 ) ), "/landmark_map", "/seabee3/base_link" );
@@ -148,7 +143,7 @@ public:
 
 		for ( size_t i = 0; i < _NUM_MOTOR_CONTROLLERS; i++ )
 		{
-			if ( i == _MotorControllerIDs::DROPPER_STAGE1 || i == _MotorControllerIDs::DROPPER_STAGE2 || i == _MotorControllerIDs::SHOOTER ) continue;
+			if ( i == movement_common::MotorControllerIDs::DROPPER_STAGE1 || i == movement_common::MotorControllerIDs::DROPPER_STAGE2 || i == movement_common::MotorControllerIDs::SHOOTER ) continue;
 
 			float thrust = thruster_vals_[i] * 0.05;
 			geometry_msgs::Vector3 pos = thruster_transforms_[i].linear;
@@ -185,7 +180,7 @@ public:
 
 		//printf( "Body Pos: %f %f %f\n", trans.getOrigin().getX(), trans.getOrigin().getY(), trans.getOrigin().getZ() );
 
-		publishTfFrame( trans, "/landmark_map", "/seabee3/base_link" );
+		publishTfFrame( trans, "/landmark_map", "/seabee3/base_link_est_dr" );
 
 		seabee3_common::PhysicsState physics_state_msg;
 		physics_state_msg.mass.linear.x = physics_state_msg.mass.linear.y = physics_state_msg.mass.linear.z = 100;
@@ -217,8 +212,6 @@ public:
 		physics_state_msg.velocity.angular.z = angular_velocity.z();
 
 		physics_state_pub_.publish( physics_state_msg );
-
-		ros::Rate( rate_ ).sleep();
 	}
 
 	void updateThrusterTransforms()
@@ -226,7 +219,7 @@ public:
 		// Fill in all of our thruster transforms
 		for ( size_t i = 0; i < _NUM_MOTOR_CONTROLLERS; ++i )
 		{
-			if ( i == _MotorControllerIDs::DROPPER_STAGE1 || i == _MotorControllerIDs::DROPPER_STAGE2 || i == _MotorControllerIDs::SHOOTER ) continue;
+			if ( i == movement_common::MotorControllerIDs::DROPPER_STAGE1 || i == movement_common::MotorControllerIDs::DROPPER_STAGE2 || i == movement_common::MotorControllerIDs::SHOOTER ) continue;
 			std::ostringstream stream;
 			stream << thruster_transform_name_prefix_ << i;
 			tf::Transform tmp_transform;
@@ -249,10 +242,10 @@ int main( int argc, char** argv )
 {
 
 	ros::init( argc, argv, "seabee3_physics" );
-	ros::NodeHandle nh;
+	ros::NodeHandle nh( "~" );
 
 	Seabee3Physics physModel( nh );
-	physModel.spin( SpinModeId::LOOP_SPIN_ONCE );
+	physModel.spin();
 
 	return 0;
 }
