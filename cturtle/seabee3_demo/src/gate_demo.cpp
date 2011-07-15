@@ -21,9 +21,12 @@ protected:
 	ros::ServiceClient reset_pose_cli_;
 
 	double forward_velocity_;
+	double forward_velocity2_;
 	double depth_;
 	double forward_time_;
+	double forward_time2_;
 	double dive_time_;
+	double buoy_rotation_;
 	tf::Transform current_pose_;
 
 	bool kill_timers_;
@@ -36,8 +39,11 @@ public:
 	{
 		nh_local_.param( "forward_velocity", forward_velocity_, 0.3 );
 		nh_local_.param( "forward_time", forward_time_, 30.0 );
+		nh_local_.param( "forward_velocity2", forward_velocity2_, 0.3 );
+		nh_local_.param( "forward_time2", forward_time2_, 999.0 );
 		nh_local_.param( "depth", depth_, 1.7 );
 		nh_local_.param( "dive_time", dive_time_, 8.0 );
+		nh_local_.param( "buoy_rotation", buoy_rotation_, 15.0 );
 
 		cmd_vel_pub_ = nh_local_.advertise<geometry_msgs::Twist> ( "/seabee3/cmd_vel", 2 );
 		kill_switch_sub_ = nh_local_.subscribe( "/seabee3/kill_switch", 2, &GateDemo::killSwitchCB, this );
@@ -150,13 +156,36 @@ public:
 			ROS_INFO( "Setting foward velocity..." );
 			setVelocity( forward_velocity_, forward_time_ );
 
+			// turn 15 degrees
+			if( kill_behaviors_ )
+			{
+				kill_behaviors_ = false;
+				return;
+			}
+			ROS_INFO( "Setting rotation..." );
+			seabee3_common::SetDesiredPose buoy_rotation_call_;
+			buoy_rotation_call_.request.ori.mask.z = 1;
+			buoy_rotation_call_.request.ori.values.z = buoy_rotation_;
+			buoy_rotation_call_.request.ori.mode.z = 1;
+			// publish
+			set_desired_heading_cli_.call( buoy_rotation_call_.request, buoy_rotation_call_.response );
+
+			// drive forward for 30 seconds
+			if( kill_behaviors_ )
+			{
+				kill_behaviors_ = false;
+				return;
+			}
+			ROS_INFO( "Setting foward velocity..." );
+			setVelocity( forward_velocity2_, forward_time2_ );
+
 			// stop moving foward
 			if( kill_behaviors_ )
 			{
 				kill_behaviors_ = false;
 				return;
 			}
-			setVelocity( 0.0, 0.5 );
+			setVelocity( 0.0, 0.1 );
 
 			// surface
 			if( kill_behaviors_ )

@@ -41,8 +41,8 @@
 #include <contour_matcher/MatchContours.h>
 #include <pipeline_finder/Pipeline.h>
 #include <pipeline_finder/FindPipelines.h>
-//#include <localization_defs/LandmarkArray.h>
-#include <localization_defs/landmark_map.h>
+#include <localization_defs/LandmarkArray.h>
+#include <landmark_map/landmark_map.h>
 #include <landmark_finder/SetEnabledLandmarks.h>
 #include <color_blob_finder/contour.h>
 #include <array>
@@ -76,6 +76,7 @@ public:
 	//                                     /<------- MatchedContourArray <-/
 	//                             ( this ) -> LandmarkArray -------------> ( LandmarkMapServer )
 	//                                                      \-------------> ( Seabee3MissionControl )
+	ros::Subscriber camera_info1_sub_;
 	ros::ServiceServer set_enabled_landmarks_svr_;
 	ros::ServiceClient find_color_blobs_cli_;
 	ros::ServiceClient match_contours_cli_;
@@ -91,7 +92,15 @@ public:
 	_MatchContoursService::Request match_contours_req_;
 	_FindPipelinesService::Request find_pipelines_req_;
 
+	sensor_msgs::CameraInfo camera_info1_msg_;
+	image_geometry::PinholeCameraModel camera_model_;
+
 	ImageLoader image_loader_;
+
+	DistanceInterpolation * distance_interpolation_;
+
+	int buoy_pixel_size_;
+	double buoy_meter_size_;
 
 	LandmarkFinder( ros::NodeHandle & nh ) :
 			_BaseNode( nh ), image_loader_( nh_local_, CV_LOAD_IMAGE_GRAYSCALE )
@@ -99,6 +108,8 @@ public:
 		set_enabled_landmarks_svr_ = nh_local_.advertiseService( "set_enabled_landmarks",
 		                                                         &LandmarkFinder::setEnabledLandmarksCB,
 		                                                         this );
+
+		camera_info1_sub_ = nh_local_.subscribe( "camera_info1", 1, &LandmarkFinder::cameraInfo1CB, this );
 
 		find_color_blobs_cli_ = nh_local_.serviceClient<_FindColorBlobsService>( "find_color_blobs" );
 
@@ -108,6 +119,11 @@ public:
 
 		landmarks_pub_ = nh_local_.advertise<_LandmarkArrayMsgType>( "landmarks",
 		                                                             1 );
+
+		nh_local_.param( "buoy_pixel_size", buoy_pixel_size_, 188 );
+		nh_local_.param( "buoy_meter_size", buoy_meter_size_, 0.23 );
+
+		distance_interpolation_ = new DistanceInterpolation( DistanceInterpolation::getPixelMeters( buoy_pixel_size_, 0.5588, buoy_meter_size_ ), 1.0 );
 
 		cv::namedWindow( "output", 0 );
 
@@ -154,6 +170,12 @@ public:
 		}
 
 		return true;
+	}
+
+	void cameraInfo1CB( const sensor_msgs::CameraInfo::ConstPtr & camera_info_msg )
+	{
+		//camera_info1_msg_ = *camera_info_msg;
+		camera_model_.fromCameraInfo( camera_info_msg );
 	}
 
 	void spinOnce()
@@ -232,29 +254,38 @@ public:
 
 				if ( num_matches > 0 )
 				{
+					// we'll pick the info from either camera_source1 or camera_source2 here
+					//camera_model_.fromCameraInfo( camera_info1_msg_ );
 					// reproject to 3D
 					// Noah's code for 3D project, probably want to move where variables are defined
 					// and need to define input diameter and contour.
 					//Replace with some way of iterating through landmarks found.
-					DistanceInterpolation::_PixelDistanceType pixels;
-					DistanceInterpolation::_MetricDistanceType diameter;
-					DistanceInterpolation::_IORType ior;
-					CvMemStorage* storage = cvCreateMemStorage(0);
-					if(inWater()) ior = 1.33; //need an argument to say whether or not we are in water
-					else ior = 1.0;
-					CvBox2D box;
-					_ContourMessage lmcontour_msg = match_contours_req_.candidate_contours[i];
-					_Contour lmcontour; //landmark contour
-					lmcontour<<lmcontour_msg;
-					box = cvminAreaRect(lmcontour,storage);
-					pixels = box.size.width;
-					double z = distance_interpolation.distanceToFeature( pixels, diameter, ior );
-					cv::Point2d box_pixel_center(round(box.center.x),round(box.center.y));
-					cv::Point3d ray =  model.projectPixelTo3dRay(box_pixel_center);
-					cv::Point3d landmark_location3D = ray * z;
+					_Contour contour; //landmark contour
+					contour << match_contours_req_.candidate_contours[i];
+
+					cv::Rect rect = cv::boundingRect( cv::Mat( contour ) );
+					int pixels = rect.width;
+
+					double distance = distance_interpolation_->distanceToFeature( pixels, 0.23, 1.33 );
+
+					cv::Point2d box_pixel_center( rect.x + rect.width / 2, rect.y + rect.height / 2);
+					cv::Point3d ray =  camera_model_.projectPixelTo3dRay( box_pixel_center );
+					cv::Point3d point = ray * distance;
+
+					tf::Transform local_landmark_tf( tf_utils::ZERO_QUAT, tf::Vector3( point.x, point.y, point.z ) );
+					tf_utils::publishTfFrame( local_landmark_tf, "/camera1", "/current_landmark" );
+
+					tf::Transform global_landmark_tf;
+					tf_utils::fetchTfFrame( global_landmark_tf, "/landmark_map", "/current_landmark" );
+
 					// add new landmark to resp
-					_LandmarkMsgType landmark_msg;
-					landmark_array_msg->landmarks.push_back( landmark_msg );
+					cv::Point3d landmark_pos;
+					landmark_pos.x = global_landmark_tf.getOrigin().getX();
+					landmark_pos.y = global_landmark_tf.getOrigin().getY();
+					landmark_pos.z = global_landmark_tf.getOrigin().getZ();
+
+					LandmarkTypes::Buoy current_landmark( landmark_pos, 0.0, find_color_blobs_resp.blobs[i].color_id );
+					landmark_array_msg->landmarks.push_back( current_landmark.createMsg() );
 				}
 			}
 		}

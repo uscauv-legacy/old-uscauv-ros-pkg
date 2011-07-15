@@ -1,32 +1,6 @@
 <launch>
-	<node pkg="seabee3_driver_base" type="seabee3_driver_base" name="seabee3_driver_base" output="screen" >
-		<param name="rate" type="double" value="30" />
-
-		<param name="surface_pressure" type="double" value="900" />
-		<param name="montalbos_per_meter" type="double" value="35.790980673" />
-
-		<param name="usb_index" type="int" value="0" />
-		<param name="shooter1/trigger_time" type="int" value="100" />
-		<param name="shooter1/trigger_value" type="int" value="75" />
-
-		<param name="shooter2/trigger_time" type="int" value="100" />
-		<param name="shooter2/trigger_value" type="int" value="-75" />
-		
-		<param name="dropper1/trigger_time" type="int" value="125" />
-		<param name="dropper1/trigger_value" type="int" value="75" />
-		
-		<param name="dropper2/trigger_time" type="int" value="125" />
-		<param name="dropper2/trigger_value" type="int" value="55" />
-		
-		<!-- ========== Motor/Behavior Tuning ========== -->
-		
-		<param name="speed_m1_dir" type="double" value="-1.0" />
-		<param name="speed_m2_dir" type="double" value="-1.0" />
-		
-		<param name="strafe_m1_dir" type="double" value="-1.0" />
-		<param name="strafe_m2_dir" type="double" value="-1.0" />
-		
-		<param name="depth_m1_dir" type="double" value="-1.0" />
-		<param name="depth_m2_dir" type="double" value="-1.0" />
-	</node>
+	<include file="$(find seabee3_driver_base)/launch/seabee3_driver_base.launch" >
+		<arg name="simulate" value="false" />
+		<arg name="port" value="/dev/seabee3_pwrboard" />
+	</include>
 </launch>

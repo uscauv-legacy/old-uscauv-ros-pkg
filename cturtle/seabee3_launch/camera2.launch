@@ -1,4 +1,7 @@
 <launch>
+	<node pkg="tf" type="static_transform_publisher" name="base_link_to_camera1" output="screen"
+	args="0.157353 -0.155575 -0.0523748 0 0 0 /seabee3/base_link /camera2 100" />
+
 	<include file="$(find seabee3_launch)/generic_camera.launch" >
 		<arg name="camera_name" value="camera2" />
 		<arg name="guid" value="00b09d010090f9de" />

@@ -12,6 +12,10 @@
   <depend package="opencv2"/>
   <depend package="sensor_msgs"/>
 
+  <export>
+    <cpp cflags="-I${prefix}/include" lflags="-Wl,-rpath,${prefix}/lib -L${prefix}/lib -lcamera_interpolation"/>
+  </export>
+
 </package>
 
 
