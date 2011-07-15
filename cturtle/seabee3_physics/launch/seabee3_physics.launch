@@ -1,0 +1,5 @@
+<launch>
+	<include file="$(find seabee3_launch)/transforms.launch" />
+	<node pkg="seabee3_physics" type="seabee3_physics" name="seabee3_physics" output="screen">
+	</node>
+</launch>
