@@ -38,6 +38,7 @@
 
 #include <base_image_proc/base_image_proc.h>
 #include <transdec_localizer/TransdecLocalizerConfig.h>
+#include <common_utils/tf.h>
 
 typedef BaseImageProc<transdec_localizer::TransdecLocalizerConfig, std_srvs::Empty> _BaseImageProc;
 
@@ -53,9 +54,6 @@ class TransdecLocalizer: public _BaseImageProc
     // ######################################################################
     IplImage* processImage( IplImage * ipl_img, _ServiceRequest & req, _ServiceResponse & resp )
     { 
-      cv::Mat mat(ipl_img);
-
-      std::vector<cv::Vec3f> circles;
       int minRadius = reconfigure_params_.minRadius;
       int maxRadius = reconfigure_params_.maxRadius;
       double minDist = reconfigure_params_.minDist;
@@ -63,19 +61,43 @@ class TransdecLocalizer: public _BaseImageProc
       int cannythresh2 = reconfigure_params_.cannythresh2;
       int houghthresh1 = reconfigure_params_.houghthresh1;
       int houghthresh2 = reconfigure_params_.houghthresh2;
+      bool showDebug = reconfigure_params_.showDebug;
+      double pixelsPerMeter = reconfigure_params_.pixelsPerMeter;
 
+      cv::Mat mat(ipl_img);
+      std::vector<cv::Vec3f> circles;
+
+      // Find the circle(s)
       cv::Canny(mat, mat, cannythresh1, cannythresh2);
       cv::HoughCircles(mat, circles, CV_HOUGH_GRADIENT, 1, minDist, houghthresh1, houghthresh2, minRadius, maxRadius);
 
-      ROS_INFO("Found %lu circles", circles.size());
-
-      for(size_t i=0; i<circles.size(); ++i)
+      if(circles.size() > 0)
       {
-        cv::Point center(cvRound(circles[i][0]), cvRound(circles[i][1]));
-        int radius = cvRound(circles[i][2]);
-        cv::circle(mat, center, radius, cv::Scalar(255), 3, 8, 0);
-        cv::line(mat, center+cv::Point(-radius,0), center+cv::Point(radius,0), cv::Scalar(255),2);
-        cv::line(mat, center+cv::Point(0,-radius), center+cv::Point(0,radius), cv::Scalar(255),2);
+        tf::Transform current_pose_tf_;
+        geometry_msgs::Twist current_pose;
+        tf_utils::fetchTfFrame( current_pose_tf_, "/landmark_map", "seabee3/base_link" );
+        current_pose_tf_ >> current_pose;
+
+        geometry_msgs::Twist localized_pose = current_pose;
+        double x = circles[0][0];
+        double y = circles[0][1];
+
+        tf::Transform localized_pose_tf;
+        localized_pose >> localized_pose_tf;
+        tf_utils::publishTfFrame( localized_pose_tf, "/landmark_map", "/seabee3/desired_pose" );
+      }
+
+      ROS_INFO("Found %lu circles", circles.size());
+      if(showDebug)
+      {
+        for(size_t i=0; i<circles.size(); ++i)
+        {
+          cv::Point center(cvRound(circles[i][0]), cvRound(circles[i][1]));
+          int radius = cvRound(circles[i][2]);
+          cv::circle(mat, center, radius, cv::Scalar(255), 3, 8, 0);
+          cv::line(mat, center+cv::Point(-radius,0), center+cv::Point(radius,0), cv::Scalar(255),2);
+          cv::line(mat, center+cv::Point(0,-radius), center+cv::Point(0,radius), cv::Scalar(255),2);
+        }
       }
 
       return ipl_img;

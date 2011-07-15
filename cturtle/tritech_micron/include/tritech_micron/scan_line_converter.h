@@ -157,7 +157,6 @@ public:
 			float const last_y = spacing * i * sin( angle-angle_diff ) + scan_line_img_->height / 2.0;
 
       cvLine(scan_line_img_, cvPoint(x,y), cvPoint(last_x, last_y), cvScalar(val), s);
-			//cvCircle( scan_line_img_, cvPoint(x, y), s, cvScalar(val), CV_FILLED );
 		}
 
 		try

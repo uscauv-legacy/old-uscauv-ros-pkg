@@ -77,7 +77,7 @@ public:
 		BaseTfTranceiver<> ( nh ), thruster_transforms_( _NUM_MOTOR_CONTROLLERS ), thruster_transform_name_prefix_( "/seabee3/thruster" ), thruster_vals_(
 				_NUM_MOTOR_CONTROLLERS )
 	{
-		publishTfFrame( tf::Transform( tf::Quaternion( 0, 0, 0 ), tf::Vector3( 0, 0, 0 ) ), "/landmark_map", "/seabee3/base_link" );
+		publishTfFrame( tf::Transform( tf::Quaternion( 0, 0, 0 ), tf::Vector3( 0, 0, 0 ) ), "/landmark_map", "/seabee3/physics_link" );
 
 		ros::Duration( 0.5 ).sleep(); //wait for this frame to register on the network
 
@@ -193,7 +193,7 @@ public:
 
 		//printf( "Body Pos: %f %f %f\n", trans.getOrigin().getX(), trans.getOrigin().getY(), trans.getOrigin().getZ() );
 
-		publishTfFrame( trans, "/landmark_map", "/seabee3/base_link_est_dr" );
+		publishTfFrame( trans, "/landmark_map", "/seabee3/physics_link" );
 
 		seabee3_common::PhysicsState physics_state_msg;
 		physics_state_msg.mass.linear.x = physics_state_msg.mass.linear.y = physics_state_msg.mass.linear.z = 100;
@@ -214,8 +214,6 @@ public:
 		physics_state_msg.force.angular.x = torque.x();
 		physics_state_msg.force.angular.y = torque.y();
 		physics_state_msg.force.angular.z = torque.z();
-
-
 
 		physics_state_msg.velocity.linear.x = linear_velocity.x();
 		physics_state_msg.velocity.linear.y = linear_velocity.y();
