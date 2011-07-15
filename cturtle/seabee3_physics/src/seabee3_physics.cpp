@@ -167,6 +167,18 @@ public:
 			seabee_body_->applyForce( force_tf * force, rel_pos );
 		}
 
+		//Noah's code to implement drag force
+		btVector3 lin_v_ = seabee_body_->getLinearVelocity();
+		float rho = 1000; //density of water kg/m^3
+		float cd = 1.15; // coefficient of drag on the face of a cylinder
+		float pi = 3.14159;
+		float seabee_r_squared = .01; //approximation of seabee's radius squared in meters
+		float A = pi * seabee_r_squared; //reference area (circular face of cylinder)
+		//below is the formula for the drag force, it is in the direction of the velocity vector and
+		// is a function of v^2
+		btVector3 force_drag = ( rho * cd * A ) * lin_v_.length2() * lin_v_.normalized() / -2;
+		seabee_body_->applyForce( force_drag, seabee_body_->getCenterOfMassPosition() );
+
 		double dt = ( ros::Time::now() - last_call_ ).toSec();
 
 
@@ -176,6 +188,7 @@ public:
 
 		btTransform trans;
 		seabee_body_->getMotionState()->getWorldTransform( trans );
+		//code to factor in drag
 
 
 		//printf( "Body Pos: %f %f %f\n", trans.getOrigin().getX(), trans.getOrigin().getY(), trans.getOrigin().getZ() );
@@ -191,17 +204,18 @@ public:
 		btVector3 forces = seabee_body_->getTotalForce();
 		btVector3 torque = seabee_body_->getTotalTorque();
 		//printf( "(%f %f %f) (%f %f %f)\n", forces.x(), forces.y(), forces.z(), torque.x(), torque.y(), torque.z() );
+		btVector3 angular_velocity = seabee_body_->getAngularVelocity();
+		btVector3 linear_velocity = seabee_body_->getLinearVelocity();
 
 		physics_state_msg.force.linear.x = forces.x();
 		physics_state_msg.force.linear.y = forces.y();
 		physics_state_msg.force.linear.z = forces.z();
 
 		physics_state_msg.force.angular.x = torque.x();
-		physics_state_msg.force.angular.x = torque.y();
-		physics_state_msg.force.angular.x = torque.z();
+		physics_state_msg.force.angular.y = torque.y();
+		physics_state_msg.force.angular.z = torque.z();
 
-		btVector3 linear_velocity = seabee_body_->getLinearVelocity();
-		btVector3 angular_velocity = seabee_body_->getAngularVelocity();
+
 
 		physics_state_msg.velocity.linear.x = linear_velocity.x();
 		physics_state_msg.velocity.linear.y = linear_velocity.y();
