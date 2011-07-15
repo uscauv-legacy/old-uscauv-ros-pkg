@@ -1,0 +1,1 @@
+rosbuild_add_executable(tf_frame_lock tf_frame_lock.cpp)
