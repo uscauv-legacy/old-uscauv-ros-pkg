@@ -69,6 +69,7 @@ private:
 	ros::Subscriber motor_cntl_sub_;
 	ros::Publisher physics_state_pub_;
 	std::vector<int> thruster_vals_;
+  double thrust_to_force_;
 
 	ros::Time last_call_;
 
@@ -77,6 +78,7 @@ public:
 		BaseTfTranceiver<> ( nh ), thruster_transforms_( _NUM_MOTOR_CONTROLLERS ), thruster_transform_name_prefix_( "/seabee3/thruster" ), thruster_vals_(
 				_NUM_MOTOR_CONTROLLERS )
 	{
+    thrust_to_force_ = 0.05;
 		publishTfFrame( tf::Transform( tf::Quaternion( 0, 0, 0 ), tf::Vector3( 0, 0, 0 ) ), "/landmark_map", "/seabee3/physics_link" );
 
 		ros::Duration( 0.5 ).sleep(); //wait for this frame to register on the network
@@ -122,6 +124,8 @@ public:
 		dynamics_world_->addRigidBody( seabee_body_ );
 
 		last_call_ = ros::Time::now();
+
+    nh_local_.param("thrust_to_force_", thrust_to_force_, 0.05);
 	}
 
 	~Seabee3Physics()
@@ -135,6 +139,13 @@ public:
 		delete seabee_body_;
 	}
 
+  //void callback(seabee3_physics::Seabee3PhysicsConfig &config, uint32_t level)
+  //{
+  //  ROS_INFO("Changing thrust-to-force: %f", config.thrustToForce);
+  //  thrust_to_force_ = config.thrustToForce;
+  //}
+
+
 	void spinOnce()
 	{
 		//updateThrusterTransforms();
@@ -143,9 +154,11 @@ public:
 
 		for ( size_t i = 0; i < _NUM_MOTOR_CONTROLLERS; i++ )
 		{
-			if ( i == movement_common::MotorControllerIDs::DROPPER_STAGE1 || i == movement_common::MotorControllerIDs::DROPPER_STAGE2 || i == movement_common::MotorControllerIDs::SHOOTER ) continue;
+			if ( i == movement_common::MotorControllerIDs::DROPPER_STAGE1 ||
+           i == movement_common::MotorControllerIDs::DROPPER_STAGE2 ||
+           i == movement_common::MotorControllerIDs::SHOOTER ) continue;
 
-			float thrust = thruster_vals_[i] * 0.05;
+			float thrust = thruster_vals_[i] * thrust_to_force_; //* 0.05;
 			geometry_msgs::Vector3 pos = thruster_transforms_[i].linear;
 			geometry_msgs::Vector3 ori = thruster_transforms_[i].angular;
 
