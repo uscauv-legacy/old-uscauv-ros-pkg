@@ -3,7 +3,7 @@
 
 <!--	<include file="$(find seabee3_machines)/client-server.machine" />-->
 
-	<include file="$(find seabee3_launch)/seabee3_dead_reckoning.launch" />
+<!--	<include file="$(find seabee3_launch)/seabee3_dead_reckoning.launch" /> -->
 
 	<include if="$(arg use_stabilizer)" file="$(find seabee3_stabilizer)/launch/seabee3_stabilizer.launch" />
 

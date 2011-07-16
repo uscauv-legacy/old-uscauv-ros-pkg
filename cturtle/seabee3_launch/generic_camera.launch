@@ -2,7 +2,7 @@
 	<arg name="camera_name" />
 	<arg name="guid" />
 	<node name="$(arg camera_name)" pkg="camera1394" type="camera1394_node" output="screen">
-		<rosparam param="" command="load" file="$(find seabee3_launch)/params/generic_camera_params.yaml" />
+<!--		<rosparam param="" command="load" file="$(find seabee3_launch)/params/generic_camera_params.yaml" /> -->
 
 		<param name="frame_id" type="string" value="$(arg camera_name)" />
 		<param name="guid" type="string" value="$(arg guid)" />

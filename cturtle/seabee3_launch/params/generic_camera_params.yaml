@@ -1,30 +1,46 @@
-audo_white_balance: 3
-auto_brighness: 3
 auto_brightness: 2
-auto_exposure: 0
-auto_focus: 4
-auto_gain: 3
+auto_exposure: 2
+auto_focus: 5
+auto_gain: 2
 auto_gamma: 0
-auto_hue: 4
-auto_iris: 4
-auto_saturation: 4
-auto_sharpness: 4
-auto_shutter: 3
+auto_hue: 5
+auto_iris: 5
+auto_saturation: 5
+auto_sharpness: 5
+auto_shutter: 2
 auto_white_balance: 3
-auto_zoom: 4
+auto_zoom: 5
 bayer_method: ''
 bayer_pattern: rggb
 binning_x: 0
 binning_y: 0
-brightness: 255.0
+brightness: 164.0
+camera_info_url: package://seabee3_launch/cfg/camera2.ini
 exposure: 0.0
 focus: 0.0
-format7_color_coding: mono8
+format7_color_coding: mono16
 format7_packet_size: 0
+frame_id: /camera2
 frame_rate: 15.0
-gain: 40.0
-gamma: 2.2000000000000002
+gain: 64.0
+gamma: 0.0
+guid: 00b09d010090f9de
 hue: 0.0
+image_color:
+  compressed: {format: jpeg, jpeg_quality: 80, png_level: 9}
+  theora: {keyframe_frequency: 64, optimize_for: 1, quality: 31, target_bitrate: 800000}
+image_mono:
+  compressed: {format: jpeg, jpeg_quality: 80, png_level: 9}
+  theora: {keyframe_frequency: 64, optimize_for: 1, quality: 31, target_bitrate: 800000}
+image_raw:
+  compressed: {format: jpeg, jpeg_quality: 80, png_level: 9}
+  theora: {keyframe_frequency: 64, optimize_for: 1, quality: 31, target_bitrate: 800000}
+image_rect:
+  compressed: {format: jpeg, jpeg_quality: 80, png_level: 9}
+  theora: {keyframe_frequency: 64, optimize_for: 1, quality: 31, target_bitrate: 800000}
+image_rect_color:
+  compressed: {format: jpeg, jpeg_quality: 80, png_level: 9}
+  theora: {keyframe_frequency: 64, optimize_for: 1, quality: 31, target_bitrate: 800000}
 iris: 8.0
 iso_speed: 400
 reset_on_open: false
@@ -32,7 +48,8 @@ roi_height: 0
 roi_width: 0
 saturation: 1.0
 sharpness: 1.0
-shutter: 30.0
+shutter: 530.0
+use_ros_time: false
 video_mode: 640x480_mono8
 white_balance_BU: 512.0
 white_balance_RV: 512.0

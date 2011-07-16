@@ -48,6 +48,7 @@
 #include <common_utils/tf.h>
 #include <xsens_node/Imu.h>
 #include <seabee3_driver_base/FakeSeabeeConfig.h>
+#include <common_utils/math.h>
 
 using namespace movement_common;
 
@@ -355,9 +356,9 @@ public:
 
 		if ( simulate_ )
 		{
-			current_pose_.angular.x = reconfigure_params_.roll;
-			current_pose_.angular.y = reconfigure_params_.pitch;
-			current_pose_.angular.z = reconfigure_params_.yaw;
+			current_pose_.angular.x = math_utils::degToRad( reconfigure_params_.roll );
+			current_pose_.angular.y = math_utils::degToRad( reconfigure_params_.pitch );
+			current_pose_.angular.z = math_utils::degToRad( reconfigure_params_.yaw );
 
 			intl_pressure_msg.value = reconfigure_params_.internal_pressure;
 			extl_pressure_msg.value = reconfigure_params_.external_pressure;
