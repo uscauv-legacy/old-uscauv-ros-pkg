@@ -207,7 +207,7 @@ public:
 			return;
 		}
 
-		unsigned int total_images = image_array_msg1->images.size() + image_array_msg2->images.size();
+		unsigned int total_images = image_array_msg1->images.size();// + image_array_msg2->images.size();
 
 		new_image_ = total_images > 0;
 
@@ -218,10 +218,10 @@ public:
 		{
 			images_cache_.push_back( image_array_msg1->images[i] );
 		}
-		for ( _DimType i = 0; i < image_array_msg2->images.size(); ++i )
+/*		for ( _DimType i = 0; i < image_array_msg2->images.size(); ++i )
 		{
 			images_cache_.push_back( image_array_msg2->images[i] );
-		}
+		}*/
 
 		printf( "Updated image cache with %d images\n", total_images );
 
