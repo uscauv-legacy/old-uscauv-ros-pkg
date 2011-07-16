@@ -48,7 +48,7 @@ class TfFrameLock: public BaseNode<>
       nh_local_.param<std::string>("from_frame", from_frame_,"");
       nh_local_.param<std::string>("to_frame", to_frame_,"");
 
-      transform_sub_ = nh_local_.subscribe<geometry_msgs::Twist>("transform", 10, &TfFrameLock::transformCB, this);
+      transform_sub_ = nh_local_.subscribe("transform", 10, &TfFrameLock::transformCB, this);
     }
 
     void transformCB(const geometry_msgs::Twist::ConstPtr & transform_msg)
