@@ -59,8 +59,6 @@ class CompetitionDemo : public BaseNode<>
     reset_pose_cli_ = nh_local_.serviceClient<std_srvs::Empty> ( "/seabee3/reset_pose" );
 
     landmarks_sub_ = nh_local_.subscribe( "/landmark_finder/landmarks", 3, &CompetitionDemo::landmarksCB, this );
-    //set_enabled_landmarks_cli_ = nh_local_.serviceClient<landmark_finder::SetEnabledLandmarks>(
-    //    "/landmark_finder/set_enabled_landmarks");
   }
 
     // ######################################################################
@@ -167,7 +165,6 @@ class CompetitionDemo : public BaseNode<>
       //////////////////////////////
       ROS_INFO("Searching For Buoys...");
       {
-        // TODO: Set enabled landmark here!!
         landmark_found_ = false;
         while(!landmark_found_)
         {
@@ -184,6 +181,9 @@ class CompetitionDemo : public BaseNode<>
         }
       }
 
+      //////////////////////////////
+      // Home in on the buoy
+      //////////////////////////////
       ROS_INFO("Homing In On Buoy");
       {
         // Head towards landmark until within error tolerance:
