@@ -19,5 +19,6 @@
   <depend package="xsens_node"/>
   <depend package="seabee3_teleop"/>
   <depend package="dead_reckoning_odom"/>
+  <depend package="localization_defs"/>
 
 </package>

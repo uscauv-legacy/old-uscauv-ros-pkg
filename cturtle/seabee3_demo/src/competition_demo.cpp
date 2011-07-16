@@ -5,6 +5,7 @@
 
 // msgs
 #include <seabee3_driver_base/KillSwitch.h>
+#include <localization_defs/LandmarkArray.h>
 
 // srvs
 #include <seabee3_common/SetDesiredPose.h> // for SetDesiredPose
@@ -25,13 +26,16 @@ class CompetitionDemo : public BaseNode<>
     ros::Subscriber landmarks_sub_;
 
     tf::Transform current_pose_;
-    tf::Transform landmark_pose_;
 
     enum FSMState_t {waiting_for_start, starting, running, killing};
     FSMState_t state_;
     std::thread FSMthread_;
 
     bool landmark_found_;
+
+    bool tracking_landmark_;
+
+    std::mutex mtx_;
 
     ////////////////////////////////
     // Run Parameters
@@ -54,17 +58,35 @@ class CompetitionDemo : public BaseNode<>
     set_desired_pose_cli_ = nh_local_.serviceClient<seabee3_common::SetDesiredPose> ( "/seabee3/set_desired_pose" );
     reset_pose_cli_ = nh_local_.serviceClient<std_srvs::Empty> ( "/seabee3/reset_pose" );
 
-    //landmarks_sub_ = nh_local_.subscribe( "/landmark_finder/landmarks", 3, &CompetitionDemo::landmarksCB, this );
+    landmarks_sub_ = nh_local_.subscribe( "/landmark_finder/landmarks", 3, &CompetitionDemo::landmarksCB, this );
     //set_enabled_landmarks_cli_ = nh_local_.serviceClient<landmark_finder::SetEnabledLandmarks>(
     //    "/landmark_finder/set_enabled_landmarks");
   }
 
-    //// ######################################################################
-    //void landmarksCB( const localization_defs::LandmarkArray::ConstPtr & landmark_msg )
-    //{
-    //  // TODO Set the landmark_pose_
-    //  ROS_INFO("Got new landmarks");
-    //}
+    // ######################################################################
+    void landmarksCB( const localization_defs::LandmarkArray::ConstPtr & landmark_msg )
+    {
+      if(landmark_msg->landmarks.size() == 0) return;
+
+      if(tracking_landmark_)
+      {
+        double x = landmark_msg->landmarks[0].pose.linear.x;
+        double y = landmark_msg->landmarks[0].pose.linear.y;
+
+        tf::Transform cp;
+        {
+          std::lock_guard<std::mutex> lock(mtx);
+          cp = current_pose_;
+        }
+
+        seabee3_common::SetDesiredPose set_desired_pose_;
+        set_desired_pose_.request.pos.values.x = x;
+        set_desired_pose_.request.pos.mask.x   = 1;
+        set_desired_pose_.request.pos.values.y = y;
+        set_desired_pose_.request.pos.mask.y   = 1;
+        set_desired_pose_cli_.call( set_desired_pose_.request, set_desired_pose_.response );
+      }
+    }
 
     // ######################################################################
     void killSwitchCB( const seabee3_driver_base::KillSwitch::ConstPtr & kill_switch_msg )
@@ -115,7 +137,10 @@ class CompetitionDemo : public BaseNode<>
       ROS_INFO("Diving...");
       {
         double roll, pitch, yaw;
-        current_pose_.getBasis().getEulerYPR( yaw, pitch, roll );
+        {
+          std::lock_guard<std::mutex> lock(mtx_);
+          current_pose_.getBasis().getEulerYPR( yaw, pitch, roll );
+        }
         seabee3_common::SetDesiredPose set_desired_pose_;
         set_desired_pose_.request.ori.values.z = yaw;
         set_desired_pose_.request.ori.mask.z   = 1;
@@ -140,30 +165,43 @@ class CompetitionDemo : public BaseNode<>
       //////////////////////////////
       // Begin search for buoy
       //////////////////////////////
-      // TODO: all of this:
-      // 1) loop through list of landmarks:
-      //    a) set enabled landmark
-      //    b) spin!
-      landmark_found_ = false;
-      while(!landmark_found_)
+      ROS_INFO("Searching For Buoys...");
       {
-        double roll, pitch, yaw;
-        current_pose_.getBasis().getEulerYPR( yaw, pitch, roll );
-        seabee3_common::SetDesiredPose set_desired_pose_;
-        set_desired_pose_.request.ori.values.z = yaw + M_PI/16;
-        set_desired_pose_.request.ori.mask.z   = 1;
-        set_desired_pose_cli_.call( set_desired_pose_.request, set_desired_pose_.response );
-        waitForPose();
+        // TODO: Set enabled landmark here!!
+        landmark_found_ = false;
+        while(!landmark_found_)
+        {
+          double roll, pitch, yaw;
+          {
+            std::lock_guard<std::mutex> lock(mtx_);
+            current_pose_.getBasis().getEulerYPR( yaw, pitch, roll );
+          }
+          seabee3_common::SetDesiredPose set_desired_pose_;
+          set_desired_pose_.request.ori.values.z = yaw + M_PI/16;
+          set_desired_pose_.request.ori.mask.z   = 1;
+          set_desired_pose_cli_.call( set_desired_pose_.request, set_desired_pose_.response );
+          waitForPose();
+        }
       }
-      //    c) head towards landmark until within error tolerance:
 
+      ROS_INFO("Homing In On Buoy");
+      {
+        // Head towards landmark until within error tolerance:
+        tracking_landmark_ = true;
+        waitForPose();
+        tracking_landmark_ = false;
+      }
 
+      ROS_INFO("Competition Finished.");
     }
 
     // ######################################################################
     void spinOnce()
     {
-      tf_utils::fetchTfFrame( current_pose_, "/landmark_map", "/seabee3/base_link" ); 
+      {
+        std::lock_guard<std::mutex> lock(mtx_);
+        tf_utils::fetchTfFrame( current_pose_, "/landmark_map", "/seabee3/base_link" ); 
+      }
 
       if(state_ == starting)
       {
