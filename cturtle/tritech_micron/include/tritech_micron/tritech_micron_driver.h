@@ -44,7 +44,7 @@ class TritechMicronDriver
         uint16_t nBins = 200,
         float range = 10,
         float VOS = 1500,
-        tritech::mtHeadCommandMsg::stepAngleSize_t stepAngleSize = tritech::mtHeadCommandMsg::Low,
+        uint8_t angleStepSize = 32,
         int leftLimit=1, int rightLimit=360);
 
     //! Disconnect from the Sonar device and kill all of our associated threads
@@ -52,7 +52,7 @@ class TritechMicronDriver
 
     //! Configure the sonar
     void configure(uint16_t nBins = 200, float range = 10, float VOS = 1500,
-        tritech::mtHeadCommandMsg::stepAngleSize_t stepAngleSize = tritech::mtHeadCommandMsg::Low,
+        uint8_t angleStepSize = 32,
         int leftLimit=1, int rightLimit=360);
 
     void resetMessage();

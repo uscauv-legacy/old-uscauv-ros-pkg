@@ -65,6 +65,7 @@ public:
 	std::string port_;int num_bins_;
 	double range_;
 	double velocity_of_sound_;
+  int angle_step_size_;
 
 	/* constructor params */
 	_AngleType scan_angle_;
@@ -100,11 +101,9 @@ public:
 		                 velocity_of_sound_,
 		                 1500.0 );
 
-		std::string angle_step_size_name;
-		nh_local_.param( "angle_step_size",
-		                 angle_step_size_name,
-		                 std::string( "medium" ) );
-		tritech::mtHeadCommandMsg::stepAngleSize_t angle_step_size = getStepAngleSize( angle_step_size_name );
+    nh_local_.param("angle_step_size",
+                     angle_step_size_,
+                     32);
 
 		if ( !simulate_ )
 		{
@@ -115,11 +114,13 @@ public:
 			                                              std::placeholders::_1,
 			                                              std::placeholders::_2,
 			                                              std::placeholders::_3 ) );
+
+      uint8_t angle_step_size_byte = std::max(1, std::min(255, angle_step_size_));
 			if ( !driver_->connect( port_.c_str(),
 			                        num_bins_,
 			                        range_,
 			                        velocity_of_sound_,
-			                        angle_step_size ) )
+			                        angle_step_size_byte ) )
 			{
 				ROS_ERROR( "Could not connect to device; simulating instead." );
 				simulate_ = true;
@@ -136,18 +137,6 @@ public:
 			driver_->disconnect();
 			delete driver_;
 		}
-	}
-
-	static tritech::mtHeadCommandMsg::stepAngleSize_t getStepAngleSize( const std::string & name )
-	{
-		if ( name == "crazy_low" ) return tritech::mtHeadCommandMsg::stepAngleSize_t::CrazyLow;
-		if ( name == "very_low" ) return tritech::mtHeadCommandMsg::stepAngleSize_t::VeryLow;
-		if ( name == "low" ) return tritech::mtHeadCommandMsg::stepAngleSize_t::Low;
-		if ( name == "medium" ) return tritech::mtHeadCommandMsg::stepAngleSize_t::Medium;
-		if ( name == "high" ) return tritech::mtHeadCommandMsg::stepAngleSize_t::High;
-		if ( name == "ultimate" ) return tritech::mtHeadCommandMsg::stepAngleSize_t::Ultimate;
-
-		return tritech::mtHeadCommandMsg::stepAngleSize_t::Low;
 	}
 
 	void publish( _AngleType scan_angle,

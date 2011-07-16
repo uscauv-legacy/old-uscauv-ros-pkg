@@ -200,10 +200,8 @@ namespace tritech
   // ######################################################################
   struct mtHeadCommandMsg
   {
-    enum stepAngleSize_t {CrazyLow, VeryLow, Low, Medium, High, Ultimate};
-
-    mtHeadCommandMsg(uint16_t _nBins = 200, float _range = 10, float _VOS = 1500, stepAngleSize_t _stepAngleSize = Low, int _leftLimit=1, int _rightLimit=360) :
-      nBins(_nBins), range(_range), VOS(_VOS), stepAngleSize(_stepAngleSize)
+    mtHeadCommandMsg(uint16_t _nBins = 200, float _range = 10, float _VOS = 1500, uint8_t _angleStepSize=32, int _leftLimit=1, int _rightLimit=360) :
+      nBins(_nBins), range(_range), VOS(_VOS), angleStepSize(_angleStepSize)
     { }
 
     //! The desired number of bins per scanline
@@ -219,13 +217,13 @@ namespace tritech
     int rightLimit;
 
     //! The size of each step of the sonar head
-    /*! CrazyLow: 7.2° 
-        VeryLow:  3.6° 
-        Low:      1.8° 
-        Medium:   0.9°
-        High:     0.45°
-        Ultimate: 0.225° */
-    stepAngleSize_t stepAngleSize;
+    /*! CrazyLow: 7.2°   = 128
+        VeryLow:  3.6°   = 64
+        Low:      1.8°   = 32 
+        Medium:   0.9°   = 16
+        High:     0.45°  = 8
+        Ultimate: 0.225° = 4 */
+    uint8_t angleStepSize;
 
     //! Construct the message vector from the given parameters
     std::vector<uint8_t> construct()
@@ -242,15 +240,7 @@ namespace tritech
       msg[36] = rangeScale & 0x00FF;
       msg[37] = rangeScale >> 8;
 
-      switch(stepAngleSize)
-      {
-        case CrazyLow: msg[51] = 128; break;
-        case VeryLow:  msg[51] = 64;  break;
-        case Low:      msg[51] = 32;  break;
-        case Medium:   msg[51] = 16;  break;
-        case High:     msg[51] = 8;   break;
-        case Ultimate: msg[51] = 4;   break;
-      }
+      msg[51] = angleStepSize;
 
       uint16_t leftLimGrads  = std::min(6399, std::max(1, int(leftLimit  / 360.0 * 400 * 16)));
       msg[38] = leftLimit & 0x00FF;
