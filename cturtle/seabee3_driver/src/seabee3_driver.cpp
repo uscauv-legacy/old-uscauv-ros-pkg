@@ -765,6 +765,8 @@ public:
 
 			math_utils::normalizeAngle( current_pose_.angular.z );
 
+			error_in_xyz_.x = desired_pose_.linear.x - current_pose_.linear.x;
+			error_in_xyz_.y = desired_pose_.linear.y - current_pose_.linear.y;
 			error_in_xyz_.z = desired_pose_.linear.z - current_pose_.linear.z;
 
 			error_in_rpy_.z = math_utils::angleDistRel( math_utils::radToDeg( desired_pose_.angular.z ),
