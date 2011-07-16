@@ -116,6 +116,10 @@ public:
 			reconfigure_srv_->setCallback( reconfigure_callback_ );
 			ROS_INFO( "Done setting up reconfigure server" );
 		}
+		else
+		{
+			ROS_INFO( "Reconfigure server not enabled." );
+		}
 		ROS_INFO( "Done setting up base node" );
 	}
 

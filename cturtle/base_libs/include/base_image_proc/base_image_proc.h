@@ -152,14 +152,17 @@ protected:
 	virtual void imageCB( const sensor_msgs::ImageConstPtr& image_msg )
 	{
 		if( !this->running_ ) return;
-		if ( !this->ignore_reconfigure_ && this->reconfigure_initialized_ )
+		if ( !this->ignore_reconfigure_ && !this->reconfigure_initialized_ )
+		{
+			ROS_WARN( "Dropped image because the reconfigure params have not been set" );
+		}
+		else
 		{
 			this->new_image_ = true;
 			this->ipl_image_ = processImage( this->image_bridge_.imgMsgToCv( this->image_msg_ ) );
 
 			if ( this->publish_image_ ) this->publishCvImage( this->ipl_image_ );
 		}
-		else ROS_WARN( "Dropped image because the reconfigure params have not been set" );
 	}
 
 };

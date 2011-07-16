@@ -137,14 +137,21 @@ public:
 	bool findColorBlobsCB( _FindColorBlobsService::Request & req, _FindColorBlobsService::Response & resp )
 	{
 		printf( "Got service request\n" );
-		if( !image_sources_mutex_.try_lock() || images_cache_.size() == 0 ) return false;
+		if( !image_sources_mutex_.try_lock() ) return false;
+		if( images_cache_.size() == 0 )
+		{
+			image_sources_mutex_.unlock();
+			return false;
+		}
 		//image_sources_mutex_.lock();
 
 		//color_blob_finder::ColorBlobArray::Ptr color_blobs( new color_blob_finder::ColorBlobArray );
 
 		const static OutputColorRGB::_CvColorType background_color_vec = OutputColorRGB::getColorRGB( -1 );
 		const static CvScalar background_color = cvScalar( background_color_vec[0], background_color_vec[1], background_color_vec[2] );
+		printf( "Setting image background\n" );
 		if( output_image_ ) cvSet( output_image_, background_color );//cvFillImage( output_image_, 0.0 );
+		printf( "Done\n" );
 
 		// for each image
 		for ( _DimType i = 0; i < images_cache_.size(); ++i )
@@ -166,10 +173,13 @@ public:
 			const IplImage current_image = IplImage ( cv_bridge::toCvShare( current_image_msg_ptr )->image );
 			const IplImage * current_image_ptr = &current_image;*/
 
+			printf( "Building bridge from image\n" );
 			cv_bridge_.fromImage( images_cache_[i].image );
+			printf( "Converting to ipl\n" );
 			const IplImage * current_image_ptr = cv_bridge_.toIpl();
 
 			std::vector<_Contour> contours;
+			printf( "Getting ready to process\n" );
 			processImage( current_image_ptr, contours, images_cache_[i].id );
 
 			// for each contour
@@ -192,7 +202,11 @@ public:
 
 		image_sources_mutex_.unlock();
 
-		output_image_pub_.publish( sensor_msgs::CvBridge::cvToImgMsg( output_image_ ) );
+		printf("Attempting to publish image");
+
+//		output_image_pub_.publish( sensor_msgs::CvBridge::cvToImgMsg( output_image_ ) );
+
+		printf( "Done" );
 
 		return true;
 	}
@@ -235,7 +249,11 @@ public:
 		                                                     IPL_DEPTH_8U,
 		                                                     3 );
 
+		printf( "Creating mat\n" );
+
 		cv::Mat current_image_mat( ipl_image );
+
+		printf( "Finding contours\n" );
 		findContours( current_image_mat, contours );
 
 		printf( "Found %zu contours\n",
