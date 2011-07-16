@@ -202,7 +202,7 @@ namespace tritech
   {
     enum stepAngleSize_t {CrazyLow, VeryLow, Low, Medium, High, Ultimate};
 
-    mtHeadCommandMsg(uint16_t _nBins = 200, float _range = 10, float _VOS = 1500, stepAngleSize_t _stepAngleSize = Low) :
+    mtHeadCommandMsg(uint16_t _nBins = 200, float _range = 10, float _VOS = 1500, stepAngleSize_t _stepAngleSize = Low, int _leftLimit=1, int _rightLimit=360) :
       nBins(_nBins), range(_range), VOS(_VOS), stepAngleSize(_stepAngleSize)
     { }
 
@@ -214,6 +214,9 @@ namespace tritech
 
     //! The velocity of sound in meters per second
     float VOS;
+
+    int leftLimit;
+    int rightLimit;
 
     //! The size of each step of the sonar head
     /*! CrazyLow: 7.2° 
@@ -248,6 +251,14 @@ namespace tritech
         case High:     msg[51] = 8;   break;
         case Ultimate: msg[51] = 4;   break;
       }
+
+      uint16_t leftLimGrads  = std::min(6399, std::max(1, int(leftLimit  / 360.0 * 400 * 16)));
+      msg[38] = leftLimit & 0x00FF;
+      msg[39] = leftLimit >> 8;
+
+      uint16_t rightLimGrads = std::min(6399, std::max(1, int(rightLimit / 360.0 * 400 * 16)));
+      msg[40] = rightLimit & 0x00FF;
+      msg[41] = rightLimit >> 8;
 
       msg[54] = nBins & 0x00FF;
       msg[55] = nBins >> 8;

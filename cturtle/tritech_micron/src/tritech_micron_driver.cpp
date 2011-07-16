@@ -55,7 +55,7 @@ void TritechMicronDriver::disconnect()
 
 // ######################################################################
 bool TritechMicronDriver::connect(std::string const& devName,
-    uint16_t nBins, float range, float VOS, mtHeadCommandMsg::stepAngleSize_t stepAngleSize)
+    uint16_t nBins, float range, float VOS, mtHeadCommandMsg::stepAngleSize_t stepAngleSize, int leftLimit, int rightLimit)
 {
   if(itsDebugMode) std::cout << "Connecting...";
 
@@ -85,8 +85,7 @@ bool TritechMicronDriver::connect(std::string const& devName,
   if(itsDebugMode) std::cout << "----------Received mtVersionData----------" <<std::endl;
 
   // Setup the sonar configuration
-  mtHeadCommandMsg headCommandMsg(nBins, range, VOS, stepAngleSize);
-  itsSerial.writeVector(headCommandMsg.construct());
+  configure(nBins, range, VOS, stepAngleSize, leftLimit, rightLimit);
 
   while(1)
   {
@@ -95,6 +94,14 @@ bool TritechMicronDriver::connect(std::string const& devName,
   }
 
   return true;
+}
+
+// ######################################################################
+void TritechMicronDriver::configure(uint16_t nBins, float range, float VOS,
+    mtHeadCommandMsg::stepAngleSize_t stepAngleSize, int leftLimit, int rightLimit)
+{
+  mtHeadCommandMsg headCommandMsg(nBins, range, VOS, stepAngleSize, leftLimit, rightLimit);
+  itsSerial.writeVector(headCommandMsg.construct());
 }
 
 // ######################################################################

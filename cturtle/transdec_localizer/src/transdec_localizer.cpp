@@ -81,6 +81,10 @@ class TransdecLocalizer: public _BaseImageProc
         geometry_msgs::Twist localized_pose = current_pose;
         double x = circles[0][0];
         double y = circles[0][1];
+        tf::Transform robot_to_center_tf;
+        robot_to_center_tf.setOrigin(x,y,0);
+        robot_to_center_tf.setRotation(createQuaternionFromRPY(0, 0, current_pose.yaw));
+
 
         tf::Transform localized_pose_tf;
         localized_pose >> localized_pose_tf;

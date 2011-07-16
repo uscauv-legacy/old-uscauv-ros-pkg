@@ -123,7 +123,6 @@ public:
 		btRigidBody::btRigidBodyConstructionInfo seabee_body_ci( seabee_mass, seabee_motion_state_, seabee_shape_, seabee_inertia );
 		seabee_body_ = new btRigidBody( seabee_body_ci );
 		seabee_body_->setActivationState( DISABLE_DEACTIVATION );
-    seabee_body_->setDamping(.018, 0);
 
 		dynamics_world_->addRigidBody( seabee_body_ );
 
@@ -176,16 +175,13 @@ public:
 
 		btVector3 lin_v_ = seabee_body_->getLinearVelocity();
     btVector3 force_drag =  -lin_v_*reconfigure_params_.drag_constant;
-    if(force_drag[0] != force_drag[0])
+    if(force_drag[0] != force_drag[0]) // if isNaN
     { force_drag[0] = 0.0; force_drag[1] = 0.0; force_drag[2] = 0.0; }
 		seabee_body_->applyForce(force_drag, seabee_body_->getCenterOfMassPosition() );
     ROS_INFO("lin_v_       %f, %f, %f", lin_v_[0], lin_v_[1], lin_v_[2]);
     ROS_INFO("Drag Force: %f ... Sub Speed: %f", force_drag.length(), lin_v_.length());
 
-
 		double dt = ( ros::Time::now() - last_call_ ).toSec();
-
-    //seabee_body_->applyDamping(dt);
 
 		// Step the physics simulation
 		dynamics_world_->stepSimulation( dt, 50, 1.0 / rate_ );
@@ -194,7 +190,6 @@ public:
 		btTransform trans;
 		seabee_body_->getMotionState()->getWorldTransform( trans );
 		//code to factor in drag
-
 
 		printf( "Body Pos: %f %f %f\n", trans.getOrigin().getX(), trans.getOrigin().getY(), trans.getOrigin().getZ() );
 
