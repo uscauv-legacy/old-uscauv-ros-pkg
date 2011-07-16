@@ -789,7 +789,9 @@ public:
 			        error_in_rpy_.y,
 			        error_in_rpy_.z );
 
-			double depth_motor_value = axis_dir_cfg_[Axes::depth] * pid_controller_.linear_z->update( error_in_xyz_.z );
+			double speed_motor_value  = axis_dir_cfg_[Axes::speed]  * pid_controller_.linear_x->update( error_in_xyz_.x );
+			double strafe_motor_value = axis_dir_cfg_[Axes::strafe] * pid_controller_.linear_y->update( error_in_xyz_.y );
+			double depth_motor_value  = axis_dir_cfg_[Axes::depth]  * pid_controller_.linear_z->update( error_in_xyz_.z );
 			double yaw_motor_value = axis_dir_cfg_[Axes::yaw] * pid_controller_.angular_z->update( error_in_rpy_.z );
 
 			printf( "depth %f yaw %f\n",
@@ -809,6 +811,8 @@ public:
 			updateMotorCntlMsg( motor_cntl_msg_,
 			                    Axes::yaw,
 			                    yaw_motor_value );
+      updateMotorCntlMsg( motor_cntl_msg_, Axes::strafe, strafe_motor_value );
+      updateMotorCntlMsg( motor_cntl_msg_, Axes::speed, speed_motor_value );
 
 		}
 		last_pid_update_time_ = ros::Time::now();
