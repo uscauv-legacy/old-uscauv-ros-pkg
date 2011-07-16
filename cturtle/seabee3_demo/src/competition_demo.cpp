@@ -21,6 +21,7 @@ class CompetitionDemo : public BaseNode<>
     ros::Subscriber kill_switch_sub_;
     ros::ServiceClient set_desired_pose_cli_;
     ros::ServiceClient reset_pose_cli_;
+    ros::ServiceClient reset_physics_cli_;
     ros::ServiceClient set_enabled_landmarks_cli_;
 
     ros::Subscriber landmarks_sub_;
@@ -57,6 +58,7 @@ class CompetitionDemo : public BaseNode<>
     kill_switch_sub_ = nh_local_.subscribe( "/seabee3/kill_switch", 2, &CompetitionDemo::killSwitchCB, this );
     set_desired_pose_cli_ = nh_local_.serviceClient<seabee3_common::SetDesiredPose> ( "/seabee3/set_desired_pose" );
     reset_pose_cli_ = nh_local_.serviceClient<std_srvs::Empty> ( "/seabee3/reset_pose" );
+    reset_physics_cli_ = nh_local_.serviceClient<std_srvs::Empty> ( "/seabee3_physics/reset_pose" );
 
     landmarks_sub_ = nh_local_.subscribe( "/landmark_finder/landmarks", 3, &CompetitionDemo::landmarksCB, this );
   }
@@ -96,6 +98,9 @@ class CompetitionDemo : public BaseNode<>
       {
         ROS_INFO("Kill Switch CB: Killing");
         state_ = killing;
+        std_srvs::Empty empty_request;
+        reset_pose_cli_.call( empty_request );
+        reset_physics_cli_.call( empty_request );
       }
       else if(state_ == waiting_for_start && last_killed_state_ == true && current_killed_state == false)
       {
@@ -107,21 +112,21 @@ class CompetitionDemo : public BaseNode<>
 
     // ######################################################################
     // Wait for the error between the base link and the desired pose is less
-    // than a threshold. Throw an std::exception if the kill switch is pulled
-    void waitForPose()
+    // than a threshold. Returns false if the killswitch was pulled
+    bool waitForPose()
     {
+      usleep(100000);
+      ROS_INFO("Waiting For Pose...");
       tf::Transform error_pose_;
       do
       {
         usleep(10000);
         if(state_ == killing) 
-        {
-          ROS_INFO("Wait For Pose: Killing");
-          throw std::logic_error("Kill Switch Pulled");
-        }
+        { ROS_INFO("Wait For Pose: Killing"); return false; }
         tf_utils::fetchTfFrame(error_pose_, "/seabee3/base_link", "/seabee3/desired_pose");
       }
       while (error_pose_.getOrigin().length() > error_threshold_);
+      return true;
     }
 
     // ######################################################################
@@ -146,7 +151,8 @@ class CompetitionDemo : public BaseNode<>
         set_desired_pose_.request.pos.mask.z   = 1;
         set_desired_pose_cli_.call( set_desired_pose_.request, set_desired_pose_.response );
       }
-      waitForPose();
+      if(!waitForPose()) return;
+      ROS_INFO("...Done Diving");
 
       //////////////////////////////
       // Go Through Gate
@@ -155,10 +161,13 @@ class CompetitionDemo : public BaseNode<>
       {
         seabee3_common::SetDesiredPose set_desired_pose_;
         set_desired_pose_.request.pos.values.x = distance_to_gate_;
+        set_desired_pose_.request.pos.values.y = 3;;
         set_desired_pose_.request.pos.mask.x   = 1;
+        set_desired_pose_.request.pos.mask.y   = 1;
         set_desired_pose_cli_.call( set_desired_pose_.request, set_desired_pose_.response );
       }
-      waitForPose();
+      if(!waitForPose()) return;
+      ROS_INFO("...Done Gate");
 
       //////////////////////////////
       // Begin search for buoy
@@ -177,9 +186,10 @@ class CompetitionDemo : public BaseNode<>
           set_desired_pose_.request.ori.values.z = yaw + M_PI/16;
           set_desired_pose_.request.ori.mask.z   = 1;
           set_desired_pose_cli_.call( set_desired_pose_.request, set_desired_pose_.response );
-          waitForPose();
+          if(!waitForPose()) return;
         }
       }
+      ROS_INFO("...Found Buoys");
 
       //////////////////////////////
       // Home in on the buoy
@@ -188,9 +198,10 @@ class CompetitionDemo : public BaseNode<>
       {
         // Head towards landmark until within error tolerance:
         tracking_landmark_ = true;
-        waitForPose();
+        if(!waitForPose()) return;
         tracking_landmark_ = false;
       }
+      ROS_INFO("...Hit Buoys");
 
       //////////////////////////////
       // Running the fuck away
@@ -202,7 +213,8 @@ class CompetitionDemo : public BaseNode<>
         set_desired_pose_.request.pos.mask.x   = 1;
         set_desired_pose_cli_.call( set_desired_pose_.request, set_desired_pose_.response );
       }
-      waitForPose();
+      if(!waitForPose()) return;
+      ROS_INFO("...Ran the fuck away!");
 
       ROS_INFO("Competition Finished.");
     }
@@ -218,13 +230,14 @@ class CompetitionDemo : public BaseNode<>
       if(state_ == starting)
       {
         ROS_INFO("Spin Once: Starting Run");
+        if(FSMthread_.joinable()) FSMthread_.join();
         FSMthread_ = std::thread(std::bind(&CompetitionDemo::letsDoThis, this));
         state_ = running;
       }
       else if(state_ == killing)
       {
         ROS_INFO("Spin Once: Killing");
-        try { FSMthread_.join(); } catch(...) {}
+        FSMthread_.join();
         state_ = waiting_for_start;
         ROS_INFO("Spin Once: Killed.. Waiting for start");
       }
