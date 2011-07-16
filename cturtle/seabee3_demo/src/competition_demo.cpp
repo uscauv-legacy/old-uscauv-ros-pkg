@@ -73,7 +73,7 @@ class CompetitionDemo : public BaseNode<>
 
         tf::Transform cp;
         {
-          std::lock_guard<std::mutex> lock(mtx);
+          std::lock_guard<std::mutex> lock(mtx_);
           cp = current_pose_;
         }
 
@@ -191,6 +191,18 @@ class CompetitionDemo : public BaseNode<>
         waitForPose();
         tracking_landmark_ = false;
       }
+
+      //////////////////////////////
+      // Running the fuck away
+      //////////////////////////////
+      ROS_INFO("Running the fuck away. See ya!");
+      {
+        seabee3_common::SetDesiredPose set_desired_pose_;
+        set_desired_pose_.request.pos.values.x = 999;
+        set_desired_pose_.request.pos.mask.x   = 1;
+        set_desired_pose_cli_.call( set_desired_pose_.request, set_desired_pose_.response );
+      }
+      waitForPose();
 
       ROS_INFO("Competition Finished.");
     }
