@@ -230,11 +230,12 @@ class CompetitionDemo : public BaseNode<>
         set_desired_pose_cli_.call( set_desired_pose_.request, set_desired_pose_.response );
         if(!waitForPose()) return;
       }
+      ROS_INFO("...Went through the hedge");
 
       //////////////////////////////
       // Go to the octagon
       //////////////////////////////
-      ROS_INFO("Going for the octogon");
+      ROS_INFO("Going for the octagon");
       {
         std::lock_guard<std::mutex> lock(mtx_);
         seabee3_common::SetDesiredPose set_desired_pose_;
@@ -253,6 +254,7 @@ class CompetitionDemo : public BaseNode<>
         set_desired_pose_cli_.call( set_desired_pose_.request, set_desired_pose_.response );
         if(!waitForPose()) return;
       }
+      ROS_INFO("...Went through the octagon");
 
       //////////////////////////////
       // Surface
@@ -267,6 +269,7 @@ class CompetitionDemo : public BaseNode<>
         set_desired_pose_cli_.call( set_desired_pose_.request, set_desired_pose_.response );
         if(!waitForPose()) return;
       }
+      ROS_INFO("Surfaced");
 
       ROS_INFO("Competition Finished.");
     }

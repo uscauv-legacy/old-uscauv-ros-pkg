@@ -81,6 +81,8 @@ private:
 	bool simulate_;
 	int pump_motor_val_;
 
+  double initial_yaw_;
+
 	// used to decode motor values
 	_ThrusterArrayCfg thruster_dir_cfg_;
 
@@ -216,6 +218,7 @@ public:
 		shooter2_action_srv_ = nh.advertiseService( "/seabee3/shooter2_action",
 		                                            &Seabee3DriverBase::shooter2ActionCB,
 		                                            this );
+    initial_yaw_ = 0.0;
 	}
 
 	float getDepthFromPressure( int & observed_pressure )
@@ -229,7 +232,7 @@ public:
 		{
 			current_pose_.angular.x = msg->ori.x;
 			current_pose_.angular.y = msg->ori.y;
-			current_pose_.angular.z = msg->ori.z;
+			current_pose_.angular.z = msg->ori.z - initial_yaw_;
 
 		  publishGivens();
 		}
@@ -389,6 +392,11 @@ public:
 			current_pose_.linear.z = -depth_msg.value;
 
 		}
+
+    if(kill_switch_msg.is_killed)
+    {
+      initial_yaw_ = current_pose_.angular.z;
+    }
 
 		publishGivens();
 

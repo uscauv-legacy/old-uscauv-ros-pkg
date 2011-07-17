@@ -329,6 +329,7 @@ public:
 	bool resetPoseCB( std_srvs::Empty::Request & req,
 	                  std_srvs::Empty::Response & resp )
 	{
+    //initial_orientation_
 		seabee_body_->getMotionState()->setWorldTransform( btTransform() );
 		seabee_body_->setAngularVelocity( btVector3() );
 		seabee_body_->setLinearVelocity( btVector3() );
