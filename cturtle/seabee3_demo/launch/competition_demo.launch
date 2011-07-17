@@ -10,8 +10,8 @@
     <param name="do_buoy" type="bool" value="false"/>
 	</node>
 
-	<node pkg="tf" type="static_transform_publisher" name="gate"    args="14.6  0.0 -2.1 0 0 0 /landmark_map /gate    100" />
-	<node pkg="tf" type="static_transform_publisher" name="hedge"   args="24.5  2.4 -2.1 0 0 0 /landmark_map /hedge   100" />
-	<node pkg="tf" type="static_transform_publisher" name="octagon" args="25.5 15.8 -2.1 0 0 0 /landmark_map /octagon 100" />
+	<node pkg="tf" type="static_transform_publisher" name="gate"    args="11.4   0.0 -2.1 0 0 0 /landmark_map /gate    100" />
+	<node pkg="tf" type="static_transform_publisher" name="hedge"   args="22.5  -0.5 -2.1 0 0 0 /landmark_map /hedge   100" />
+	<node pkg="tf" type="static_transform_publisher" name="octagon" args="33.9 -18.8 -2.1 0 0 0 /landmark_map /octagon 100" />
 
 </launch>
