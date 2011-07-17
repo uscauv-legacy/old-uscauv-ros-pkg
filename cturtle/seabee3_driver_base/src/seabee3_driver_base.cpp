@@ -79,6 +79,7 @@ private:
 	double surface_pressure_;
 	double montalbos_per_meter_;
 	bool simulate_;
+	int pump_motor_val_;
 
 	// used to decode motor values
 	_ThrusterArrayCfg thruster_dir_cfg_;
@@ -108,6 +109,11 @@ public:
 		nh_local_.param( "port",
 		                 port_,
 		                 std::string( "/dev/seabee_pwrboard" ) );
+
+		nh_local_.param( "pump_motor_val",
+						 pump_motor_val_,
+						 30 );
+
 		if ( !simulate_ )
 		{
 			ROS_INFO( "constructing new driver instance" );
@@ -242,14 +248,12 @@ public:
 				{
 					ROS_INFO( "Setting motor id %d to %d",
 					          i,
-					          abs( msg->motors[i] ) >= min_motor_value_ ? dir * msg->motors[i] :
-					                                                      0 );
+					          dir * msg->motors[i] );
 				}
 				else
 				{
 					bee_stem_3_driver_->setThruster( i,
-					                                 abs( msg->motors[i] ) >= min_motor_value_ ? dir * msg->motors[i] :
-					                                                                             0 );
+					                                 dir * msg->motors[i] );
 				}
 			}
 		}
@@ -370,6 +374,9 @@ public:
 		}
 		else
 		{
+			bee_stem_3_driver_->setThruster( movement_common::MotorControllerIDs::SHOOTER,
+					                         pump_motor_val_ );
+
 			bee_stem_3_driver_->readPressure( intl_pressure_msg.value,
 			                                  extl_pressure_msg.value );
 

@@ -11,6 +11,7 @@
 	<arg name="port" default="/dev/seabee3_pwrboard" />
 
 	<node pkg="$(arg pkg)" type="$(arg node_type)" name="$(arg name)" output="screen" args="_rate:=$(arg rate) _simulate:=$(arg simulate)" >
+    <param name="pump_motor_val" type="int" value="30" />
 		<param name="port" type="string" value="$(arg port)" />
 		<param name="shooter1/trigger_time" type="int" value="100" />
 		<param name="shooter1/trigger_value" type="int" value="75" />
@@ -30,7 +31,7 @@
 		<param name="speed_m2_dir" type="double" value="-1.0" />
 		
 		<param name="strafe_m1_dir" type="double" value="-1.0" />
-		<param name="strafe_m2_dir" type="double" value="-1.0" />
+		<param name="strafe_m2_dir" type="double" value="1.0" />
 		
 		<param name="depth_m1_dir" type="double" value="-1.0" />
 		<param name="depth_m2_dir" type="double" value="-1.0" />
