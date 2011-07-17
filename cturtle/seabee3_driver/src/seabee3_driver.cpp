@@ -102,7 +102,6 @@ private:
 	geometry_msgs::Twist desired_pose_velocity_;
 	geometry_msgs::Twist current_pose_;
 
-	double axis_dir_cfg_[6];
 	double pid_i_min_, pid_i_max_;
 
 	_Pid6D pid_controller_;
@@ -266,25 +265,6 @@ public:
 		nh_local_.param( "yaw_m2_dir",
 		                 motors_dir_cfg_[Axes::yaw].at( 2 ),
 		                 1.0 );
-
-		nh_local_.param( "speed_axis_dir",
-		                 axis_dir_cfg_[Axes::speed],
-		                 1.0 );
-		nh_local_.param( "strafe_axis_dir",
-		                 axis_dir_cfg_[Axes::strafe],
-		                 1.0 );
-		nh_local_.param( "depth_axis_dir",
-		                 axis_dir_cfg_[Axes::depth],
-		                 -1.0 );
-		nh_local_.param( "roll_axis_dir",
-		                 axis_dir_cfg_[Axes::roll],
-		                 -1.0 );
-		nh_local_.param( "pitch_axis_dir",
-		                 axis_dir_cfg_[Axes::pitch],
-		                 -1.0 );
-		nh_local_.param( "yaw_axis_dir",
-		                 axis_dir_cfg_[Axes::yaw],
-		                 -1.0 );
 
 		nh_local_.param( "min_motor_value_",
 		                 min_motor_value_,
@@ -703,9 +683,9 @@ public:
 
 			std::map<int, double> motor_values;
 
-			motor_values[Axes::speed] = axis_dir_cfg_[Axes::speed] * pid_controller_.linear_x->update( error_in_work.x );
-			motor_values[Axes::strafe] = axis_dir_cfg_[Axes::strafe] * pid_controller_.linear_y->update( error_in_work.y );
-			motor_values[Axes::depth] = axis_dir_cfg_[Axes::depth] * pid_controller_.linear_z->update( error_in_work.z );
+			motor_values[Axes::speed]  = pid_controller_.linear_x->update( error_in_work.x );
+			motor_values[Axes::strafe] = pid_controller_.linear_y->update( error_in_work.y );
+			motor_values[Axes::depth]  = pid_controller_.linear_z->update( error_in_work.z );
 
 			//double rollMotorVal = axis_dir_cfg_[roll] * pid_controller_.angular.x.updatePid( error_in_rpy_.x, dt );
 			//double pitchMotorVal = axis_dir_cfg_[pitch] * pid_controller_.angular.y.updatePid( error_in_rpy_.y, dt );
@@ -717,11 +697,9 @@ public:
 			//printf("w2 %f\n", 100.0 * physics_state_msg_.mass.angular.z * ( error_in_velocity.angular.z < 0 ? -1.0 : 1.0 ) * pow( error_in_velocity.angular.z, 2 ) / 2.0);
 
 			// W=Fx=mv^2/2
-			double error_in_work_yaw = 5.0 * 0.3 * math_utils::degToRad( error_in_rpy_.z )
-			        - 100.0 * physics_state_msg_.mass.angular.z * ( error_in_velocity.angular.z < 0 ? 1.0 :
-			                                                                                          -1.0 ) * pow( error_in_velocity.angular.z,
-			                                                                                                        2 ) / 2.0;
-			motor_values[Axes::yaw] = axis_dir_cfg_[Axes::yaw] * pid_controller_.angular_z->update( error_in_work_yaw );
+      double error_in_work_yaw = 5.0 * 0.3 * math_utils::degToRad( error_in_rpy_.z )
+        - 100.0 * physics_state_msg_.mass.angular.z * ( error_in_velocity.angular.z < 0 ? 1.0 : -1.0 ) * pow( error_in_velocity.angular.z, 2 ) / 2.0;
+			motor_values[Axes::yaw] = pid_controller_.angular_z->update( error_in_work_yaw );
 
 			//printf( "speed %f strafe %f depth %f yaw %f\n", speed_motor_val, strafe_motor_val, depth_motor_val, yaw_motor_val );
 
@@ -756,37 +734,29 @@ public:
 			const double t1 = dt.toSec();
 
 			printf( "error x %f y %f z %f r %f p %f y %f\n",
-			        error_in_pose.linear.x,
-			        error_in_pose.linear.y,
-			        error_in_pose.linear.z,
-			        error_in_pose.angular.x,
-			        error_in_pose.angular.y,
-			        error_in_pose.angular.z );
+			        error_in_pose.linear.x, error_in_pose.linear.y, error_in_pose.linear.z,
+			        error_in_pose.angular.x, error_in_pose.angular.y, error_in_pose.angular.z );
 
-			double speed_motor_value  =  pid_controller_.linear_x->update( error_in_pose.linear.x, t1 );
-			double strafe_motor_value = -1 * pid_controller_.linear_y->update( error_in_pose.linear.y, t1 );
-			double depth_motor_value  =  pid_controller_.linear_z->update( error_in_pose.linear.z, t1 );
-			double yaw_motor_value    =  pid_controller_.angular_z->update( error_in_pose.angular.z, t1 );
+			double speed_motor_value  = pid_controller_.linear_x->update( error_in_pose.linear.x, t1 );
+			double strafe_motor_value = pid_controller_.linear_y->update( error_in_pose.linear.y, t1 );
+			double depth_motor_value  = pid_controller_.linear_z->update( error_in_pose.linear.z, t1 );
+			double yaw_motor_value    = pid_controller_.angular_z->update( error_in_pose.angular.z, t1 );
 
 			printf( "depth motor value: %f yaw motor value %f speed motor value %f strafe motor value %f\n", depth_motor_value, yaw_motor_value, speed_motor_value, strafe_motor_value );
 
-			math_utils::capValue( depth_motor_value,
-			                      100.0 );
-			math_utils::capValue( yaw_motor_value,
-			                      100.0 );	
-      math_utils::capValue( speed_motor_value,
-			                      50.0 );
-      math_utils::capValue( strafe_motor_value,
-			                      75.0 );
+      math_utils::capValue( speed_motor_value, 50.0 );
+      math_utils::capValue( strafe_motor_value, 75.0 );
+			math_utils::capValue( depth_motor_value, 100.0 );
+			math_utils::capValue( yaw_motor_value, 100.0 );	
 
-			updateMotorCntlMsg( motor_cntl_msg_,
-			                    Axes::depth,
-			                    depth_motor_value );
-			updateMotorCntlMsg( motor_cntl_msg_,
-			                    Axes::yaw,
-			                    yaw_motor_value );
-      updateMotorCntlMsg( motor_cntl_msg_, Axes::strafe, strafe_motor_value );
+      // Speed
       updateMotorCntlMsg( motor_cntl_msg_, Axes::speed, speed_motor_value );
+      // Strafe
+      updateMotorCntlMsg( motor_cntl_msg_, Axes::strafe, strafe_motor_value );
+      // Depth
+			updateMotorCntlMsg( motor_cntl_msg_, Axes::depth, depth_motor_value );
+      // Yaw
+			updateMotorCntlMsg( motor_cntl_msg_, Axes::yaw, yaw_motor_value );
 
 		}
 	}
@@ -799,10 +769,10 @@ public:
     {
       updateMotorCntlMsg( motor_cntl_msg_,
           Axes::speed,
-          -100 * axis_dir_cfg_[Axes::speed] * twist_cache_.linear.x / cmd_vel_conversions[Axes::speed] );
+          -100 * twist_cache_.linear.x / cmd_vel_conversions[Axes::speed] );
       updateMotorCntlMsg( motor_cntl_msg_,
           Axes::strafe,
-          -100 * axis_dir_cfg_[Axes::strafe] * twist_cache_.linear.y / cmd_vel_conversions[Axes::strafe] );
+          -100 * twist_cache_.linear.y / cmd_vel_conversions[Axes::strafe] );
     }
 
 		if ( use_pid_assist ) stepAbsoluteMeasurementPID();
