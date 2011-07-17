@@ -290,6 +290,8 @@ class CompetitionDemo : public BaseNode<>
 
     void pose_thread_method()
     {
+      if(!ros::ok()) exit(0);
+
       std::lock_guard<std::mutex> lock(mtx_);
       tf_utils::fetchTfFrame( current_pose_, "/landmark_map", "/seabee3/base_link" ); 
     }
