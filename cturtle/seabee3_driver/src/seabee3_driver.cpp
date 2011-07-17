@@ -446,7 +446,7 @@ public:
 	int scaleMotorValue( int value )
 	{
 		//ROS_INFO( "value: %d", value );
-		if ( value == 0 ) return value;
+/*		if ( value == 0 ) return value;
 
 		if ( abs( value ) < motor_val_deadzone_ ) return 0;
 
@@ -456,7 +456,9 @@ public:
 
 		value_d = direction * ( motor_val_min_ + ( value_d - motor_val_deadzone_ ) * ( motor_val_max_ - motor_val_min_ ) / 100.0 );
 
-		return (int) round( value_d );
+		return (int) round( value_d );*/
+
+    return ( value < -100 ? -100 : ( value > 100 ? 100 : value ) );
 	}
 
 	void resetMotorCntlMsg()
@@ -734,16 +736,15 @@ public:
 	// temporary change to enable heading-only PID
 	void stepAbsoluteMeasurementPID()
 	{
-		desired_pose_velocity_ = twist_cache_;
-
-		//fetchTfFrame( desired_pose_tf_, "landmark_map", "seabee3/desired_pose" );
-		fetchTfFrame( current_pose_tf_,
-		              global_frame_,
-		              "/seabee3/base_link" );
+    tf::Transform error_in_pose_tf;
+		fetchTfFrame( error_in_pose_tf,
+		              "/seabee3/base_link",
+                  "/seabee3/desired_pose" );
 
 		//convert tf frames to Twist messages; fuck quaternions
 		//desired_pose_tf_ >> desired_pose_;
-		current_pose_tf_ >> current_pose_;
+    geometry_msgs::Twist error_in_pose;
+		error_in_pose_tf >> error_in_pose;
 
 		if ( last_pid_update_time_ != ros::Time( -1 ) )
 		{
@@ -753,59 +754,30 @@ public:
 			//we multiply by the change in time to obtain the desired change in pose
 			//this change in pose is then added to the current pose; the result is desiredPose
 			const double t1 = dt.toSec();
-			geometry_msgs::Twist change_in_desired_pose = twist_cache_ * t1;
-			requestChangeInDesiredPose( change_in_desired_pose );
-
-			desired_pose_ >> desired_pose_tf_;
-			publishTfFrame( desired_pose_tf_,
-			                global_frame_,
-			                "/seabee3/desired_pose" );
-
-			math_utils::normalizeAngle( desired_pose_.angular.z );
-
-			math_utils::normalizeAngle( current_pose_.angular.z );
-
-			error_in_xyz_.x = desired_pose_.linear.x - current_pose_.linear.x;
-			error_in_xyz_.y = desired_pose_.linear.y - current_pose_.linear.y;
-			error_in_xyz_.z = desired_pose_.linear.z - current_pose_.linear.z;
-
-			error_in_rpy_.z = math_utils::angleDistRel( math_utils::radToDeg( desired_pose_.angular.z ),
-			                                            math_utils::radToDeg( current_pose_.angular.z ) );
 
 			printf( "error x %f y %f z %f r %f p %f y %f\n",
-			        error_in_xyz_.x,
-			        error_in_xyz_.y,
-			        error_in_xyz_.z,
-			        error_in_rpy_.x,
-			        error_in_rpy_.y,
-			        error_in_rpy_.z );
+			        error_in_pose.linear.x,
+			        error_in_pose.linear.y,
+			        error_in_pose.linear.z,
+			        error_in_pose.angular.x,
+			        error_in_pose.angular.y,
+			        error_in_pose.angular.z );
 
-			math_utils::capValue( error_in_rpy_.z,
-			                      max_error_in_rpy_.z );
+			double speed_motor_value  =  pid_controller_.linear_x->update( error_in_pose.linear.x, t1 );
+			double strafe_motor_value = -1 * pid_controller_.linear_y->update( error_in_pose.linear.y, t1 );
+			double depth_motor_value  =  pid_controller_.linear_z->update( error_in_pose.linear.z, t1 );
+			double yaw_motor_value    =  pid_controller_.angular_z->update( error_in_pose.angular.z, t1 );
 
-			printf( "error x %f y %f z %f r %f p %f y %f\n",
-			        error_in_xyz_.x,
-			        error_in_xyz_.y,
-			        error_in_xyz_.z,
-			        error_in_rpy_.x,
-			        error_in_rpy_.y,
-			        error_in_rpy_.z );
-
-			double speed_motor_value  = axis_dir_cfg_[Axes::speed]  * pid_controller_.linear_x->update( error_in_xyz_.x );
-			double strafe_motor_value = axis_dir_cfg_[Axes::strafe] * pid_controller_.linear_y->update( error_in_xyz_.y );
-			double depth_motor_value  = axis_dir_cfg_[Axes::depth]  * pid_controller_.linear_z->update( error_in_xyz_.z );
-			double yaw_motor_value = axis_dir_cfg_[Axes::yaw] * pid_controller_.angular_z->update( error_in_rpy_.z );
-
-			printf( "depth %f yaw %f\n",
-			        depth_motor_value,
-			        yaw_motor_value );
-
-			printf( "depth moto value: %f yaw motor value %f\n" );
+			printf( "depth motor value: %f yaw motor value %f speed motor value %f strafe motor value %f\n", depth_motor_value, yaw_motor_value, speed_motor_value, strafe_motor_value );
 
 			math_utils::capValue( depth_motor_value,
 			                      100.0 );
 			math_utils::capValue( yaw_motor_value,
-			                      100.0 );
+			                      100.0 );	
+      math_utils::capValue( speed_motor_value,
+			                      50.0 );
+      math_utils::capValue( strafe_motor_value,
+			                      75.0 );
 
 			updateMotorCntlMsg( motor_cntl_msg_,
 			                    Axes::depth,
@@ -817,41 +789,34 @@ public:
       updateMotorCntlMsg( motor_cntl_msg_, Axes::speed, speed_motor_value );
 
 		}
-		last_pid_update_time_ = ros::Time::now();
 	}
 
-	void setMotorValsFromCmdVel( bool use_pid_assist = false )
+	void setMotorValsFromCmdVel( bool use_pid_assist = false, bool pass_through_motor_values = true )
 	{
 		resetMotorCntlMsg();
 
-		updateMotorCntlMsg( motor_cntl_msg_,
-		                    Axes::speed,
-		                    -100 * axis_dir_cfg_[Axes::speed] * twist_cache_.linear.x / cmd_vel_conversions[Axes::speed] );
-		updateMotorCntlMsg( motor_cntl_msg_,
-		                    Axes::strafe,
-		                    -100 * axis_dir_cfg_[Axes::strafe] * twist_cache_.linear.y / cmd_vel_conversions[Axes::strafe] );
+    if( pass_through_motor_values )
+    {
+      updateMotorCntlMsg( motor_cntl_msg_,
+          Axes::speed,
+          -100 * axis_dir_cfg_[Axes::speed] * twist_cache_.linear.x / cmd_vel_conversions[Axes::speed] );
+      updateMotorCntlMsg( motor_cntl_msg_,
+          Axes::strafe,
+          -100 * axis_dir_cfg_[Axes::strafe] * twist_cache_.linear.y / cmd_vel_conversions[Axes::strafe] );
+    }
 
-		if ( use_pid_assist )
-		{
-			stepAbsoluteMeasurementPID();
-		}
-		else
-		{
-			updateMotorCntlMsg( motor_cntl_msg_,
-			                    Axes::depth,
-			                    -100 * axis_dir_cfg_[Axes::depth] * twist_cache_.linear.z / cmd_vel_conversions[Axes::depth] );
-			updateMotorCntlMsg( motor_cntl_msg_,
-			                    Axes::yaw,
-			                    100 * axis_dir_cfg_[Axes::yaw] * twist_cache_.angular.z / cmd_vel_conversions[Axes::yaw] );
-		}
+		if ( use_pid_assist ) stepAbsoluteMeasurementPID();
 	}
 
 	void spinOnce()
 	{
+    desired_pose_ >> desired_pose_tf_;
+    publishTfFrame( desired_pose_tf_, global_frame_, "/seabee3/desired_pose" );
+
 		//this also grabs and publishes tf frames
 
-		if ( cmd_vel_conversion_mode_ == CmdVelConversionType::pid ) pidStep();
-		else if ( cmd_vel_conversion_mode_ == CmdVelConversionType::linear ) setMotorValsFromCmdVel( use_pid_assist_ );
+    setMotorValsFromCmdVel( use_pid_assist_, cmd_vel_conversion_mode_ == CmdVelConversionType::linear );
+		last_pid_update_time_ = ros::Time::now();
 
 		/*for ( size_t i; i < motor_cntl_msg_.motors.size(); i++ )
 		 {

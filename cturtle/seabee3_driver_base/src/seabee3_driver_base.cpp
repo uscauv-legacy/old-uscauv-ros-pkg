@@ -366,7 +366,7 @@ public:
 			kill_switch_msg.is_killed = reconfigure_params_.is_killed;
 			depth_msg.value = getDepthFromPressure( extl_pressure_msg.value );
 
-			current_pose_.linear.z = depth_msg.value;
+			current_pose_.linear.z = -depth_msg.value;
 		}
 		else
 		{
@@ -376,7 +376,7 @@ public:
 			bee_stem_3_driver_->readKillSwitch( kill_switch_msg.is_killed );
 			depth_msg.value = getDepthFromPressure( extl_pressure_msg.value );
 
-			current_pose_.linear.z = depth_msg.value;
+			current_pose_.linear.z = -depth_msg.value;
 
 		}
 

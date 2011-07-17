@@ -47,6 +47,8 @@
 #include <seabee3_driver_base/MotorCntl.h>
 #include <seabee3_common/PhysicsState.h>
 #include <seabee3_physics/Seabee3PhysicsConfig.h>
+#include <seabee3_driver_base/KillSwitch.h>
+#include <std_srvs/Empty.h>
 
 typedef seabee3_physics::Seabee3PhysicsConfig _ReconfigureType;
 
@@ -69,17 +71,23 @@ private:
 	btDefaultMotionState *seabee_motion_state_;
 	btRigidBody *seabee_body_;
 
+	ros::Subscriber kill_switch_sub_;
 	ros::Subscriber motor_cntl_sub_;
 	ros::Publisher physics_state_pub_;
 	ros::Publisher tf_lock_pub_;
+  ros::ServiceServer reset_pose_svr_;
 	std::vector<int> thruster_vals_;
+	bool is_killed_;
 
 	ros::Time last_call_;
 
 public:
 	Seabee3Physics( ros::NodeHandle &nh ) :
-			BaseTfTranceiver<_ReconfigureType>( nh ), thruster_transforms_( _NUM_MOTOR_CONTROLLERS ), thruster_transform_name_prefix_( "/seabee3/thruster" ), thruster_vals_( _NUM_MOTOR_CONTROLLERS )
+			BaseTfTranceiver<_ReconfigureType>( nh ), thruster_transforms_( _NUM_MOTOR_CONTROLLERS ), thruster_transform_name_prefix_( "/seabee3/thruster" ), thruster_vals_( _NUM_MOTOR_CONTROLLERS ), is_killed_( true )
 	{
+
+		reset_pose_svr_ = nh_local_.advertiseService( "reset_pose", &Seabee3Physics::resetPoseCB, this );
+
 		tf_lock_pub_ = nh_local_.advertise<geometry_msgs::Twist>( "base_link",
 		                                                          1 );
 		geometry_msgs::Twist::Ptr base_link_msg( new geometry_msgs::Twist );
@@ -104,6 +112,8 @@ public:
 		                                this );
 		physics_state_pub_ = nh.advertise<seabee3_common::PhysicsState>( std::string( "/seabee3/physics_state" ),
 		                                                                 1 );
+
+		kill_switch_sub_ = nh_local_.subscribe( "/seabee3/kill_switch", 2, &Seabee3Physics::killSwitchCB, this );
 
 		// Build the broadphase
 		broadphase_ = new btDbvtBroadphase();
@@ -169,98 +179,104 @@ public:
 		delete seabee_motion_state_;
 		delete seabee_body_;
 	}
+	void killSwitchCB( const seabee3_driver_base::KillSwitch::ConstPtr & kill_switch_msg )
+	{
+		is_killed_ = kill_switch_msg->is_killed;
+	}
 
 	void spinOnce()
 	{
-		seabee_body_->clearForces();
 
 		btTransform world_transform;
-		seabee_body_->getMotionState()->getWorldTransform( world_transform );
 
-		btTransform world_rotation;
-		world_rotation.setRotation( world_transform.getRotation() );
+			seabee_body_->clearForces();
 
-		for ( size_t i = 0; i < _NUM_MOTOR_CONTROLLERS; i++ )
-		{
-			if ( i == movement_common::MotorControllerIDs::DROPPER_STAGE1 || i == movement_common::MotorControllerIDs::DROPPER_STAGE2
-			        || i == movement_common::MotorControllerIDs::SHOOTER ) continue;
+			seabee_body_->getMotionState()->getWorldTransform( world_transform );
 
-			float thrust = thruster_vals_[i] * reconfigure_params_.thrust_to_force;
+			btTransform world_rotation;
+			world_rotation.setRotation( world_transform.getRotation() );
 
-			/*if ( i == movement_common::MotorControllerIDs::FWD_LEFT_THRUSTER || i == movement_common::MotorControllerIDs::FWD_RIGHT_THRUSTER )
+			for ( size_t i = 0; i < _NUM_MOTOR_CONTROLLERS; i++ )
 			{
-				thrust *= -1.0;
-			}*/
+				if ( i == movement_common::MotorControllerIDs::DROPPER_STAGE1 || i == movement_common::MotorControllerIDs::DROPPER_STAGE2
+					    || i == movement_common::MotorControllerIDs::SHOOTER ) continue;
 
-			if ( i == movement_common::MotorControllerIDs::STRAFE_FRONT_THRUSTER )
-			{
-				thrust *= -1.0;
+				float thrust = is_killed_ ? 0.0 : thruster_vals_[i] * reconfigure_params_.thrust_to_force;
+
+				/*if ( i == movement_common::MotorControllerIDs::FWD_LEFT_THRUSTER || i == movement_common::MotorControllerIDs::FWD_RIGHT_THRUSTER )
+				{
+					thrust *= -1.0;
+				}*/
+
+				if ( i == movement_common::MotorControllerIDs::STRAFE_FRONT_THRUSTER )
+				{
+					thrust *= -1.0;
+				}
+
+				/*if ( i == movement_common::MotorControllerIDs::STRAFE_BACK_THRUSTER )
+				{
+					thrust *= -1.0;
+				}*/
+
+				geometry_msgs::Vector3 pos = thruster_transforms_[i].linear;
+				geometry_msgs::Vector3 ori = thruster_transforms_[i].angular;
+
+				btVector3 force;
+				force.setY( thrust );
+
+				// Y P R
+				btTransform force_tf( btQuaternion( ori.z,
+					                                ori.y,
+					                                ori.x ) );
+
+				force_tf.setRotation( world_rotation * force_tf.getRotation() );
+
+				btVector3 rel_pos;
+				rel_pos.setX( pos.x );
+				rel_pos.setY( pos.y );
+				rel_pos.setZ( pos.z );
+
+				ROS_INFO( "MOTOR%Zu THRUST: %f (%f,%f,%f) @ (%f,%f,%f)",
+					      i,
+					      thrust,
+					      force.x(),
+					      force.y(),
+					      force.z(),
+					      rel_pos.x(),
+					      rel_pos.y(),
+					      rel_pos.z() );
+
+				seabee_body_->applyForce( force_tf * force,
+					                      rel_pos );
 			}
 
-			/*if ( i == movement_common::MotorControllerIDs::STRAFE_BACK_THRUSTER )
+			btVector3 lin_v_ = seabee_body_->getLinearVelocity();
+			btVector3 force_drag = -lin_v_ * reconfigure_params_.drag_constant;
+			if ( force_drag[0] != force_drag[0] )
 			{
-				thrust *= -1.0;
-			}*/
+				force_drag[0] = 0.0;
+				force_drag[1] = 0.0;
+				force_drag[2] = 0.0;
+			}
+			seabee_body_->applyForce( force_drag,
+				                      seabee_body_->getCenterOfMassPosition() );
+			ROS_INFO( "lin_v_       %f, %f, %f",
+				      lin_v_[0],
+				      lin_v_[1],
+				      lin_v_[2] );
+			ROS_INFO( "Drag Force: %f ... Sub Speed: %f",
+				      force_drag.length(),
+				      lin_v_.length() );
 
-			geometry_msgs::Vector3 pos = thruster_transforms_[i].linear;
-			geometry_msgs::Vector3 ori = thruster_transforms_[i].angular;
+			double dt = ( ros::Time::now() - last_call_ ).toSec();
 
-			btVector3 force;
-			force.setY( thrust );
+			//seabee_body_->applyDamping(dt);
 
-			// Y P R
-			btTransform force_tf( btQuaternion( ori.z,
-			                                    ori.y,
-			                                    ori.x ) );
-
-			force_tf.setRotation( world_rotation * force_tf.getRotation() );
-
-			btVector3 rel_pos;
-			rel_pos.setX( pos.x );
-			rel_pos.setY( pos.y );
-			rel_pos.setZ( pos.z );
-
-			ROS_INFO( "MOTOR%Zu THRUST: %f (%f,%f,%f) @ (%f,%f,%f)",
-			          i,
-			          thrust,
-			          force.x(),
-			          force.y(),
-			          force.z(),
-			          rel_pos.x(),
-			          rel_pos.y(),
-			          rel_pos.z() );
-
-			seabee_body_->applyForce( force_tf * force,
-			                          rel_pos );
-		}
-
-		btVector3 lin_v_ = seabee_body_->getLinearVelocity();
-		btVector3 force_drag = -lin_v_ * reconfigure_params_.drag_constant;
-		if ( force_drag[0] != force_drag[0] )
-		{
-			force_drag[0] = 0.0;
-			force_drag[1] = 0.0;
-			force_drag[2] = 0.0;
-		}
-		seabee_body_->applyForce( force_drag,
-		                          seabee_body_->getCenterOfMassPosition() );
-		ROS_INFO( "lin_v_       %f, %f, %f",
-		          lin_v_[0],
-		          lin_v_[1],
-		          lin_v_[2] );
-		ROS_INFO( "Drag Force: %f ... Sub Speed: %f",
-		          force_drag.length(),
-		          lin_v_.length() );
-
-		double dt = ( ros::Time::now() - last_call_ ).toSec();
-
-		//seabee_body_->applyDamping(dt);
-
-		// Step the physics simulation
-		dynamics_world_->stepSimulation( dt,
-		                                 50,
-		                                 1.0 / rate_ );
-		last_call_ = ros::Time::now();
+			// Step the physics simulation
+			dynamics_world_->stepSimulation( dt,
+				                             50,
+				                             1.0 / rate_ );
+			last_call_ = ros::Time::now();
 
 		tf::Transform givens_tf;
 		tf_utils::fetchTfFrame( givens_tf,
@@ -283,6 +299,9 @@ public:
 //		world_transform.getOrigin().setZ( givens_tf.getOrigin().getZ() );
 //		seabee_body_->getMotionState()->setWorldTransform( world_transform );
 		seabee_body_->setAngularVelocity( btVector3() );
+		btVector3 linVel = seabee_body_->getLinearVelocity();
+    linVel[2] = 0;
+    seabee_body_->setLinearVelocity(linVel);
 
 		seabee_body_->getMotionState()->getWorldTransform( world_transform );
 		//code to factor in drag
@@ -320,6 +339,16 @@ public:
 		{
 			if ( msg->mask[i] == 1 ) thruster_vals_[i] = msg->motors[i];
 		}
+	}
+
+	bool resetPoseCB( std_srvs::Empty::Request & req,
+	                  std_srvs::Empty::Response & resp )
+	{
+		seabee_body_->getMotionState()->setWorldTransform( btTransform() );
+		seabee_body_->setAngularVelocity( btVector3() );
+		seabee_body_->setLinearVelocity( btVector3() );
+		seabee_body_->setCenterOfMassTransform( btTransform() );
+		return true;
 	}
 
 };
