@@ -133,19 +133,15 @@ class CompetitionDemo : public BaseNode<>
     void letsDoThis()
     {
       ROS_INFO("Let's do this!");
+      reset_pose_cli_.call( empty_request );
+      reset_physics_cli_.call( empty_request );
 
       //////////////////////////////
       // Dive
       //////////////////////////////
       ROS_INFO("Diving...");
       {
-        double roll, pitch, yaw;
-        std::lock_guard<std::mutex> lock(mtx_);
-        current_pose_.getBasis().getEulerYPR( yaw, pitch, roll );
-
         seabee3_common::SetDesiredPose set_desired_pose_;
-        set_desired_pose_.request.ori.values.z = yaw;
-        set_desired_pose_.request.ori.mask.z   = 1;
         set_desired_pose_.request.pos.values.z = -depth_;
         set_desired_pose_.request.pos.mask.z   = 1;
         set_desired_pose_cli_.call( set_desired_pose_.request, set_desired_pose_.response );
@@ -160,11 +156,20 @@ class CompetitionDemo : public BaseNode<>
       {
         std::lock_guard<std::mutex> lock(mtx_);
         seabee3_common::SetDesiredPose set_desired_pose_;
-        set_desired_pose_.request.pos.values.x = distance_to_gate_;
-        set_desired_pose_.request.pos.values.y = 3;;
+        tf::Transform gate_tf;
+        tf_utils::fetchTfFrame( current_pose_, "/landmark_map", "/gate" ); 
+        tf::Transform rel_gate_tf;
+        tf_utils::fetchTfFrame( current_pose_, "/seabee3/base_link", "/gate" ); 
+        double yaw, pitch, roll;
+        rel_hedge_tf.getBasis().getEulerYPR( yaw, pitch, roll );
+
+        set_desired_pose_.request.pos.values.x = gate_tf.getOrigin().x();
         set_desired_pose_.request.pos.mask.x   = 1;
+        set_desired_pose_.request.pos.values.y = gate_tf.getOrigin().y();
         set_desired_pose_.request.pos.mask.y   = 1;
+        set_desired_pose_.request.ori.values.z = yaw; 
         set_desired_pose_cli_.call( set_desired_pose_.request, set_desired_pose_.response );
+        if(!waitForPose()) return;
       }
       if(!waitForPose()) return;
       ROS_INFO("...Done Gate");
@@ -208,6 +213,7 @@ class CompetitionDemo : public BaseNode<>
       //////////////////////////////
       ROS_INFO("Going for the hedge");
       {
+        std::lock_guard<std::mutex> lock(mtx_);
         seabee3_common::SetDesiredPose set_desired_pose_;
         tf::Transform hedge_tf;
         tf_utils::fetchTfFrame( current_pose_, "/landmark_map", "/hedge" ); 
@@ -230,6 +236,7 @@ class CompetitionDemo : public BaseNode<>
       //////////////////////////////
       ROS_INFO("Going for the octogon");
       {
+        std::lock_guard<std::mutex> lock(mtx_);
         seabee3_common::SetDesiredPose set_desired_pose_;
         tf::Transform octagon_tf;
         tf_utils::fetchTfFrame( current_pose_, "/landmark_map", "/octagon" ); 
@@ -252,6 +259,7 @@ class CompetitionDemo : public BaseNode<>
       //////////////////////////////
       ROS_INFO("Surfacing");
       {
+        std::lock_guard<std::mutex> lock(mtx_);
         seabee3_common::SetDesiredPose set_desired_pose_;
 
         set_desired_pose_.request.pos.values.z = -.5;

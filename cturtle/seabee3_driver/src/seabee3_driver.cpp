@@ -744,10 +744,10 @@ public:
 
 			printf( "depth motor value: %f yaw motor value %f speed motor value %f strafe motor value %f\n", depth_motor_value, yaw_motor_value, speed_motor_value, strafe_motor_value );
 
-      math_utils::capValue( speed_motor_value, 50.0 );
-      math_utils::capValue( strafe_motor_value, 75.0 );
-			math_utils::capValue( depth_motor_value, 100.0 );
-			math_utils::capValue( yaw_motor_value, 100.0 );	
+      math_utils::capValue( speed_motor_value,  40.0 );
+      math_utils::capValue( strafe_motor_value, 50.0 );
+			math_utils::capValue( depth_motor_value,  100.0 );
+			math_utils::capValue( yaw_motor_value,    100.0 );	
 
       // Speed
       updateMotorCntlMsg( motor_cntl_msg_, Axes::speed, speed_motor_value );
