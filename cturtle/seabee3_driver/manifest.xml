@@ -16,6 +16,7 @@
   <depend package="std_srvs"/>
   <depend package="seabee3_common"/>
   <depend package="seabee3_physics"/>
+  <depend package="seabee3_stabilizer"/>
   <export>
     <cpp cflags="-I${prefix}/include -I${prefix}/msg/cpp -I${prefix}/srv/cpp" lflags="-Wl,-rpath,${prefix}/lib -L${prefix}/lib"/>
   </export>

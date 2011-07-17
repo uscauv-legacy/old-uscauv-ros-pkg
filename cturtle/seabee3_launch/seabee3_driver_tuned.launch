@@ -8,8 +8,6 @@
 	<include if="$(arg use_stabilizer)" file="$(find seabee3_stabilizer)/launch/seabee3_stabilizer.launch" />
 
 	<node pkg="seabee3_driver" type="seabee3_driver" name="seabee3_driver" output="screen" >
-		<remap from="~motor_cntl" to="/seabee3/motor_cntl_raw" />
-
 		<remap if="$(arg use_stabilizer)" from="~motor_cntl" to="/seabee3/motor_cntl_raw" />
 		<remap unless="$(arg use_stabilizer)" from="~motor_cntl" to="/seabee3/motor_cntl" />
 

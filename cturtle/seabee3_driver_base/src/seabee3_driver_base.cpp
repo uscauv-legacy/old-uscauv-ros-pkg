@@ -225,14 +225,14 @@ public:
 
 	void imuCB( const xsens_node::ImuConstPtr & msg )
 	{
-		if ( !simulate_ )
+		if ( !reconfigure_params_.override_imu )
 		{
 			current_pose_.angular.x = msg->ori.x;
 			current_pose_.angular.y = msg->ori.y;
 			current_pose_.angular.z = msg->ori.z;
-		}
 
-		publishGivens();
+		  publishGivens();
+		}
 	}
 
 	void motorCntlCB( const seabee3_driver_base::MotorCntlConstPtr & msg )
@@ -360,9 +360,12 @@ public:
 
 		if ( simulate_ )
 		{
-			current_pose_.angular.x = math_utils::degToRad( reconfigure_params_.roll );
-			current_pose_.angular.y = math_utils::degToRad( reconfigure_params_.pitch );
-			current_pose_.angular.z = math_utils::degToRad( reconfigure_params_.yaw );
+      if( reconfigure_params_.override_imu )
+      {
+			  current_pose_.angular.x = math_utils::degToRad( reconfigure_params_.roll );
+  			current_pose_.angular.y = math_utils::degToRad( reconfigure_params_.pitch );
+  			current_pose_.angular.z = math_utils::degToRad( reconfigure_params_.yaw );
+      }
 
 			intl_pressure_msg.value = reconfigure_params_.internal_pressure;
 			extl_pressure_msg.value = reconfigure_params_.external_pressure;
