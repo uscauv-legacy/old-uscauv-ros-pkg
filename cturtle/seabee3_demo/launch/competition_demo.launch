@@ -1,7 +1,17 @@
 <launch>
 	<node pkg="seabee3_demo" type="competition_demo" name="competition_demo" output="screen" args="_rate:=20" >
+
     <param name="error_threshold" type="double" value="0.2"/>
+
     <param name="depth" type="double" value="1.7"/>
+
     <param name="distance_to_gate" type="double" value="10.0"/>
 	</node>
+
+	<node pkg="tf" type="static_transform_publisher" name="hedge"   args="20 20 1.7 0 0 0 /landmark_map /hedge 100" />
+	<node pkg="tf" type="static_transform_publisher" name="octagon" args="30 30 1.7 0 0 0 /landmark_map /octagon 100" />
+
+
+
+
 </launch>
