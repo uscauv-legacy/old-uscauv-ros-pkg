@@ -65,7 +65,6 @@ class CompetitionDemo : public BaseNode<>
     reset_physics_cli_ = nh_local_.serviceClient<std_srvs::Empty> ( "/seabee3_physics/reset_pose" );
 
     landmarks_sub_ = nh_local_.subscribe( "/landmark_finder/landmarks", 3, &CompetitionDemo::landmarksCB, this );
-    pose_thread_ = std::thread(std::bind(&CompetitionDemo::pose_thread_method, this));
   }
 
     // ######################################################################
@@ -127,10 +126,14 @@ class CompetitionDemo : public BaseNode<>
       tf::Transform error_pose_;
       do
       {
+        tf_utils::fetchTfFrame( current_pose_, "/landmark_map", "/seabee3/base_link" ); 
         usleep(10000);
         if(state_ == killing) 
         { ROS_INFO("Wait For Pose: Killing"); return false; }
         tf_utils::fetchTfFrame(error_pose_, "/seabee3/base_link", "/seabee3/desired_pose");
+
+        if(!ros::ok()) exit(0);
+
       }
       while (error_pose_.getOrigin().length() > error_threshold_);
       return true;
@@ -140,6 +143,7 @@ class CompetitionDemo : public BaseNode<>
     void letsDoThis()
     {
       ROS_INFO("Let's do this!");
+      tf_utils::fetchTfFrame( current_pose_, "/landmark_map", "/seabee3/base_link" ); 
       std_srvs::Empty empty_request;
       reset_pose_cli_.call( empty_request );
       reset_physics_cli_.call( empty_request );
@@ -149,6 +153,8 @@ class CompetitionDemo : public BaseNode<>
       //////////////////////////////
       ROS_INFO("Diving...");
       {
+        std::lock_guard<std::mutex> lock(mtx_);
+        tf_utils::fetchTfFrame( current_pose_, "/landmark_map", "/seabee3/base_link" ); 
         seabee3_common::SetDesiredPose set_desired_pose_;
         set_desired_pose_.request.pos.values.z = -depth_;
         set_desired_pose_.request.pos.mask.z   = 1;
@@ -163,6 +169,7 @@ class CompetitionDemo : public BaseNode<>
       ROS_INFO("Cruising to gate...");
       {
         std::lock_guard<std::mutex> lock(mtx_);
+        tf_utils::fetchTfFrame( current_pose_, "/landmark_map", "/seabee3/base_link" ); 
         tf::Transform gate_tf;
         tf_utils::fetchTfFrame( current_pose_, "/landmark_map", "/gate" ); 
         tf::Transform rel_gate_tf;
@@ -185,6 +192,7 @@ class CompetitionDemo : public BaseNode<>
 
       if(do_buoy_)
       {
+        tf_utils::fetchTfFrame( current_pose_, "/landmark_map", "/seabee3/base_link" ); 
         //////////////////////////////
         // Begin search for buoy
         //////////////////////////////
@@ -193,6 +201,7 @@ class CompetitionDemo : public BaseNode<>
           landmark_found_ = false;
           while(!landmark_found_)
           {
+            tf_utils::fetchTfFrame( current_pose_, "/landmark_map", "/seabee3/base_link" ); 
             double roll, pitch, yaw;
             std::lock_guard<std::mutex> lock(mtx_);
             current_pose_.getBasis().getEulerYPR( yaw, pitch, roll );
@@ -211,6 +220,7 @@ class CompetitionDemo : public BaseNode<>
         //////////////////////////////
         ROS_INFO("Homing In On Buoy");
         {
+          tf_utils::fetchTfFrame( current_pose_, "/landmark_map", "/seabee3/base_link" ); 
           // Head towards landmark until within error tolerance:
           tracking_landmark_ = true;
           if(!waitForPose("buoy home")) return;
@@ -226,6 +236,7 @@ class CompetitionDemo : public BaseNode<>
       ROS_INFO("Going for the hedge");
       {
         std::lock_guard<std::mutex> lock(mtx_);
+        tf_utils::fetchTfFrame( current_pose_, "/landmark_map", "/seabee3/base_link" ); 
         seabee3_common::SetDesiredPose set_desired_pose_;
         tf::Transform hedge_tf;
         tf_utils::fetchTfFrame( current_pose_, "/landmark_map", "/hedge" ); 
@@ -252,6 +263,7 @@ class CompetitionDemo : public BaseNode<>
       ROS_INFO("Going for the octagon");
       {
         std::lock_guard<std::mutex> lock(mtx_);
+        tf_utils::fetchTfFrame( current_pose_, "/landmark_map", "/seabee3/base_link" ); 
         seabee3_common::SetDesiredPose set_desired_pose_;
         tf::Transform octagon_tf;
         tf_utils::fetchTfFrame( current_pose_, "/landmark_map", "/octagon" ); 
@@ -278,6 +290,7 @@ class CompetitionDemo : public BaseNode<>
       ROS_INFO("Surfacing");
       {
         std::lock_guard<std::mutex> lock(mtx_);
+        tf_utils::fetchTfFrame( current_pose_, "/landmark_map", "/seabee3/base_link" ); 
         seabee3_common::SetDesiredPose set_desired_pose_;
 
         set_desired_pose_.request.pos.values.z = -.5;
@@ -292,10 +305,8 @@ class CompetitionDemo : public BaseNode<>
 
     void pose_thread_method()
     {
-      if(!ros::ok()) exit(0);
 
       std::lock_guard<std::mutex> lock(mtx_);
-      tf_utils::fetchTfFrame( current_pose_, "/landmark_map", "/seabee3/base_link" ); 
     }
 
     // ######################################################################
