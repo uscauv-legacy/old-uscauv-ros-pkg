@@ -134,12 +134,22 @@ namespace tf_utils
 	                          const std::string & to,
 	                          ros::Time timestamp = ros::Time( 0 ),
 	                          const double & wait_time = 0.1,
+  							  tf::TransformListener * other_listener = NULL,
 	                          double extrapolation_limit = 1.0,
 	                          unsigned int attempts = 0 )
 	{
 		static tf::StampedTransform stamped_transform;
 		static unsigned int error_count = 0;
-		static tf::TransformListener * listener = new tf::TransformListener;
+
+		tf::TransformListener * listener;
+		
+		if(other_listener) listener = other_listener;
+		else
+		{
+			static tf::TransformListener * static_listener = new tf::TransformListener;
+	 		listener = static_listener;
+		}
+
 		listener->setExtrapolationLimit( ros::Duration( extrapolation_limit ) );
 
 		try
@@ -173,11 +183,11 @@ namespace tf_utils
 			                                   to,
 			                                   ros::Time( 0 ),
 			                                   wait_time,
+											   listener,
 			                                   extrapolation_limit,
 			                                   attempts + 1 );
 		}
 	}
-
 }
 
 #endif /* TF_UTILS_H_ */

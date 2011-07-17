@@ -74,7 +74,6 @@ private:
 	ros::Subscriber kill_switch_sub_;
 	ros::Subscriber motor_cntl_sub_;
 	ros::Publisher physics_state_pub_;
-	ros::Publisher tf_lock_pub_;
   ros::ServiceServer reset_pose_svr_;
 	std::vector<int> thruster_vals_;
 	bool is_killed_;
@@ -87,11 +86,6 @@ public:
 	{
 
 		reset_pose_svr_ = nh_local_.advertiseService( "reset_pose", &Seabee3Physics::resetPoseCB, this );
-
-		tf_lock_pub_ = nh_local_.advertise<geometry_msgs::Twist>( "base_link",
-		                                                          1 );
-		geometry_msgs::Twist::Ptr base_link_msg( new geometry_msgs::Twist );
-		tf_lock_pub_.publish( base_link_msg );
 
 		ros::Duration( 0.5 ).sleep(); //wait for this frame to register on the network
 
@@ -270,19 +264,20 @@ public:
 //		geometry_msgs::Twist givens;
 //		givens_tf >> givens;
 
-//		btTransform world_transform;
-		btTransform center_of_mass;
+//		btTransform center_of_mass;
+//
+//		center_of_mass = seabee_body_->getCenterOfMassTransform();
+//		center_of_mass.setRotation( givens_tf.getRotation() );
+//		center_of_mass.getOrigin().setZ( givens_tf.getOrigin().getZ() );
+//		seabee_body_->setCenterOfMassTransform( center_of_mass );
 
-		center_of_mass = seabee_body_->getCenterOfMassTransform();
-		center_of_mass.setRotation( givens_tf.getRotation() );
-		center_of_mass.getOrigin().setZ( givens_tf.getOrigin().getZ() );
-		seabee_body_->setCenterOfMassTransform( center_of_mass );
+		seabee_body_->getMotionState()->getWorldTransform( world_transform );
+		world_transform.setRotation( givens_tf.getRotation() );
+		world_transform.getOrigin().setZ( givens_tf.getOrigin().getZ() );
+		seabee_body_->getMotionState()->setWorldTransform( world_transform );
 
-//		seabee_body_->getMotionState()->getWorldTransform( world_transform );
-//		world_transform.setRotation( givens_tf.getRotation() );
-//		world_transform.setRotation( tf::Quaternion( 0, 0, 0, 1 ) );
-//		world_transform.getOrigin().setZ( givens_tf.getOrigin().getZ() );
-//		seabee_body_->getMotionState()->setWorldTransform( world_transform );
+
+
 		seabee_body_->setAngularVelocity( btVector3() );
 		btVector3 linVel = seabee_body_->getLinearVelocity();
     linVel[2] = 0;

@@ -492,6 +492,7 @@ public:
 	bool resetPoseCB( std_srvs::Empty::Request & req,
 	                  std_srvs::Empty::Response & resp )
 	{
+    ROS_INFO( "Resetting pose" );
 		resetPose();
 
 		return true;
@@ -500,6 +501,7 @@ public:
 	bool setDesiredPoseCB( seabee3_common::SetDesiredPose::Request & req,
 	                       seabee3_common::SetDesiredPose::Response & resp )
 	{
+    printf( "Setting desired pose:\n pos\nmask[%f %f %f] values[%f %f %f]\nori\nmask[%f %f %f] values[%f %f %f]\n", req.pos.mask.x, req.pos.mask.y, req.pos.mask.z, req.pos.values.x, req.pos.values.y, req.pos.values.z, req.ori.mask.x, req.ori.mask.y, req.ori.mask.z, req.ori.values.x, req.ori.values.y, req.ori.values.z );
 		// If the incoming request's mode is set to non-zero, then the request is for a relative angle. Here, setDesiredPose will
 		// ensure that desired_pose_'s angles are always absolute after it is called.
 		setDesiredPose( req.ori.mask,
@@ -733,16 +735,16 @@ public:
 			//this change in pose is then added to the current pose; the result is desiredPose
 			const double t1 = dt.toSec();
 
-			printf( "error x %f y %f z %f r %f p %f y %f\n",
+/*			printf( "error x %f y %f z %f r %f p %f y %f\n",
 			        error_in_pose.linear.x, error_in_pose.linear.y, error_in_pose.linear.z,
-			        error_in_pose.angular.x, error_in_pose.angular.y, error_in_pose.angular.z );
+			        error_in_pose.angular.x, error_in_pose.angular.y, error_in_pose.angular.z );*/
 
 			double speed_motor_value  = pid_controller_.linear_x->update( error_in_pose.linear.x, t1 );
 			double strafe_motor_value = pid_controller_.linear_y->update( error_in_pose.linear.y, t1 );
 			double depth_motor_value  = pid_controller_.linear_z->update( error_in_pose.linear.z, t1 );
 			double yaw_motor_value    = pid_controller_.angular_z->update( error_in_pose.angular.z, t1 );
 
-			printf( "depth motor value: %f yaw motor value %f speed motor value %f strafe motor value %f\n", depth_motor_value, yaw_motor_value, speed_motor_value, strafe_motor_value );
+/*			printf( "depth motor value: %f yaw motor value %f speed motor value %f strafe motor value %f\n", depth_motor_value, yaw_motor_value, speed_motor_value, strafe_motor_value );*/
 
       math_utils::capValue( speed_motor_value,  40.0 );
       math_utils::capValue( strafe_motor_value, 50.0 );

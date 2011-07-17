@@ -232,7 +232,7 @@ public:
 		{
 			current_pose_.angular.x = msg->ori.x;
 			current_pose_.angular.y = msg->ori.y;
-			current_pose_.angular.z = msg->ori.z - initial_yaw_;
+			current_pose_.angular.z = msg->ori.z;
 
 		  publishGivens();
 		}
@@ -348,7 +348,9 @@ public:
 
 	void publishGivens()
 	{
-		current_pose_ >> current_pose_tf_;
+    geometry_msgs::Twist normalized_pose_ = current_pose_;
+    normalized_pose_.angular.z -= initial_yaw_;
+		normalized_pose_ >> current_pose_tf_;
 		tf_utils::publishTfFrame( current_pose_tf_,
 		                          "/landmark_map",
 		                          "/seabee3/base_link_givens" );
