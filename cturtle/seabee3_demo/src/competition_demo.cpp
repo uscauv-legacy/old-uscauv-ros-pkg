@@ -171,6 +171,8 @@ class CompetitionDemo : public BaseNode<>
         set_desired_pose_.request.pos.mask.x   = 1;
         set_desired_pose_.request.pos.values.y = gate_tf.getOrigin().y();
         set_desired_pose_.request.pos.mask.y   = 1;
+        set_desired_pose_.request.pos.values.z = gate_tf.getOrigin().z();
+        set_desired_pose_.request.pos.mask.z   = 1;
         set_desired_pose_.request.ori.values.z = yaw; 
         set_desired_pose_cli_.call( set_desired_pose_.request, set_desired_pose_.response );
       }
@@ -232,6 +234,8 @@ class CompetitionDemo : public BaseNode<>
         set_desired_pose_.request.pos.mask.x   = 1;
         set_desired_pose_.request.pos.values.y = hedge_tf.getOrigin().y();
         set_desired_pose_.request.pos.mask.y   = 1;
+        set_desired_pose_.request.pos.values.z = hedge_tf.getOrigin().z();
+        set_desired_pose_.request.pos.mask.z   = 1;
         set_desired_pose_.request.ori.values.z = yaw; 
         set_desired_pose_cli_.call( set_desired_pose_.request, set_desired_pose_.response );
       }
@@ -256,6 +260,8 @@ class CompetitionDemo : public BaseNode<>
         set_desired_pose_.request.pos.mask.x   = 1;
         set_desired_pose_.request.pos.values.y = octagon_tf.getOrigin().y();
         set_desired_pose_.request.pos.mask.y   = 1;
+        set_desired_pose_.request.pos.values.z = octagon_tf.getOrigin().z();
+        set_desired_pose_.request.pos.mask.z   = 1;
         set_desired_pose_.request.ori.values.z = yaw; 
         set_desired_pose_cli_.call( set_desired_pose_.request, set_desired_pose_.response );
       }
