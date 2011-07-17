@@ -203,21 +203,6 @@ public:
 
 				float thrust = is_killed_ ? 0.0 : thruster_vals_[i] * reconfigure_params_.thrust_to_force;
 
-				/*if ( i == movement_common::MotorControllerIDs::FWD_LEFT_THRUSTER || i == movement_common::MotorControllerIDs::FWD_RIGHT_THRUSTER )
-				{
-					thrust *= -1.0;
-				}*/
-
-				if ( i == movement_common::MotorControllerIDs::STRAFE_FRONT_THRUSTER )
-				{
-					thrust *= -1.0;
-				}
-
-				/*if ( i == movement_common::MotorControllerIDs::STRAFE_BACK_THRUSTER )
-				{
-					thrust *= -1.0;
-				}*/
-
 				geometry_msgs::Vector3 pos = thruster_transforms_[i].linear;
 				geometry_msgs::Vector3 ori = thruster_transforms_[i].angular;
 
