@@ -99,13 +99,13 @@ class CompetitionDemo : public BaseNode<>
       static bool last_killed_state_ = kill_switch_msg->is_killed;
       bool current_killed_state = kill_switch_msg->is_killed;
 
-      if(state_ == running && last_killed_state_ == false && current_killed_state == true)
+      if(last_killed_state_ == false && current_killed_state == true)
       {
         ROS_INFO("Kill Switch CB: Killing");
-        state_ = killing;
         std_srvs::Empty empty_request;
         reset_pose_cli_.call( empty_request );
         reset_physics_cli_.call( empty_request );
+        state_ = killing;
       }
       else if(last_killed_state_ == true && current_killed_state == false)
       {
@@ -302,6 +302,7 @@ class CompetitionDemo : public BaseNode<>
         ROS_INFO("Spin Once: Starting Run");
         state_ = running;
         letsDoThis();
+        ROS_INFO("Finished Run");
       }
     }
 };
