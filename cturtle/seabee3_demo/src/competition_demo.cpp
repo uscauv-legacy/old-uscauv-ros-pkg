@@ -133,6 +133,7 @@ class CompetitionDemo : public BaseNode<>
     void letsDoThis()
     {
       ROS_INFO("Let's do this!");
+      std_srvs::Empty empty_request;
       reset_pose_cli_.call( empty_request );
       reset_physics_cli_.call( empty_request );
 
@@ -161,7 +162,7 @@ class CompetitionDemo : public BaseNode<>
         tf::Transform rel_gate_tf;
         tf_utils::fetchTfFrame( current_pose_, "/seabee3/base_link", "/gate" ); 
         double yaw, pitch, roll;
-        rel_hedge_tf.getBasis().getEulerYPR( yaw, pitch, roll );
+        rel_gate_tf.getBasis().getEulerYPR( yaw, pitch, roll );
 
         set_desired_pose_.request.pos.values.x = gate_tf.getOrigin().x();
         set_desired_pose_.request.pos.mask.x   = 1;
