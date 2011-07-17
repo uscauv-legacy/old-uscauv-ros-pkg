@@ -119,7 +119,7 @@ class CompetitionDemo : public BaseNode<>
     bool waitForPose(std::string posename = "")
     {
       usleep(100000);
-      ROS_INFO("Waiting For Pose...[%s]", posename);
+      ROS_INFO("Waiting For Pose...[%s]", posename.c_str());
       tf::Transform error_pose_;
       do
       {
