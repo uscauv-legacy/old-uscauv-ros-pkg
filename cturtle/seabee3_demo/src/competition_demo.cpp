@@ -116,10 +116,10 @@ class CompetitionDemo : public BaseNode<>
     // ######################################################################
     // Wait for the error between the base link and the desired pose is less
     // than a threshold. Returns false if the killswitch was pulled
-    bool waitForPose()
+    bool waitForPose(std::string posename = "")
     {
       usleep(100000);
-      ROS_INFO("Waiting For Pose...");
+      ROS_INFO("Waiting For Pose...[%s]", posename);
       tf::Transform error_pose_;
       do
       {
@@ -150,7 +150,7 @@ class CompetitionDemo : public BaseNode<>
         set_desired_pose_.request.pos.mask.z   = 1;
         set_desired_pose_cli_.call( set_desired_pose_.request, set_desired_pose_.response );
       }
-      if(!waitForPose()) return;
+      if(!waitForPose("dive")) return;
       ROS_INFO("...Done Diving");
 
       //////////////////////////////
@@ -159,7 +159,6 @@ class CompetitionDemo : public BaseNode<>
       ROS_INFO("Cruising to gate...");
       {
         std::lock_guard<std::mutex> lock(mtx_);
-        seabee3_common::SetDesiredPose set_desired_pose_;
         tf::Transform gate_tf;
         tf_utils::fetchTfFrame( current_pose_, "/landmark_map", "/gate" ); 
         tf::Transform rel_gate_tf;
@@ -167,22 +166,22 @@ class CompetitionDemo : public BaseNode<>
         double yaw, pitch, roll;
         rel_gate_tf.getBasis().getEulerYPR( yaw, pitch, roll );
 
+        seabee3_common::SetDesiredPose set_desired_pose_;
         set_desired_pose_.request.pos.values.x = gate_tf.getOrigin().x();
         set_desired_pose_.request.pos.mask.x   = 1;
         set_desired_pose_.request.pos.values.y = gate_tf.getOrigin().y();
         set_desired_pose_.request.pos.mask.y   = 1;
         set_desired_pose_.request.ori.values.z = yaw; 
         set_desired_pose_cli_.call( set_desired_pose_.request, set_desired_pose_.response );
-        if(!waitForPose()) return;
       }
-      if(!waitForPose()) return;
+      if(!waitForPose("gate")) return;
       ROS_INFO("...Done Gate");
 
-      //////////////////////////////
-      // Begin search for buoy
-      //////////////////////////////
       if(do_buoy_)
       {
+        //////////////////////////////
+        // Begin search for buoy
+        //////////////////////////////
         ROS_INFO("Searching For Buoys...");
         {
           landmark_found_ = false;
@@ -196,23 +195,23 @@ class CompetitionDemo : public BaseNode<>
             set_desired_pose_.request.ori.values.z = yaw + M_PI/16;
             set_desired_pose_.request.ori.mask.z   = 1;
             set_desired_pose_cli_.call( set_desired_pose_.request, set_desired_pose_.response );
-            if(!waitForPose()) return;
+            if(!waitForPose("buoy search")) return;
           }
         }
         ROS_INFO("...Found Buoys");
-      }
 
-      //////////////////////////////
-      // Home in on the buoy
-      //////////////////////////////
-      ROS_INFO("Homing In On Buoy");
-      {
-        // Head towards landmark until within error tolerance:
-        tracking_landmark_ = true;
-        if(!waitForPose()) return;
-        tracking_landmark_ = false;
+        //////////////////////////////
+        // Home in on the buoy
+        //////////////////////////////
+        ROS_INFO("Homing In On Buoy");
+        {
+          // Head towards landmark until within error tolerance:
+          tracking_landmark_ = true;
+          if(!waitForPose("buoy home")) return;
+          tracking_landmark_ = false;
+        }
+        ROS_INFO("...Hit Buoys");
       }
-      ROS_INFO("...Hit Buoys");
 
 
       //////////////////////////////
@@ -235,8 +234,8 @@ class CompetitionDemo : public BaseNode<>
         set_desired_pose_.request.pos.mask.y   = 1;
         set_desired_pose_.request.ori.values.z = yaw; 
         set_desired_pose_cli_.call( set_desired_pose_.request, set_desired_pose_.response );
-        if(!waitForPose()) return;
       }
+      if(!waitForPose("hedge")) return;
       ROS_INFO("...Went through the hedge");
 
       //////////////////////////////
@@ -259,8 +258,8 @@ class CompetitionDemo : public BaseNode<>
         set_desired_pose_.request.pos.mask.y   = 1;
         set_desired_pose_.request.ori.values.z = yaw; 
         set_desired_pose_cli_.call( set_desired_pose_.request, set_desired_pose_.response );
-        if(!waitForPose()) return;
       }
+      if(!waitForPose("octagon")) return;
       ROS_INFO("...Went through the octagon");
 
       //////////////////////////////
@@ -274,8 +273,8 @@ class CompetitionDemo : public BaseNode<>
         set_desired_pose_.request.pos.values.z = -.5;
         set_desired_pose_.request.pos.mask.z   = 1;
         set_desired_pose_cli_.call( set_desired_pose_.request, set_desired_pose_.response );
-        if(!waitForPose()) return;
       }
+      if(!waitForPose("surface")) return;
       ROS_INFO("Surfaced");
 
       ROS_INFO("Competition Finished.");
