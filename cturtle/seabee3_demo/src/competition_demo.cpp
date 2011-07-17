@@ -118,7 +118,7 @@ class CompetitionDemo : public BaseNode<>
     // than a threshold. Returns false if the killswitch was pulled
     bool waitForPose(std::string posename = "")
     {
-      usleep(100000);
+      sleep(1);
       ROS_INFO("Waiting For Pose...[%s]", posename.c_str());
       tf::Transform error_pose_;
       do
