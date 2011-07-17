@@ -28,7 +28,7 @@ class CompetitionDemo : public BaseNode<>
 
     tf::Transform current_pose_;
 
-    enum FSMState_t {waiting_for_start, starting, running, killing};
+    enum FSMState_t {waiting_for_start=0, starting=1, running=2, killing=3};
     FSMState_t state_;
 
     std::thread pose_thread_;
@@ -98,6 +98,8 @@ class CompetitionDemo : public BaseNode<>
     {
       static bool last_killed_state_ = kill_switch_msg->is_killed;
       bool current_killed_state = kill_switch_msg->is_killed;
+
+      ROS_INFO("killSwitchCB: last_killed_state_:%d current_killed_state_:%d state_:%d", last_killed_state_, current_killed_state, state_);
 
       if(last_killed_state_ == false && current_killed_state == true)
       {
