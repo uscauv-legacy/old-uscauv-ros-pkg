@@ -36,6 +36,8 @@ class CompetitionDemo : public BaseNode<>
 
     bool tracking_landmark_;
 
+    bool do_buoy_;
+
     std::mutex mtx_;
 
     ////////////////////////////////
@@ -54,6 +56,7 @@ class CompetitionDemo : public BaseNode<>
     nh_local_.param( "error_threshold", error_threshold_, 0.1 );
     nh_local_.param( "depth", depth_, 1.7 );
     nh_local_.param( "distance_to_gate", distance_to_gate_, 10.0 );
+    nh_local_.param( "do_buoy", do_buoy_, true );
 
     kill_switch_sub_ = nh_local_.subscribe( "/seabee3/kill_switch", 2, &CompetitionDemo::killSwitchCB, this );
     set_desired_pose_cli_ = nh_local_.serviceClient<seabee3_common::SetDesiredPose> ( "/seabee3/set_desired_pose" );
@@ -178,23 +181,26 @@ class CompetitionDemo : public BaseNode<>
       //////////////////////////////
       // Begin search for buoy
       //////////////////////////////
-      ROS_INFO("Searching For Buoys...");
+      if(do_buoy_)
       {
-        landmark_found_ = false;
-        while(!landmark_found_)
+        ROS_INFO("Searching For Buoys...");
         {
-          double roll, pitch, yaw;
-          std::lock_guard<std::mutex> lock(mtx_);
-          current_pose_.getBasis().getEulerYPR( yaw, pitch, roll );
+          landmark_found_ = false;
+          while(!landmark_found_)
+          {
+            double roll, pitch, yaw;
+            std::lock_guard<std::mutex> lock(mtx_);
+            current_pose_.getBasis().getEulerYPR( yaw, pitch, roll );
 
-          seabee3_common::SetDesiredPose set_desired_pose_;
-          set_desired_pose_.request.ori.values.z = yaw + M_PI/16;
-          set_desired_pose_.request.ori.mask.z   = 1;
-          set_desired_pose_cli_.call( set_desired_pose_.request, set_desired_pose_.response );
-          if(!waitForPose()) return;
+            seabee3_common::SetDesiredPose set_desired_pose_;
+            set_desired_pose_.request.ori.values.z = yaw + M_PI/16;
+            set_desired_pose_.request.ori.mask.z   = 1;
+            set_desired_pose_cli_.call( set_desired_pose_.request, set_desired_pose_.response );
+            if(!waitForPose()) return;
+          }
         }
+        ROS_INFO("...Found Buoys");
       }
-      ROS_INFO("...Found Buoys");
 
       //////////////////////////////
       // Home in on the buoy
