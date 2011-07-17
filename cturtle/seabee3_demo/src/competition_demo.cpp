@@ -140,10 +140,9 @@ class CompetitionDemo : public BaseNode<>
       ROS_INFO("Diving...");
       {
         double roll, pitch, yaw;
-        {
-          std::lock_guard<std::mutex> lock(mtx_);
-          current_pose_.getBasis().getEulerYPR( yaw, pitch, roll );
-        }
+        std::lock_guard<std::mutex> lock(mtx_);
+        current_pose_.getBasis().getEulerYPR( yaw, pitch, roll );
+
         seabee3_common::SetDesiredPose set_desired_pose_;
         set_desired_pose_.request.ori.values.z = yaw;
         set_desired_pose_.request.ori.mask.z   = 1;
@@ -159,8 +158,11 @@ class CompetitionDemo : public BaseNode<>
       //////////////////////////////
       ROS_INFO("Cruising to gate...");
       {
+        std::lock_guard<std::mutex> lock(mtx_);
+        double currentX = current_pose_.getOrigin().x;
+
         seabee3_common::SetDesiredPose set_desired_pose_;
-        set_desired_pose_.request.pos.values.x = distance_to_gate_;
+        set_desired_pose_.request.pos.values.x = currentX + distance_to_gate_;
         set_desired_pose_.request.pos.values.y = 3;;
         set_desired_pose_.request.pos.mask.x   = 1;
         set_desired_pose_.request.pos.mask.y   = 1;
@@ -178,10 +180,9 @@ class CompetitionDemo : public BaseNode<>
         while(!landmark_found_)
         {
           double roll, pitch, yaw;
-          {
-            std::lock_guard<std::mutex> lock(mtx_);
-            current_pose_.getBasis().getEulerYPR( yaw, pitch, roll );
-          }
+          std::lock_guard<std::mutex> lock(mtx_);
+          current_pose_.getBasis().getEulerYPR( yaw, pitch, roll );
+
           seabee3_common::SetDesiredPose set_desired_pose_;
           set_desired_pose_.request.ori.values.z = yaw + M_PI/16;
           set_desired_pose_.request.ori.mask.z   = 1;
@@ -209,7 +210,7 @@ class CompetitionDemo : public BaseNode<>
       ROS_INFO("Running the fuck away. See ya!");
       {
         seabee3_common::SetDesiredPose set_desired_pose_;
-        set_desired_pose_.request.pos.values.x = 999;
+        set_desired_pose_.request.pos.values.x = 9999;
         set_desired_pose_.request.pos.mask.x   = 1;
         set_desired_pose_cli_.call( set_desired_pose_.request, set_desired_pose_.response );
       }
