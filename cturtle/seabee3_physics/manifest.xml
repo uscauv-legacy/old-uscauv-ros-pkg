@@ -16,7 +16,7 @@
   <depend package="seabee3_driver_base"/>
   <depend package="seabee3_common"/>
   <export>
-    <cpp cflags="-I${prefix}/include -I${prefix}/msg/cpp -I${prefix}/srv/cpp" lflags="-Wl,-rpath,${prefix}/lib -L${prefix}/lib -lseabee3_physics"/>
+    <cpp cflags="-I${prefix}/include -I${prefix}/msg/cpp -I${prefix}/srv/cpp" lflags="-Wl,-rpath,${prefix}/lib -L${prefix}/lib"/>
   </export>
 </package>
 
