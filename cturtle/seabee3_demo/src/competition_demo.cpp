@@ -99,7 +99,7 @@ class CompetitionDemo : public BaseNode<>
       static bool last_killed_state_ = kill_switch_msg->is_killed;
       bool current_killed_state = kill_switch_msg->is_killed;
 
-      if(last_killed_state_ == false && current_killed_state == true)
+      if(state == running && last_killed_state_ == false && current_killed_state == true)
       {
         ROS_INFO("Kill Switch CB: Killing");
         state_ = killing;
