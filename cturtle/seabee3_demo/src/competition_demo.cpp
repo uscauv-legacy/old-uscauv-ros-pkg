@@ -30,7 +30,8 @@ class CompetitionDemo : public BaseNode<>
 
     enum FSMState_t {waiting_for_start, starting, running, killing};
     FSMState_t state_;
-    std::thread FSMthread_;
+
+    std::thread pose_thread_;
 
     bool landmark_found_;
 
@@ -64,6 +65,7 @@ class CompetitionDemo : public BaseNode<>
     reset_physics_cli_ = nh_local_.serviceClient<std_srvs::Empty> ( "/seabee3_physics/reset_pose" );
 
     landmarks_sub_ = nh_local_.subscribe( "/landmark_finder/landmarks", 3, &CompetitionDemo::landmarksCB, this );
+    pose_thread_ = std::thread(std::bind(&CompetitionDemo::pose_thread_method, this));
   }
 
     // ######################################################################
@@ -97,7 +99,7 @@ class CompetitionDemo : public BaseNode<>
       static bool last_killed_state_ = kill_switch_msg->is_killed;
       bool current_killed_state = kill_switch_msg->is_killed;
 
-      if(state_ == running && last_killed_state_ == false && current_killed_state == true)
+      if(last_killed_state_ == false && current_killed_state == true)
       {
         ROS_INFO("Kill Switch CB: Killing");
         state_ = killing;
@@ -105,7 +107,7 @@ class CompetitionDemo : public BaseNode<>
         reset_pose_cli_.call( empty_request );
         reset_physics_cli_.call( empty_request );
       }
-      else if(state_ == waiting_for_start && last_killed_state_ == true && current_killed_state == false)
+      else if(last_killed_state_ == true && current_killed_state == false)
       {
         ROS_INFO("Kill Switch CB: Starting");
         state_ = starting;
@@ -286,27 +288,20 @@ class CompetitionDemo : public BaseNode<>
       ROS_INFO("Competition Finished.");
     }
 
+    void pose_thread_method()
+    {
+      std::lock_guard<std::mutex> lock(mtx_);
+      tf_utils::fetchTfFrame( current_pose_, "/landmark_map", "/seabee3/base_link" ); 
+    }
+
     // ######################################################################
     void spinOnce()
     {
-      {
-        std::lock_guard<std::mutex> lock(mtx_);
-        tf_utils::fetchTfFrame( current_pose_, "/landmark_map", "/seabee3/base_link" ); 
-      }
-
       if(state_ == starting)
       {
         ROS_INFO("Spin Once: Starting Run");
-        if(FSMthread_.joinable()) FSMthread_.join();
-        FSMthread_ = std::thread(std::bind(&CompetitionDemo::letsDoThis, this));
         state_ = running;
-      }
-      else if(state_ == killing)
-      {
-        ROS_INFO("Spin Once: Killing");
-        FSMthread_.join();
-        state_ = waiting_for_start;
-        ROS_INFO("Spin Once: Killed.. Waiting for start");
+        letsDoThis();
       }
     }
 };
