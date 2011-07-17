@@ -7,7 +7,7 @@
     <param name="depth" type="double" value="1.7"/>
 
     <param name="distance_to_gate" type="double" value="10.0"/>
-    <param name="do_buoy" type="bool" value="true"/>
+    <param name="do_buoy" type="bool" value="false"/>
 	</node>
 
 	<node pkg="tf" type="static_transform_publisher" name="gate"    args="14.6  0.0 -2.1 0 0 0 /landmark_map /gate    100" />
