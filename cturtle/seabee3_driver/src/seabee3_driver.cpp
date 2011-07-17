@@ -737,10 +737,10 @@ public:
 			        error_in_pose.linear.x, error_in_pose.linear.y, error_in_pose.linear.z,
 			        error_in_pose.angular.x, error_in_pose.angular.y, error_in_pose.angular.z );
 
-			double speed_motor_value  =        pid_controller_.linear_x->update( error_in_pose.linear.x, t1 );
-			double strafe_motor_value = -1.0 * pid_controller_.linear_y->update( error_in_pose.linear.y, t1 );
-			double depth_motor_value  =        pid_controller_.linear_z->update( error_in_pose.linear.z, t1 );
-			double yaw_motor_value    =        pid_controller_.angular_z->update( error_in_pose.angular.z, t1 );
+			double speed_motor_value  = pid_controller_.linear_x->update( error_in_pose.linear.x, t1 );
+			double strafe_motor_value = pid_controller_.linear_y->update( error_in_pose.linear.y, t1 );
+			double depth_motor_value  = pid_controller_.linear_z->update( error_in_pose.linear.z, t1 );
+			double yaw_motor_value    = pid_controller_.angular_z->update( error_in_pose.angular.z, t1 );
 
 			printf( "depth motor value: %f yaw motor value %f speed motor value %f strafe motor value %f\n", depth_motor_value, yaw_motor_value, speed_motor_value, strafe_motor_value );
 
