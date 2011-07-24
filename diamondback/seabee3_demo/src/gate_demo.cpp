@@ -4,7 +4,7 @@
 #include <common_utils/tf.h>
 
 // msgs
-#include <seabee3_driver_base/KillSwitch.h>
+#include <seabee3_driver/KillSwitch.h>
 
 // srvs
 #include <seabee3_common/SetDesiredPose.h> // for SetDesiredPose
@@ -81,7 +81,7 @@ public:
 		kill_timers_ = false;
 	}
 
-	void killSwitchCB( const seabee3_driver_base::KillSwitch::ConstPtr & kill_switch_msg )
+	void killSwitchCB( const seabee3_driver::KillSwitch::ConstPtr & kill_switch_msg )
 	{
 		static bool last_killed_state_ = kill_switch_msg->is_killed;
 		bool current_killed_state = kill_switch_msg->is_killed;

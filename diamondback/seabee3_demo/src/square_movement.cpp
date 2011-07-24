@@ -1,6 +1,6 @@
 #include <base_node/base_node.h>
 #include <geometry_msgs/Twist.h>
-#include <mathy_math/mathy_math.h>
+#include <common_utils/math.h>
 
 // srvs
 #include <seabee3_common/SetDesiredPose.h> // for SetDesiredPose

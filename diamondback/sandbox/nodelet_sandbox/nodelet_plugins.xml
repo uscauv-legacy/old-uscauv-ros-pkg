@@ -1,7 +1,0 @@
-<library path="lib/libnodelets">
-  <class name="nodelet_sandbox/StaticMemberVar" type="nodelet_sandbox::StaticMemberVarNodelet" base_class_type="nodelet::Nodelet">
-    <description> 
-      tests the effects of using static member vars in nodelets
-    </description>
-  </class>
-</library>

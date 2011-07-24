@@ -44,7 +44,7 @@
 #include <vector>
 #include <sstream>
 #include <std_srvs/Empty.h>
-#include <xsens_node/Imu.h>
+#include <xsens_driver/Imu.h>
 
 
 class IMUIntegrator: public BaseTfTranceiver<>
@@ -126,7 +126,7 @@ public:
 		delete seabee_body_;
 	}
 
-	void imuCB( const xsens_node::Imu::ConstPtr & imu_msg )
+	void imuCB( const xsens_driver::Imu::ConstPtr & imu_msg )
 	{
     btTransform world_transform;
 

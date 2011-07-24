@@ -1,3 +1,3 @@
-int8 Req
+int8 req
 ---
-localization_defs/LandmarkMapMsg Map
+localization_defs/LandmarkMap map

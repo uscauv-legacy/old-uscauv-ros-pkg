@@ -8,13 +8,11 @@
   <license>BSD</license>
   <review status="unreviewed" notes=""/>
   <url>http://ros.org/wiki/seabee3_teleop</url>
-  <depend package="roscpp"/>
   <depend package="geometry_msgs" />
   <depend package="joy" />
   <depend package="tf"/>
-  <depend package="seabee3_driver_base" />
+  <depend package="seabee3_driver" />
   <depend package="base_libs"/>
-  <depend package="common_utils"/>
   <export>
     <cpp cflags="-I${prefix}/include -I${prefix}/msg/cpp -I${prefix}/srv/cpp"/>
   </export>

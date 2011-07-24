@@ -38,7 +38,7 @@
 
 #include <base_teleop/base_teleop.h>
 #include <seabee3_common/movement_common.h>
-#include <seabee3_driver_base/FiringDeviceAction.h>
+#include <seabee3_driver/FiringDeviceAction.h>
 #include <common_utils/math.h>
 #include <std_srvs/Empty.h>
 
@@ -60,7 +60,7 @@ private:
 	geometry_msgs::Twist last_cmd_vel_;
 
 	ros::ServiceClient shooter1_cli_, shooter2_cli_, dropper1_cli_, dropper2_cli_, reset_pose_cli_;
-	seabee3_driver_base::FiringDeviceAction device_action_;
+	seabee3_driver::FiringDeviceAction device_action_;
 	bool button_action_busy_, keep_alive_;
 	int button_action_id_, axis_action_id_;
 	ros::Timer timer_;
@@ -87,10 +87,10 @@ public:
 
 		nh_local_.param( "keep_alive_period", keep_alive_period_, 0.25 );
 
-		shooter1_cli_ = nh_local_.serviceClient<seabee3_driver_base::FiringDeviceAction> ( "/seabee3/shooter1_action" );
-		shooter2_cli_ = nh_local_.serviceClient<seabee3_driver_base::FiringDeviceAction> ( "/seabee3/shooter2_action" );
-		dropper1_cli_ = nh_local_.serviceClient<seabee3_driver_base::FiringDeviceAction> ( "/seabee3/dropper1_action" );
-		dropper2_cli_ = nh_local_.serviceClient<seabee3_driver_base::FiringDeviceAction> ( "/seabee3/dropper2_action" );
+		shooter1_cli_ = nh_local_.serviceClient<seabee3_driver::FiringDeviceAction> ( "/seabee3/shooter1_action" );
+		shooter2_cli_ = nh_local_.serviceClient<seabee3_driver::FiringDeviceAction> ( "/seabee3/shooter2_action" );
+		dropper1_cli_ = nh_local_.serviceClient<seabee3_driver::FiringDeviceAction> ( "/seabee3/dropper1_action" );
+		dropper2_cli_ = nh_local_.serviceClient<seabee3_driver::FiringDeviceAction> ( "/seabee3/dropper2_action" );
 		reset_pose_cli_ = nh_local_.serviceClient<std_srvs::Empty> ( "/seabee3/reset_pose" );
 
 		timer_ = nh_local_.createTimer( ros::Duration( keep_alive_period_ ), &Seabee3Teleop::keepAlive, this );
@@ -99,7 +99,7 @@ public:
 
 	void fireCurrentDevice( bool reset = false )
 	{
-		device_action_.request.action = seabee3_driver_base::FiringDeviceAction::Request::FIRE;
+		device_action_.request.action = seabee3_driver::FiringDeviceAction::Request::FIRE;
 
 		ROS_INFO("Firing device: %d", current_device_ );
 

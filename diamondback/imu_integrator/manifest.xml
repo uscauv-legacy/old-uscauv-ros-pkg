@@ -8,7 +8,7 @@
   <license>BSD</license>
   <review status="unreviewed" notes=""/>
   <url>http://ros.org/wiki/imu_integrator</url>
-  <depend package="xsens_node"/>
+  <depend package="xsens_driver"/>
   <depend package="bullet"/>
   <depend package="base_libs"/>
 

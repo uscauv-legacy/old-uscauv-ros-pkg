@@ -43,11 +43,11 @@
 #include <fstream>
 
 // for Landmark::LandmarkType, LandmarkTypes
-#include <landmark_map/LandmarkMap.h>
+#include <landmark_map/landmark_map.h>
 
 // msgs
 // for LandmarkMapMsg
-#include <localization_defs/LandmarkMapMsg.h>
+#include <localization_defs/LandmarkMap.h>
 // for MarkerArray
 #include <visualization_msgs/MarkerArray.h>
 
@@ -144,7 +144,7 @@ private:
 	std::string map_frame_;
 	std::vector<Landmark> landmarks_;
 	std::vector<visualization_msgs::Marker> markers_;
-	localization_defs::LandmarkMapMsg map_msg_;
+	localization_defs::LandmarkMap map_msg_;
 
 public:
 	bool success_;
@@ -152,8 +152,8 @@ public:
 		BaseNode<>( nh )
 	{
 		success_ = false;
-		nh_priv_.param( "map_frame", map_frame_, std::string( "/landmark_map" ) );
-		nh_priv_.param( "map_uri", map_uri_, std::string( "null" ) );
+		nh_local_.param( "map_frame", map_frame_, std::string( "/landmark_map" ) );
+		nh_local_.param( "map_uri", map_uri_, std::string( "null" ) );
 
 		ROS_DEBUG( "Attempting to open map file at %s", map_uri_.c_str() );
 
@@ -165,8 +165,8 @@ public:
 			return;
 		}
 
-		marker_pub_ = nh_priv_.advertise<visualization_msgs::Marker> ( "landmarks", 5 );
-		map_server_ = nh_priv_.advertiseService( "fetch_landmark_map", &LandmarkMapServer::fetchLandmarkMapCB, this );
+		marker_pub_ = nh_local_.advertise<visualization_msgs::Marker> ( "landmarks", 5 );
+		map_server_ = nh_local_.advertiseService( "fetch_landmark_map", &LandmarkMapServer::fetchLandmarkMapCB, this );
 
 		YAML::Parser parser( fin );
 		YAML::Node doc;
@@ -196,7 +196,7 @@ public:
 
 	bool fetchLandmarkMapCB( landmark_map_server::FetchLandmarkMap::Request & req, landmark_map_server::FetchLandmarkMap::Response & resp )
 	{
-		resp.Map = map_msg_;
+		resp.map = map_msg_;
 		return true;
 	}
 
@@ -225,7 +225,7 @@ int main( int argc, char* argv[] )
 	// make sure the requested file was found
 	if ( !landmark_map_server.success_ ) return 1;
 
-	landmark_map_server.spin( SpinModeId::LOOP_SPIN_ONCE );
+	landmark_map_server.spin();
 	
 	return 0;
 }

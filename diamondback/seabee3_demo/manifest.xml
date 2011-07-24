@@ -9,17 +9,14 @@
   <review status="unreviewed" notes=""/>
   <url>http://ros.org/wiki/seabee3_demo</url>
   
-  <depend package="roscpp"/>
   <depend package="base_libs"/>
   <depend package="seabee3_common"/>
-  <depend package="seabee3_driver_base"/>
+  <depend package="localization_defs"/>
   
   <!-- not linking dependencies, but we want to make sure these are compiled and ready to go -->
   <!-- can't link against seabee3_driver...maybe because it has no messages or libs? <depend package="seabee3_driver"/> -->
-  <depend package="xsens_node"/>
+  <depend package="xsens_driver"/>
   <depend package="seabee3_teleop"/>
-  <depend package="dead_reckoning_odom"/>
-  <depend package="localization_defs"/>
-  <depend package="seabee3_driver" />
+  <depend package="seabee3_controls" />
 
 </package>
