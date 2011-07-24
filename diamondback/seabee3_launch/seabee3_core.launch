@@ -1,0 +1,7 @@
+<launch>
+<!--	<include file="$(find seabee3_machines)/client-server.machine" />-->
+
+	<include file="$(find seabee3_launch)/xsens_node.launch" />
+	
+	<include file="$(find seabee3_launch)/seabee3_driver.launch" />
+</launch>

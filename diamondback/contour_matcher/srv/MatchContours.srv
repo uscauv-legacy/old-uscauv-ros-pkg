@@ -1,0 +1,6 @@
+color_blob_finder/Contour[] template_contours
+color_blob_finder/Contour[] candidate_contours
+---
+# we return a MatchedContours message for each candidate contour
+# the content of each MatchedContour is an array with the match quality for the current candidate contour to each template contour
+contour_matcher/MatchedContour[] matched_contours

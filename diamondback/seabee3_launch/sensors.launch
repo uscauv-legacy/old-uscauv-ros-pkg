@@ -1,0 +1,9 @@
+<launch>
+	<include file="$(find seabee3_launch)/camera2.launch" />
+	<include file="$(find tritech_micron)/launch/tritech_micron.launch" >
+		<arg name="show_rviz" value="false" />
+		<arg name="enable_scan_line_converter" value="false" />
+		<arg name="show_reconfigure" value="false" />
+		<arg name="angle_step_size" value="very_low" />
+	</include>
+</launch>

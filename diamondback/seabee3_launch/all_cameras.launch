@@ -1,0 +1,4 @@
+<launch>
+	<include file="$(find seabee3_launch)/camera1.launch" />
+	<include file="$(find seabee3_launch)/camera2.launch" />
+</launch>

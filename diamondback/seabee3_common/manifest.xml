@@ -1,0 +1,21 @@
+<package>
+  <description brief="seabee3_common">
+
+     seabee3_common
+
+  </description>
+  <author>Edward T. Kaszubski</author>
+  <license>BSD</license>
+  <review status="unreviewed" notes=""/>
+  <url>http://ros.org/wiki/seabee3_common</url>
+  <depend package="geometry_msgs"/>
+  <depend package="dynamic_reconfigure"/>
+  <depend package="driver_base"/>
+  <depend package="generic_controllers"/>
+  <export>
+    <cpp cflags="-I${prefix}/include -I${prefix}/msg/cpp -I${prefix}/srv/cpp" lflags="-Wl,-rpath,${prefix}/lib -L${prefix}/lib -lseabee3_common"/>
+  </export>
+
+</package>
+
+

@@ -1,0 +1,34 @@
+<launch>
+	<arg name="rate" default="10" />
+	<arg name="use_nodelets" default="false" />
+	<arg name="nodelet_manager_name" default="nodelet_manager" />
+	<arg name="initialize" default="false" />
+	<arg name="param_file_name" default="default_params" />
+	<arg name="name_prefix" default="color_blob_finder" />
+	<arg name="name_postfix" default="" />
+	<arg name="source1" default="/color_classifier/images" />
+	<arg name="source2" default="/color_classifier/images" />
+	
+	<arg name="name" value="$(arg name_prefix)$(arg name_postfix)" />
+	<arg name="pkg" value="color_blob_finder" />
+	<arg name="node_type" value="$(arg pkg)_node" />
+	<arg name="nodelet_type" value="$(arg pkg)_nodelet" />
+
+	<group unless="$(arg use_nodelets)" >
+		<node pkg="$(arg pkg)" type="$(arg node_type)" name="$(arg name)" output="screen" args="_rate:=$(arg rate) ~source1:=$(arg source1) ~source2:=$(arg source2)" >
+			<rosparam unless="$(arg initialize)" param="reconfigure" command="load" file="$(find color_blob_finder)/params/$(arg param_file_name).yaml" />
+		</node>
+	</group>
+
+	<group if="$(arg use_nodelets)" >
+		<node pkg="nodelet" type="nodelet" name="$(arg name)" output="screen" args="load $(arg pkg)/$(arg nodelet_type) $(arg nodelet_manager_name) _rate:=$(arg rate) ~source1:=$(arg source1) ~source2:=$(arg source2)" >
+			<rosparam unless="$(arg initialize)" param="reconfigure" command="load" file="$(find color_blob_finder)/params/$(arg param_file_name).yaml" />
+		</node>
+	</group>
+	
+	<arg name="show_image" default="true" />
+	<include file="$(find seabee3_launch)/image_view.launch" >
+		<arg name="enable" value="$(arg show_image)" />
+		<arg name="name" value="$(arg name)" />
+	</include>
+</launch>

@@ -1,0 +1,22 @@
+<package>
+  <description brief="landmark_map_server">
+
+     landmark_map_server
+
+  </description>
+  <author>Edward T. Kaszubski</author>
+  <license>BSD</license>
+  <review status="unreviewed" notes=""/>
+  <url>http://ros.org/wiki/landmark_map_server</url>
+  <depend package="roscpp" />
+  <depend package="localization_defs" />
+  <depend package="yaml_cpp" />
+  <depend package="opencv2" />
+  <depend package="visualization_msgs" />
+  <depend package="base_libs"/>
+  <export>
+    <cpp cflags="-I${prefix}/include -I${prefix}/msg/cpp -I${prefix}/srv/cpp" lflags="-L/{prefix}/lib"/>
+  </export>
+</package>
+
+

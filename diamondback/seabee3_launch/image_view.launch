@@ -1,0 +1,10 @@
+<launch>
+	<arg name="enable" />
+	<arg name="name" />
+	<arg name="image" default="output_image" />
+	<arg name="image_transport" default="raw" />
+
+	<group if="$(arg enable)" >
+		<node pkg="image_view" type="image_view" name="$(arg name)_$(arg image)_view" output="screen" args="image:=/$(arg name)/$(arg image) _image_transport:=$(arg image_transport)" />
+	</group>
+</launch>

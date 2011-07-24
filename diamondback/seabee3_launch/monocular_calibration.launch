@@ -1,0 +1,4 @@
+<launch>
+<!--	<include file="$(find seabee3_launch)/camera3.launch" /> -->
+	<node pkg="camera_calibration" type="cameracalibrator.py" name="camera_calibrator" args="--square 0.048 --size 8x6 image:=/camera1/image_raw camera:=/camera1" output="screen" />
+</launch>

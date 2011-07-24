@@ -1,0 +1,1 @@
+rosbuild_add_library( ${PROJECT_NAME}_nodelets color_blob_finder_nodelet.cpp )

@@ -1,0 +1,14 @@
+<launch>
+<!--	<include file="$(find seabee3_machines)/client-server.machine" />-->
+	
+	<arg name="rate" default="110" />
+	<arg name="name_prefix" default="xsens" />
+	<arg name="name_postfix" default="" />
+	
+	<arg name="name" value="$(arg name_prefix)$(arg name_postfix)" />
+	<arg name="pkg" value="xsens_node" />
+	<arg name="node_type" value="$(arg pkg)" />
+	<arg name="nodelet_type" value="$(arg pkg)_nodelet" />
+
+	<node pkg="$(arg pkg)" type="$(arg node_type)" name="$(arg name)" output="screen" args="_rate:=$(arg rate)" />
+</launch>

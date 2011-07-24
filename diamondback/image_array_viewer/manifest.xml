@@ -1,0 +1,16 @@
+<package>
+  <description brief="image_array_viewer">
+
+     image_array_viewer
+
+  </description>
+  <author>Edward</author>
+  <license>BSD</license>
+  <review status="unreviewed" notes=""/>
+  <url>http://ros.org/wiki/image_array_viewer</url>
+  <depend package="base_libs"/>
+  <depend package="common_utils"/>
+
+</package>
+
+

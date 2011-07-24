@@ -1,0 +1,7 @@
+<library path="lib/libcolor_blob_finder_nodelets">
+  <class name="color_blob_finder/color_blob_finder_nodelet" type="color_blob_finder::ColorBlobFinderNodelet" base_class_type="nodelet::Nodelet">
+    <description> 
+      finds contours in a set of color-coded, thresholded binary images
+    </description>
+  </class>
+</library>

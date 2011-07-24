@@ -1,0 +1,3 @@
+<launch>
+	<include file="$(find seabee3_physics)/launch/seabee3_physics.launch" />
+</launch>

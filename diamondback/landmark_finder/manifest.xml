@@ -1,0 +1,26 @@
+<package>
+  <description brief="landmark_finder">
+
+     landmark_finder
+
+  </description>
+  <author>Edward T. Kaszubski</author>
+  <license>BSD</license>
+  <review status="unreviewed" notes=""/>
+  <url>http://ros.org/wiki/landmark_finder</url>
+  <depend package="base_libs"/>
+  <depend package="common_utils"/>
+  <depend package="localization_defs"/>
+  <depend package="color_blob_finder"/>
+  <depend package="contour_matcher"/>
+  <depend package="pipeline_finder"/>
+  <depend package="color_classifier"/>
+  <depend package="camera_interpolation"/>
+
+  <export>
+    <cpp cflags="-std=c++0x -I${prefix}/include" lflags="-Wl,-rpath,${prefix}/lib -L${prefix}/lib -llandmark_finder"/>
+  </export>
+
+</package>
+
+

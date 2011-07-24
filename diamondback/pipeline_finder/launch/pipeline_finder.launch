@@ -1,0 +1,10 @@
+<launch>
+
+	<arg name="name_prefix" default="pipeline_finder" />
+	<arg name="name_postfix" default="" />
+	<arg name="pkg" value="pipeline_finder" />
+	<arg name="name" value="$(arg name_prefix)$(arg name_postfix)" />
+	<arg name="node_type" value="$(arg pkg)" />
+
+  <node pkg="$(arg pkg)" type="$(arg node_type)" name="$(arg name)" output="screen" args="" />
+</launch>

@@ -1,0 +1,24 @@
+<package>
+  <description brief="common_utils">
+
+     common_utils
+
+  </description>
+  <author>Edward T. Kaszubski</author>
+  <license>BSD</license>
+  <review status="unreviewed" notes=""/>
+  <url>http://ros.org/wiki/common_utils</url>
+  <depend package="roscpp"/>
+  <depend package="opencv2"/>
+  <depend package="cv_bridge"/>
+  <depend package="sensor_msgs"/>
+  <depend package="geometry_msgs"/>
+  <depend package="image_transport"/>
+  <depend package="tf"/>
+  <export>
+    <cpp cflags="-std=c++0x -I${prefix}/include -I${prefix}/msg/cpp -I${prefix}/srv/cpp" lflags="-Wl,-rpath,${prefix}/lib -L${prefix}/lib -lcommon_utils"/>
+  </export>
+
+</package>
+
+

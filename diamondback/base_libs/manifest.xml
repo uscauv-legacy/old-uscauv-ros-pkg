@@ -1,0 +1,34 @@
+<package>
+  <description brief="base_libs">
+
+     base_libs
+
+  </description>
+  <author>Edward T. Kaszubski</author>
+  <license>BSD</license>
+  <review status="unreviewed" notes=""/>
+  <url>http://ros.org/wiki/base_libs</url>
+  <depend package="roscpp"/>
+  <depend package="std_msgs"/>
+  <depend package="std_srvs"/>
+  <depend package="opencv2"/>
+  <depend package="image_geometry"/>
+  <depend package="cv_bridge"/>
+  <depend package="image_transport"/>
+  <depend package="dynamic_reconfigure"/>
+  <depend package="driver_base"/>
+  <depend package="geometry_msgs"/>
+  <depend package="tf"/>
+  <depend package="joy"/>
+  <depend package="common_utils"/>
+  <depend package="nodelet"/>
+  <depend package="pluginlib"/>
+  
+  <export>
+    <nodelet plugin="${prefix}/nodelet_plugins.xml" />
+    <cpp cflags="-std=c++0x -I${prefix}/include -I${prefix}/msg/cpp -I${prefix}/srv/cpp" lflags="-Wl,-rpath,${prefix}/lib -L${prefix}/lib -lbase_libs"/>
+  </export>
+
+</package>
+
+
