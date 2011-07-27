@@ -38,11 +38,11 @@
 
 #include <base_node/base_node.h>
 #include <common_utils/math.h>
-#include <tritech_micron/ScanLine.h>
+#include <tritech_micron_driver/ScanLine.h>
 #include <sensor_msgs/LaserScan.h>
 #include <sensor_msgs/PointCloud.h>
 #include <sensor_msgs/Image.h>
-#include <tritech_micron/ScanLineConverterConfig.h>
+#include <tritech_micron_driver/ScanLineConverterConfig.h>
 #include <opencv2/opencv.hpp>
 #include <cv_bridge/CvBridge.h>
 #include <cv_bridge/cv_bridge.h>
@@ -50,10 +50,10 @@
 
 typedef unsigned int _DimType;
 
-typedef tritech_micron::ScanLineConverterConfig _ReconfigureType;
+typedef tritech_micron_driver::ScanLineConverterConfig _ReconfigureType;
 typedef BaseNode<_ReconfigureType> _BaseNode;
-typedef tritech_micron::ScanLine _ScanLineMsgType;
-typedef tritech_micron::IntensityBin _IntensityBinMsgType;
+typedef tritech_micron_driver::ScanLine _ScanLineMsgType;
+typedef tritech_micron_driver::IntensityBin _IntensityBinMsgType;
 typedef sensor_msgs::LaserScan _LaserScanMsgType;
 typedef sensor_msgs::PointCloud _PointCloudMsgType;
 

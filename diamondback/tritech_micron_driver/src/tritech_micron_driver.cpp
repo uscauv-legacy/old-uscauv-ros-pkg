@@ -18,8 +18,8 @@
 //
 // ######################################################################
 
-#include <tritech_micron/tritech_micron_driver.h>
-#include <tritech_micron/message_types.h>
+#include <tritech_micron_driver/tritech_micron_driver.h>
+#include <tritech_micron_driver/message_types.h>
 #include <iostream>
 #include <algorithm>
 #include <chrono>

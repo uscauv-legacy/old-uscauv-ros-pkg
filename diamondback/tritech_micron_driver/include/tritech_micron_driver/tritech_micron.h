@@ -38,17 +38,17 @@
 
 #include <base_node/base_node.h>
 #include <common_utils/math.h>
-#include <tritech_micron/ScanLine.h>
-#include <tritech_micron/TritechMicronConfig.h>
-#include <tritech_micron/tritech_micron_driver.h>
+#include <tritech_micron_driver/ScanLine.h>
+#include <tritech_micron_driver/TritechMicronConfig.h>
+#include <tritech_micron_driver/tritech_micron_driver.h>
 #include <iostream>
 
 typedef unsigned int _DimType;
 
-typedef tritech_micron::TritechMicronConfig _ReconfigureType;
+typedef tritech_micron_driver::TritechMicronConfig _ReconfigureType;
 typedef BaseNode<_ReconfigureType> _BaseNode;
-typedef tritech_micron::ScanLine _ScanLineMsgType;
-typedef tritech_micron::IntensityBin _IntensityBinMsgType;
+typedef tritech_micron_driver::ScanLine _ScanLineMsgType;
+typedef tritech_micron_driver::IntensityBin _IntensityBinMsgType;
 
 typedef float _StepType;
 typedef float _AngleType;

@@ -34,7 +34,7 @@
  *******************************************************************************/
 
 #include <ros/ros.h>
-#include <tritech_micron/tritech_micron.h>
+#include <tritech_micron_driver/tritech_micron.h>
 
 int main( int argc, char ** argv )
 {
@@ -43,7 +43,7 @@ int main( int argc, char ** argv )
 	ros::NodeHandle nh( "~" );
 
 	TritechMicron tritech_micron( nh );
-	tritech_micron.spin( SpinModeId::LOOP_SPIN_ONCE );
+	tritech_micron.spin();
 
 	return 0;
 }

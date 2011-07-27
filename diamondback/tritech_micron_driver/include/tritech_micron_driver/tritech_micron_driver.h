@@ -21,8 +21,8 @@
 #ifndef TRITECHMICRON_TRITECHMICRON_H
 #define TRITECHMICRON_TRITECHMICRON_H
 
-#include <tritech_micron/constants.h>
-#include <tritech_micron/message_types.h>
+#include <tritech_micron_driver/constants.h>
+#include <tritech_micron_driver/message_types.h>
 #include <vector>
 #include <stdint.h>
 #include <common_utils/serial.h>

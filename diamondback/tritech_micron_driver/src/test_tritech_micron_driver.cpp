@@ -1,4 +1,4 @@
-#include <tritech_micron/tritech_micron_driver.h>
+#include <tritech_micron_driver/tritech_micron_driver.h>
 #include <iostream>
 #include <vector>
 

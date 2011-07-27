@@ -33,7 +33,7 @@
  *
  *******************************************************************************/
 
-#include <tritech_micron/scan_line_converter.h>
+#include <tritech_micron_driver/scan_line_converter.h>
 
 int main( int argc, char ** argv )
 {
