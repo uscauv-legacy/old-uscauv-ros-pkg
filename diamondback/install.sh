@@ -36,7 +36,7 @@ echo -n 'Download seabee3-ros-pkg? (y/n) '
 read res
 if [ "$res" == "y" ]; then
   mkdir -p ~/workspace
-	svn co https://seabee3-ros-pkg.googlecode.com/svn/trunk/cturtle/ ~/workspace/seabee3-ros-pkg
+	svn co https://seabee3-ros-pkg.googlecode.com/svn/trunk/diamondback/ ~/workspace/seabee3-ros-pkg
 	rosstack profile && rospack profile
 fi
 echo "----------"
