@@ -4,7 +4,7 @@
 #include <common_utils/tf.h>
 
 // msgs
-#include <seabee3_driver/KillSwitch.h>
+#include <seabee3_driver_base/KillSwitch.h>
 #include <localization_defs/LandmarkArray.h>
 
 // srvs
@@ -99,7 +99,7 @@ class CompetitionDemo : public BaseNode<>
     }
 
     // ######################################################################
-    void killSwitchCB( const seabee3_driver::KillSwitch::ConstPtr & kill_switch_msg )
+    void killSwitchCB( const seabee3_driver_base::KillSwitch::ConstPtr & kill_switch_msg )
     {
       static bool last_killed_state_ = kill_switch_msg->is_killed;
       bool current_killed_state = kill_switch_msg->is_killed;
@@ -159,6 +159,16 @@ class CompetitionDemo : public BaseNode<>
       reset_pose_cli_.call( empty_request );
       reset_physics_cli_.call( empty_request );
 
+
+      tf::Transform gate_tf;
+      fetchTfFrame( gate_tf, "/landmark_map", "/gate" ); 
+
+      tf::Transform hedge_tf;
+      fetchTfFrame( hedge_tf, "/landmark_map", "/hedge" ); 
+
+      tf::Transform octagon_tf;
+      fetchTfFrame( octagon_tf, "/landmark_map", "/octagon" ); 
+
       //////////////////////////////
       // Dive
       //////////////////////////////
@@ -177,12 +187,6 @@ class CompetitionDemo : public BaseNode<>
       //////////////////////////////
       ROS_INFO("Cruising to gate...");
       {
-        tf::Transform gate_tf;
-        fetchTfFrame( gate_tf, "/landmark_map", "/gate" ); 
-        tf::Transform rel_gate_tf;
-        fetchTfFrame( rel_gate_tf, "/seabee3/base_link", "/gate" ); 
-        double yaw, pitch, roll;
-        rel_gate_tf.getBasis().getEulerYPR( yaw, pitch, roll );
 
         seabee3_common::SetDesiredPose set_desired_pose_;
         set_desired_pose_.request.pos.values.x = gate_tf.getOrigin().x();
@@ -191,51 +195,17 @@ class CompetitionDemo : public BaseNode<>
         set_desired_pose_.request.pos.mask.y   = 1;
         set_desired_pose_.request.pos.values.z = gate_tf.getOrigin().z();
         set_desired_pose_.request.pos.mask.z   = 1;
-        set_desired_pose_.request.ori.values.z = yaw; 
         set_desired_pose_cli_.call( set_desired_pose_.request, set_desired_pose_.response );
       }
       if(!waitForPose("gate")) return;
       ROS_INFO("...Done Gate");
 
-      if(do_buoy_)
       {
-        //////////////////////////////
-        // Begin search for buoy
-        //////////////////////////////
-        ROS_INFO("Searching For Buoys...");
-        {
-          landmark_found_ = false;
-          while(!landmark_found_)
-          {
-            double roll, pitch, yaw;
-
-            {
-              ROS_INFO("Locking_FSM");
-              std::lock_guard<std::mutex> lock(mtx_);
-              ROS_INFO("Locked_FSM");
-              current_pose_.getBasis().getEulerYPR( yaw, pitch, roll );
-            }
-
-            seabee3_common::SetDesiredPose set_desired_pose_;
-            set_desired_pose_.request.ori.values.z = yaw + M_PI/16;
-            set_desired_pose_.request.ori.mask.z   = 1;
-            set_desired_pose_cli_.call( set_desired_pose_.request, set_desired_pose_.response );
-            if(!waitForPose("buoy search")) return;
-          }
-        }
-        ROS_INFO("...Found Buoys");
-
-        //////////////////////////////
-        // Home in on the buoy
-        //////////////////////////////
-        ROS_INFO("Homing In On Buoy");
-        {
-          // Head towards landmark until within error tolerance:
-          tracking_landmark_ = true;
-          if(!waitForPose("buoy home")) return;
-          tracking_landmark_ = false;
-        }
-        ROS_INFO("...Hit Buoys");
+        seabee3_common::SetDesiredPose set_desired_pose_;
+        double yaw = atan2(gate_tf.getOrigin().y() - hedge_tf.getOrigin().y(), gate_tf.getOrigin().x() - hedge_tf.getOrigin().x());
+        set_desired_pose_.request.ori.values.z = yaw; 
+        set_desired_pose_.request.ori.mask.z   = 1;
+        set_desired_pose_cli_.call( set_desired_pose_.request, set_desired_pose_.response );
       }
 
 
@@ -245,24 +215,25 @@ class CompetitionDemo : public BaseNode<>
       ROS_INFO("Going for the hedge");
       {
         seabee3_common::SetDesiredPose set_desired_pose_;
-        tf::Transform hedge_tf;
-        fetchTfFrame( hedge_tf, "/landmark_map", "/hedge" ); 
-        tf::Transform rel_hedge_tf;
-        fetchTfFrame( rel_hedge_tf, "/seabee3/base_link", "/hedge" ); 
-        double yaw, pitch, roll;
-        rel_hedge_tf.getBasis().getEulerYPR( yaw, pitch, roll );
-
         set_desired_pose_.request.pos.values.x = hedge_tf.getOrigin().x();
         set_desired_pose_.request.pos.mask.x   = 1;
         set_desired_pose_.request.pos.values.y = hedge_tf.getOrigin().y();
         set_desired_pose_.request.pos.mask.y   = 1;
         set_desired_pose_.request.pos.values.z = hedge_tf.getOrigin().z();
         set_desired_pose_.request.pos.mask.z   = 1;
-        set_desired_pose_.request.ori.values.z = yaw; 
         set_desired_pose_cli_.call( set_desired_pose_.request, set_desired_pose_.response );
       }
       if(!waitForPose("hedge")) return;
       ROS_INFO("...Went through the hedge");
+
+      {
+        seabee3_common::SetDesiredPose set_desired_pose_;
+        double yaw = atan2(hedge_tf.getOrigin().y() - octagon_tf.getOrigin().y(), hedge_tf.getOrigin().x() - octagon_tf.getOrigin().x());
+        set_desired_pose_.request.ori.values.z = yaw; 
+        set_desired_pose_.request.ori.mask.z   = 1;
+        set_desired_pose_cli_.call( set_desired_pose_.request, set_desired_pose_.response );
+      }
+
 
       //////////////////////////////
       // Go to the octagon
@@ -270,20 +241,12 @@ class CompetitionDemo : public BaseNode<>
       ROS_INFO("Going for the octagon");
       {
         seabee3_common::SetDesiredPose set_desired_pose_;
-        tf::Transform octagon_tf;
-        fetchTfFrame( octagon_tf, "/landmark_map", "/octagon" ); 
-        tf::Transform rel_octagon_tf;
-        fetchTfFrame( rel_octagon_tf, "/seabee3/base_link", "/octagon" ); 
-        double yaw, pitch, roll;
-        rel_octagon_tf.getBasis().getEulerYPR( yaw, pitch, roll );
-
         set_desired_pose_.request.pos.values.x = octagon_tf.getOrigin().x();
         set_desired_pose_.request.pos.mask.x   = 1;
         set_desired_pose_.request.pos.values.y = octagon_tf.getOrigin().y();
         set_desired_pose_.request.pos.mask.y   = 1;
         set_desired_pose_.request.pos.values.z = octagon_tf.getOrigin().z();
         set_desired_pose_.request.pos.mask.z   = 1;
-        set_desired_pose_.request.ori.values.z = yaw; 
         set_desired_pose_cli_.call( set_desired_pose_.request, set_desired_pose_.response );
       }
       if(!waitForPose("octagon")) return;
@@ -295,7 +258,6 @@ class CompetitionDemo : public BaseNode<>
       ROS_INFO("Surfacing");
       {
         seabee3_common::SetDesiredPose set_desired_pose_;
-
         set_desired_pose_.request.pos.values.z = -.5;
         set_desired_pose_.request.pos.mask.z   = 1;
         set_desired_pose_cli_.call( set_desired_pose_.request, set_desired_pose_.response );

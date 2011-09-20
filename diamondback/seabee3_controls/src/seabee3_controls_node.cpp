@@ -716,13 +716,12 @@ public:
 	// temporary change to enable heading-only PID
 	void stepAbsoluteMeasurementPID()
 	{
+		printf( "Stepping PIDs\n" );
     tf::Transform error_in_pose_tf;
 		fetchTfFrame( error_in_pose_tf,
 		              "/seabee3/base_link",
                   "/seabee3/desired_pose" );
 
-		//convert tf frames to Twist messages; fuck quaternions
-		//desired_pose_tf_ >> desired_pose_;
     geometry_msgs::Twist error_in_pose;
 		error_in_pose_tf >> error_in_pose;
 
@@ -776,6 +775,13 @@ public:
           Axes::strafe,
           -100 * twist_cache_.linear.y / cmd_vel_conversions[Axes::strafe] );
     }
+    else
+    {
+		ros::Duration dt = ros::Time::now() - last_pid_update_time_;
+		const double t1 = dt.toSec();
+		geometry_msgs::Twist change_in_desired_pose = twist_cache_ * t1;
+		requestChangeInDesiredPose( change_in_desired_pose );
+	}
 
 		if ( use_pid_assist ) stepAbsoluteMeasurementPID();
 	}

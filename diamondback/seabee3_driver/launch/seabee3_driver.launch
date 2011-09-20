@@ -1,17 +1,17 @@
 <launch>
 	<arg name="rate" default="20" />
-	<arg name="name_prefix" default="seabee3_driver_base" />
+	<arg name="name_prefix" default="seabee3_driver" />
 	<arg name="name_postfix" default="" />
 	<arg name="simulate" default="false" />
 	
 	<arg name="name" value="$(arg name_prefix)$(arg name_postfix)" />
-	<arg name="pkg" value="seabee3_driver_base" />
+	<arg name="pkg" value="seabee3_driver" />
 	<arg name="node_type" value="$(arg pkg)" />
 
 	<arg name="port" default="/dev/seabee3_pwrboard" />
 
-	<node pkg="$(arg pkg)" type="$(arg node_type)" name="$(arg name)" output="screen" args="_rate:=$(arg rate) _simulate:=$(arg simulate)" >
-    <param name="pump_motor_val" type="int" value="30" />
+	<node pkg="$(arg pkg)" type="$(arg node_type)_node" name="$(arg name)" output="screen" args="_rate:=$(arg rate) _simulate:=$(arg simulate)" >
+		<param name="pump_motor_val" type="int" value="30" />
 		<param name="port" type="string" value="$(arg port)" />
 		<param name="shooter1/trigger_time" type="int" value="100" />
 		<param name="shooter1/trigger_value" type="int" value="75" />
