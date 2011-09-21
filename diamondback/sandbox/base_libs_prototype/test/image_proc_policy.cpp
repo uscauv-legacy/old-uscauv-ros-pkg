@@ -2,12 +2,10 @@
 #include <base_libs/types.h>
 #include <base_libs/image_proc_policy.h>
 
-class TestImageProcPolicy : public base_libs::Node<base_libs::ImageProcPolicy>
+class TestImageProcPolicy : public BASE_LIBS_Node<base_libs::ImageProcPolicy>
 {
 public:
-	typedef base_libs::Node<base_libs::ImageProcPolicy> _Node;
-	
-	TestImageProcPolicy( ros::NodeHandle & nh ) : _Node( nh )
+	TestImageProcPolicy( ros::NodeHandle & nh ) : BASE_LIBS_Node<base_libs::ImageProcPolicy>( nh )
 	{
 		
 	}

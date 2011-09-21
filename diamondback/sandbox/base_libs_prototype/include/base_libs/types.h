@@ -8,7 +8,7 @@ namespace base_libs
 {
 
 typedef
-	Node<Policy>
+	BASE_LIBS_Node<Policy>
 	_Node;
 
 }
