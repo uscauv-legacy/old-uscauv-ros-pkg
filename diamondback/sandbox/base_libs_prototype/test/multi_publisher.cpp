@@ -2,7 +2,6 @@
 #include <base_libs/multi_publisher.h>
 #include <std_msgs/String.h>
 #include <geometry_msgs/Point.h>
-#include <vector>
 
 class TestMultiPublisher
 {

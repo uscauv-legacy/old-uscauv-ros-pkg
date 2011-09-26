@@ -1,28 +1,56 @@
 #ifndef BASE_LIBS_BASE_LIBS_MULTI_SUBSCRIBER_H_
 #define BASE_LIBS_BASE_LIBS_MULTI_SUBSCRIBER_H_
 
-// copypasta'd from multi_publisher with types renamed
-// need to take the time to do all of the std::function references later
-/*#include <map>
+#include <map>
 #include <ros/node_handle.h>
 #include <ros/subscriber.h>
 #include <base_libs/container.h>
 #include <vector>
 #include <stdio.h>
 #include <typeinfo>
+#include <base_libs/auto_bind.h>
 
 namespace ros
 {
 
+// ## SubscriberAdapter ################################################
+template<class __Subscriber>
+class SubscriberAdapter {};
+
+// ## SubscriberAdapter for ros::Subscriber ############################
+template<>
+class SubscriberAdapter<ros::Subscriber>
+{
+public:
+	typedef ros::Subscriber _Subscriber;
+	
+	template<class __Message>
+	static _Subscriber createSubscriber(
+		ros::NodeHandle & nh,
+		const std::string & topic,
+		const unsigned int & cache_size,
+		const std::function<void( const boost::shared_ptr<__Message const>& )> & callback )
+	{
+		return nh.subscribe(
+			topic,
+			cache_size,
+			boost::function< void( const boost::shared_ptr< __Message const>& )>( callback ) );
+	}
+};
+
+
+// ## MultiSubscriber ##################################################
 // *given a list of message types, create a subscriber and topic for each
 // *provide easy functions for publishing and accessing data 
+template<class __Subscriber = ros::Subscriber>
 class MultiSubscriber
 {
 public:
 	typedef std::string _Topic;
 	typedef std::vector<_Topic> _TopicArray;
-	typedef ros::Subscriber _Subscriber;
-	typedef std::map<_Topic, _Subscriber> _SubscriberMap;
+	typedef __Subscriber _Subscriber;
+	//typedef SubscriberAdapter<__Subscriber> _SubscriberAdapter;
+	typedef std::map<_Topic, __Subscriber> _SubscriberMap;
 
 protected:
 	_SubscriberMap subscribers_;
@@ -34,39 +62,21 @@ public:
 		//
 	}
 	
-	template<class... __Messages>
-	MultiSubscriber & addSubscribers( ros::NodeHandle & nh, const std::initializer_list<_Topic> & topic_names_init )
+	// here, we only support adding one callback at a time, either through a standard or member function pointer
+	template<class __Message, class __Caller>
+	MultiSubscriber & addSubscriber( ros::NodeHandle & nh, const _Topic & topic_name, void( __Caller::*function_ptr )( const __Message & ), __Caller * caller )
 	{
-		_TopicArray topic_names( topic_names_init.size() );
-		std::copy( topic_names_init.begin(), topic_names_init.end(), topic_names.begin() );
+		return addSubscriber( nh, topic_name, base_libs::auto_bind( function_ptr, caller ) );
+	}
+	
+	template<class __Message>
+	MultiSubscriber & addSubscriber( ros::NodeHandle & nh, const _Topic & topic_name, const std::function< void(const boost::shared_ptr< __Message const > &)> & callback )
+	{
+		printf( "Creating subscriber [%s] on topic %s/%s\n", __Message::__s_getDataType().c_str(), nh.getNamespace().c_str(), topic_name.c_str() );
 		
-		printf( "Recursing through %zu subscribers...\n", topic_names.size() );
-		createSubscribers<Container<__Messages...> >( nh, topic_names.begin(), topic_names.end() );
+		subscribers_[topic_name] = SubscriberAdapter<__Subscriber>::createSubscriber( nh, topic_name, 10, callback );
 		
 		return *this;
-	}
-	
-	// recursively process the message types in __MessagesSubset and
-	// create a subscriber for each
-	template<class __MessagesSubset>
-	typename std::enable_if<(__MessagesSubset::num_types_ > 0 ), void>::type
-	createSubscribers( ros::NodeHandle & nh, typename _TopicArray::iterator current_topic, const typename _TopicArray::iterator last_topic )
-	{
-		typedef typename ContainerTypes<__MessagesSubset>::_Front _CurrentMessageType;
-		printf( "Creating subscriber [%s] on topic %s/%s\n", _CurrentMessageType::__s_getDataType().c_str(), nh.getNamespace().c_str(), current_topic->c_str() );
-		
-		subscribers_[*current_topic] = nh.advertise<_CurrentMessageType>( *current_topic, 10 );
-		createSubscribers<typename ContainerTypes<__MessagesSubset>::_Rest>( nh, ++current_topic, last_topic );
-	}
-	
-	// bottom-level in the createSubscribers recursive algorithm
-	// __MessagesSubset should be Container<>; if so, all topics have
-	// been registered
-	template<class __MessagesSubset>
-	typename std::enable_if<(__MessagesSubset::num_types_ == 0 ), void>::type
-	createSubscribers( ros::NodeHandle & nh, typename _TopicArray::iterator current_topic, const typename _TopicArray::iterator last_topic )
-	{
-		printf( "Finished creating topics.\n" );
 	}
 	
 	// check to see if a topic exists in the list of subscribers
@@ -76,26 +86,13 @@ public:
 	}
 	
 	// indexing operator; allows read-only access of subscribers_
-	const _Subscriber & operator[]( const _Topic & topic )
+	const __Subscriber & operator[]( const _Topic & topic )
 	{
 		if( subscribers_.count( topic ) ) return subscribers_[topic];
-		return _Subscriber();
+		return __Subscriber();
 	}
-	
-	// given a list of key-value pairs, recurse through the list to
-	// publish the messages
-	template<class __Message, class... __Args>
-	void publish( const _Topic & topic, const __Message & msg, __Args&&... args )
-	{
-		if( exists( topic ) ) subscribers_[topic].publish( msg );
-		publish( args... );
-	}
-	
-	// bottom-level of recursive publish() algorithm
-	// does nothing
-	void publish(){}
 };
 
-}*/
+}
 
 #endif // BASE_LIBS_BASE_LIBS_MULTI_SUBSCRIBER_H_

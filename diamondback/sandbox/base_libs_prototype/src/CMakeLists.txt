@@ -1,6 +1,7 @@
 rosbuild_add_library( ${PROJECT_NAME} macros.cpp
 									  types.cpp
 									  container.cpp
+									  auto_bind.cpp
 									  generic_policy_adapter.cpp
 									  param_reader.cpp
 									  multi_subscriber.cpp

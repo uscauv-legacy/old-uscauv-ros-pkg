@@ -9,25 +9,30 @@
 #include <stdio.h>
 #include <typeinfo>
 
+//## Adapters ##########################################################
+
 namespace ros
 {
 
+// ## PublisherAdapterStorage ##########################################
 template<class __Publisher>
 struct PublisherAdapterStorage {};
 
+// ## PublisherAdapterStorage for ros::Publisher #######################
 template<>
 struct PublisherAdapterStorage<ros::Publisher> {};
 
+// ## PublisherAdapter #################################################
 template<class __Publisher, class __Message>
 class PublisherAdapter {};
 
+// ## PublisherAdapter for ros::Publisher ##############################
 template<class __Message>
 class PublisherAdapter<ros::Publisher, __Message>
 {
 public:
 	typedef ros::Publisher _Publisher;
 	
-	//template<class __MessageType>
 	static _Publisher createPublisher(
 		ros::NodeHandle & nh,
 		const std::string & topic,
@@ -40,6 +45,7 @@ public:
 	}
 };
 
+// ## MultiPublisher ###################################################
 // *given a list of message types, create a publisher and topic for each
 // *provide easy functions for publishing and accessing data 
 template<class __Publisher = ros::Publisher>

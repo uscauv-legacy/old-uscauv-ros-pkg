@@ -18,4 +18,7 @@ int main( int argc, char ** argv ) \
 #define IMAGE_PROC_PROCESS_IMAGE( image_ptr_name ) \
 void processImage( cv_bridge::CvImagePtr & image_ptr_name ) \
 
+#define BASE_LIBS_DECLARE_STANDARD_CALLBACK( callback_name, message_type ) \
+void callback_name( const message_type::ConstPtr & msg ) \
+
 #endif // BASE_LIBS_BASE_LIBS_MACROS_H_
