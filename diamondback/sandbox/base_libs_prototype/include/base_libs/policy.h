@@ -28,11 +28,15 @@ public:
 		ROS_INFO( "Done creating basic policy." );
 	}
 	
+	virtual void spinFirst(){}
 	virtual void spinOnce() = 0;
 	
 	virtual void spin()
 	{
 		run_ = true;
+		
+		spinFirst();
+		
 		while( run_ && ros::ok() )
 		{
 			spinOnce();
