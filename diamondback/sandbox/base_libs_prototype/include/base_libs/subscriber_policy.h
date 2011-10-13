@@ -1,30 +1,27 @@
 #ifndef BASE_LIBS_BASE_LIBS_SUBSCRIBER_POLICY_H_
 #define BASE_LIBS_BASE_LIBS_SUBSCRIBER_POLICY_H_
 
-// NOTE: multi_subscriber needs to be implemented first
-
-#include <base_libs/policy.h>
+#include <base_libs/node_handle_policy.h>
+#include <base_libs/generic_policy_adapter.h>
 #include <base_libs/multi_subscriber.h>
+#include <base_libs/macros.h>
 
 namespace base_libs
 {
 
-class SubscriberPolicy : public Policy
+BASE_LIBS_DECLARE_POLICY( Subscriber, NodeHandlePolicy )
+
+BASE_LIBS_DECLARE_POLICY_CLASS( Subscriber )
 {
+	BASE_LIBS_MAKE_POLICY_NAME( Subscriber )
+	
 protected:
 	ros::MultiSubscriber<> multi_sub_;
 	
-private:
-	ros::NodeHandle nh_rel_;
-	
-public:
-	SubscriberPolicy( ros::NodeHandle & nh )
-	:
-		Policy(),
-		nh_rel_( nh )
+	BASE_LIBS_DECLARE_POLICY_CONSTRUCTOR( Subscriber )
 	{
-		ROS_INFO( "Creating subscriber policy..." );
-		ROS_INFO( "Done creating subscriber policy." );
+		printPolicyActionStart( "create", this );
+		printPolicyActionDone( "create", this );
 	}
 };
 

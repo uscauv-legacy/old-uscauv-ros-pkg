@@ -1,30 +1,29 @@
 #ifndef BASE_LIBS_BASE_LIBS_PUBLISHER_POLICY_H_
 #define BASE_LIBS_BASE_LIBS_PUBLISHER_POLICY_H_
 
-#include <base_libs/policy.h>
+#include <base_libs/node_handle_policy.h>
+#include <base_libs/generic_policy_adapter.h>
 #include <base_libs/multi_publisher.h>
 #include <base_libs/type_utils.h>
+#include <base_libs/macros.h>
 
 namespace base_libs
 {
 
+BASE_LIBS_DECLARE_POLICY( Publisher, NodeHandlePolicy )
+
 template<class __Publisher = ros::Publisher>
-class PublisherPolicy : public Policy
+BASE_LIBS_DECLARE_POLICY_CLASS( Publisher )
 {
-private:
-	ros::NodeHandle nh_rel_;
+	BASE_LIBS_MAKE_POLICY_NAME( Publisher )
 	
 protected:
 	ros::MultiPublisher<__Publisher> publishers_;
 	
-public:
-	PublisherPolicy( ros::NodeHandle & nh )
-	:
-		Policy(),
-		nh_rel_( nh )
+	BASE_LIBS_DECLARE_POLICY_CONSTRUCTOR( Publisher )
 	{
-		ROS_INFO( "Creating publisher policy..." );
-		ROS_INFO( "Done creating publisher policy." );
+		printPolicyActionStart( "create", this );
+		printPolicyActionDone( "create", this );
 	}
 };
 

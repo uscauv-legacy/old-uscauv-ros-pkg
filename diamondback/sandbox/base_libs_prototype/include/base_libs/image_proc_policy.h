@@ -2,7 +2,8 @@
 #define BASE_LIBS_BASE_LIBS_IMAGE_PROC_POLICY_H_
 
 #include <base_libs/macros.h>
-#include <base_libs/policy.h>
+#include <base_libs/node_handle_policy.h>
+#include <base_libs/generic_policy_adapter.h>
 #include <base_libs/multi_publisher.h>
 #include <base_libs/param_reader.h>
 #include <image_transport/image_transport.h>
@@ -44,11 +45,11 @@ public:
 namespace base_libs
 {
 
-class ImageProcPolicy : public Policy
-{
-private:
-	ros::NodeHandle nh_rel_;
+BASE_LIBS_DECLARE_POLICY( ImageProc, NodeHandlePolicy )
 
+BASE_LIBS_DECLARE_POLICY_CLASS( ImageProc )
+{
+	BASE_LIBS_MAKE_POLICY_NAME( ImageProc )
 protected:
 	ros::MultiPublisher<image_transport::Publisher> image_publishers_;
 	
@@ -58,16 +59,18 @@ protected:
 public:
 	ImageProcPolicy( ros::NodeHandle & nh )
 	:
-		Policy(),
-		nh_rel_( nh ),
+		_ImageProcPolicyAdapterType( nh ),
 		image_transport_( nh_rel_ ),
 		image_sub_( image_transport_.subscribe( nh_rel_.resolveName( "image" ), 1, &ImageProcPolicy::imageCB_0, this ) )
 	{
+		printPolicyActionStart( "create", this );
 		ros::PublisherAdapterStorage<image_transport::Publisher> storage;
 		storage.image_transport_ = &image_transport_;
 		
 		if( ros::ParamReader<bool, 1>::readParam( nh_rel_, "show_image", true ) )
 			image_publishers_.addPublishers<sensor_msgs::Image>( nh_rel_, {"output_image"}, storage );
+			
+		printPolicyActionDone( "create", this );
 	}
 	
 	virtual IMAGE_PROC_PROCESS_IMAGE( image_ptr )
@@ -92,11 +95,11 @@ public:
 	{
 		imageCB( image_msg );
 		
-		cv_bridge::CvImagePtr cv_image_ptr;
+		cv_bridge::CvImageConstPtr cv_image_ptr;
 		
 		try
 		{
-			cv_image_ptr = cv_bridge::toCvCopy( image_msg, sensor_msgs::image_encodings::BGR8 );
+			cv_image_ptr = cv_bridge::toCvShare( image_msg );
 		}
 		catch (cv_bridge::Exception& e)
 		{
@@ -108,13 +111,13 @@ public:
 	}
 	
 	template<class... __Topics>
-	void publishImage( cv_bridge::CvImagePtr & image_ptr, std::string topic, __Topics... topics )
+	void publishImage( cv_bridge::CvImageConstPtr & image_ptr, std::string topic, __Topics... topics )
 	{
 		image_publishers_.publish( topic, image_ptr->toImageMsg() );
 		publishImage( image_ptr, topics... );
 	}
 	
-	void publishImage( cv_bridge::CvImagePtr & image_ptr ){}
+	void publishImage( cv_bridge::CvImageConstPtr & image_ptr ){}
 	
 };
 

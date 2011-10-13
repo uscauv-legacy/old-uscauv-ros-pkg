@@ -1,31 +1,32 @@
 #ifndef BASE_LIBS_BASE_LIBS_TF_TRANCEIVER_POLICY_H_
 #define BASE_LIBS_BASE_LIBS_TF_TRANCEIVER_POLICY_H_
 
-#include <base_libs/policy.h>
+#include <base_libs/node_handle_policy.h>
+#include <base_libs/generic_policy_adapter.h>
 #include <tf/transform_broadcaster.h>
 #include <tf/transform_listener.h>
+#include <base_libs/macros.h>
 
 namespace base_libs
 {
 
-class TfTranceiverPolicy : public Policy
+BASE_LIBS_DECLARE_POLICY( TfTranceiver, NodeHandlePolicy )
+
+BASE_LIBS_DECLARE_POLICY_CLASS( TfTranceiver )
 {
+	BASE_LIBS_MAKE_POLICY_NAME( TfTranceiver )
+	
 protected:
 	tf::TransformBroadcaster tf_publisher_;
 	tf::TransformListener tf_listener_;
 	
-private:
-	ros::NodeHandle nh_rel_;
-	
 public:
 	typedef std::string _TfFrameId;
-	TfTranceiverPolicy( ros::NodeHandle & nh )
-	:
-		Policy(),
-		nh_rel_( nh )
+	
+	BASE_LIBS_DECLARE_POLICY_CONSTRUCTOR( TfTranceiver )
 	{
-		ROS_INFO( "Creating tf tranceiver policy..." );
-		ROS_INFO( "Done creating tf tranceiver policy." );
+		printPolicyActionStart( "create", this );
+		printPolicyActionDone( "create", this );
 	}
 	
 	void publishTransform( const tf::StampedTransform & transform, ros::Time frame_time )
