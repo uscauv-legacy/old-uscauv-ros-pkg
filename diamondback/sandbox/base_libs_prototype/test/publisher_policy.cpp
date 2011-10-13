@@ -1,13 +1,13 @@
 #include <base_libs/macros.h>
-#include <base_libs/types.h>
+#include <base_libs/node.h>
 #include <base_libs/publisher_policy.h>
 #include <std_msgs/String.h>
 #include <geometry_msgs/Point.h>
 
-class TestPublisherPolicy : public BASE_LIBS_Node<base_libs::PublisherPolicy<> >
+class TestPublisherPolicy : public base_libs::Node<base_libs::PublisherPolicy<> >
 {
 public:
-	TestPublisherPolicy( ros::NodeHandle & nh ) : BASE_LIBS_Node<base_libs::PublisherPolicy<> >( nh )
+	TestPublisherPolicy( ros::NodeHandle & nh ) : base_libs::Node<base_libs::PublisherPolicy<> >( nh )
 	{
 		publishers_.addPublishers<
 			std_msgs::String,

@@ -21,3 +21,11 @@ target_link_libraries( test_multi_subscriber ${PROJECT_NAME} )
 rosbuild_add_executable( test_tf_tranceiver_policy tf_tranceiver_policy.cpp )
 rosbuild_add_compile_flags( test_tf_tranceiver_policy -std=c++0x )
 target_link_libraries( test_tf_tranceiver_policy ${PROJECT_NAME} )
+
+rosbuild_add_executable( test_reconfigure_policy reconfigure_policy.cpp )
+rosbuild_add_compile_flags( test_reconfigure_policy -std=c++0x )
+target_link_libraries( test_reconfigure_policy ${PROJECT_NAME} )
+
+rosbuild_add_executable( test_type_utils type_utils.cpp )
+rosbuild_add_compile_flags( test_type_utils -std=c++0x )
+target_link_libraries( test_type_utils ${PROJECT_NAME} )

@@ -1,53 +1,42 @@
 #ifndef BASE_LIBS_BASE_LIBS_POLICY_H_
 #define BASE_LIBS_BASE_LIBS_POLICY_H_
 
-#include <ros/node_handle.h>
-#include <ros/rate.h>
-#include <base_libs/param_reader.h>
+// for ROS_INFO, etc
+#include <ros/console.h>
 
 namespace base_libs
 {
 
 class Policy
 {
-protected:
-	ros::NodeHandle nh_rel_;
-	ros::Rate * loop_rate_;
-	bool run_;
-	
 public:
-	Policy( ros::NodeHandle & nh )
-	:
-		nh_rel_( nh ),
-		run_( false )
+	const static inline std::string name(){ return "Base"; }
+	
+	template<class... __Args>
+	Policy( __Args&&... args )
 	{
-		ROS_INFO( "Creating basic policy..." );
-		
-		loop_rate_ = new ros::Rate( ros::ParamReader<double, 1>::readParam( nh, "loop_rate", 10 ) );
-		
-		ROS_INFO( "Done creating basic policy." );
+		// discard args... but don't fail to compile if anything is passed in
+		ROS_INFO( "--------------------" );
+		printPolicyActionStart( "create", this );
+		printPolicyActionDone( "create", this );
 	}
 	
-	virtual void spinFirst(){}
-	virtual void spinOnce() = 0;
-	
-	virtual void spin()
+	template<class __Policy>
+	static void printPolicyAction( std::string action, __Policy * policy )
 	{
-		run_ = true;
-		
-		spinFirst();
-		
-		while( run_ && ros::ok() )
-		{
-			spinOnce();
-			ros::spinOnce();
-			if( loop_rate_ ) loop_rate_->sleep();
-		}
+		ROS_INFO( "[%s] on policy: [%s]", action.c_str(), __Policy::name().c_str() );
 	}
 	
-	virtual void interrupt()
+	template<class __Policy>
+	static void printPolicyActionStart( std::string action, __Policy * policy )
 	{
-		run_ = false;
+		printPolicyAction( "Start: " + action, policy );
+	}
+	
+	template<class __Policy>
+	static void printPolicyActionDone( std::string action, __Policy * policy )
+	{
+		printPolicyAction( "Done: " + action, policy );
 	}
 };
 

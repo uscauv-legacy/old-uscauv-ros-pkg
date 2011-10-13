@@ -1,10 +1,10 @@
 #include <base_libs/macros.h>
-#include <base_libs/types.h>
+#include <base_libs/node.h>
 
-class TestNode : public base_libs::_Node
+class TestNode : public base_libs::Node<>
 {
 public:
-	TestNode( ros::NodeHandle & nh ) : base_libs::_Node( nh )
+	TestNode( ros::NodeHandle & nh ) : base_libs::Node<>( nh )
 	{
 		
 	}

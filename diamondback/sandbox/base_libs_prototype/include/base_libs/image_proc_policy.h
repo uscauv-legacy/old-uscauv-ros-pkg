@@ -4,6 +4,7 @@
 #include <base_libs/macros.h>
 #include <base_libs/policy.h>
 #include <base_libs/multi_publisher.h>
+#include <base_libs/param_reader.h>
 #include <image_transport/image_transport.h>
 #include <cv_bridge/cv_bridge.h>
 #include <sensor_msgs/image_encodings.h>
@@ -45,6 +46,9 @@ namespace base_libs
 
 class ImageProcPolicy : public Policy
 {
+private:
+	ros::NodeHandle nh_rel_;
+
 protected:
 	ros::MultiPublisher<image_transport::Publisher> image_publishers_;
 	
@@ -54,7 +58,8 @@ protected:
 public:
 	ImageProcPolicy( ros::NodeHandle & nh )
 	:
-		Policy( nh ),
+		Policy(),
+		nh_rel_( nh ),
 		image_transport_( nh_rel_ ),
 		image_sub_( image_transport_.subscribe( nh_rel_.resolveName( "image" ), 1, &ImageProcPolicy::imageCB_0, this ) )
 	{

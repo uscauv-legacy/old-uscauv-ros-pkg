@@ -1,14 +1,14 @@
 #include <base_libs/macros.h>
-#include <base_libs/types.h>
+#include <base_libs/node.h>
 #include <base_libs/tf_tranceiver_policy.h>
 
-class TestTfTranceiverPolicy : public BASE_LIBS_Node<base_libs::TfTranceiverPolicy >
+class TestTfTranceiverPolicy : public base_libs::Node<base_libs::TfTranceiverPolicy >
 {
 public:
 	ros::Time last_time_;
 	ros::Time now_;
 
-	TestTfTranceiverPolicy( ros::NodeHandle & nh ) : BASE_LIBS_Node<base_libs::TfTranceiverPolicy >( nh ), last_time_( ros::Time::now() ), now_( ros::Time::now() )
+	TestTfTranceiverPolicy( ros::NodeHandle & nh ) : base_libs::Node<base_libs::TfTranceiverPolicy >( nh ), last_time_( ros::Time::now() ), now_( ros::Time::now() )
 	{
 		//
 	}

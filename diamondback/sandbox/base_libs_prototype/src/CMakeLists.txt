@@ -1,6 +1,8 @@
 rosbuild_add_library( ${PROJECT_NAME} macros.cpp
 									  types.cpp
+									  type_utils.cpp
 									  container.cpp
+									  multityped_linked_list.cpp
 									  auto_bind.cpp
 									  generic_policy_adapter.cpp
 									  param_reader.cpp
@@ -9,6 +11,9 @@ rosbuild_add_library( ${PROJECT_NAME} macros.cpp
 									  node.cpp
 									  nodelet.cpp
 									  policy.cpp
+									  node_handle_policy.cpp
+									  runable_policy.cpp
+									  updateable_policy.cpp
 									  reconfigure_policy.cpp
 									  service_server_policy.cpp
 									  publisher_policy.cpp

@@ -12,12 +12,16 @@ namespace base_libs
 class SubscriberPolicy : public Policy
 {
 protected:
-	//ros::MultiSubscriber multi_pub_;
+	ros::MultiSubscriber<> multi_sub_;
+	
+private:
+	ros::NodeHandle nh_rel_;
 	
 public:
 	SubscriberPolicy( ros::NodeHandle & nh )
 	:
-		Policy( nh )
+		Policy(),
+		nh_rel_( nh )
 	{
 		ROS_INFO( "Creating subscriber policy..." );
 		ROS_INFO( "Done creating subscriber policy." );

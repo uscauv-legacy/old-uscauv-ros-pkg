@@ -14,11 +14,15 @@ protected:
 	tf::TransformBroadcaster tf_publisher_;
 	tf::TransformListener tf_listener_;
 	
+private:
+	ros::NodeHandle nh_rel_;
+	
 public:
 	typedef std::string _TfFrameId;
 	TfTranceiverPolicy( ros::NodeHandle & nh )
 	:
-		Policy( nh )
+		Policy(),
+		nh_rel_( nh )
 	{
 		ROS_INFO( "Creating tf tranceiver policy..." );
 		ROS_INFO( "Done creating tf tranceiver policy." );
