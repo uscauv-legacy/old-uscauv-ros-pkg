@@ -5,11 +5,12 @@
 
 typedef base_libs::ReconfigurePolicy<base_libs_prototype::TestConfig> _TestConfigReconfigurePolicy;
 typedef base_libs::ReconfigurePolicy<base_libs_prototype::Test2Config> _Test2ConfigReconfigurePolicy;
-typedef base_libs::Node<_TestConfigReconfigurePolicy, _Test2ConfigReconfigurePolicy> _Node;
-class TestReconfigurePolicy : public _Node
+
+BASE_LIBS_DECLARE_NODE( TestReconfigurePolicy, _TestConfigReconfigurePolicy, _Test2ConfigReconfigurePolicy )
+
+BASE_LIBS_DECLARE_NODE_CLASS( TestReconfigurePolicy )
 {
-public:
-	TestReconfigurePolicy( ros::NodeHandle & nh ) : _Node( nh )
+	BASE_LIBS_DECLARE_NODE_CONSTRUCTOR( TestReconfigurePolicy )
 	{
 		//
 	}
@@ -57,4 +58,4 @@ public:
 	}*/
 };
 
-BASE_LIBS_DECLARE_NODE( TestReconfigurePolicy, "test_reconfigure_policy" )
+BASE_LIBS_INST_NODE( TestReconfigurePolicyNode, "test_reconfigure_policy_node" )

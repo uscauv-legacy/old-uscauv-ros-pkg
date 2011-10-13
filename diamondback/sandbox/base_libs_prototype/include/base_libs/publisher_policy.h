@@ -17,7 +17,7 @@ BASE_LIBS_DECLARE_POLICY_CLASS( Publisher )
 {
 	BASE_LIBS_MAKE_POLICY_NAME( Publisher )
 	
-protected:
+public:
 	ros::MultiPublisher<__Publisher> publishers_;
 	
 	BASE_LIBS_DECLARE_POLICY_CONSTRUCTOR( Publisher )

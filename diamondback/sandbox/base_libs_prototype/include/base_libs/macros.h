@@ -3,8 +3,8 @@
 
 #include <ros/ros.h>
 
-// use: BASE_LIBS_DECLARE_NODE( SomeNode, "some_node" )
-#define BASE_LIBS_DECLARE_NODE( __Class, node_name_string ) \
+// use: BASE_LIBS_INST_NODE( SomeNode, "some_node" )
+#define BASE_LIBS_INST_NODE( __Class, node_name_string ) \
 int main( int argc, char ** argv ) \
 { \
 	ros::init( argc, argv, node_name_string ); \
@@ -60,5 +60,18 @@ public: \
 	__NameBase##Policy( __Args&&... args ) \
 	: \
 		_##__NameBase##PolicyAdapterType( args... )
+		
+#define BASE_LIBS_DECLARE_NODE( __NameBase, __Policies... ) \
+typedef base_libs::Node< __Policies > _##__NameBase##NodeAdapterType;
+
+#define BASE_LIBS_DECLARE_NODE_CLASS( __NameBase ) \
+class __NameBase##Node : public _##__NameBase##NodeAdapterType
+
+#define BASE_LIBS_DECLARE_NODE_CONSTRUCTOR( __NameBase ) \
+public: \
+	template<class... __Args> \
+	__NameBase##Node( __Args&&... args ) \
+	: \
+		_##__NameBase##NodeAdapterType( args... )
 
 #endif // BASE_LIBS_BASE_LIBS_MACROS_H_

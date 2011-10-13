@@ -3,13 +3,13 @@
 #include <std_msgs/String.h>
 #include <geometry_msgs/Point.h>
 
-class TestMultiSubscriber
+class TestMultiSubscriberNode
 {
 public:
 	ros::MultiSubscriber<> multi_sub_;
 	ros::Rate loop_rate_;
 	
-	TestMultiSubscriber( ros::NodeHandle & nh )
+	TestMultiSubscriberNode( ros::NodeHandle & nh )
 	:
 		multi_sub_(),
 		loop_rate_( 10 )
@@ -17,12 +17,12 @@ public:
 		multi_sub_.addSubscriber(
 				nh,
 				"string",
-				&TestMultiSubscriber::stringCB, this );
+				&TestMultiSubscriberNode::stringCB, this );
 		
 		multi_sub_.addSubscriber(
 				nh,
 				"point",
-				&TestMultiSubscriber::pointCB, this );
+				&TestMultiSubscriberNode::pointCB, this );
 	}
 	
 	BASE_LIBS_DECLARE_STANDARD_CALLBACK( stringCB, std_msgs::String )
@@ -51,4 +51,4 @@ public:
 	}
 };
 
-BASE_LIBS_DECLARE_NODE( TestMultiSubscriber, "test_multi_subscriber" )
+BASE_LIBS_INST_NODE( TestMultiSubscriberNode, "test_multi_subscriber_node" )

@@ -4,10 +4,12 @@
 #include <std_msgs/String.h>
 #include <geometry_msgs/Point.h>
 
-class TestPublisherPolicy : public base_libs::Node<base_libs::PublisherPolicy<> >
+BASE_LIBS_DECLARE_NODE( TestPublisherPolicy, base_libs::PublisherPolicy<> )
+
+BASE_LIBS_DECLARE_NODE_CLASS( TestPublisherPolicy )
 {
 public:
-	TestPublisherPolicy( ros::NodeHandle & nh ) : base_libs::Node<base_libs::PublisherPolicy<> >( nh )
+	TestPublisherPolicyNode( ros::NodeHandle & nh ) : _TestPublisherPolicyNodeAdapterType( nh )
 	{
 		publishers_.addPublishers<
 			std_msgs::String,
@@ -57,4 +59,4 @@ public:
 	}
 };
 
-BASE_LIBS_DECLARE_NODE( TestPublisherPolicy, "test_publisher_policy" )
+BASE_LIBS_INST_NODE( TestPublisherPolicyNode, "test_publisher_policy_node" )

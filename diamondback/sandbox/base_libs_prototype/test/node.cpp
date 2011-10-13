@@ -1,10 +1,11 @@
 #include <base_libs/macros.h>
 #include <base_libs/node.h>
 
-class TestNode : public base_libs::Node<>
+BASE_LIBS_DECLARE_NODE( Test )
+
+BASE_LIBS_DECLARE_NODE_CLASS( Test )
 {
-public:
-	TestNode( ros::NodeHandle & nh ) : base_libs::Node<>( nh )
+	BASE_LIBS_DECLARE_NODE_CONSTRUCTOR( Test )
 	{
 		
 	}
@@ -15,4 +16,4 @@ public:
 	}
 };
 
-BASE_LIBS_DECLARE_NODE( TestNode, "test_node" )
+BASE_LIBS_INST_NODE( TestNode, "test_node" )

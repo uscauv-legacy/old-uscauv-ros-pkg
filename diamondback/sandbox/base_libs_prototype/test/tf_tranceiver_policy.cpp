@@ -2,13 +2,16 @@
 #include <base_libs/node.h>
 #include <base_libs/tf_tranceiver_policy.h>
 
-class TestTfTranceiverPolicy : public base_libs::Node<base_libs::TfTranceiverPolicy >
+BASE_LIBS_DECLARE_NODE( TestTfTranceiverPolicy, base_libs::TfTranceiverPolicy )
+
+BASE_LIBS_DECLARE_NODE_CLASS( TestTfTranceiverPolicy )
 {
 public:
 	ros::Time last_time_;
 	ros::Time now_;
 
-	TestTfTranceiverPolicy( ros::NodeHandle & nh ) : base_libs::Node<base_libs::TfTranceiverPolicy >( nh ), last_time_( ros::Time::now() ), now_( ros::Time::now() )
+	BASE_LIBS_DECLARE_NODE_CONSTRUCTOR( TestTfTranceiverPolicy ),
+		last_time_( ros::Time::now() ), now_( ros::Time::now() )
 	{
 		//
 	}
@@ -52,4 +55,4 @@ public:
 	}
 };
 
-BASE_LIBS_DECLARE_NODE( TestTfTranceiverPolicy, "test_tf_tranceiver_policy" )
+BASE_LIBS_INST_NODE( TestTfTranceiverPolicyNode, "test_tf_tranceiver_policy_node" )

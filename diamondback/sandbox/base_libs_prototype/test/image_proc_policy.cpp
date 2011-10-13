@@ -2,13 +2,15 @@
 #include <base_libs/node.h>
 #include <base_libs/image_proc_policy.h>
 
-class TestImageProcPolicy :
-	public base_libs::Node<
-		base_libs::ImageProcPolicy>
+BASE_LIBS_DECLARE_NODE( TestImageProcPolicy, base_libs::ImageProcPolicy )
+//typedef base_libs::Node<base_libs::ImageProcPolicy> _Node;
+BASE_LIBS_DECLARE_NODE_CLASS( TestImageProcPolicy )
+//class TestImageProcPolicy : public _Node
 {
-public:
-	template<class... __Args>
-	TestImageProcPolicy( __Args&&... args ) : base_libs::Node<base_libs::ImageProcPolicy>( args... )
+	BASE_LIBS_DECLARE_NODE_CONSTRUCTOR( TestImageProcPolicy )
+//public:
+//	template<class... __Args>
+//	TestImageProcPolicy( __Args&&... args ) : _Node( args... )
 	{
 		
 	}
@@ -28,4 +30,4 @@ public:
 	}
 };
 
-BASE_LIBS_DECLARE_NODE( TestImageProcPolicy, "test_image_proc_policy" )
+BASE_LIBS_INST_NODE( TestImageProcPolicyNode, "test_image_proc_policy_node" )

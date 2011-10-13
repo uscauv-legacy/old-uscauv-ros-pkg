@@ -3,13 +3,13 @@
 #include <std_msgs/String.h>
 #include <geometry_msgs/Point.h>
 
-class TestMultiPublisher
+class TestMultiPublisherNode
 {
 public:
 	ros::MultiPublisher<> multi_pub_;
 	ros::Rate loop_rate_;
 	
-	TestMultiPublisher( ros::NodeHandle & nh )
+	TestMultiPublisherNode( ros::NodeHandle & nh )
 	:
 		multi_pub_(),
 		loop_rate_( 10 )
@@ -72,4 +72,4 @@ public:
 	}
 };
 
-BASE_LIBS_DECLARE_NODE( TestMultiPublisher, "test_multi_publisher" )
+BASE_LIBS_INST_NODE( TestMultiPublisherNode, "test_multi_publisher_node" )
