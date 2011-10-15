@@ -16,17 +16,10 @@ set(EXECUTABLE_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/bin)
 #set the default path for built libraries to the "lib" directory
 set(LIBRARY_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/lib)
 
-# Auto-generated files for this package are under version control.
-# To make changes to these files, uncomment the following section,
-# build, then re-comment and commit the changes.
-#
 # add dynamic reconfigure api
-#rosbuild_find_ros_package(dynamic_reconfigure)
-#include(${dynamic_reconfigure_PACKAGE_PATH}/cmake/cfgbuild.cmake)
-#gencfg()
+rosbuild_find_ros_package(dynamic_reconfigure)
+include(${dynamic_reconfigure_PACKAGE_PATH}/cmake/cfgbuild.cmake)
+gencfg()
 
-#rosbuild_genmsg()
-#rosbuild_gensrv()
-
-add_subdirectory( src )
-#add_subdirectory( test )
+add_subdirectory( nodes )
+add_subdirectory( nodelets )

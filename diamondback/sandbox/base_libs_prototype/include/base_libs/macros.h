@@ -1,7 +1,11 @@
 #ifndef BASE_LIBS_BASE_LIBS_MACROS_H_
 #define BASE_LIBS_BASE_LIBS_MACROS_H_
 
-#include <ros/ros.h>
+//#include <ros/ros.h>
+
+//#define BASE_LIBS_DECLARE_HEADER( package_name, include_name, header_name )
+//'#ifndef package_name##_##include_name##_##header_name##_H_'
+//'#define package_name##_##include_name##_##header_name##_H_'
 
 // use: BASE_LIBS_INST_NODE( SomeNode, "some_node" )
 #define BASE_LIBS_INST_NODE( __Class, node_name_string ) \
@@ -73,5 +77,12 @@ public: \
 	__NameBase##Node( __Args&&... args ) \
 	: \
 		_##__NameBase##NodeAdapterType( args... )
+
+#define BASE_LIBS_DECLARE_NODELET( namespace_name, class_name ) \
+namespace namespace_name { \
+class class_name##Nodelet : public base_libs::Nodelet<class_name##Node>{}; }
+
+#define BASE_LIBS_INST_NODELET( namespace_name, class_name, nodelet_name ) \
+PLUGINLIB_DECLARE_CLASS( namespace_name, nodelet_name, namespace_name::class_name##Nodelet, nodelet::Nodelet )
 
 #endif // BASE_LIBS_BASE_LIBS_MACROS_H_

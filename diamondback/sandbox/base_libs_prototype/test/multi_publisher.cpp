@@ -1,5 +1,6 @@
 #include <base_libs/macros.h>
 #include <base_libs/multi_publisher.h>
+#include <ros/rate.h>
 #include <std_msgs/String.h>
 #include <geometry_msgs/Point.h>
 

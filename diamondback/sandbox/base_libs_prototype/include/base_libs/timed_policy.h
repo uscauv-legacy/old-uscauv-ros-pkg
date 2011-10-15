@@ -18,8 +18,8 @@ public:
 	:
 		UpdateablePolicy( nh )
 	{
-		ROS_INFO( "Creating timed policy..." );
-		ROS_INFO( "Done creating timed policy." );
+		PRINT_INFO( "Creating timed policy..." );
+		PRINT_INFO( "Done creating timed policy." );
 	}
 	
 	BASE_LIBS_ENABLE_UPDATE

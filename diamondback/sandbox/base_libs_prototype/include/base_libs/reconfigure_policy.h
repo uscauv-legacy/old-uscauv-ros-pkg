@@ -6,11 +6,10 @@
 #include <base_libs/generic_policy_adapter.h>
 #include <base_libs/type_utils.h>
 #include <dynamic_reconfigure/server.h>
+#include <base_libs/auto_bind.h>
 
 namespace base_libs
 {
-
-#define POLICY_NAME Reconfigure
 
 BASE_LIBS_DECLARE_POLICY( Reconfigure, NodeHandlePolicy )
 
@@ -20,6 +19,7 @@ BASE_LIBS_DECLARE_POLICY_CLASS( Reconfigure )
 	BASE_LIBS_MAKE_POLICY_NAME( Reconfigure )
 	
 public:
+	typedef __ReconfigureType _ReconfigureType;
 	typedef dynamic_reconfigure::Server<__ReconfigureType> _ReconfigureServer;
 	typedef ReconfigurePolicy<__ReconfigureType> _ReconfigurePolicy;
 	
@@ -28,7 +28,7 @@ protected:
 
 private:
 	_ReconfigureServer * server_;
-	typename _ReconfigureServer::CallbackType callback_;
+	typename _ReconfigureServer::CallbackType external_callback_;
 	
 public:
 	BASE_LIBS_DECLARE_POLICY_CONSTRUCTOR( Reconfigure ),
@@ -46,10 +46,11 @@ public:
 			ros::NodeHandle(
 				NodeHandlePolicy::nh_rel_,
 				ros::ParamReader<std::string, 1>::readParam( 
-					NodeHandlePolicy::nh_rel_, getMetaParamDef<std::string>( "reconfigure_namespace_name", "reconfigure_namespace", args... ), "reconfigure" ) ) );
+					NodeHandlePolicy::nh_rel_,
+					getMetaParamDef<std::string>( "reconfigure_namespace_name", "reconfigure_namespace", args... ),
+					"reconfigure" ) ) );
 		
-		callback_ = boost::bind( &_ReconfigurePolicy::reconfigureCB_0, this, _1, _2 );
-		server_->setCallback( callback_ );
+		server_->setCallback( base_libs::auto_bind( &_ReconfigurePolicy::reconfigureCB_0, this ) );
 		
 		printPolicyActionDone( "initialize", this );
 	}
@@ -59,21 +60,25 @@ public:
 		if( server_ ) delete server_;
 	}
 	
+	void registerCallback( typename _ReconfigureServer::CallbackType external_callback )
+	{
+		external_callback_ = external_callback;
+	}
+	
 private:
 	void reconfigureCB_0( __ReconfigureType & config, uint32_t level )
 	{
 		config_ = config;
-		reconfigureCB( config, level );
+		if( external_callback_ ) external_callback_( config, level );
 	}
 
+/*
 protected:
 	void reconfigureCB( __ReconfigureType & config, uint32_t level )
 	{
 		//
-	}
+	}*/
 };
-
-#undef POLICY_NAME
 
 }
 

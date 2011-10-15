@@ -3,14 +3,10 @@
 #include <base_libs/image_proc_policy.h>
 
 BASE_LIBS_DECLARE_NODE( TestImageProcPolicy, base_libs::ImageProcPolicy )
-//typedef base_libs::Node<base_libs::ImageProcPolicy> _Node;
+
 BASE_LIBS_DECLARE_NODE_CLASS( TestImageProcPolicy )
-//class TestImageProcPolicy : public _Node
 {
 	BASE_LIBS_DECLARE_NODE_CONSTRUCTOR( TestImageProcPolicy )
-//public:
-//	template<class... __Args>
-//	TestImageProcPolicy( __Args&&... args ) : _Node( args... )
 	{
 		
 	}

@@ -8,6 +8,7 @@
 #include <base_libs/param_reader.h>
 #include <image_transport/image_transport.h>
 #include <cv_bridge/cv_bridge.h>
+#include <cv_bridge/CvBridge.h>
 #include <sensor_msgs/image_encodings.h>
 #include <opencv2/imgproc/imgproc.hpp>
 #include <opencv2/highgui/highgui.hpp>
@@ -110,14 +111,27 @@ public:
 		processImage( cv_image_ptr );
 	}
 	
+	void publishImage(){}
+	
 	template<class... __Topics>
 	void publishImage( cv_bridge::CvImageConstPtr & image_ptr, std::string topic, __Topics... topics )
 	{
 		image_publishers_.publish( topic, image_ptr->toImageMsg() );
-		publishImage( image_ptr, topics... );
+		publishImage( topics... );
 	}
 	
-	void publishImage( cv_bridge::CvImageConstPtr & image_ptr ){}
+	template<class... __Topics>
+	void publishImage( IplImage * image_ptr, std::string topic, __Topics... topics )
+	{
+		cv_bridge::CvImage image_wrapper;
+		image_wrapper.image = cv::Mat( image_ptr );
+		
+		image_publishers_.publish( topic, image_wrapper.toImageMsg() );
+		publishImage( topics... );
+	}
+	
+	//void publishImage( IplImage * image_ptr ){}
+		
 	
 };
 

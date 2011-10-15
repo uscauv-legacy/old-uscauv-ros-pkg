@@ -1,7 +1,11 @@
-#include <ros/ros.h>
+#include <base_libs/console.h>
+#include <ros/param.h>
+#include <ros/node_handle.h>
 #include <type_traits>
 #include <vector>
 #include <sstream>
+
+//BASE_LIBS_DECLARE_HEADER( BASE_LIBS, BASE_LIBS, PARAM_READER )
 
 #ifndef BASE_LIBS_BASE_LIBS_PARAM_READER_H_
 #define BASE_LIBS_BASE_LIBS_PARAM_READER_H_
@@ -79,7 +83,7 @@ public:
 				param_name.c_str(),
 				param_value ) )
 			{
-				std::cout << "Loaded param [" << param_name.c_str() << "] with value " << param_value << std::endl;
+				PRINT_INFO( "Loaded param [%s] with value [%s]", param_name.c_str(), param_value );
 				params_.push_back( param_value );
 				++n;
 			}
@@ -142,14 +146,21 @@ public:
 			const __Storage & default_value = __Storage() )
 	{
 		__Storage param_value( default_value );
-		if( !tryReadParam( nh, param_name, param_value ) )
+		
+		const bool param_found( tryReadParam( nh, param_name, param_value ) );
+		
+		std::stringstream ss;
+		ss << param_value;
+		
+		if( param_found )
 		{
-			std::stringstream ss;
-			ss << param_value;
-			ROS_WARN(
-				"Defaulting to %s",
-				ss.str().c_str() );
+			PRINT_INFO( "> Using value [ %s ]", ss.str().c_str() );
 		}
+		else
+		{
+			PRINT_WARN( "> Defaulting to [ %s ]", ss.str().c_str() );
+		}
+		
 		return  param_value;
 	}
 	
@@ -162,11 +173,15 @@ public:
 			param_name.c_str(),
 			param_value ) )
 		{
+			PRINT_INFO( "Found param [%s/%s]",
+			nh.getNamespace().c_str(),
+			param_name.c_str() );
+			
 			return true;
 		}
 		
-		ROS_WARN(
-			"Could not find param %s/%s",
+		PRINT_WARN(
+			"Could not find param [%s/%s]",
 			nh.getNamespace().c_str(),
 			param_name.c_str() );
 		

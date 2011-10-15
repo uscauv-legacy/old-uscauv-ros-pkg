@@ -3,8 +3,8 @@
 
 #include <type_traits>
 #include <string>
-#include <iostream>
 #include <stdlib.h>
+#include <base_libs/console.h>
 
 namespace base_libs
 {
@@ -33,8 +33,7 @@ namespace base_libs
 	template<class __Desired>
 	__Desired getMetaParamRec( const std::string & name, const __Desired & default_value )
 	{
-		std::cerr << "Failed to find key [" << name << "] in list of parameters" << std::endl;
-		std::cerr << "Attempting to use default, if given" << std::endl;
+		PRINT_WARN( "Failed to find key [%s]", name.c_str() );
 		return default_value;
 		// fail at runtime
 		//abort();
@@ -63,6 +62,7 @@ namespace base_libs
 	static typename std::enable_if<(std::is_same<__Desired, __Current>::value), __Desired>::type
 	getMetaParamRec( const std::string & name, const __Desired & default_value, const std::string & current_name, __Current & current, __Rest&&... rest )
 	{
+		PRINT_INFO( "Found key [%s]", name.c_str() );
 		return name == current_name ? current : getMetaParamRec<__Desired>( name, default_value, rest... );
 	}
 	

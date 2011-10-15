@@ -40,7 +40,7 @@ public:
 	{
 		if( transform.frame_id_.size() == 0 || transform.child_frame_id_.size() == 0 )
 		{
-			ROS_WARN( "Cannot publish StampedTransform with empty source frame or target frame id:\n[ %s -> %s ] : %f", transform.frame_id_.c_str(), transform.child_frame_id_.c_str(), transform.stamp_.toSec() );
+			PRINT_WARN( "Cannot publish StampedTransform with empty source frame or target frame id:\n[ %s -> %s ] : %f", transform.frame_id_.c_str(), transform.child_frame_id_.c_str(), transform.stamp_.toSec() );
 			return;
 		}
 		printf( "Publishing %s -> %s [%f]\n", transform.frame_id_.c_str(), transform.child_frame_id_.c_str(), transform.stamp_.toSec() );
@@ -132,7 +132,7 @@ public:
 			}
 			else
 			{
-				ROS_WARN(
+				PRINT_WARN(
 					"Cannot find transform from %s to %s via %s at the given times",
 					from_frame_id.c_str(),
 					to_frame_id.c_str(),
@@ -140,12 +140,12 @@ public:
 				
 				if( default_to_latest )
 				{
-					ROS_WARN( "Attempting to look up latest transform..." );
+					PRINT_WARN( "Attempting to look up latest transform..." );
 					return lookupTransform( from_frame_id, to_frame_id, ros::Time( 0 ), wait_time, false );
 				}
 				else
 				{
-					ROS_WARN(
+					PRINT_WARN(
 						"Lookup of  %s -> %s via %s failed",
 						from_frame_id.c_str(),
 						to_frame_id.c_str(),
@@ -222,19 +222,19 @@ public:
 			}
 			else
 			{
-				ROS_WARN(
+				PRINT_WARN(
 					"Cannot find transform from %s to %s at the given time",
 					from_frame_id.c_str(),
 					to_frame_id.c_str() );
 				
 				if( default_to_latest )
 				{
-					ROS_WARN( "Attempting to look up latest transform..." );
+					PRINT_WARN( "Attempting to look up latest transform..." );
 					return lookupTransform( from_frame_id, to_frame_id, ros::Time( 0 ), wait_time, false );
 				}
 				else
 				{
-					ROS_WARN(
+					PRINT_WARN(
 						"Lookup of %s -> %s failed",
 						from_frame_id.c_str(),
 						to_frame_id.c_str() );

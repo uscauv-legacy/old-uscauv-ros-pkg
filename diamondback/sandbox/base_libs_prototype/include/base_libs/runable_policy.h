@@ -44,7 +44,7 @@ protected:
 	{
 		run_ = true;
 		
-		ROS_INFO( "----- Spinning... -----" );
+		PRINT_INFO( "----- Spinning... -----" );
 		
 		spinFirst();
 		

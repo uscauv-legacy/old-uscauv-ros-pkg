@@ -4,9 +4,9 @@
 #include <map>
 #include <ros/node_handle.h>
 #include <ros/publisher.h>
+#include <base_libs/console.h>
 #include <base_libs/container.h>
 #include <vector>
-#include <stdio.h>
 #include <typeinfo>
 
 //## Adapters ##########################################################
@@ -75,7 +75,7 @@ public:
 		_TopicArray topic_names( topic_names_init.size() );
 		std::copy( topic_names_init.begin(), topic_names_init.end(), topic_names.begin() );
 		
-		printf( "Recursing through %zu publishers...\n", topic_names.size() );
+		PRINT_INFO( "Attempting to add %zu publishers...", topic_names.size() );
 		createPublishers<Container<__Messages...> >( nh, topic_names.begin(), topic_names.end(), storage );
 		
 		return *this;
@@ -88,7 +88,7 @@ public:
 	createPublishers( ros::NodeHandle & nh, typename _TopicArray::iterator current_topic, const typename _TopicArray::iterator last_topic, _PublisherAdapterStorage & storage )
 	{
 		typedef typename ContainerTypes<__MessagesSubset>::_Front _CurrentMessageType;
-		printf( "Creating publisher [%s] on topic %s/%s\n", _CurrentMessageType::__s_getDataType().c_str(), nh.getNamespace().c_str(), current_topic->c_str() );
+		PRINT_INFO( "Creating publisher [%s] on topic [%s/%s]", _CurrentMessageType::__s_getDataType().c_str(), nh.getNamespace().c_str(), current_topic->c_str() );
 		
 		publishers_[*current_topic] = PublisherAdapter<__Publisher, _CurrentMessageType>::createPublisher( nh, *current_topic, 10, storage );
 		createPublishers<typename ContainerTypes<__MessagesSubset>::_Rest>( nh, ++current_topic, last_topic, storage );
@@ -101,7 +101,7 @@ public:
 	typename std::enable_if<(__MessagesSubset::num_types_ == 0 ), void>::type
 	createPublishers( ros::NodeHandle & nh, typename _TopicArray::iterator current_topic, const typename _TopicArray::iterator last_topic, _PublisherAdapterStorage & storage )
 	{
-		printf( "Finished creating topics.\n" );
+		PRINT_INFO( "Finished creating topics." );
 	}
 	
 	// check to see if a topic exists in the list of publishers

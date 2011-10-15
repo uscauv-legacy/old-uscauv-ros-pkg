@@ -33,9 +33,11 @@ BASE_LIBS_DECLARE_NODE_CLASS( TestReconfigurePolicy )
 		// If this function was given no arguments, the ParamReader would instead try to find "node_name/reconfigure_namespace" (since the default value for they meta-param key
 		// "reconfigure_namespace_name", as defined in ReconfigurePolicy, is "reconfigure_namespace") or default to "reconfigure", etc
 		_TestConfigReconfigurePolicy::init( "reconfigure_namespace_name", std::string( "reconfigure_namespace_1" ) );
+		_TestConfigReconfigurePolicy::registerCallback( base_libs::auto_bind( &TestReconfigurePolicyNode::reconfigureCB1, this ) );
 		
 		// call init on just _Test2ConfigReconfigurePolicy
 		_Test2ConfigReconfigurePolicy::init( "reconfigure_namespace_name", std::string( "reconfigure_namespace_2" ) );
+		_Test2ConfigReconfigurePolicy::registerCallback( base_libs::auto_bind( &TestReconfigurePolicyNode::reconfigureCB2, this ) );
 		
 		// so now, when we run this node using the above inits, we can do:
 		// ./node_name _reconfigure_namespace_1:=reconfigure1 _reconfigure_namespace_2:=reconfigure2
@@ -51,11 +53,15 @@ BASE_LIBS_DECLARE_NODE_CLASS( TestReconfigurePolicy )
 		std::cout << "." << std::flush;
 	}
 	
-	/*template<class... __Args>
-	void reconfigureCB( __Args&&... args )
+	void reconfigureCB1( _TestConfigReconfigurePolicy::_ReconfigureType & config, uint32_t level )
 	{
-		printf( "Got reconfigureCB\n" );
-	}*/
+		printf( "Got reconfigureCB1\n" );
+	}
+	
+	void reconfigureCB2( _Test2ConfigReconfigurePolicy::_ReconfigureType & config, uint32_t level )
+	{
+		printf( "Got reconfigureCB2\n" );
+	}
 };
 
 BASE_LIBS_INST_NODE( TestReconfigurePolicyNode, "test_reconfigure_policy_node" )

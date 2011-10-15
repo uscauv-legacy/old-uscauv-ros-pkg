@@ -18,8 +18,8 @@ public:
 	:
 		Policy( args... )
 	{
-		ROS_INFO( "Creating updateable policy..." );
-		ROS_INFO( "Done creating updateable policy." );
+		PRINT_INFO( "Creating updateable policy..." );
+		PRINT_INFO( "Done creating updateable policy." );
 	}
 	
 	BASE_LIBS_ENABLE_UPDATE{}

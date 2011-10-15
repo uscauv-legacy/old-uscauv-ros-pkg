@@ -1,8 +1,8 @@
 #ifndef BASE_LIBS_BASE_LIBS_POLICY_H_
 #define BASE_LIBS_BASE_LIBS_POLICY_H_
 
-// for ROS_INFO, etc
-#include <ros/console.h>
+// for PRINT_INFO, etc
+#include <base_libs/console.h>
 
 namespace base_libs
 {
@@ -16,7 +16,7 @@ public:
 	Policy( __Args&&... args )
 	{
 		// discard args... but don't fail to compile if anything is passed in
-		ROS_INFO( "--------------------" );
+		PRINT_INFO( "--------------------" );
 		printPolicyActionStart( "create", this );
 		printPolicyActionDone( "create", this );
 	}
@@ -24,7 +24,7 @@ public:
 	template<class __Policy>
 	static void printPolicyAction( std::string action, __Policy * policy )
 	{
-		ROS_INFO( "[%s] on policy: [%s]", action.c_str(), __Policy::name().c_str() );
+		PRINT_INFO( "[%s] on policy: [%s]", action.c_str(), __Policy::name().c_str() );
 	}
 	
 	template<class __Policy>

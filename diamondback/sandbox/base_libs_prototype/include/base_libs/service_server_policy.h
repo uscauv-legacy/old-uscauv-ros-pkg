@@ -19,8 +19,8 @@ public:
 		Policy(),
 		nh_rel_( nh )
 	{
-		ROS_INFO( "Creating service server policy..." );
-		ROS_INFO( "Done creating service server policy." );
+		PRINT_INFO( "Creating service server policy..." );
+		PRINT_INFO( "Done creating service server policy." );
 	}
 	
 };
