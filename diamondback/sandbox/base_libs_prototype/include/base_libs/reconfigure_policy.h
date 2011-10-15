@@ -2,11 +2,8 @@
 #define BASE_LIBS_BASE_LIBS_RECONFIGURE_POLICY_H_
 
 #include <base_libs/node_handle_policy.h>
-#include <base_libs/param_reader.h>
-#include <base_libs/generic_policy_adapter.h>
-#include <base_libs/type_utils.h>
-#include <dynamic_reconfigure/server.h>
 #include <base_libs/auto_bind.h>
+#include <dynamic_reconfigure/server.h>
 
 namespace base_libs
 {

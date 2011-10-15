@@ -1,11 +1,9 @@
 #ifndef BASE_LIBS_BASE_LIBS_NODE_HANDLE_POLICY_H_
 #define BASE_LIBS_BASE_LIBS_NODE_HANDLE_POLICY_H_
 
-#include <ros/node_handle.h>
+#include <base_libs/param_reader.h>
 #include <base_libs/policy.h>
-#include <base_libs/generic_policy_adapter.h>
-#include <base_libs/type_utils.h>
-#include <base_libs/macros.h>
+#include <ros/node_handle.h>
 
 namespace base_libs
 {

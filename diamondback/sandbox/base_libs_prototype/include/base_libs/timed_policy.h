@@ -7,19 +7,22 @@
 namespace base_libs
 {
 
-class TimedPolicy : public UpdateablePolicy
+BASE_LIBS_DECLARE_POLICY( Timed, UpdateablePolicy )
+
+BASE_LIBS_DECLARE_POLICY_CLASS( Timed )
 {
+	BASE_LIBS_MAKE_POLICY_NAME( Timed )
+
 protected:
 	ros::Time last_time_;
 	ros::Time now_;
+	double dt_;
 	
-public:
-	TimedPolicy( ros::NodeHandle & nh )
-	:
-		UpdateablePolicy( nh )
+	BASE_LIBS_DECLARE_POLICY_CONSTRUCTOR( Timed ),
+		dt_( 0 )
 	{
-		PRINT_INFO( "Creating timed policy..." );
-		PRINT_INFO( "Done creating timed policy." );
+		printPolicyActionStart( "create", this );
+		printPolicyActionDone( "create", this );
 	}
 	
 	BASE_LIBS_ENABLE_UPDATE

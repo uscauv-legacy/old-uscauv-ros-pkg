@@ -2,10 +2,8 @@
 #define BASE_LIBS_BASE_LIBS_TF_TRANCEIVER_POLICY_H_
 
 #include <base_libs/node_handle_policy.h>
-#include <base_libs/generic_policy_adapter.h>
 #include <tf/transform_broadcaster.h>
 #include <tf/transform_listener.h>
-#include <base_libs/macros.h>
 
 namespace base_libs
 {

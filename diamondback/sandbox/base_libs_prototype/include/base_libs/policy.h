@@ -3,6 +3,8 @@
 
 // for PRINT_INFO, etc
 #include <base_libs/console.h>
+#include <base_libs/generic_policy_adapter.h>
+#include <base_libs/type_utils.h>
 
 namespace base_libs
 {

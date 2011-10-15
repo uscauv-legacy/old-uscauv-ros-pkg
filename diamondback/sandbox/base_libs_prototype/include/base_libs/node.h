@@ -1,9 +1,7 @@
 #ifndef BASE_LIBS_BASE_LIBS_NODE_H_
 #define BASE_LIBS_BASE_LIBS_NODE_H_
 
-#include <base_libs/generic_policy_adapter.h>
 #include <base_libs/runable_policy.h>
-#include <base_libs/macros.h>
 
 namespace base_libs
 {

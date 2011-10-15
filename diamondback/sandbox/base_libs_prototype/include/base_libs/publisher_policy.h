@@ -2,10 +2,7 @@
 #define BASE_LIBS_BASE_LIBS_PUBLISHER_POLICY_H_
 
 #include <base_libs/node_handle_policy.h>
-#include <base_libs/generic_policy_adapter.h>
 #include <base_libs/multi_publisher.h>
-#include <base_libs/type_utils.h>
-#include <base_libs/macros.h>
 
 namespace base_libs
 {

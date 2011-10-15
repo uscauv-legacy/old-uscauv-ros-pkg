@@ -1,12 +1,8 @@
 #ifndef BASE_LIBS_BASE_LIBS_RUNABLE_POLICY_H_
 #define BASE_LIBS_BASE_LIBS_RUNABLE_POLICY_H_
 
-#include <ros/rate.h>
-#include <base_libs/param_reader.h>
-#include <base_libs/generic_policy_adapter.h>
 #include <base_libs/node_handle_policy.h>
-#include <base_libs/type_utils.h>
-#include <base_libs/macros.h>
+#include <ros/rate.h>
 
 namespace base_libs
 {

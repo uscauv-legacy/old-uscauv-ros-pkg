@@ -1,11 +1,8 @@
 #ifndef BASE_LIBS_BASE_LIBS_IMAGE_PROC_POLICY_H_
 #define BASE_LIBS_BASE_LIBS_IMAGE_PROC_POLICY_H_
 
-#include <base_libs/macros.h>
 #include <base_libs/node_handle_policy.h>
-#include <base_libs/generic_policy_adapter.h>
 #include <base_libs/multi_publisher.h>
-#include <base_libs/param_reader.h>
 #include <image_transport/image_transport.h>
 #include <cv_bridge/cv_bridge.h>
 #include <cv_bridge/CvBridge.h>

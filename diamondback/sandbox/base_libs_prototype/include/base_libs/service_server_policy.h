@@ -1,26 +1,22 @@
 #ifndef BASE_LIBS_BASE_LIBS_SERVICE_SERVER_POLICY_H_
 #define BASE_LIBS_BASE_LIBS_SERVICE_SERVER_POLICY_H_
 
-#include <base_libs/policy.h>
+#include <base_libs/node_handle_policy.h>
 #include <ros/service_server.h>
-#include <ros/node_handle.h>
 
 namespace base_libs
 {
 
-class ServiceServerPolicy : public Policy
+BASE_LIBS_DECLARE_POLICY( ServiceServer, NodeHandlePolicy )
+
+BASE_LIBS_DECLARE_POLICY_CLASS( ServiceServer )
 {
-private:
-	ros::NodeHandle nh_rel_;
+	BASE_LIBS_MAKE_POLICY_NAME( ServiceServer )
 	
-public:
-	ServiceServerPolicy( ros::NodeHandle & nh )
-	:
-		Policy(),
-		nh_rel_( nh )
+	BASE_LIBS_DECLARE_POLICY_CONSTRUCTOR( ServiceServer )
 	{
-		PRINT_INFO( "Creating service server policy..." );
-		PRINT_INFO( "Done creating service server policy." );
+		printPolicyActionStart( "create", this );
+		printPolicyActionDone( "create", this );
 	}
 	
 };

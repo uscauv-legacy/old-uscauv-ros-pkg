@@ -1,25 +1,21 @@
 #ifndef BASE_LIBS_BASE_LIBS_UPDATEABLE_POLICY_H_
 #define BASE_LIBS_BASE_LIBS_UPDATEABLE_POLICY_H_
 
-#include <ros/node_handle.h>
-#include <ros/rate.h>
-#include <base_libs/param_reader.h>
 #include <base_libs/policy.h>
-#include <base_libs/macros.h>
 
 namespace base_libs
 {
 
-class UpdateablePolicy : public Policy
-{	
-public:
-	template<class... __Args>
-	UpdateablePolicy( __Args&&... args )
-	:
-		Policy( args... )
+BASE_LIBS_DECLARE_POLICY( Updateable, Policy )
+
+BASE_LIBS_DECLARE_POLICY_CLASS( Updateable )
+{
+	BASE_LIBS_MAKE_POLICY_NAME( Updateable )
+
+	BASE_LIBS_DECLARE_POLICY_CONSTRUCTOR( Updateable )
 	{
-		PRINT_INFO( "Creating updateable policy..." );
-		PRINT_INFO( "Done creating updateable policy." );
+		printPolicyActionStart( "create", this );
+		printPolicyActionDone( "create", this );
 	}
 	
 	BASE_LIBS_ENABLE_UPDATE{}
