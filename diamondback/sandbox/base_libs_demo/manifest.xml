@@ -1,20 +1,21 @@
 <package>
-  <description brief="image_server_prototype">
+  <description brief="base_libs_demo">
 
-     image_server_prototype
+     base_libs_demo
 
   </description>
-  <author>Edward T. Kaszubski, Rand Voorhies</author>
+  <author>Edward</author>
   <license>BSD</license>
   <review status="unreviewed" notes=""/>
-  <url>http://ros.org/wiki/image_server</url>
+  <url>http://ros.org/wiki/base_libs_demo</url>
   <depend package="base_libs_prototype"/>
   <depend package="nodelet"/>
-  
+
   <export>
     <nodelet plugin="${prefix}/nodelets/nodelet_plugins.xml" />
     <cpp cflags="-I${prefix}/include" lflags="-Wl,-rpath,${prefix}/lib -L${prefix}/lib"/>
   </export>
+
 </package>
 
 
