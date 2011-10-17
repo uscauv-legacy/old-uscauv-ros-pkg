@@ -48,6 +48,14 @@
 namespace ros
 {
 
+// ## SubscriberAdapterStorage #########################################
+template<class __Subscriber>
+struct SubscriberAdapterStorage {};
+
+// ## SubscriberAdapterStorage for ros::Subscriber #####################
+template<>
+struct SubscriberAdapterStorage<ros::Subscriber> {};
+
 // ## SubscriberAdapter ################################################
 template<class __Subscriber>
 class SubscriberAdapter {};
@@ -64,7 +72,8 @@ public:
 		ros::NodeHandle & nh,
 		const std::string & topic,
 		const unsigned int & cache_size,
-		const std::function<void( const boost::shared_ptr<__Message const>& )> & callback )
+		const std::function<void( const boost::shared_ptr<__Message const>& )> & callback,
+		SubscriberAdapterStorage<_Subscriber> & storage )
 	{
 		return nh.subscribe(
 			topic,
@@ -85,6 +94,7 @@ public:
 	typedef std::vector<_Topic> _TopicArray;
 	typedef __Subscriber _Subscriber;
 	//typedef SubscriberAdapter<__Subscriber> _SubscriberAdapter;
+	typedef SubscriberAdapterStorage<__Subscriber> _SubscriberAdapterStorage;
 	typedef std::map<_Topic, __Subscriber> _SubscriberMap;
 
 protected:
@@ -99,17 +109,17 @@ public:
 	
 	// here, we only support adding one callback at a time, either through a standard or member function pointer
 	template<class __Message, class __CallerBase, class __Caller>
-	MultiSubscriber & addSubscriber( ros::NodeHandle & nh, const _Topic & topic_name, void( __CallerBase::*function_ptr )( const __Message & ), __Caller * caller )
+	MultiSubscriber & addSubscriber( ros::NodeHandle & nh, const _Topic & topic_name, void( __CallerBase::*function_ptr )( const __Message & ), __Caller * caller, _SubscriberAdapterStorage & storage = _SubscriberAdapterStorage() )
 	{
-		return addSubscriber( nh, topic_name, base_libs::auto_bind( function_ptr, caller ) );
+		return addSubscriber( nh, topic_name, base_libs::auto_bind( function_ptr, caller ), storage );
 	}
 	
 	template<class __Message>
-	MultiSubscriber & addSubscriber( ros::NodeHandle & nh, const _Topic & topic_name, const std::function< void(const boost::shared_ptr< __Message const > &)> & callback )
+	MultiSubscriber & addSubscriber( ros::NodeHandle & nh, const _Topic & topic_name, const std::function< void(const boost::shared_ptr< __Message const > &)> & callback, _SubscriberAdapterStorage & storage )
 	{
 		printf( "Creating subscriber [%s] on topic %s/%s\n", __Message::__s_getDataType().c_str(), nh.getNamespace().c_str(), topic_name.c_str() );
 		
-		subscribers_[topic_name] = SubscriberAdapter<__Subscriber>::createSubscriber( nh, topic_name, 10, callback );
+		subscribers_[topic_name] = SubscriberAdapter<__Subscriber>::createSubscriber( nh, topic_name, 10, callback, storage );
 		
 		return *this;
 	}

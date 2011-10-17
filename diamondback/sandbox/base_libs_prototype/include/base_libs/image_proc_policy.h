@@ -38,6 +38,7 @@
 
 #include <base_libs/node_handle_policy.h>
 #include <base_libs/multi_publisher.h>
+#include <base_libs/multi_subscriber.h>
 #include <image_transport/image_transport.h>
 #include <cv_bridge/cv_bridge.h>
 #include <cv_bridge/CvBridge.h>
@@ -45,7 +46,7 @@
 #include <opencv2/imgproc/imgproc.hpp>
 #include <opencv2/highgui/highgui.hpp>
 
-// specializations for image_transport::Publisher
+// ## PublisherAdapterStorage for image_transport::Publisher ###########
 namespace ros
 {
 
@@ -54,6 +55,8 @@ struct PublisherAdapterStorage<image_transport::Publisher>
 {
 	image_transport::ImageTransport * image_transport_;
 };
+
+// ## PublisherAdapter for image_transport::Publisher ##################
 
 template<class __Message>
 class PublisherAdapter<image_transport::Publisher, __Message>
@@ -73,6 +76,35 @@ public:
 	}
 };
 
+// ## SubscriberAdapterStorage for image_transport::Subscriber #########
+template<>
+struct SubscriberAdapterStorage<image_transport::Subscriber>
+{
+	image_transport::ImageTransport * image_transport_;
+};
+
+// ## SubscriberAdapter for image_transport::Subscriber ################
+template<>
+class SubscriberAdapter<image_transport::Subscriber>
+{
+public:
+	typedef image_transport::Subscriber _Subscriber;
+	
+	template<class __Message>
+	static _Subscriber createSubscriber(
+		ros::NodeHandle & nh,
+		const std::string & topic,
+		const unsigned int & cache_size,
+		const std::function<void( const boost::shared_ptr<__Message const>& )> & callback,
+		SubscriberAdapterStorage<_Subscriber> & storage )
+	{
+		return storage.image_transport_->subscribe(
+			topic,
+			cache_size,
+			boost::function< void( const boost::shared_ptr< __Message const>& )>( callback ) );
+	}
+};
+
 }
 
 namespace base_libs
@@ -84,24 +116,30 @@ BASE_LIBS_DECLARE_POLICY_CLASS( ImageProc )
 {
 	BASE_LIBS_MAKE_POLICY_NAME( ImageProc )
 protected:
-	ros::MultiPublisher<image_transport::Publisher> image_publishers_;
+	ros::MultiPublisher<image_transport::Publisher> image_pubs_;
+	ros::MultiSubscriber<image_transport::Subscriber> image_subs_;
 	
 	image_transport::ImageTransport image_transport_;
-	image_transport::Subscriber image_sub_;
+	//image_transport::Subscriber image_sub_;
+	
 	
 public:
 	ImageProcPolicy( ros::NodeHandle & nh )
 	:
 		_ImageProcPolicyAdapterType( nh ),
-		image_transport_( nh_rel_ ),
-		image_sub_( image_transport_.subscribe( nh_rel_.resolveName( "image" ), 1, &ImageProcPolicy::imageCB_0, this ) )
+		image_transport_( nh_rel_ )
 	{
 		printPolicyActionStart( "create", this );
-		ros::PublisherAdapterStorage<image_transport::Publisher> storage;
-		storage.image_transport_ = &image_transport_;
+		ros::PublisherAdapterStorage<image_transport::Publisher> publisher_storage;
+		ros::SubscriberAdapterStorage<image_transport::Subscriber> subscriber_storage;
+		publisher_storage.image_transport_ = &image_transport_;
+		subscriber_storage.image_transport_ = &image_transport_;
+		
+		if( ros::ParamReader<bool, 1>::readParam( nh_rel_, "subscribe_to_image", true ) )
+			image_subs_.addSubscriber( nh_rel_, "image", &ImageProcPolicy::imageCB_0, this, subscriber_storage );
 		
 		if( ros::ParamReader<bool, 1>::readParam( nh_rel_, "show_image", true ) )
-			image_publishers_.addPublishers<sensor_msgs::Image>( nh_rel_, {"output_image"}, storage );
+			image_pubs_.addPublishers<sensor_msgs::Image>( nh_rel_, {"output_image"}, publisher_storage );
 			
 		printPolicyActionDone( "create", this );
 	}
@@ -113,7 +151,7 @@ public:
 		 * When done, if applicable, publish a debug image on the given topic
 		 * 
 		 * IplImage * image = &IplImage( image_ptr->image );
-		 * image_publishers_.publish( image_ptr->toImageMsg(), "output_image" );
+		 * image_pubs_.publish( image_ptr->toImageMsg(), "output_image" );
 		 */
 	}
 	
@@ -143,19 +181,20 @@ public:
 		processImage( cv_image_ptr );
 	}
 	
+	// publish specializaiton for sensor_msgs::Image::Ptr
+	void publishImages( const std::string & topic, const sensor_msgs::Image::Ptr & image_ptr )
+	{
+		//PRINT_INFO( "publishing image (CvImageConstPtr) on topic %s", topic.c_str() );
+		
+		image_pubs_.publish( topic, image_ptr );
+	}
+	
 	// publish specializaiton for cv_bridge::CvImageConstPtr
 	void publishImages( const std::string & topic, cv_bridge::CvImageConstPtr & image_ptr )
 	{
-		image_publishers_.publish( topic, image_ptr->toImageMsg() );
-	}
-	
-	// publish specialization for IplImage *
-	void publishImages( const std::string & topic, IplImage * image_ptr )
-	{
-		cv_bridge::CvImage image_wrapper;
-		image_wrapper.image = cv::Mat( image_ptr );
+		//PRINT_INFO( "publishing image (CvImageConstPtr) on topic %s", topic.c_str() );
 		
-		image_publishers_.publish( topic, image_wrapper.toImageMsg() );
+		publishImages( topic, image_ptr->toImageMsg() );
 	}
 	
 	// generic recursive publish with topic/image pairs
@@ -165,8 +204,23 @@ public:
 	publishImages( const std::string & topic, __Image & image, __Rest... rest )
 	{
 		// publish using specialization for __Image
-		publishImages( image, topic );
+		publishImages( topic, image );
 		publishImages( rest... );
+	}
+	
+	sensor_msgs::Image::Ptr fromIplImage( IplImage * image_ptr, std::string frame_id = "" )
+	{
+		//cv_bridge::CvImage image_wrapper;
+		
+		//image_wrapper.image = cv::Mat( image_ptr );
+		//image_wrapper.encoding = "bgr8";
+		//image_wrapper.frame_name = frame_id;
+		
+		//return image_wrapper;
+		
+		auto result = sensor_msgs::CvBridge::cvToImgMsg( image_ptr );
+		result->header.frame_id = frame_id;
+		return result;
 	}
 	
 	//void publishImage( IplImage * image_ptr ){}

@@ -82,9 +82,9 @@ public:
 		{
 			if ( current_frame_ < image_loader_.image_cache_.size() )
 			{
-				ROS_INFO( "Publishing image %d", current_frame_ );
+				ROS_INFO( "Publishing image %d [%dx%d]", current_frame_, image_loader_.image_cache_[current_frame_]->width, image_loader_.image_cache_[current_frame_]->height );
 				
-				publishImages( "output_image", image_loader_.image_cache_[current_frame_] );
+				publishImages( "output_image", fromIplImage( image_loader_.image_cache_[current_frame_] ) );
 				
 				//publishCvImage( image_loader_.image_cache_[current_frame_] );
 				if ( config_.auto_advance )
