@@ -26,7 +26,8 @@ echo -n 'Configure environment variables? (y/n) '
 read res
 if [ "$res" == "y" ]; then
 	sudo sh -c 'echo "source /opt/ros/diamondback/setup.bash" >> ~/.bashrc'
-	sudo sh -c 'echo "\nexport ROS_PACKAGE_PATH=\${ROS_PACKAGE_PATH}:~/workspace" >> ~/.bashrc'
+	sudo sh -c 'echo "\nexport ROS_PACKAGE_PATH=\$ROS_PACKAGE_PATH:~/workspace" >> ~/.bashrc'
+  sudo sh -c 'echo "\nexport ROS_PARALLEL_JOBS=-j4" >> ~/.bashrc'
 	. ~/.bashrc
 fi
 echo "----------"
