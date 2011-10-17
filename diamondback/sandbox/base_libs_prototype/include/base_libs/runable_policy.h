@@ -76,9 +76,16 @@ protected:
 	{
 		run_ = true;
 		
-		PRINT_INFO( "----- Spinning... -----" );
+		PRINT_INFO( "--------------------" );
+		PRINT_INFO( ">>>>> Starting pre-spin..." );
 		
 		spinFirst();
+		
+		PRINT_INFO( "--------------------" );
+		PRINT_INFO( "<<<<< Done pre-spin" );
+		
+		PRINT_INFO( "--------------------" );
+		PRINT_INFO( ">>>>> Spinning at %f Hz...", 1.0 / loop_rate_->expectedCycleTime().toSec() );
 		
 		while( run_ && ros::ok() )
 		{
@@ -86,10 +93,13 @@ protected:
 			ros::spinOnce();
 			if( loop_rate_ ) loop_rate_->sleep();
 		}
+		
+		PRINT_INFO( "<<<<< Main loop finished" );
 	}
 	
 	virtual void interrupt()
 	{
+		PRINT_INFO( ">>>>> Interrupting main loop..." );
 		run_ = false;
 	}
 };

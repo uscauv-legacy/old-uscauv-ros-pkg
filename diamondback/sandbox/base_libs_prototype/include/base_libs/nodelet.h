@@ -69,34 +69,45 @@ public:
 		nodelet::Nodelet(), data_( NULL ), m_thread_( NULL ), running_( false )
 	{
 		PRINT_INFO( "--------------------" );
-		PRINT_INFO( "Setting up nodelet..." );
-		PRINT_INFO( "Done setting up nodelet" );
+		PRINT_INFO( ">>>>> Setting up nodelet..." );
+		PRINT_INFO( "<<<<< Done setting up nodelet" );
 	}
 
 	virtual ~Nodelet()
 	{
 		PRINT_INFO( "--------------------" );
-		PRINT_INFO( "Shutting down nodelet..." );
+		PRINT_INFO( ">>>>> Shutting down nodelet..." );
 		if ( running_ && m_thread_ )
 		{
-			PRINT_INFO( "Interrupting blocking processes..." );
+			PRINT_INFO( "--------------------" );
+			PRINT_INFO( ">>>>> Interrupting blocking processes..." );
 			if( interrupt_callback_ )
 			{
 				interrupt_callback_();
-				PRINT_INFO( "Done interrupting blocking processes" );
+				PRINT_INFO( "--------------------" );
+				PRINT_INFO( "<<<<< Done interrupting blocking processes" );
 			}
-			else PRINT_INFO( "No interrupt callback registered" );
+			else
+			{
+				PRINT_INFO( "--------------------" );
+				PRINT_INFO( "<<<<< No interrupt callback registered" );
+			}
 
-			PRINT_INFO( "Stopping thread..." );
+			PRINT_INFO( "--------------------" );
+			PRINT_INFO( ">>>>> Stopping thread..." );
 			if( m_thread_ ) m_thread_->join();
-			PRINT_INFO( "Done stopping thread" );
-
-			PRINT_INFO( "Deleting data..." );
+			PRINT_INFO( "--------------------" );
+			PRINT_INFO( "<<<<< Done stopping thread" );
+			
+			PRINT_INFO( "--------------------" );
+			PRINT_INFO( ">>>>> Deleting data..." );
 			if( data_ ) delete data_;
-			PRINT_INFO( "Done deleting data" );
+			PRINT_INFO( "--------------------" );
+			PRINT_INFO( "<<<<< Done deleting data" );
 		}
 		if( m_thread_ ) delete m_thread_;
-		PRINT_INFO( "Done shutting down nodelet" );
+		PRINT_INFO( "--------------------" );
+		PRINT_INFO( "<<<<< Done shutting down nodelet" );
 		PRINT_INFO( "--------------------\n" );
 	}
 
@@ -113,20 +124,25 @@ public:
 
 	void onInit()
 	{
-		PRINT_INFO( "Initializing..." );
+		PRINT_INFO( "--------------------" );
+		PRINT_INFO( ">>>>> Initializing..." );
 
-		PRINT_INFO( "Constructing data..." );
+		PRINT_INFO( "--------------------" );
+		PRINT_INFO( ">>>>> Constructing data..." );
 		constructData();
-		PRINT_INFO( "Done constructing data" );
+		PRINT_INFO( "--------------------" );
+		PRINT_INFO( "<<<<< Done constructing data" );
 
-
-		PRINT_INFO( "Starting thread..." );
+		PRINT_INFO( "--------------------" );
+		PRINT_INFO( ">>>>> Starting thread..." );
 		running_ = true;
 		m_thread_ = new std::thread( &Nodelet::spin,
 		                             this );
-		PRINT_INFO( "Done starting thread" );
+		PRINT_INFO( "--------------------" );
+		PRINT_INFO( "<<<<< Done starting thread" );
 
-		PRINT_INFO( "Done initializing" );
+		PRINT_INFO( "--------------------" );
+		PRINT_INFO( "<<<<< Done initializing" );
 	}
 
 	virtual void constructData()

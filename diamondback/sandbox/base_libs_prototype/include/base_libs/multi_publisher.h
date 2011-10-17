@@ -136,7 +136,7 @@ public:
 	typename std::enable_if<(__MessagesSubset::num_types_ == 0 ), void>::type
 	createPublishers( ros::NodeHandle & nh, typename _TopicArray::iterator current_topic, const typename _TopicArray::iterator last_topic, _PublisherAdapterStorage & storage )
 	{
-		PRINT_INFO( "Finished creating topics." );
+		//PRINT_INFO( "Finished creating topics." );
 	}
 	
 	// check to see if a topic exists in the list of publishers

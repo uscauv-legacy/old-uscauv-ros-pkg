@@ -53,7 +53,7 @@ public:
 	Policy( __Args&&... args )
 	{
 		// discard args... but don't fail to compile if anything is passed in
-		PRINT_INFO( "--------------------" );
+		PRINT_INFO( "########## Policy Group ##########" );
 		printPolicyActionStart( "create", this );
 		printPolicyActionDone( "create", this );
 	}
@@ -67,13 +67,13 @@ public:
 	template<class __Policy>
 	static void printPolicyActionStart( std::string action, __Policy * policy )
 	{
-		printPolicyAction( "Start: " + action, policy );
+		printPolicyAction( ">>>>> Start: " + action, policy );
 	}
 	
 	template<class __Policy>
 	static void printPolicyActionDone( std::string action, __Policy * policy )
 	{
-		printPolicyAction( "Done: " + action, policy );
+		printPolicyAction( "<<<<< Done: " + action, policy );
 	}
 };
 

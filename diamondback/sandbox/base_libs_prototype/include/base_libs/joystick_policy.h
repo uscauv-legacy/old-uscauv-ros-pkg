@@ -36,23 +36,49 @@
 #ifndef BASE_LIBS_BASE_LIBS_JOYSTICK_POLICY_H_
 #define BASE_LIBS_BASE_LIBS_JOYSTICK_POLICY_H_
 
-#include <base_libs/policy.h>
+#include <base_libs/node_handle_policy.h>
+#include <base_libs/multi_publisher.h>
+#include <base_libs/multi_subscriber.h>
+#include <geometry_msgs/Twist.h>
+#include <joy/Joy.h>
 
 namespace base_libs
 {
 
-BASE_LIBS_DECLARE_POLICY( Joystick, Policy )
+BASE_LIBS_DECLARE_POLICY( Joystick, NodeHandlePolicy )
 
 BASE_LIBS_DECLARE_POLICY_CLASS( Joystick )
 {
 	BASE_LIBS_MAKE_POLICY_NAME( Joystick )
+
+public:
+	ros::MultiPublisher<> multi_pub_;
+	ros::MultiSubscriber<> multi_sub_;
 	
 	BASE_LIBS_DECLARE_POLICY_CONSTRUCTOR( Joystick )
 	{
 		printPolicyActionStart( "create", this );
+		
+		preInit();
+		
 		printPolicyActionDone( "create", this );
 	}
+	
+	void preInit()
+	{
+		multi_pub_.addPublishers<geometry_msgs::Twist>( nh_rel_, { "cmd_vel" } );
+		multi_sub_.addSubscriber( nh_rel_, "joystick", &JoystickPolicy::joystickCB, this );
+		
+		auto linear_axis_scales = ros::ParamReader<double, 3>::readParams( nh_rel_, "linear_axis", "_scale" );
+		auto angular_axis_scales = ros::ParamReader<double, 3>::readParams( nh_rel_, "angular_axis", "_scale" );
+		
+		auto axis_indices = ros::ParamReader<double, 6>::readParams( nh_rel_, "axis", "_index" );
+	}
 
+	void joystickCB( const joy::Joy::ConstPtr & msg )
+	{
+		
+	}
 };
 
 }

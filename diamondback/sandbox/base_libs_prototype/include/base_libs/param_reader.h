@@ -91,41 +91,52 @@ public:
 	_Array
 		readParams()
 	{
-		return readParams(
+		params_ = readParams(
+			nh_,
 			prefix_,
 			postfix_,
 			start_index_ );
+		
+		return params_;
 	}
 	
-	_Array
+	static _Array
 		readParams(
+			ros::NodeHandle & nh,
 			const std::string & prefix,
 			const std::string & postfix = "",
 			unsigned int start_index = 1 )
 	{
-		params_.clear();
+		_Array params;
 		bool new_param_found = true;
-	    unsigned int n = start_index_;
+	    unsigned int n = start_index;
 	    do
 	    {
-			std::stringstream ss;
-			ss << prefix_ << n << postfix_;
+			std::stringstream param_name_ss;
+			param_name_ss << prefix << n << postfix;
 			
 			__Storage param_value;
-			const std::string param_name = ss.str();
+			const std::string param_name = param_name_ss.str();
 			
-			if( nh_.getParam(
+			if( nh.getParam(
 				param_name.c_str(),
 				param_value ) )
 			{
-				PRINT_INFO( "Loaded param [%s] with value [%s]", param_name.c_str(), param_value );
-				params_.push_back( param_value );
+				std::stringstream param_value_ss;
+				param_value_ss << param_value;
+				PRINT_INFO( "Loaded param [%s] with value [%s]", param_name.c_str(), param_value_ss.str().c_str() );
+				params.push_back( param_value );
 				++n;
 			}
-			else new_param_found = false;
+			else
+			{
+				PRINT_WARN( "Only found %i/%i parameters in array", n - start_index, __Dim__ );
+				PRINT_WARN( "%s[%u:%u]%s", prefix.c_str(), start_index, start_index + __Dim__, postfix.c_str() );
+				new_param_found = false;
+			}
 	    }
-	    while( new_param_found && ( __Dim__ == 0 || n < __Dim__ + start_index_ ) );
-		return params_;
+	    while( new_param_found && ( __Dim__ == 0 || n < __Dim__ + start_index ) );
+		return params;
 	}
 };
 
@@ -184,16 +195,16 @@ public:
 		
 		const bool param_found( tryReadParam( nh, param_name, param_value ) );
 		
-		std::stringstream ss;
-		ss << param_value;
+		std::stringstream param_value_ss;
+		param_value_ss << param_value;
 		
 		if( param_found )
 		{
-			PRINT_INFO( "> Using value [ %s ]", ss.str().c_str() );
+			PRINT_INFO( "> Using value [ %s ]", param_value_ss.str().c_str() );
 		}
 		else
 		{
-			PRINT_WARN( "> Defaulting to [ %s ]", ss.str().c_str() );
+			PRINT_WARN( "> Defaulting to [ %s ]", param_value_ss.str().c_str() );
 		}
 		
 		return  param_value;

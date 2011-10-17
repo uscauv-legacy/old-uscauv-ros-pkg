@@ -123,13 +123,18 @@ protected:
 	//image_transport::Subscriber image_sub_;
 	
 	
-public:
-	ImageProcPolicy( ros::NodeHandle & nh )
-	:
-		_ImageProcPolicyAdapterType( nh ),
+	BASE_LIBS_DECLARE_POLICY_CONSTRUCTOR( ImageProc ),
 		image_transport_( nh_rel_ )
 	{
 		printPolicyActionStart( "create", this );
+		
+		preInit();
+		
+		printPolicyActionDone( "create", this );
+	}
+	
+	void preInit()
+	{
 		ros::PublisherAdapterStorage<image_transport::Publisher> publisher_storage;
 		ros::SubscriberAdapterStorage<image_transport::Subscriber> subscriber_storage;
 		publisher_storage.image_transport_ = &image_transport_;
@@ -140,8 +145,6 @@ public:
 		
 		if( ros::ParamReader<bool, 1>::readParam( nh_rel_, "show_image", true ) )
 			image_pubs_.addPublishers<sensor_msgs::Image>( nh_rel_, {"output_image"}, publisher_storage );
-			
-		printPolicyActionDone( "create", this );
 	}
 	
 	virtual IMAGE_PROC_PROCESS_IMAGE( image_ptr )
