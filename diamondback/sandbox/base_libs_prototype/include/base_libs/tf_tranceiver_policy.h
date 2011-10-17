@@ -8,6 +8,8 @@
 namespace base_libs
 {
 
+#define DEFAULT_LOOKUP_TIME ros::Time( 0 )
+
 BASE_LIBS_DECLARE_POLICY( TfTranceiver, NodeHandlePolicy )
 
 BASE_LIBS_DECLARE_POLICY_CLASS( TfTranceiver )
@@ -41,7 +43,7 @@ public:
 			PRINT_WARN( "Cannot publish StampedTransform with empty source frame or target frame id:\n[ %s -> %s ] : %f", transform.frame_id_.c_str(), transform.child_frame_id_.c_str(), transform.stamp_.toSec() );
 			return;
 		}
-		printf( "Publishing %s -> %s [%f]\n", transform.frame_id_.c_str(), transform.child_frame_id_.c_str(), transform.stamp_.toSec() );
+		PRINT_DEBUG( "Publishing %s -> %s [%f]", transform.frame_id_.c_str(), transform.child_frame_id_.c_str(), transform.stamp_.toSec() );
 		tf_publisher_.sendTransform( transform );
 	}
 	
@@ -99,15 +101,15 @@ public:
 		const ros::Duration & wait_time,
 		const bool & default_to_latest = true )
 	{
-		printf( "Looking up transform:\n [ %s-> %s ]\n( %f -> %f )...\n", from_frame_id.c_str(), to_frame_id.c_str(), from_frame_time.toSec(), to_frame_time.toSec() );
-		tf::StampedTransform transform;
+		PRINT_DEBUG( "Looking up transform:\n [ %s-> %s ]\n( %f -> %f )...", from_frame_id.c_str(), to_frame_id.c_str(), from_frame_time.toSec(), to_frame_time.toSec() );
+		tf::StampedTransform transform( btTransform( tf::createIdentityQuaternion() ), ros::Time::now(), from_frame_id, to_frame_id );
 		try
 		{
-			if( tf_listener_.canTransform(
-				to_frame_id,
-				to_frame_time,
+			if( transformExists(
 				from_frame_id,
 				from_frame_time,
+				to_frame_id,
+				to_frame_time,
 				fixed_frame_id ) )
 			{
 				tf_listener_.waitForTransform(
@@ -126,7 +128,7 @@ public:
 					fixed_frame_id,
 					transform );
 					
-				printf( "OK\n" );
+				PRINT_DEBUG( "OK\n" );
 			}
 			else
 			{
@@ -153,7 +155,7 @@ public:
 		}
 		catch ( const tf::TransformException & ex )
 		{
-			ROS_ERROR(
+			PRINT_ERROR(
 				"%s",
 				ex.what() );
 		}
@@ -170,7 +172,7 @@ public:
 		return lookupTransform(
 			from_frame_id,
 			to_frame_id,
-			ros::Time::now(),
+			DEFAULT_LOOKUP_TIME,
 			wait_time );
 	}
 	
@@ -195,13 +197,13 @@ public:
 		const ros::Duration & wait_time,
 		const bool & default_to_latest = true )
 	{
-		printf( "Looking up transform:\n [ %s-> %s ]\n( %f )...\n", from_frame_id.c_str(), to_frame_id.c_str(), frame_time.toSec() );
-		tf::StampedTransform transform;
+		PRINT_DEBUG( "Looking up transform:\n [ %s-> %s ]\n( %f )...", from_frame_id.c_str(), to_frame_id.c_str(), frame_time.toSec() );
+		tf::StampedTransform transform( btTransform( tf::createIdentityQuaternion() ), ros::Time::now(), from_frame_id, to_frame_id );
 		try
 		{
-			if( tf_listener_.canTransform(
-				to_frame_id,
+			if( transformExists(
 				from_frame_id,
+				to_frame_id,
 				frame_time ) )
 			{
 				tf_listener_.waitForTransform(
@@ -216,7 +218,7 @@ public:
 					frame_time,
 					transform );
 					
-				printf( "OK\n" );
+				PRINT_DEBUG( "OK" );
 			}
 			else
 			{
@@ -241,14 +243,55 @@ public:
 		}
 		catch ( const tf::TransformException & ex )
 		{
-			ROS_ERROR(
+			PRINT_ERROR(
 				"%s",
 				ex.what() );
 		}
 		transform.setRotation( transform.getRotation().normalized() );
 		return transform;
 	}
+	
+	bool transformExists(
+		const _TfFrameId & from_frame_id,
+		const _TfFrameId & to_frame_id )
+	{
+		return transformExists(
+			from_frame_id,
+			to_frame_id,
+			DEFAULT_LOOKUP_TIME );
+	}
+	
+	bool transformExists(
+		const _TfFrameId & from_frame_id,
+		const _TfFrameId & to_frame_id,
+		const ros::Time & frame_time )
+	{
+		// to_frame and from_frame are flipped in the tf api here
+		return tf_listener_.canTransform(
+			to_frame_id,
+			from_frame_id,
+			frame_time );
+	}
+	
+	bool transformExists(
+		const _TfFrameId & from_frame_id,
+		const ros::Time & from_frame_time,
+		const _TfFrameId & to_frame_id,
+		const ros::Time & to_frame_time,
+		const _TfFrameId & fixed_frame_id )
+	{
+		// to_frame and from_frame are flipped in the tf api here
+		return tf_listener_.canTransform(
+			to_frame_id,
+			to_frame_time,
+			from_frame_id,
+			from_frame_time,
+			fixed_frame_id );
+	}
+			
 };
+
+#undef DEFAULT_LOOKUP_TIME
 
 }
 

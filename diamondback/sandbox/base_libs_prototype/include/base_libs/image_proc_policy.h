@@ -101,30 +101,37 @@ public:
 		}
 		catch (cv_bridge::Exception& e)
 		{
-			ROS_ERROR( "cv_bridge exception: %s", e.what() );
+			PRINT_ERROR( "cv_bridge exception: %s", e.what() );
 			return;
 		}
 		
 		processImage( cv_image_ptr );
 	}
 	
-	void publishImage(){}
-	
-	template<class... __Topics>
-	void publishImage( cv_bridge::CvImageConstPtr & image_ptr, std::string topic, __Topics... topics )
+	// publish specializaiton for cv_bridge::CvImageConstPtr
+	void publishImages( const std::string & topic, cv_bridge::CvImageConstPtr & image_ptr )
 	{
 		image_publishers_.publish( topic, image_ptr->toImageMsg() );
-		publishImage( topics... );
 	}
 	
-	template<class... __Topics>
-	void publishImage( IplImage * image_ptr, std::string topic, __Topics... topics )
+	// publish specialization for IplImage *
+	void publishImages( const std::string & topic, IplImage * image_ptr )
 	{
 		cv_bridge::CvImage image_wrapper;
 		image_wrapper.image = cv::Mat( image_ptr );
 		
 		image_publishers_.publish( topic, image_wrapper.toImageMsg() );
-		publishImage( topics... );
+	}
+	
+	// generic recursive publish with topic/image pairs
+	// enabled only if __Rest... is not empty
+	template<class __Image, class... __Rest>
+	typename std::enable_if<(sizeof...(__Rest) > 0), void>::type
+	publishImages( const std::string & topic, __Image & image, __Rest... rest )
+	{
+		// publish using specialization for __Image
+		publishImages( image, topic );
+		publishImages( rest... );
 	}
 	
 	//void publishImage( IplImage * image_ptr ){}

@@ -34,6 +34,7 @@ protected:
 	}
 	
 	virtual void spinFirst(){}
+	
 	virtual void spinOnce(){}
 	
 	virtual void spin()

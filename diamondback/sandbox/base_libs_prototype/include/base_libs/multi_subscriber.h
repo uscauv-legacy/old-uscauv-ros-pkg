@@ -63,8 +63,8 @@ public:
 	}
 	
 	// here, we only support adding one callback at a time, either through a standard or member function pointer
-	template<class __Message, class __Caller>
-	MultiSubscriber & addSubscriber( ros::NodeHandle & nh, const _Topic & topic_name, void( __Caller::*function_ptr )( const __Message & ), __Caller * caller )
+	template<class __Message, class __CallerBase, class __Caller>
+	MultiSubscriber & addSubscriber( ros::NodeHandle & nh, const _Topic & topic_name, void( __CallerBase::*function_ptr )( const __Message & ), __Caller * caller )
 	{
 		return addSubscriber( nh, topic_name, base_libs::auto_bind( function_ptr, caller ) );
 	}

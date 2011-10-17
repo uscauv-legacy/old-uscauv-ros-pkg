@@ -27,7 +27,7 @@ rosbuild_add_library( ${PROJECT_NAME} console.cpp
 									  robot_driver_policy.cpp )
 									 
 #rosbuild_add_executable( test_base_image_proc test_base_image_proc.cpp )
-target_link_libraries( ${PROJECT_NAME} pthread )
+target_link_libraries( ${PROJECT_NAME} pthread boost_thread )
 rosbuild_add_compile_flags( ${PROJECT_NAME} -std=c++0x )
 
 #add_subdirectory( nodelets )

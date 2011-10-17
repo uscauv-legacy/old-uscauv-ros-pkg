@@ -29,3 +29,7 @@ target_link_libraries( test_reconfigure_policy ${PROJECT_NAME} )
 rosbuild_add_executable( test_type_utils type_utils.cpp )
 rosbuild_add_compile_flags( test_type_utils -std=c++0x )
 target_link_libraries( test_type_utils ${PROJECT_NAME} )
+
+rosbuild_add_executable( test_robot_driver_policy robot_driver_policy.cpp )
+rosbuild_add_compile_flags( test_robot_driver_policy -std=c++0x )
+target_link_libraries( test_robot_driver_policy ${PROJECT_NAME} )

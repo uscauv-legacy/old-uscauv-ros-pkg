@@ -17,7 +17,7 @@ BASE_LIBS_DECLARE_NODE_CLASS( TestImageProcPolicy )
 		
 		//
 		
-		publishImage( image_ptr, "output_image" );
+		publishImages( "output_image", image_ptr );
 	}
 	
 	void spinOnce()
