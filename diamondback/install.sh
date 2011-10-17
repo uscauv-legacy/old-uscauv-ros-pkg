@@ -17,7 +17,7 @@ if [ "$res" == "y" ]; then
 	sudo sh -c 'echo "deb http://code.ros.org/packages/ros/ubuntu maverick main" > /etc/apt/sources.list.d/ros-latest.list'
 	wget http://code.ros.org/packages/ros.key -O - | sudo apt-key add -
 	sudo apt-get update
-	sudo apt-get install ros-diamondback-desktop-full
+	sudo apt-get install ros-diamondback-desktop-full ros-diamondback-joystick-drivers
 fi
 echo "----------"
 
