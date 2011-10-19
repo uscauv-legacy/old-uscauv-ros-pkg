@@ -38,6 +38,7 @@
 
 #include <base_libs/container.h>
 #include <base_libs/auto_bind.h>
+#include <base_libs/console.h>
 #include <ros/node_handle.h>
 #include <ros/subscriber.h>
 #include <vector>
