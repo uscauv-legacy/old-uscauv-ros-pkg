@@ -1,5 +1,5 @@
 /***************************************************************************
- *  include/base_libs/service_server_policy.h
+ *  include/base_libs/service_client_policy.h
  *  --------------------
  * 
  *  Copyright (c) 2011, Edward T. Kaszubski ( ekaszubski@gmail.com )
@@ -33,56 +33,29 @@
  * 
  **************************************************************************/
 
-#ifndef BASE_LIBS_BASE_LIBS_SERVICE_SERVER_POLICY_H_
-#define BASE_LIBS_BASE_LIBS_SERVICE_SERVER_POLICY_H_
+#ifndef BASE_LIBS_BASE_LIBS_SERVICE_CLIENT_POLICY_H_
+#define BASE_LIBS_BASE_LIBS_SERVICE_CLIENT_POLICY_H_
 
 #include <base_libs/node_handle_policy.h>
-#include <base_libs/auto_bind.h>
-#include <ros/service_server.h>
+#include <ros/service_client.h>
 
 namespace base_libs
 {
 
-BASE_LIBS_DECLARE_POLICY( ServiceServer, NodeHandlePolicy )
+BASE_LIBS_DECLARE_POLICY( ServiceClient, NodeHandlePolicy )
 
 template<class __Service>
-BASE_LIBS_DECLARE_POLICY_CLASS( ServiceServer )
+BASE_LIBS_DECLARE_POLICY_CLASS( ServiceClient )
 {
-	BASE_LIBS_MAKE_POLICY_NAME( ServiceServer )
+	BASE_LIBS_MAKE_POLICY_NAME( ServiceClient )
 	
-protected:
-	typedef typename __Service::Request _ServiceRequest;
-	typedef typename __Service::Response _ServiceResponse;
-	typedef ServiceServerPolicy<__Service> _ServiceServerPolicy;
-	typedef std::function<bool( _ServiceRequest &, _ServiceResponse & )> _CallbackType;
-	
-	ros::ServiceServer server_;
-	_CallbackType external_callback_;
-	
-	BASE_LIBS_DECLARE_POLICY_CONSTRUCTOR( ServiceServer )
+	BASE_LIBS_DECLARE_POLICY_CONSTRUCTOR( ServiceClient )
 	{
 		printPolicyActionStart( "create", this );
 		printPolicyActionDone( "create", this );
-	}
-	
-	BASE_LIBS_ENABLE_INIT
-	{
-		std::string service_name = ros::ParamReader<std::string, 1>::readParam( nh_rel_, getMetaParamDef<std::string>( "service_name_param", "service_name", args... ), "service" );
-		server_ = NodeHandlePolicy::nh_rel_.advertiseService( service_name, &_ServiceServerPolicy::serviceCB, this );
-	}
-	
-	bool serviceCB( _ServiceRequest & request, _ServiceResponse & response )
-	{
-		if( external_callback_ ) return external_callback_( request, response );
-		return false;
-	}
-	
-	void registerCallback( _CallbackType external_callback )
-	{
-		external_callback_ = external_callback;
 	}
 };
 
 }
 
-#endif // BASE_LIBS_BASE_LIBS_SERVICE_SERVER_POLICY_H_
+#endif // BASE_LIBS_BASE_LIBS_SERVICE_CLIENT_POLICY_H_

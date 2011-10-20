@@ -19,6 +19,7 @@ rosbuild_add_library( ${PROJECT_NAME} console.cpp
 									  timed_policy.cpp
 									  reconfigure_policy.cpp
 									  service_server_policy.cpp
+									  service_client_policy.cpp
 									  publisher_policy.cpp
 									  subscriber_policy.cpp
 									  image_proc_policy.cpp
