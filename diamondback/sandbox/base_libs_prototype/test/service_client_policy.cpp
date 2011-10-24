@@ -39,11 +39,11 @@
 #include <base_libs_prototype/TestService2.h>
 
 typedef base_libs_prototype::TestService1 _TestService1;
-typedef base_libs::ServiceClientPolicy<_TestService1> _TestService1ClientPolicy;
+typedef base_libs::ServiceClientPolicy<_TestService1> _ServiceClientPolicy1;
 typedef base_libs_prototype::TestService2 _TestService2;
-typedef base_libs::ServiceClientPolicy<_TestService2> _TestService2ClientPolicy;
+typedef base_libs::ServiceClientPolicy<_TestService2> _ServiceClientPolicy2;
 
-BASE_LIBS_DECLARE_NODE( TestServiceClientPolicy, _TestService1ClientPolicy, _TestService2ClientPolicy )
+BASE_LIBS_DECLARE_NODE( TestServiceClientPolicy, _ServiceClientPolicy1, _ServiceClientPolicy2 )
 
 BASE_LIBS_DECLARE_NODE_CLASS( TestServiceClientPolicy )
 {
@@ -59,8 +59,8 @@ public:
 	{
 		//initAll();
 		
-		_TestService1ClientPolicy::init( "service_name_param", std::string( "service1_name" ) );
-		_TestService2ClientPolicy::init( "service_name_param", std::string( "service2_name" ) );
+		_ServiceClientPolicy1::init( "service_name_param", std::string( "service1_name" ) );
+		_ServiceClientPolicy2::init( "service_name_param", std::string( "service2_name" ) );
 	}
 	
 	void spinOnce()
@@ -70,12 +70,12 @@ public:
 		if( mode_ )
 		{
 			_TestService1 service;
-			_TestService1ClientPolicy::callService( service );
+			_ServiceClientPolicy1::callService( service );
 		}
 		else
 		{
 			_TestService2 service;
-			_TestService2ClientPolicy::callService( service, ros::Duration( 2.0 ), 2 );
+			_ServiceClientPolicy2::callService( service, ros::Duration( 2.0 ), 2 );
 		}
 		
 		mode_ = !mode_;
