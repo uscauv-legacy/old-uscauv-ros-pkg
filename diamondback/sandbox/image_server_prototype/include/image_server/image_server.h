@@ -74,6 +74,8 @@ public:
 	{
 		initAll();
 		_ImageServerConfigPolicy::registerCallback( base_libs::auto_bind( &ImageServerNode::reconfigureCB, this ) );
+		
+		image_loader_.loadImages();
 	}
 
 	void spinOnce()
@@ -100,10 +102,6 @@ public:
 					}
 				}
 			}
-		}
-		else
-		{
-			image_loader_.loadImages();
 		}
 	}
 
