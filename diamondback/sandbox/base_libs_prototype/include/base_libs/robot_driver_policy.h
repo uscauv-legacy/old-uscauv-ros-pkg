@@ -124,7 +124,8 @@ protected:
 		robot_frame_name_,
 		target_frame_name_;
 	
-	BASE_LIBS_DECLARE_POLICY_CONSTRUCTOR( RobotDriver )
+	BASE_LIBS_DECLARE_POLICY_CONSTRUCTOR( RobotDriver ),
+		initialized_( false )
 	{
 		printPolicyActionStart( "create", this );
 		printPolicyActionDone( "create", this );
@@ -132,7 +133,11 @@ protected:
 	
 	BASE_LIBS_ENABLE_INIT
 	{
-		multi_sub_.addSubscriber( nh_rel_, getMetaParamDef<std::string>( "cmd_vel_topic_name", "cmd_vel", args... ), &RobotDriverPolicy::cmdVelCB, this );
+		printPolicyActionStart( "initialize", this );
+		
+		ros::NodeHandle & nh_rel = NodeHandlePolicy::getNodeHandle();
+		
+		multi_sub_.addSubscriber( nh_rel, getMetaParamDef<std::string>( "cmd_vel_topic_name", "cmd_vel", args... ), &RobotDriverPolicy::cmdVelCB, this );
 		
 		robot_name_ = getMetaParamDef<std::string>( "robot_name", "", args... );
 		world_frame_name_ = getMetaParamDef<std::string>( "world_frame_name", "/world", args... );
@@ -141,10 +146,16 @@ protected:
 		
 		target_frame_name_ = robot_name_ + "/" + target_frame_name_;
 		robot_frame_name_ = robot_name_ + "/" + robot_frame_name_;
+		
+		BASE_LIBS_SET_INITIALIZED;
+		
+		printPolicyActionDone( "initialize", this );
 	}
 	
 	void cmdVelCB( const geometry_msgs::Twist::ConstPtr & msg )
 	{
+		BASE_LIBS_CHECK_INITIALIZED;
+		
 		if( !cmd_vel_cache_mutex_.try_lock() ) return;
 		
 		cmd_vel_cache_ = msg;
@@ -166,6 +177,8 @@ protected:
 	
 	tf::StampedTransform getTransformToTarget()
 	{
+		BASE_LIBS_CHECK_INITIALIZED;
+		
 		return lookupTransform( robot_frame_name_, target_frame_name_, now_ );
 	}
 };

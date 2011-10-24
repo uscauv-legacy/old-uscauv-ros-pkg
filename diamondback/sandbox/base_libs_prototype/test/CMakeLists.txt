@@ -49,3 +49,7 @@ rosbuild_gensrv()
 add_compile_test( test_service_server_policy service_server_policy.cpp )
 rosbuild_add_compile_flags( test_service_server_policy -std=c++0x )
 target_link_libraries( test_service_server_policy ${PROJECT_NAME} )
+
+add_compile_test( test_service_client_policy service_client_policy.cpp )
+rosbuild_add_compile_flags( test_service_client_policy -std=c++0x )
+target_link_libraries( test_service_client_policy ${PROJECT_NAME} )

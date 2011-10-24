@@ -49,7 +49,7 @@ BASE_LIBS_DECLARE_POLICY_CLASS( NodeHandle )
 {
 	BASE_LIBS_MAKE_POLICY_NAME( NodeHandle )
 	
-protected:
+private:
 	ros::NodeHandle nh_rel_;
 	
 	BASE_LIBS_DECLARE_POLICY_CONSTRUCTOR( NodeHandle ),
@@ -57,6 +57,11 @@ protected:
 	{
 		printPolicyActionStart( "create", this );
 		printPolicyActionDone( "create", this );
+	}
+	
+	ros::NodeHandle & getNodeHandle()
+	{
+		return nh_rel_;
 	}
 };
 

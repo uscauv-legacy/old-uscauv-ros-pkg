@@ -64,7 +64,8 @@ private:
 	
 public:
 	BASE_LIBS_DECLARE_POLICY_CONSTRUCTOR( Reconfigure ),
-		server_( NULL )
+		server_( NULL ),
+		initialized_( false )
 	{
 		printPolicyActionStart( "create", this );
 		printPolicyActionDone( "create", this );
@@ -74,15 +75,19 @@ public:
 	{
 		printPolicyActionStart( "initialize", this );
 		
+		ros::NodeHandle & nh_rel = NodeHandlePolicy::getNodeHandle();
+		
 		server_ = new _ReconfigureServer(
 			ros::NodeHandle(
-				NodeHandlePolicy::nh_rel_,
+				nh_rel,
 				ros::ParamReader<std::string, 1>::readParam( 
-					NodeHandlePolicy::nh_rel_,
+					nh_rel,
 					getMetaParamDef<std::string>( "reconfigure_namespace_name", "reconfigure_namespace", args... ),
 					"reconfigure" ) ) );
 		
 		server_->setCallback( base_libs::auto_bind( &_ReconfigurePolicy::reconfigureCB_0, this ) );
+		
+		BASE_LIBS_SET_INITIALIZED;
 		
 		printPolicyActionDone( "initialize", this );
 	}
@@ -94,6 +99,8 @@ public:
 	
 	void registerCallback( typename _ReconfigureServer::CallbackType external_callback )
 	{
+		BASE_LIBS_CHECK_INITIALIZED;
+		
 		external_callback_ = external_callback;
 	}
 	

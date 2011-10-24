@@ -33,8 +33,8 @@
  * 
  **************************************************************************/
 
-#ifndef IMAGE_LOADER_H_
-#define IMAGE_LOADER_H_
+#ifndef BASE_LIBS_BASE_LIBS_IMAGE_LOADER_H_
+#define BASE_LIBS_BASE_LIBS_IMAGE_LOADER_H_
 
 #include <vector>
 #include <string>
@@ -73,14 +73,6 @@ public:
 		load_flag_( load_flag )
 	{
 		PRINT_INFO( "Setting up image_loader..." );
-
-		//nh.param( "prefix", file_prefix_, std::string( "image" ) );
-		//nh.param( "start", start_, 0 );
-		//nh.param( "end", end_, 0 );
-		//nh.param( "digits", digits_, 0 );
-		//nh.param( "ext", file_ext_, std::string( ".png" ) );
-		//nh.param( "width", width_, -1 );
-		//nh.param( "height", height_, -1 );
 		
 		file_prefix_ = ros::ParamReader<std::string, 1>::readParam( nh, "prefix", "image" );
 		file_ext_ = ros::ParamReader<std::string, 1>::readParam( nh, "ext", ".png" );
@@ -103,8 +95,10 @@ public:
 		PRINT_INFO( "Done releasing image cache" );
 	}
 
-	_ImageCache loadImages()
+	_ImageCache loadImages( const bool & force = false )
 	{
+		if( !force && images_loaded_ ) return image_cache_;
+		
 		PRINT_INFO( "Loading images %s %d %d %d %s ...", file_prefix_.c_str(), start_, end_, digits_, file_ext_.c_str() );
 		IplImage * img = NULL;
 		for ( int i = start_; i <= end_; i++ )
@@ -153,4 +147,4 @@ public:
 	}
 };
 
-#endif /* IMAGE_LOADER_H_ */
+#endif // BASE_LIBS_BASE_LIBS_IMAGE_LOADER_H_

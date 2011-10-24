@@ -66,13 +66,15 @@ public:
 	
 	void preInit()
 	{
-		multi_pub_.addPublishers<geometry_msgs::Twist>( nh_rel_, { "cmd_vel" } );
-		multi_sub_.addSubscriber( nh_rel_, "joystick", &JoystickPolicy::joystickCB, this );
+		ros::NodeHandle & nh_rel = NodeHandlePolicy::getNodeHandle();
 		
-		auto linear_axis_scales = ros::ParamReader<double, 3>::readParams( nh_rel_, "linear_axis", "_scale" );
-		auto angular_axis_scales = ros::ParamReader<double, 3>::readParams( nh_rel_, "angular_axis", "_scale" );
+		multi_pub_.addPublishers<geometry_msgs::Twist>( nh_rel, { "cmd_vel" } );
+		multi_sub_.addSubscriber( nh_rel, "joystick", &JoystickPolicy::joystickCB, this );
 		
-		auto axis_indices = ros::ParamReader<double, 6>::readParams( nh_rel_, "axis", "_index" );
+		auto linear_axis_scales = ros::ParamReader<double, 3>::readParams( nh_rel, "linear_axis", "_scale" );
+		auto angular_axis_scales = ros::ParamReader<double, 3>::readParams( nh_rel, "angular_axis", "_scale" );
+		
+		auto axis_indices = ros::ParamReader<double, 6>::readParams( nh_rel, "axis", "_index" );
 	}
 
 	void joystickCB( const joy::Joy::ConstPtr & msg )

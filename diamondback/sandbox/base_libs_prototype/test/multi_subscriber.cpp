@@ -61,12 +61,12 @@ public:
 				&TestMultiSubscriberNode::pointCB, this );
 	}
 	
-	BASE_LIBS_DECLARE_STANDARD_CALLBACK( stringCB, std_msgs::String )
+	BASE_LIBS_DECLARE_MESSAGE_CALLBACK( stringCB, std_msgs::String )
 	{
 		printf( "Got string: %s\n", msg->data.c_str() );
 	}
 	
-	BASE_LIBS_DECLARE_STANDARD_CALLBACK( pointCB, geometry_msgs::Point )
+	BASE_LIBS_DECLARE_MESSAGE_CALLBACK( pointCB, geometry_msgs::Point )
 	{
 		printf( "Got point: [%f %f %f] %d\n", msg->x, msg->y, msg->z );
 	}

@@ -124,7 +124,7 @@ protected:
 	
 	
 	BASE_LIBS_DECLARE_POLICY_CONSTRUCTOR( ImageProc ),
-		image_transport_( nh_rel_ )
+		image_transport_( NodeHandlePolicy::getNodeHandle() )
 	{
 		printPolicyActionStart( "create", this );
 		
@@ -140,11 +140,13 @@ protected:
 		publisher_storage.image_transport_ = &image_transport_;
 		subscriber_storage.image_transport_ = &image_transport_;
 		
-		if( ros::ParamReader<bool, 1>::readParam( nh_rel_, "subscribe_to_image", true ) )
-			image_subs_.addSubscriber( nh_rel_, "image", &ImageProcPolicy::imageCB_0, this, subscriber_storage );
+		ros::NodeHandle & nh_rel = NodeHandlePolicy::getNodeHandle();
 		
-		if( ros::ParamReader<bool, 1>::readParam( nh_rel_, "show_image", true ) )
-			image_pubs_.addPublishers<sensor_msgs::Image>( nh_rel_, {"output_image"}, publisher_storage );
+		if( ros::ParamReader<bool, 1>::readParam( nh_rel, "subscribe_to_image", true ) )
+			image_subs_.addSubscriber( nh_rel, "image", &ImageProcPolicy::imageCB_0, this, subscriber_storage );
+		
+		if( ros::ParamReader<bool, 1>::readParam( nh_rel, "show_image", true ) )
+			image_pubs_.addPublishers<sensor_msgs::Image>( nh_rel, {"output_image"}, publisher_storage );
 	}
 	
 	virtual IMAGE_PROC_PROCESS_IMAGE( image_ptr )

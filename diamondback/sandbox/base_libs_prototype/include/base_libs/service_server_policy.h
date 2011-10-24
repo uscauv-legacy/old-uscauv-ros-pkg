@@ -59,7 +59,8 @@ protected:
 	ros::ServiceServer server_;
 	_CallbackType external_callback_;
 	
-	BASE_LIBS_DECLARE_POLICY_CONSTRUCTOR( ServiceServer )
+	BASE_LIBS_DECLARE_POLICY_CONSTRUCTOR( ServiceServer ),
+		initialized_( false )
 	{
 		printPolicyActionStart( "create", this );
 		printPolicyActionDone( "create", this );
@@ -67,8 +68,16 @@ protected:
 	
 	BASE_LIBS_ENABLE_INIT
 	{
-		std::string service_name = ros::ParamReader<std::string, 1>::readParam( nh_rel_, getMetaParamDef<std::string>( "service_name_param", "service_name", args... ), "service" );
-		server_ = NodeHandlePolicy::nh_rel_.advertiseService( service_name, &_ServiceServerPolicy::serviceCB, this );
+		printPolicyActionStart( "initialize", this );
+		
+		ros::NodeHandle & nh_rel = NodeHandlePolicy::getNodeHandle();
+		
+		std::string service_name = ros::ParamReader<std::string, 1>::readParam( nh_rel, getMetaParamDef<std::string>( "service_name_param", "service_name", args... ), "service" );
+		server_ = nh_rel.advertiseService( service_name, &_ServiceServerPolicy::serviceCB, this );
+		
+		BASE_LIBS_SET_INITIALIZED;
+		
+		printPolicyActionDone( "initialize", this );
 	}
 	
 	bool serviceCB( _ServiceRequest & request, _ServiceResponse & response )
@@ -79,6 +88,8 @@ protected:
 	
 	void registerCallback( _CallbackType external_callback )
 	{
+		BASE_LIBS_CHECK_INITIALIZED;
+		
 		external_callback_ = external_callback;
 	}
 };

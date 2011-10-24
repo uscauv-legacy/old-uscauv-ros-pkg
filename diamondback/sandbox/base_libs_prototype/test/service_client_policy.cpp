@@ -1,5 +1,5 @@
 /***************************************************************************
- *  include/base_libs/runable_policy.h
+ *  test/service_client_policy.cpp
  *  --------------------
  * 
  *  Copyright (c) 2011, Edward T. Kaszubski ( ekaszubski@gmail.com )
@@ -33,83 +33,53 @@
  * 
  **************************************************************************/
 
-#ifndef BASE_LIBS_BASE_LIBS_RUNABLE_POLICY_H_
-#define BASE_LIBS_BASE_LIBS_RUNABLE_POLICY_H_
+#include <base_libs/node.h>
+#include <base_libs/service_client_policy.h>
+#include <base_libs_prototype/TestService1.h>
+#include <base_libs_prototype/TestService2.h>
 
-#include <base_libs/node_handle_policy.h>
-#include <ros/rate.h>
+typedef base_libs_prototype::TestService1 _TestService1;
+typedef base_libs::ServiceClientPolicy<_TestService1> _TestService1ClientPolicy;
+typedef base_libs_prototype::TestService2 _TestService2;
+typedef base_libs::ServiceClientPolicy<_TestService2> _TestService2ClientPolicy;
 
-namespace base_libs
+BASE_LIBS_DECLARE_NODE( TestServiceClientPolicy, _TestService1ClientPolicy, _TestService2ClientPolicy )
+
+BASE_LIBS_DECLARE_NODE_CLASS( TestServiceClientPolicy )
 {
-
-
-BASE_LIBS_DECLARE_POLICY( Runable, NodeHandlePolicy )
-
-BASE_LIBS_DECLARE_POLICY_CLASS( Runable )
-{
-	BASE_LIBS_MAKE_POLICY_NAME( Runable )
+private:
+	bool mode_;
 	
-protected:
-	ros::Rate * loop_rate_;
-	bool run_;
-	
-	BASE_LIBS_DECLARE_POLICY_CONSTRUCTOR( Runable ),
-		run_( false )
+	BASE_LIBS_DECLARE_NODE_CONSTRUCTOR( TestServiceClientPolicy ),
+		mode_( false )
+	{}
+
+public:
+	void spinFirst()
 	{
-		printPolicyActionStart( "create", this );
+		//initAll();
 		
-		preInit();
-		
-		printPolicyActionDone( "create", this );
+		_TestService1ClientPolicy::init( "service_name_param", std::string( "service1_name" ) );
+		_TestService2ClientPolicy::init( "service_name_param", std::string( "service2_name" ) );
 	}
 	
-	void preInit()
+	void spinOnce()
 	{
-		ros::NodeHandle & nh_rel = NodeHandlePolicy::getNodeHandle();
-		loop_rate_ = new ros::Rate( ros::ParamReader<double, 1>::readParam( nh_rel, "loop_rate", 10 ) );
-	}
-	
-	~RunablePolicy()
-	{
-		if( loop_rate_ ) delete loop_rate_;
-	}
-	
-	virtual void spinFirst(){}
-	
-	virtual void spinOnce(){}
-	
-	virtual void spin()
-	{
-		run_ = true;
+		PRINT_INFO( "Spinning..." );
 		
-		PRINT_INFO( "--------------------" );
-		PRINT_INFO( ">>>>> Starting pre-spin..." );
-		
-		spinFirst();
-		
-		PRINT_INFO( "--------------------" );
-		PRINT_INFO( "<<<<< Done pre-spin" );
-		
-		PRINT_INFO( "--------------------" );
-		PRINT_INFO( ">>>>> Spinning at %f Hz...", 1.0 / loop_rate_->expectedCycleTime().toSec() );
-		
-		while( run_ && ros::ok() )
+		if( mode_ )
 		{
-			spinOnce();
-			ros::spinOnce();
-			if( loop_rate_ ) loop_rate_->sleep();
+			_TestService1 service;
+			_TestService1ClientPolicy::callService( service );
+		}
+		else
+		{
+			_TestService2 service;
+			_TestService2ClientPolicy::callService( service, ros::Duration( 2.0 ), 2 );
 		}
 		
-		PRINT_INFO( "<<<<< Main loop finished" );
-	}
-	
-	virtual void interrupt()
-	{
-		PRINT_INFO( ">>>>> Interrupting main loop..." );
-		run_ = false;
+		mode_ = !mode_;
 	}
 };
 
-}
-
-#endif // BASE_LIBS_BASE_LIBS_RUNABLE_POLICY_H_
+BASE_LIBS_INST_NODE( TestServiceClientPolicyNode, "test_service_client_policy_node" )
