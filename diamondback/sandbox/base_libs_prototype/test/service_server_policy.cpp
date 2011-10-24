@@ -39,11 +39,11 @@
 #include <base_libs_prototype/TestService2.h>
 
 typedef base_libs_prototype::TestService1 _TestService1;
-typedef base_libs::ServiceServerPolicy<_TestService1> _TestService1ServerPolicy;
+typedef base_libs::ServiceServerPolicy<_TestService1> _ServiceServerPolicy1;
 typedef base_libs_prototype::TestService2 _TestService2;
-typedef base_libs::ServiceServerPolicy<_TestService2> _TestService2ServerPolicy;
+typedef base_libs::ServiceServerPolicy<_TestService2> _ServiceServerPolicy2;
 
-BASE_LIBS_DECLARE_NODE( TestServiceServerPolicy, _TestService1ServerPolicy, _TestService2ServerPolicy )
+BASE_LIBS_DECLARE_NODE( TestServiceServerPolicy, _ServiceServerPolicy1, _ServiceServerPolicy2 )
 
 BASE_LIBS_DECLARE_NODE_CLASS( TestServiceServerPolicy )
 {
@@ -54,20 +54,20 @@ public:
 	{
 		//initAll();
 		
-		_TestService1ServerPolicy::init( "service_name_param", std::string( "service1_name" ) );
-		_TestService1ServerPolicy::registerCallback( base_libs::auto_bind( &TestServiceServerPolicyNode::service1CB, this ) );
+		_ServiceServerPolicy1::init( "service_name_param", std::string( "service1_name" ) );
+		_ServiceServerPolicy1::registerCallback( base_libs::auto_bind( &TestServiceServerPolicyNode::service1CB, this ) );
 		
-		_TestService2ServerPolicy::init( "service_name_param", std::string( "service2_name" ) );
-		_TestService2ServerPolicy::registerCallback( base_libs::auto_bind( &TestServiceServerPolicyNode::service2CB, this ) );
+		_ServiceServerPolicy2::init( "service_name_param", std::string( "service2_name" ) );
+		_ServiceServerPolicy2::registerCallback( base_libs::auto_bind( &TestServiceServerPolicyNode::service2CB, this ) );
 	}
 	
-	bool service1CB( _TestService1::Request & request, _TestService1::Response & response )
+	BASE_LIBS_DECLARE_SERVICE_CALLBACK( service1CB, _TestService1 )
 	{
 		PRINT_INFO( "Got service1CB" );
 		return true;
 	}
 	
-	bool service2CB( _TestService2::Request & request, _TestService2::Response & response )
+	BASE_LIBS_DECLARE_SERVICE_CALLBACK( service2CB, _TestService2 )
 	{
 		PRINT_INFO( "Got service2CB" );
 		return true;

@@ -36,30 +36,72 @@
 #ifndef BASE_LIBS_BASE_LIBS_MACROS_H_
 #define BASE_LIBS_BASE_LIBS_MACROS_H_
 
-//#include <ros/ros.h>
 
-//#define BASE_LIBS_DECLARE_HEADER( package_name, include_name, header_name )
-//'#ifndef package_name##_##include_name##_##header_name##_H_'
-//'#define package_name##_##include_name##_##header_name##_H_'
+// ########## Generic Policy Macros ####################################
+// ---------------------------------------------------------------------
+#define BASE_LIBS_DECLARE_POLICY( PolicyNameBase, __Policies... ) \
+typedef base_libs::GenericPolicyAdapter< __Policies > _##PolicyNameBase##PolicyAdapterType;
 
-// use: BASE_LIBS_INST_NODE( SomeNode, "some_node" )
-#define BASE_LIBS_INST_NODE( __Class, node_name_string ) \
+// ---------------------------------------------------------------------
+#define BASE_LIBS_DECLARE_POLICY_CLASS( PolicyNameBase ) \
+class PolicyNameBase##Policy : public _##PolicyNameBase##PolicyAdapterType
+
+// ---------------------------------------------------------------------
+#define BASE_LIBS_MAKE_POLICY_NAME( PolicyNameBase ) \
+public: const static inline std::string name(){ return #PolicyNameBase; }
+
+// ---------------------------------------------------------------------
+#define BASE_LIBS_DECLARE_POLICY_CONSTRUCTOR( PolicyNameBase ) \
+public: \
+	template<class... __Args> \
+	PolicyNameBase##Policy( __Args&&... args ) \
+	: \
+		_##PolicyNameBase##PolicyAdapterType( args... )
+
+// ########## Generic Node Macros ######################################
+// ---------------------------------------------------------------------
+#define BASE_LIBS_DECLARE_NODE( NodeNameBase, __Policies... ) \
+typedef base_libs::Node< __Policies > _##NodeNameBase##NodeAdapterType;
+
+// ---------------------------------------------------------------------
+#define BASE_LIBS_DECLARE_NODE_CLASS( NodeNameBase ) \
+class NodeNameBase##Node : public _##NodeNameBase##NodeAdapterType
+
+// ---------------------------------------------------------------------
+#define BASE_LIBS_DECLARE_NODE_CONSTRUCTOR( NodeNameBase ) \
+public: \
+	template<class... __Args> \
+	NodeNameBase##Node( __Args&&... args ) \
+	: \
+		_##NodeNameBase##NodeAdapterType( args... )
+
+// ########## Node Instantiation Macros ################################
+// ---------------------------------------------------------------------
+/// use: BASE_LIBS_INST_NODE( SomeNode, "some_node" )
+#define BASE_LIBS_INST_NODE( NodeClassname, node_name_string ) \
 int main( int argc, char ** argv ) \
 { \
 	ros::init( argc, argv, node_name_string ); \
 	ros::NodeHandle nh( "~" ); \
 	\
-	__Class class_inst( nh ); \
-	class_inst.spin(); \
+	NodeClassname node_inst( nh ); \
+	node_inst.spin(); \
 	return 0; \
 }
 
-#define IMAGE_PROC_PROCESS_IMAGE( image_ptr_name ) \
-void processImage( cv_bridge::CvImageConstPtr & image_ptr_name )
+// ########## Generic Nodelet Macros ###################################
+// ---------------------------------------------------------------------
+#define BASE_LIBS_DECLARE_NODELET( namespace_name, ClassName ) \
+namespace namespace_name { \
+class ClassName##Nodelet : public base_libs::Nodelet<ClassName##Node>{}; }
 
-#define BASE_LIBS_DECLARE_MESSAGE_CALLBACK( callback_name, message_type ) \
-void callback_name( const message_type::ConstPtr & msg )
+// ########## Nodelet Instantiation Macros #############################
+// ---------------------------------------------------------------------
+#define BASE_LIBS_INST_NODELET( namespace_name, ClassName, nodelet_name ) \
+PLUGINLIB_DECLARE_CLASS( namespace_name, nodelet_name, namespace_name::ClassName##Nodelet, nodelet::Nodelet )
 
+// ########## Initable Policy Macros ###################################
+// ---------------------------------------------------------------------
 #define BASE_LIBS_ENABLE_INIT \
 public: const static bool HAS_INIT_ = true; \
 private: bool initialized_; \
@@ -67,52 +109,34 @@ private: inline void setInitialized( const bool & value ){ initialized_ = value;
 public: template<class... __Args> \
 void init( __Args&&... args )
 
+// ---------------------------------------------------------------------
 #define BASE_LIBS_CHECK_INITIALIZED \
 if( !initialized_ ) PRINT_ERROR( "Policy [%s] has not been initialized!", name().c_str() ); \
 if( !initialized_ ) PRINT_ERROR( "Some functionality may be disabled." )
 
+// ---------------------------------------------------------------------
 #define BASE_LIBS_SET_INITIALIZED \
 this->setInitialized( true )
 
+// ########## Updateable Policy Macros #################################
+// ---------------------------------------------------------------------
 #define BASE_LIBS_ENABLE_UPDATE \
 const static bool HAS_UPDATE_ = true; \
 template<class... __Args> \
 void update( __Args&&... args )
-		
-#define BASE_LIBS_DECLARE_POLICY( __NameBase, __Policies... ) \
-typedef base_libs::GenericPolicyAdapter< __Policies > _##__NameBase##PolicyAdapterType;
 
-#define BASE_LIBS_DECLARE_POLICY_CLASS( __NameBase ) \
-class __NameBase##Policy : public _##__NameBase##PolicyAdapterType
+// ########## Generic Callback Macros ##################################
+// ---------------------------------------------------------------------
+#define BASE_LIBS_DECLARE_MESSAGE_CALLBACK( callbackName, __MessageType ) \
+void callbackName( const __MessageType::ConstPtr & msg )
 
-#define BASE_LIBS_MAKE_POLICY_NAME( __NameBase ) \
-public: const static inline std::string name(){ return #__NameBase; }
+// ---------------------------------------------------------------------
+#define BASE_LIBS_DECLARE_SERVICE_CALLBACK( callbackName, __ServiceType ) \
+bool callbackName( __ServiceType::Request & request, __ServiceType::Response & response )
 
-#define BASE_LIBS_DECLARE_POLICY_CONSTRUCTOR( __NameBase ) \
-public: \
-	template<class... __Args> \
-	__NameBase##Policy( __Args&&... args ) \
-	: \
-		_##__NameBase##PolicyAdapterType( args... )
-		
-#define BASE_LIBS_DECLARE_NODE( __NameBase, __Policies... ) \
-typedef base_libs::Node< __Policies > _##__NameBase##NodeAdapterType;
-
-#define BASE_LIBS_DECLARE_NODE_CLASS( __NameBase ) \
-class __NameBase##Node : public _##__NameBase##NodeAdapterType
-
-#define BASE_LIBS_DECLARE_NODE_CONSTRUCTOR( __NameBase ) \
-public: \
-	template<class... __Args> \
-	__NameBase##Node( __Args&&... args ) \
-	: \
-		_##__NameBase##NodeAdapterType( args... )
-
-#define BASE_LIBS_DECLARE_NODELET( namespace_name, class_name ) \
-namespace namespace_name { \
-class class_name##Nodelet : public base_libs::Nodelet<class_name##Node>{}; }
-
-#define BASE_LIBS_INST_NODELET( namespace_name, class_name, nodelet_name ) \
-PLUGINLIB_DECLARE_CLASS( namespace_name, nodelet_name, namespace_name::class_name##Nodelet, nodelet::Nodelet )
+// ########## ImageProc Policy Macros ##################################
+// ---------------------------------------------------------------------
+#define IMAGE_PROC_PROCESS_IMAGE( image_ptr_name ) \
+void processImage( cv_bridge::CvImageConstPtr & image_ptr_name )
 
 #endif // BASE_LIBS_BASE_LIBS_MACROS_H_
