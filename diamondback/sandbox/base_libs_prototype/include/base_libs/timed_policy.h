@@ -54,9 +54,9 @@ protected:
 	double dt_;
 	
 	BASE_LIBS_DECLARE_POLICY_CONSTRUCTOR( Timed ),
-		dt_( 0 ),
+		last_time_( 0 ),
 		now_( 0 ),
-		last_time_( 0 )
+		dt_( 0 )
 	{
 		printPolicyActionStart( "create", this );
 		printPolicyActionDone( "create", this );

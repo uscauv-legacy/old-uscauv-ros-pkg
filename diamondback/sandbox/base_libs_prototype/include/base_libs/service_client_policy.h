@@ -56,7 +56,7 @@ public:
 private:
 	ros::ServiceClient client_;
 	
-	std::string service_name_;
+	std::string service_name_, service_topic_name_;
 	bool is_valid_;
 	
 	const static double _DEF_callService_wait_time = 2.0;
@@ -64,6 +64,7 @@ private:
 	
 	BASE_LIBS_DECLARE_POLICY_CONSTRUCTOR( ServiceClient ),
 		service_name_( "service" ),
+		service_topic_name_( "service" ),
 		is_valid_( false ),
 		initialized_( false )
 	{
@@ -75,10 +76,12 @@ private:
 	{
 		printPolicyActionStart( "initialize", this );
 		
+		ros::NodeHandle & nh_rel = NodeHandlePolicy::getNodeHandle();
 		// look up the meta-param remap of the service name param in args..., if it exists
 		const std::string service_name_param = getMetaParamDef<std::string>( "service_name_param", "service_name", args... );
 		// look up the ros-param rempa of the service name on the ros parameter server, if it exists
-		service_name_ = ros::ParamReader<std::string, 1>::readParam( NodeHandlePolicy::getNodeHandle(), service_name_param, service_name_ );
+		service_name_ = ros::ParamReader<std::string, 1>::readParam( nh_rel, service_name_param, service_name_ );
+		service_topic_name_ = ros::NodeHandle( nh_rel, service_name_ ).getNamespace();
 		// now that we have a final value for the service name, create a service with that name
 		
 		BASE_LIBS_SET_INITIALIZED;
@@ -102,15 +105,12 @@ private:
 		is_valid_ = client_.exists() && client_.isValid();
 		if( !is_valid_ )
 		{
-			PRINT_INFO( "Attempting to connect to service [%s]", service_name_.c_str() );
+			PRINT_INFO( "Attempting to connect to service [%s]...", service_topic_name_.c_str() );
 			client_ = nh_rel.serviceClient<__Service>( service_name_, true );
 			is_valid_ = client_.exists() && client_.isValid();
-		}
-		
-		if( !is_valid_ ) PRINT_WARN( "Could not connect!" );
-		else
-		{
-			if( show_status_on_success ) PRINT_INFO( "Connected." );
+			
+			if( is_valid_ ) PRINT_INFO( "Connected to service [%s].", service_topic_name_.c_str() );
+			else PRINT_WARN( "Could not connect to service [%s]!", service_topic_name_.c_str() );
 		}
 		
 		return is_valid_;
@@ -137,7 +137,7 @@ private:
 			
 			if( attempts > 0 ) --attempts;
 				
-			if( attempts > 0 ) PRINT_WARN( "Will try %d more times before aborting.", attempts );
+			if( attempts > 0 ) PRINT_WARN( "Will try %u more times before aborting.", attempts );
 			else PRINT_WARN( "Will try indefinitely." );
 			
 			client_.waitForExistence( wait_time );

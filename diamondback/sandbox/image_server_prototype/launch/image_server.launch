@@ -18,11 +18,21 @@
 	<arg name="nodelet_type" value="image_server" />
 
 	<group unless="$(arg use_nodelets)" >
-		<node pkg="$(arg pkg)" type="$(arg node_type)" name="$(arg name)" output="screen" args="_prefix:=$(arg prefix) _ext:='$(arg ext)' _digits:=$(arg digits) _start:=$(arg start) _end:=$(arg end) _width:=$(arg width) _height:=$(arg height) _loop_rate:=$(arg rate)" />
+		<node
+			pkg="$(arg pkg)"
+			type="$(arg node_type)"
+			name="$(arg name)"
+			output="screen"
+			args="_prefix:=$(arg prefix) _ext:='$(arg ext)' _digits:=$(arg digits) _start:=$(arg start) _end:=$(arg end) _width:=$(arg width) _height:=$(arg height) _loop_rate:=$(arg rate)" />
 	</group>
 
 	<group if="$(arg use_nodelets)" >
-		<node pkg="nodelet" type="nodelet" name="$(arg name)" output="screen" args="load $(arg pkg)/$(arg nodelet_type) $(arg nodelet_manager_name) _prefix:=$(arg prefix) _ext:='$(arg ext)' _digits:=$(arg digits) _start:=$(arg start) _end:=$(arg end) _width:=$(arg width) _height:=$(arg height) _loop_rate:=$(arg rate)" />
+		<node
+			pkg="nodelet"
+			type="nodelet"
+			name="$(arg name)"
+			output="screen"
+			args="load $(arg pkg)/$(arg nodelet_type) $(arg nodelet_manager_name) _prefix:=$(arg prefix) _ext:='$(arg ext)' _digits:=$(arg digits) _start:=$(arg start) _end:=$(arg end) _width:=$(arg width) _height:=$(arg height) _loop_rate:=$(arg rate)" />
 	</group>
 
 	<arg name="show_reconfigure" default="true" />

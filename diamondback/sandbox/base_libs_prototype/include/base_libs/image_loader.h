@@ -68,7 +68,7 @@ public:
 	int start_, end_, digits_, width_, height_;
 	int load_flag_;
 
-	ImageLoader( ros::NodeHandle & nh, int load_flag = CV_LOAD_IMAGE_COLOR ) :
+	ImageLoader( ros::NodeHandle nh, int load_flag = CV_LOAD_IMAGE_COLOR ) :
 		images_loaded_( false ),
 		load_flag_( load_flag )
 	{

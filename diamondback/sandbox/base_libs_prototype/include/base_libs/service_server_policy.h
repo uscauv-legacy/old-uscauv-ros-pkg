@@ -72,7 +72,12 @@ protected:
 		
 		ros::NodeHandle & nh_rel = NodeHandlePolicy::getNodeHandle();
 		
-		std::string service_name = ros::ParamReader<std::string, 1>::readParam( nh_rel, getMetaParamDef<std::string>( "service_name_param", "service_name", args... ), "service" );
+		const std::string service_name_param( getMetaParamDef<std::string>( "service_name_param", "service_name", args... ) );
+		const std::string service_name( ros::ParamReader<std::string, 1>::readParam( nh_rel, service_name_param, "service" ) );
+		
+		ros::NodeHandle service_nh( nh_rel, service_name );
+		PRINT_INFO( "Creating service server [%s] on topic [%s]", ros::service_traits::DataType<__Service>::value(), service_nh.getNamespace().c_str() );
+		
 		server_ = nh_rel.advertiseService( service_name, &_ServiceServerPolicy::serviceCB, this );
 		
 		BASE_LIBS_SET_INITIALIZED;

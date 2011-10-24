@@ -58,10 +58,8 @@ public:
 	unsigned int current_frame_;
 	unsigned int direction_;
 
-	ImageServerNode( ros::NodeHandle & nh )
-	:
-		_ImageServerNodeAdapterType( nh ),
-		image_loader_( nh ),
+	BASE_LIBS_DECLARE_NODE_CONSTRUCTOR( ImageServer ),
+		image_loader_( base_libs::getFirstOfType<ros::NodeHandle>( args... ) ),
 		last_next_image_state_( false ),
 		last_prev_image_state_( false ),
 		current_frame_( 0 ),
@@ -72,6 +70,7 @@ public:
 
 	void spinFirst()
 	{
+		// we're fine with using the default values for all of our initializable policies
 		initAll();
 		_ImageServerConfigPolicy::registerCallback( base_libs::auto_bind( &ImageServerNode::reconfigureCB, this ) );
 		
@@ -129,8 +128,7 @@ public:
 		}
 	}
 
-	void reconfigureCB( _ImageServerConfigPolicy::_ReconfigureType &config,
-	                    uint32_t level )
+	BASE_LIBS_DECLARE_RECONFIGURE_CALLBACK( reconfigureCB, _ImageServerConfig )
 	{
 		if ( config.auto_advance )
 		{

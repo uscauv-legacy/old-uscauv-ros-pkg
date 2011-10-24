@@ -134,6 +134,10 @@ void callbackName( const __MessageType::ConstPtr & msg )
 #define BASE_LIBS_DECLARE_SERVICE_CALLBACK( callbackName, __ServiceType ) \
 bool callbackName( __ServiceType::Request & request, __ServiceType::Response & response )
 
+// ---------------------------------------------------------------------
+#define BASE_LIBS_DECLARE_RECONFIGURE_CALLBACK( callbackName, __ReconfigureType ) \
+void callbackName( __ReconfigureType & config, uint32_t level )
+
 // ########## ImageProc Policy Macros ##################################
 // ---------------------------------------------------------------------
 #define IMAGE_PROC_PROCESS_IMAGE( image_ptr_name ) \

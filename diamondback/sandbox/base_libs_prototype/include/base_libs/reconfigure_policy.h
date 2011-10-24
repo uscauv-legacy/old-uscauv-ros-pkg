@@ -77,13 +77,12 @@ public:
 		
 		ros::NodeHandle & nh_rel = NodeHandlePolicy::getNodeHandle();
 		
-		server_ = new _ReconfigureServer(
-			ros::NodeHandle(
-				nh_rel,
-				ros::ParamReader<std::string, 1>::readParam( 
-					nh_rel,
-					getMetaParamDef<std::string>( "reconfigure_namespace_name", "reconfigure_namespace", args... ),
-					"reconfigure" ) ) );
+		const std::string reconfigure_namespace_name( getMetaParamDef<std::string>( "reconfigure_namespace_param", "reconfigure_namespace", args... ) );
+		const std::string reconfigure_namespace( ros::ParamReader<std::string, 1>::readParam( nh_rel, reconfigure_namespace_name, "reconfigure" ) );
+		ros::NodeHandle reconfigure_nh( nh_rel, reconfigure_namespace );
+		
+		PRINT_INFO( "Creating dynamic reconfigure server on topic [%s]", reconfigure_nh.getNamespace().c_str() );
+		server_ = new _ReconfigureServer( reconfigure_nh );
 		
 		server_->setCallback( base_libs::auto_bind( &_ReconfigurePolicy::reconfigureCB_0, this ) );
 		
