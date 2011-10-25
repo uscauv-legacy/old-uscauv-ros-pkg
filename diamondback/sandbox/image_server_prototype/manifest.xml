@@ -12,6 +12,7 @@
   <depend package="nodelet"/>
   
   <export>
+	<rosdoc config="rosdoc.yaml"/>
     <nodelet plugin="${prefix}/nodelets/nodelet_plugins.xml" />
     <cpp cflags="-I${prefix}/include" lflags="-Wl,-rpath,${prefix}/lib -L${prefix}/lib"/>
   </export>
