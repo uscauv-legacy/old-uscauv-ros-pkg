@@ -40,6 +40,7 @@
 #include <string>
 #include <stdlib.h>
 #include <base_libs/console.h>
+#include <boost/shared_ptr.hpp>
 
 namespace base_libs
 {
@@ -116,6 +117,13 @@ namespace base_libs
 	{
 		return getMetaParamRec<__Desired>( name, default_value, rest... );
 	}
+	
+	template<class __Type>
+	struct makePtr
+	{
+		typedef boost::shared_ptr<__Type> _Shared;
+		typedef boost::shared_ptr<__Type const> _Const;
+	};
 }
 
 #endif // BASE_LIBS_BASE_LIBS_TYPE_UTILS_H_

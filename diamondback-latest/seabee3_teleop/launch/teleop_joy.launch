@@ -1,0 +1,10 @@
+<launch>
+	<node
+		pkg="joy"
+		type="joy_node"
+		name="joy_node" />
+	
+	<arg name="controller" default="ps3" />
+	
+	<include file="$(find seabee3_teleop)/launch/teleop_$(arg controller).launch" />
+</launch>

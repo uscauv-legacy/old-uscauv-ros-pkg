@@ -1,0 +1,1 @@
+rosbuild_add_executable( seabee3_teleop_node seabee3_teleop_node.cpp )

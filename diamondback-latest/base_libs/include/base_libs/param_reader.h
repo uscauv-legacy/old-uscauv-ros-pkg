@@ -124,6 +124,13 @@ public:
 		bool new_param_found = true;
 	    unsigned int n = start_index;
 	    unsigned int i;
+	    
+	    std::stringstream num_params_ss;
+		if( __Dim__ > 0 ) num_params_ss << __Dim__;
+		else num_params_ss << "any";
+		
+		PRINT_INFO( "Attempting to load [ %s ] parameters in the form [ %s#%s ] starting with index [ %u ]", num_params_ss.str().c_str(), prefix.c_str(), postfix.c_str(), start_index );
+	    
 	    do
 	    {
 			i = n - start_index;
@@ -139,15 +146,20 @@ public:
 			{
 				std::stringstream param_value_ss;
 				param_value_ss << param_value;
-				PRINT_INFO( "Loaded param [%s] with value [%s]", param_name.c_str(), param_value_ss.str().c_str() );
+				PRINT_INFO( "Loaded param [ %s ] with value [ %s ]", param_name.c_str(), param_value_ss.str().c_str() );
 				if( params.size() > i ) params[i] = param_value;
 				else params.push_back( param_value );
 				++n;
 			}
 			else
 			{
-				PRINT_WARN( "Only found %i/%i parameters in array", i, __Dim__ );
-				PRINT_WARN( "%s[%u:%u]%s", prefix.c_str(), start_index, start_index + __Dim__, postfix.c_str() );
+				if( __Dim__ > 0 ) PRINT_WARN( "Only found [ %i/%i ] parameters in array", i, __Dim__ );
+				else
+				{
+					if( i > 0 )	PRINT_INFO( "Found [ %i ] parameters in array", i );
+					else PRINT_WARN( "No parameters found in array" );
+				}
+				//PRINT_WARN( "%s[%u:%u]%s", prefix.c_str(), start_index, start_index + __Dim__, postfix.c_str() );
 				new_param_found = false;
 			}
 	    }
@@ -235,7 +247,7 @@ public:
 			param_name.c_str(),
 			param_value ) )
 		{
-			PRINT_INFO( "Found param [%s/%s]",
+			PRINT_INFO( "Found param [ %s/%s ]",
 			nh.getNamespace().c_str(),
 			param_name.c_str() );
 			
@@ -243,7 +255,7 @@ public:
 		}
 		
 		PRINT_WARN(
-			"Could not find param [%s/%s]",
+			"Could not find param [ %s/%s ]",
 			nh.getNamespace().c_str(),
 			param_name.c_str() );
 		
