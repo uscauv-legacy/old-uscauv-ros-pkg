@@ -9,6 +9,7 @@
   <review status="unreviewed" notes=""/>
   <url>http://ros.org/wiki/seabee3_teleop</url>
   <depend package="base_libs"/>
+  <depend package="seabee3_driver"/>
   <export>
     <cpp cflags="-I${prefix}/include -I${prefix}/msg/cpp -I${prefix}/srv/cpp"/>
   </export>

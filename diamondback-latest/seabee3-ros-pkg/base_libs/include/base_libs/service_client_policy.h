@@ -44,7 +44,7 @@ namespace base_libs
 
 BASE_LIBS_DECLARE_POLICY( ServiceClient, NodeHandlePolicy )
 
-template<class __Service>
+template<class __Service, unsigned int __Id__ = 0>
 BASE_LIBS_DECLARE_POLICY_CLASS( ServiceClient )
 {
 	BASE_LIBS_MAKE_POLICY_NAME( ServiceClient )

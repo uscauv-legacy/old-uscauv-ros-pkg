@@ -38,10 +38,17 @@
 
 #include <base_libs/node.h>
 #include <base_libs/joystick_policy.h>
+#include <base_libs/service_client_policy.h>
+#include <seabee3_driver/FiringDeviceAction.h>
 
 typedef base_libs::JoystickPolicy _JoystickPolicy;
+typedef seabee3_driver::FiringDeviceAction _FiringDeviceActionService;
+typedef base_libs::ServiceClientPolicy<_FiringDeviceActionService, 0> _ServiceClientPolicy1;
+typedef base_libs::ServiceClientPolicy<_FiringDeviceActionService, 1> _ServiceClientPolicy2;
+typedef base_libs::ServiceClientPolicy<_FiringDeviceActionService, 2> _ServiceClientPolicy3;
+typedef base_libs::ServiceClientPolicy<_FiringDeviceActionService, 3> _ServiceClientPolicy4;
 
-BASE_LIBS_DECLARE_NODE( Seabee3Teleop, _JoystickPolicy )
+BASE_LIBS_DECLARE_NODE( Seabee3Teleop, _JoystickPolicy, _ServiceClientPolicy1, _ServiceClientPolicy2, _ServiceClientPolicy3, _ServiceClientPolicy4 )
 
 BASE_LIBS_DECLARE_NODE_CLASS( Seabee3Teleop )
 {
@@ -52,6 +59,21 @@ BASE_LIBS_DECLARE_NODE_CLASS( Seabee3Teleop )
 	
 	BASE_LIBS_DECLARE_MESSAGE_CALLBACK( joystickCB, _JoystickPolicy::_JoystickMsg )
 	{
+		
+	}
+	
+	void spinFirst()
+	{
+		auto nh_rel = base_libs::RunablePolicy::getNodeHandle();
+		
+		nh_rel.setParam( "shooter1_service_name", "shooter1" );
+		_ServiceClientPolicy1::init( "service_name_param", std::string( "shooter1_service_name" ) );
+		nh_rel.setParam( "shooter2_service_name", "shooter2" );
+		_ServiceClientPolicy2::init( "service_name_param", std::string( "shooter2_service_name" ) );
+		nh_rel.setParam( "dropper1_service_name", "dropper1" );
+		_ServiceClientPolicy3::init( "service_name_param", std::string( "dropper1_service_name" ) );
+		nh_rel.setParam( "dropper2_service_name", "dropper2" );
+		_ServiceClientPolicy4::init( "service_name_param", std::string( "dropper2_service_name" ) );
 		
 	}
 	
