@@ -12,16 +12,12 @@ any:
 
 #forward all other commands, calling 'any' first if necessary
 %:
-	if cd build; then make $@ $(ROS_MAKE_FLAGS); else make any && make $@; fi;
+	if [ -r build ]; then cd build && make $@ $(ROS_MAKE_FLAGS); else make any && make $@; fi
 
 PACKAGE_NAME=$(shell basename $(PWD))
 
-# The clean target blows everything away
-# It also removes auto-generated message/service code directories, 
-# to handle the case where the original .msg/.srv file has been removed,
-# and thus CMake no longer knows about it.
 clean:
-	-cd build && make clean
+	-if [ -r build ]; then cd build && make clean; fi
 	-rm -rf build
 	-rm -rf lib
 	-rm -rf bin
