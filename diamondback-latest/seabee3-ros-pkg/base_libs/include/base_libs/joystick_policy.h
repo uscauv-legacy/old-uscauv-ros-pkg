@@ -84,6 +84,11 @@ public:
 			return scale_ * getRawValue( msg );
 		}
 		
+		inline _AxisValue getValueAsButton( const _JoystickMsg::ConstPtr & msg ) const
+		{
+			return is_button_ ? getRawValue( msg ) : getValue( msg ) < 0.75;
+		}
+		
 		std::string str() const
 		{
 			std::stringstream ss;
@@ -106,13 +111,15 @@ protected:
 	
 	_JoystickMsg::ConstPtr last_joystick_message_;
 	ros::Time last_joystick_message_time_;
+	bool enabled_;
 	double joystick_timeout_;
 	
 	_AxesMap axes_map_;
 	
 
 	BASE_LIBS_DECLARE_POLICY_CONSTRUCTOR( Joystick ),
-		last_joystick_message_time_( ros::Time::now() )
+		last_joystick_message_time_( ros::Time::now() ),
+		enabled_( false )
 	{
 		printPolicyActionStart( "create", this );
 		
@@ -188,14 +195,26 @@ protected:
 		return true;
 	}
 	
+	bool axisExists( const _AxisName & axis_name ) const
+	{
+		return axes_map_.count( axis_name );
+	}
+	
+	_Axis getAxis( const _AxisName & axis_name ) const
+	{
+		const auto axis_it = axes_map_.find( axis_name );
+		if( axis_it == axes_map_.end() ) return _Axis();
+		return axis_it->second;
+	}
+	
 	void update()
 	{
 		makePtr<geometry_msgs::Twist>::_Shared velocity_msg( new geometry_msgs::Twist );
 		
 		const auto enable_axis_it = axes_map_.find( "enable" );
-		const bool enabled = enable_axis_it == axes_map_.end() || enable_axis_it->second.getValue( last_joystick_message_ ) > 0;
+		enabled_ = enable_axis_it == axes_map_.end() || enable_axis_it->second.getValue( last_joystick_message_ ) > 0;
 		
-		if( enabled )
+		if( enabled_ )
 		{
 			updateVelocityComponent( "linear.x", velocity_msg->linear.x );
 			updateVelocityComponent( "linear.y", velocity_msg->linear.y );
@@ -207,6 +226,11 @@ protected:
 		}
 		
 		multi_pub_.publish( "cmd_vel", velocity_msg );
+	}
+	
+	inline bool isEnabled() const
+	{
+		return enabled_;
 	}
 };
 

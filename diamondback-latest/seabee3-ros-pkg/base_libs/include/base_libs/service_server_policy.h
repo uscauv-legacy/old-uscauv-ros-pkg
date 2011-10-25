@@ -53,7 +53,7 @@ BASE_LIBS_DECLARE_POLICY_CLASS( ServiceServer )
 protected:
 	typedef typename __Service::Request _ServiceRequest;
 	typedef typename __Service::Response _ServiceResponse;
-	typedef ServiceServerPolicy<__Service> _ServiceServerPolicy;
+	typedef ServiceServerPolicy<__Service, __Id__> _ServiceServerPolicy;
 	typedef std::function<bool( _ServiceRequest &, _ServiceResponse & )> _CallbackType;
 	
 	ros::ServiceServer server_;

@@ -25,18 +25,10 @@ set(LIBRARY_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/lib)
 #
 rosbuild_genmsg()
 rosbuild_gensrv()
+
 # add dynamic reconfigure api
 rosbuild_find_ros_package(dynamic_reconfigure)
 include(${dynamic_reconfigure_PACKAGE_PATH}/cmake/cfgbuild.cmake)
 gencfg()
 
-#add_subdirectory( src )
-#link_directories("${PROJECT_SOURCE_DIR}/../libseabee3_beestem/lib")
-
-#if (UNIX AND NOT WIN32)
-#  if (CMAKE_SIZEOF_VOID_P MATCHES "8")
-#    target_link_libraries(seabee3_driver_base seabee3_beestem_x64)
-#  else (CMAKE_SIZEOF_VOID_P MATCHES "8")
-#	target_link_libraries(seabee3_driver_base seabee3_beestem_i386)
-#  endif (CMAKE_SIZEOF_VOID_P MATCHES "8")
-#endif (UNIX AND NOT WIN32)
+add_subdirectory( nodes )

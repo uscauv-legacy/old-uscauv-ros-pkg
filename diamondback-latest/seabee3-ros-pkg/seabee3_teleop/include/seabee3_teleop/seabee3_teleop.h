@@ -52,27 +52,101 @@ BASE_LIBS_DECLARE_NODE( Seabee3Teleop, _JoystickPolicy, _ServiceClientPolicy1, _
 
 BASE_LIBS_DECLARE_NODE_CLASS( Seabee3Teleop )
 {
-	BASE_LIBS_DECLARE_NODE_CONSTRUCTOR( Seabee3Teleop )
+public:
+	int current_firing_device_;
+	int num_firing_devices_;
+	_JoystickPolicy::_AxisName current_button_;
+	
+	BASE_LIBS_DECLARE_NODE_CONSTRUCTOR( Seabee3Teleop ),
+		current_firing_device_( 0 ),
+		num_firing_devices_( 4 ),
+		current_button_( "" )
 	{
 		//
 	}
 	
+	bool tryGetButtonLock( const _JoystickPolicy::_Axis & axis, const _JoystickPolicy::_JoystickMsg::ConstPtr & msg )
+	{
+		if( axis.getValueAsButton( msg ) > 0 )
+		{
+			if( current_button_ == "" )
+			{
+				//PRINT_INFO( "Axis [ %s ] gained lock", axis.name_.c_str() );
+				
+				current_button_ = axis.name_;
+				return true;
+			}
+		}
+		else
+		{
+			if( current_button_ == axis.name_ )
+			{
+				//PRINT_INFO( "Axis [ %s ] released lock", axis.name_.c_str() );
+				current_button_ = "";
+			}
+		}
+		
+		return false;
+	}
+	
 	BASE_LIBS_DECLARE_MESSAGE_CALLBACK( joystickCB, _JoystickPolicy::_JoystickMsg )
 	{
+		if( JoystickPolicy::isEnabled() )
+		{
+			const auto next_firing_device_axis = _JoystickPolicy::getAxis( "next_firing_device" );
+			const auto prev_firing_device_axis = _JoystickPolicy::getAxis( "prev_firing_device" );
+			const auto fire_device_axis = _JoystickPolicy::getAxis( "fire_device" );
+			
+			if( tryGetButtonLock( next_firing_device_axis, msg ) ) ++current_firing_device_;
+			if( tryGetButtonLock( prev_firing_device_axis, msg ) ) --current_firing_device_;
+			
+			if( num_firing_devices_ > 0 )
+			{
+				if( current_firing_device_ > num_firing_devices_ - 1 ) current_firing_device_ = 0;
+				if( current_firing_device_ < 0 ) current_firing_device_ = num_firing_devices_ - 1;
+			}
+			
+			if( tryGetButtonLock( fire_device_axis, msg ) ) fireCurrentDevice();
+		}
+	}
+	
+	void fireCurrentDevice()
+	{
+		PRINT_INFO( "Firing current device: %i", current_firing_device_ );
 		
+		_FiringDeviceActionService service;
+		
+		switch( current_firing_device_ )
+		{
+		case 0:
+			_ServiceClientPolicy1::callService( service );
+			break;
+		case 1:
+			_ServiceClientPolicy2::callService( service );
+			break;
+		case 2:
+			_ServiceClientPolicy3::callService( service );
+			break;
+		case 3:
+			_ServiceClientPolicy4::callService( service );
+			break;
+		}
 	}
 	
 	void spinFirst()
 	{
 		auto nh_rel = base_libs::RunablePolicy::getNodeHandle();
 		
-		nh_rel.setParam( "shooter1_service_name", "shooter1" );
+		nh_rel.setParam( "shooter1_service_name", "/seabee3/shooter1" );
 		_ServiceClientPolicy1::init( "service_name_param", std::string( "shooter1_service_name" ) );
-		nh_rel.setParam( "shooter2_service_name", "shooter2" );
+		
+		nh_rel.setParam( "shooter2_service_name", "/seabee3/shooter2" );
 		_ServiceClientPolicy2::init( "service_name_param", std::string( "shooter2_service_name" ) );
-		nh_rel.setParam( "dropper1_service_name", "dropper1" );
+		
+		nh_rel.setParam( "dropper1_service_name", "/seabee3/dropper1" );
 		_ServiceClientPolicy3::init( "service_name_param", std::string( "dropper1_service_name" ) );
-		nh_rel.setParam( "dropper2_service_name", "dropper2" );
+		
+		nh_rel.setParam( "dropper2_service_name", "/seabee3/dropper2" );
 		_ServiceClientPolicy4::init( "service_name_param", std::string( "dropper2_service_name" ) );
 		
 	}
