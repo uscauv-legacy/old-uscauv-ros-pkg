@@ -23,6 +23,7 @@
   <depend package="joy"/>
   
   <export>
+	<rosdoc config="rosdoc.yaml"/>
     <cpp cflags="-std=c++0x -I${prefix}/include" lflags="-Wl,-rpath,${prefix}/lib -L${prefix}/lib -lbase_libs_prototype"/>
   </export>
 

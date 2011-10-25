@@ -51,10 +51,16 @@ BASE_LIBS_DECLARE_POLICY_CLASS( Joystick )
 {
 	BASE_LIBS_MAKE_POLICY_NAME( Joystick )
 
-public:
+protected:
 	ros::MultiPublisher<> multi_pub_;
 	ros::MultiSubscriber<> multi_sub_;
 	
+	joy::Joy::ConstPtr last_joystick_message_;
+	
+	std::vector<double> linear_axis_scales_;
+	std::vector<double> angular_axis_scales_;
+	std::vector<int> axis_indices_;
+
 	BASE_LIBS_DECLARE_POLICY_CONSTRUCTOR( Joystick )
 	{
 		printPolicyActionStart( "create", this );
@@ -69,18 +75,24 @@ public:
 		ros::NodeHandle & nh_rel = NodeHandlePolicy::getNodeHandle();
 		
 		multi_pub_.addPublishers<geometry_msgs::Twist>( nh_rel, { "cmd_vel" } );
-		multi_sub_.addSubscriber( nh_rel, "joystick", &JoystickPolicy::joystickCB, this );
+		multi_sub_.addSubscriber( nh_rel, "joystick", &JoystickPolicy::joystickCB_0, this );
 		
-		auto linear_axis_scales = ros::ParamReader<double, 3>::readParams( nh_rel, "linear_axis", "_scale" );
-		auto angular_axis_scales = ros::ParamReader<double, 3>::readParams( nh_rel, "angular_axis", "_scale" );
+		// by providing a list of default arguments, we guarantee that at the output vector has at least that many elements
+		linear_axis_scales_ = ros::ParamReader<double, 3>::readParams( nh_rel, "linear_axis", "_scale", 0, { 1.0, 1.0, 1.0 } );
+		angular_axis_scales_ = ros::ParamReader<double, 3>::readParams( nh_rel, "angular_axis", "_scale", 0, { 1.0, 1.0, 1.0 } );
 		
-		auto axis_indices = ros::ParamReader<double, 6>::readParams( nh_rel, "axis", "_index" );
+		// read as many axis#_index values as exist on the parameter server starting with axis0_index
+		axis_indices_ = ros::ParamReader<int, 0>::readParams( nh_rel, "axis", "_index", 0, {} );
 	}
 
-	void joystickCB( const joy::Joy::ConstPtr & msg )
+	BASE_LIBS_DECLARE_MESSAGE_CALLBACK( joystickCB_0, joy::Joy )
 	{
+		last_joystick_message_ = msg;
 		
+		joystickCB( msg );
 	}
+	
+	virtual BASE_LIBS_DECLARE_MESSAGE_CALLBACK( joystickCB, joy::Joy ){}
 };
 
 }

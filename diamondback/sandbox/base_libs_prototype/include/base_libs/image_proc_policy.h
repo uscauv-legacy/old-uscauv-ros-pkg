@@ -120,7 +120,6 @@ protected:
 	ros::MultiSubscriber<image_transport::Subscriber> image_subs_;
 	
 	image_transport::ImageTransport image_transport_;
-	//image_transport::Subscriber image_sub_;
 	
 	
 	BASE_LIBS_DECLARE_POLICY_CONSTRUCTOR( ImageProc ),

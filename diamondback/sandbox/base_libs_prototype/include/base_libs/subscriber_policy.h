@@ -44,12 +44,13 @@ namespace base_libs
 
 BASE_LIBS_DECLARE_POLICY( Subscriber, NodeHandlePolicy )
 
+template<class __Subscriber = ros::Subscriber>
 BASE_LIBS_DECLARE_POLICY_CLASS( Subscriber )
 {
 	BASE_LIBS_MAKE_POLICY_NAME( Subscriber )
 	
 protected:
-	ros::MultiSubscriber<> multi_sub_;
+	ros::MultiSubscriber<__Subscriber> multi_sub_;
 	
 	BASE_LIBS_DECLARE_POLICY_CONSTRUCTOR( Subscriber )
 	{

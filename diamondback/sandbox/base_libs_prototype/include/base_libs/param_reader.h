@@ -107,11 +107,26 @@ public:
 			const std::string & postfix = "",
 			unsigned int start_index = 1 )
 	{
-		_Array params;
+		return readParams( nh, prefix, postfix, start_index, {} );
+	}
+	
+	static _Array
+		readParams(
+			ros::NodeHandle & nh,
+			const std::string & prefix,
+			const std::string & postfix,
+			unsigned int start_index,
+			const std::initializer_list<__Storage> & defaults )
+	{
+		_Array params( defaults.size() );
+		std::copy( defaults.begin(), defaults.end(), params.begin() );
+		
 		bool new_param_found = true;
 	    unsigned int n = start_index;
+	    unsigned int i;
 	    do
 	    {
+			i = n - start_index;
 			std::stringstream param_name_ss;
 			param_name_ss << prefix << n << postfix;
 			
@@ -125,12 +140,13 @@ public:
 				std::stringstream param_value_ss;
 				param_value_ss << param_value;
 				PRINT_INFO( "Loaded param [%s] with value [%s]", param_name.c_str(), param_value_ss.str().c_str() );
-				params.push_back( param_value );
+				if( params.size() > i ) params[i] = param_value;
+				else params.push_back( param_value );
 				++n;
 			}
 			else
 			{
-				PRINT_WARN( "Only found %i/%i parameters in array", n - start_index, __Dim__ );
+				PRINT_WARN( "Only found %i/%i parameters in array", i, __Dim__ );
 				PRINT_WARN( "%s[%u:%u]%s", prefix.c_str(), start_index, start_index + __Dim__, postfix.c_str() );
 				new_param_found = false;
 			}
