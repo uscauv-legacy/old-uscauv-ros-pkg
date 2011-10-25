@@ -1,0 +1,1 @@
+rosbuild_add_executable( seabee3_controls_node seabee3_controls_node.cpp )

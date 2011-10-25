@@ -37,18 +37,16 @@
 #define SEABEE3_DRIVER_SEABEE3_DRIVER_SEABEE3_DRIVER_H_
 
 #include <base_libs/node.h>
-#include <base_libs/robot_driver_policy.h>
 #include <base_libs/service_server_policy.h>
 #include <seabee3_driver/FiringDeviceAction.h>
 
-typedef base_libs::RobotDriverPolicy _RobotDriverPolicy;
 typedef seabee3_driver::FiringDeviceAction _FiringDeviceActionService;
 typedef base_libs::ServiceServerPolicy<_FiringDeviceActionService, 0> _ServiceServerPolicy1;
 typedef base_libs::ServiceServerPolicy<_FiringDeviceActionService, 1> _ServiceServerPolicy2;
 typedef base_libs::ServiceServerPolicy<_FiringDeviceActionService, 2> _ServiceServerPolicy3;
 typedef base_libs::ServiceServerPolicy<_FiringDeviceActionService, 3> _ServiceServerPolicy4;
 
-BASE_LIBS_DECLARE_NODE( Seabee3Driver, _RobotDriverPolicy, _ServiceServerPolicy1, _ServiceServerPolicy2, _ServiceServerPolicy3, _ServiceServerPolicy4 )
+BASE_LIBS_DECLARE_NODE( Seabee3Driver, _ServiceServerPolicy1, _ServiceServerPolicy2, _ServiceServerPolicy3, _ServiceServerPolicy4 )
 
 BASE_LIBS_DECLARE_NODE_CLASS( Seabee3Driver )
 {
@@ -76,8 +74,6 @@ BASE_LIBS_DECLARE_NODE_CLASS( Seabee3Driver )
 		nh_rel.setParam( "dropper2_service_name", "/seabee3/dropper2" );
 		_ServiceServerPolicy4::init( "service_name_param", std::string( "dropper2_service_name" ) );
 		_ServiceServerPolicy4::registerCallback( base_libs::auto_bind( &Seabee3DriverNode::dropper2CB, this ) );
-		
-		_RobotDriverPolicy::init();
 	}
 	
 	BASE_LIBS_DECLARE_SERVICE_CALLBACK( shooter1CB, _FiringDeviceActionService )
@@ -102,11 +98,6 @@ BASE_LIBS_DECLARE_NODE_CLASS( Seabee3Driver )
 	{
 		PRINT_INFO( "Dropping second marker!" );
 		return true;
-	}
-	
-	void spinOnce()
-	{
-		//_RobotDriverPolicy::update();
 	}
 };
 
