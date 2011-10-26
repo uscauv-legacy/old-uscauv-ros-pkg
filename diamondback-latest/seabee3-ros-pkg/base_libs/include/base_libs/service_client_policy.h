@@ -38,6 +38,7 @@
 
 #include <base_libs/node_handle_policy.h>
 #include <ros/service_client.h>
+#include <boost/thread/mutex.hpp>
 
 namespace base_libs
 {
@@ -55,6 +56,7 @@ public:
 	
 private:
 	ros::ServiceClient client_;
+	boost::mutex service_mutex_;
 	
 	std::string service_name_, service_topic_name_;
 	bool is_valid_;
@@ -130,6 +132,8 @@ private:
 	/*! Expanded version of callService that takes \param service.request and \param service.response as arguments instead of just \param service */
 	bool callService( _ServiceRequest & request, _ServiceResponse & response, const ros::Duration & wait_time = ros::Duration( _DEF_callService_wait_time ), unsigned int attempts = _DEF_callService_attempts )
 	{
+		if( !service_mutex_.try_lock() ) return false;
+		
 		while( !connectToService() )
 		{
 			// if we're on the last attempt and we still haven't connected, abort
@@ -142,6 +146,8 @@ private:
 			
 			client_.waitForExistence( wait_time );
 		}
+		
+		service_mutex_.unlock();
 		
 		return client_.call( request, response );
 	}

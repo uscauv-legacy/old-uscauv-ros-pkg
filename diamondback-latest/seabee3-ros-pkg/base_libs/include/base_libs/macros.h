@@ -143,4 +143,12 @@ void callbackName( __ReconfigureType & config, uint32_t level )
 #define IMAGE_PROC_PROCESS_IMAGE( image_ptr_name ) \
 void processImage( cv_bridge::CvImageConstPtr & image_ptr_name )
 
+// ########## Runable Policy Macros ####################################
+// ---------------------------------------------------------------------
+#define BASE_LIBS_SPIN_FIRST \
+void spinFirst()
+
+#define BASE_LIBS_SPIN_ONCE \
+void spinOnce()
+
 #endif // BASE_LIBS_BASE_LIBS_MACROS_H_
