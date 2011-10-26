@@ -37,8 +37,15 @@
 #include <std_msgs/String.h>
 #include <std_msgs/UInt64.h>
 
+// input message type
 typedef std_msgs::String _InputMessage;
+// output message type
 typedef std_msgs::UInt64 _OutputMessage;
+// test node type
 typedef MessageIOTestNode<_InputMessage, _OutputMessage> _MessageIOTestNode;
 
-GENERIC_TESTS_INST_TEST( _MessageIOTestNode, "message_io_test_node", "enable_publisher_param", true )
+// instantiate the node; arguments 3->N are passed to the init() function of the node
+GENERIC_TESTS_INST_TEST( _MessageIOTestNode, "message_io_test_node" )
+
+// to enable the publisher, set "enable_publisher_param" to true
+// GENERIC_TESTS_INST_TEST( _MessageIOTestNode, "message_io_test_node", "enable_publisher_param", true )

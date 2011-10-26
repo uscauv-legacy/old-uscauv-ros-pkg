@@ -69,23 +69,28 @@ private:
 	{
 		auto & nh_rel = NodeHandlePolicy::getNodeHandle();
 		
+		// if "enable_publisher_param" is true, create a publisher
 		if( getMetaParamDef<bool>( "enable_publisher_param", false, args... ) )
-		{		
+		{
+			// get the input topic name
 			const std::string input_topic_name_param = getMetaParamDef<std::string>( "input_topic_name_param", "input_topic_name", args... );
 			const std::string input_topic_name = ros::ParamReader<std::string, 1>::readParam( nh_rel, input_topic_name_param, "input" );
 			multi_pub_.addPublishers<__InputMessage>( nh_rel, { input_topic_name } );
 		}
 		
+		// get the output topic name
 		const std::string output_topic_name_param = getMetaParamDef<std::string>( "output_topic_name_param", "input_topic_name", args... );
 		const std::string output_topic_name = ros::ParamReader<std::string, 1>::readParam( nh_rel, output_topic_name_param, "output" );
 		multi_sub_.addSubscriber( nh_rel, output_topic_name, &_MessageIOTestPolicy::testOutputCB_0, this );
 	}
 	
+	// declare the callback for output from the node (extenral) this test is connected to
 	BASE_LIBS_DECLARE_MESSAGE_CALLBACK( testOutputCB_0, typename __OutputMessage )
 	{
 		testOutputCB( msg );
 	}
 	
+	// pass the output on to children of this policy
 	virtual BASE_LIBS_DECLARE_MESSAGE_CALLBACK( testOutputCB, typename __OutputMessage ){}
 };
 

@@ -56,6 +56,7 @@ public:
 		//
 	}
 	
+	// called by message_io_test_policy::testOutputCB_0
 	BASE_LIBS_DECLARE_MESSAGE_CALLBACK( testOutputCB, typename __OutputMessage )
 	{
 		PRINT_INFO( "Got message" );

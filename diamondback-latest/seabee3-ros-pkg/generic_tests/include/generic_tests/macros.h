@@ -36,6 +36,8 @@
 #ifndef GENERIC_TESTS_GENERIC_TESTS_MACROS_H_
 #define GENERIC_TESTS_GENERIC_TESTS_MACROS_H_
 
+// ########## Tests Instantiation Macros ###############################
+// ---------------------------------------------------------------------
 #define GENERIC_TESTS_INST_TEST( NodeClassname, node_name_string, init_args... ) \
 int main( int argc, char ** argv ) \
 { \
