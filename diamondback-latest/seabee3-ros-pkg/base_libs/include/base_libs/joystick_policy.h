@@ -59,6 +59,7 @@ public:
 	typedef double _AxisScale;
 	typedef double _AxisValue;
 	typedef joy::Joy _JoystickMsg;
+	typedef geometry_msgs::Twist _VelocityMsg;
 	
 	struct Axis
 	{
@@ -108,6 +109,8 @@ public:
 protected:
 	ros::MultiPublisher<> multi_pub_;
 	ros::MultiSubscriber<> multi_sub_;
+	
+	makePtr<_VelocityMsg>::_Shared velocity_msg_;
 	
 	_JoystickMsg::ConstPtr last_joystick_message_;
 	ros::Time last_joystick_message_time_;
@@ -207,25 +210,27 @@ protected:
 		return axis_it->second;
 	}
 	
-	void update()
+	void update( const bool & auto_publish = true )
 	{
-		makePtr<geometry_msgs::Twist>::_Shared velocity_msg( new geometry_msgs::Twist );
+		velocity_msg_ = makePtr<geometry_msgs::Twist>::_Shared( new geometry_msgs::Twist );
 		
 		const auto enable_axis_it = axes_map_.find( "enable" );
 		enabled_ = enable_axis_it == axes_map_.end() || enable_axis_it->second.getValue( last_joystick_message_ ) > 0;
 		
-		if( enabled_ )
-		{
-			updateVelocityComponent( "linear.x", velocity_msg->linear.x );
-			updateVelocityComponent( "linear.y", velocity_msg->linear.y );
-			updateVelocityComponent( "linear.z", velocity_msg->linear.z );
+		updateVelocityComponent( "linear.x", velocity_msg_->linear.x );
+		updateVelocityComponent( "linear.y", velocity_msg_->linear.y );
+		updateVelocityComponent( "linear.z", velocity_msg_->linear.z );
 			
-			updateVelocityComponent( "angular.x", velocity_msg->angular.x );
-			updateVelocityComponent( "angular.y", velocity_msg->angular.y );
-			updateVelocityComponent( "angular.z", velocity_msg->angular.z );
-		}
+		updateVelocityComponent( "angular.x", velocity_msg_->angular.x );
+		updateVelocityComponent( "angular.y", velocity_msg_->angular.y );
+		updateVelocityComponent( "angular.z", velocity_msg_->angular.z );
 		
-		multi_pub_.publish( "cmd_vel", velocity_msg );
+		if( auto_publish ) publish();
+	}
+	
+	void publish()
+	{
+		multi_pub_.publish( "cmd_vel", velocity_msg_ );
 	}
 	
 	inline bool isEnabled() const
