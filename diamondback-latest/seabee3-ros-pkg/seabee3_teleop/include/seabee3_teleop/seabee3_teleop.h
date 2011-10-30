@@ -55,7 +55,7 @@ BASE_LIBS_DECLARE_NODE_CLASS( Seabee3Teleop )
 public:
 	int current_firing_device_;
 	int num_firing_devices_;
-	_JoystickPolicy::_AxisName current_button_;
+	_JoystickPolicy::_Axis::_Name current_button_;
 	
 	BASE_LIBS_DECLARE_NODE_CONSTRUCTOR( Seabee3Teleop ),
 		current_firing_device_( 0 ),
@@ -93,9 +93,9 @@ public:
 	{
 		if( JoystickPolicy::isEnabled() )
 		{
-			const auto next_firing_device_axis = _JoystickPolicy::getAxis( "next_firing_device" );
-			const auto prev_firing_device_axis = _JoystickPolicy::getAxis( "prev_firing_device" );
-			const auto fire_device_axis = _JoystickPolicy::getAxis( "fire_device" );
+			const auto & next_firing_device_axis = _JoystickPolicy::getAxis( "next_firing_device" );
+			const auto & prev_firing_device_axis = _JoystickPolicy::getAxis( "prev_firing_device" );
+			const auto & fire_device_axis = _JoystickPolicy::getAxis( "fire_device" );
 			
 			if( tryGetButtonLock( next_firing_device_axis, msg ) ) ++current_firing_device_;
 			if( tryGetButtonLock( prev_firing_device_axis, msg ) ) --current_firing_device_;

@@ -1,5 +1,5 @@
 /***************************************************************************
- *  include/base_libs/robot_driver_policy.h
+ *  include/base_libs/robot_controller_policy.h
  *  --------------------
  * 
  *  Copyright (c) 2011, Edward T. Kaszubski ( ekaszubski@gmail.com )
@@ -33,8 +33,8 @@
  * 
  **************************************************************************/
 
-#ifndef BASE_LIBS_BASE_LIBS_ROBOT_DRIVER_POLICY_H_
-#define BASE_LIBS_BASE_LIBS_ROBOT_DRIVER_POLICY_H_
+#ifndef BASE_LIBS_BASE_LIBS_ROBOT_CONTROLLER_POLICY_H_
+#define BASE_LIBS_BASE_LIBS_ROBOT_CONTROLLER_POLICY_H_
 
 #include <base_libs/tf_tranceiver_policy.h>
 #include <base_libs/multi_subscriber.h>
@@ -47,16 +47,18 @@
 namespace base_libs
 {
 
-BASE_LIBS_DECLARE_POLICY( RobotDriver, TfTranceiverPolicy, TimedPolicy )
+BASE_LIBS_DECLARE_POLICY( RobotController, TfTranceiverPolicy, TimedPolicy )
 
-BASE_LIBS_DECLARE_POLICY_CLASS( RobotDriver )
+template<class __MotorValue = void>
+BASE_LIBS_DECLARE_POLICY_CLASS( RobotController )
 {
-	BASE_LIBS_MAKE_POLICY_NAME( RobotDriver )
+	BASE_LIBS_MAKE_POLICY_NAME( RobotController )
 	
 protected:
 	boost::mutex cmd_vel_cache_mutex_;
 	geometry_msgs::Twist::ConstPtr cmd_vel_cache_;
 	ros::MultiSubscriber<> multi_sub_;
+	ros::MultiPublisher<> multi_pub_;
 	
 	std::string
 		robot_name_,
@@ -64,7 +66,7 @@ protected:
 		robot_frame_name_,
 		target_frame_name_;
 	
-	BASE_LIBS_DECLARE_POLICY_CONSTRUCTOR( RobotDriver ),
+	BASE_LIBS_DECLARE_POLICY_CONSTRUCTOR( RobotController ),
 		initialized_( false )
 	{
 		printPolicyActionStart( "create", this );
@@ -77,15 +79,24 @@ protected:
 		
 		ros::NodeHandle & nh_rel = NodeHandlePolicy::getNodeHandle();
 		
-		multi_sub_.addSubscriber( nh_rel, getMetaParamDef<std::string>( "cmd_vel_topic_name", "cmd_vel", args... ), &RobotDriverPolicy::cmdVelCB, this );
+		multi_sub_.addSubscriber( nh_rel, getMetaParamDef<std::string>( "cmd_vel_topic_name", "cmd_vel", args... ), &RobotControllerPolicy::cmdVelCB, this );
 		
-		robot_name_ = getMetaParamDef<std::string>( "robot_name", "", args... );
-		world_frame_name_ = getMetaParamDef<std::string>( "world_frame_name", "/world", args... );
-		robot_frame_name_ = getMetaParamDef<std::string>( "robot_frame_name", "base_link", args... );
-		target_frame_name_ = getMetaParamDef<std::string>( "target_frame_name", "desired_pose", args... );
+		const auto robot_name_param = getMetaParamDef<std::string>( "robot_name_param", "robot_name", args... );
+		robot_name_ = ros::ParamReader<std::string, 1>::readParam( nh_rel, robot_name_param, "" );
+		
+		const auto world_frame_name_param = getMetaParamDef<std::string>( "world_frame_name_param", "world_frame_name", args... );
+		world_frame_name_ = ros::ParamReader<std::string, 1>::readParam( nh_rel, world_frame_name_param, "/world" );
+		
+		const auto robot_frame_name_param = getMetaParamDef<std::string>( "robot_frame_name_param", "robot_frame_name", args... );
+		robot_frame_name_ = ros::ParamReader<std::string, 1>::readParam( nh_rel, robot_frame_name_param, "base_link" );
+		
+		const auto target_frame_name_param = getMetaParamDef<std::string>( "target_frame_name_param", "target_frame_name", args... );
+		target_frame_name_ = ros::ParamReader<std::string, 1>::readParam( nh_rel, target_frame_name_param, "desired_pose" );
 		
 		target_frame_name_ = robot_name_ + "/" + target_frame_name_;
 		robot_frame_name_ = robot_name_ + "/" + robot_frame_name_;
+		
+		multi_pub_.addPublishers<__MotorValue>( nh_rel, { getMetaParamDef<std::string>( "motor_vals_topic_name_param", "motor_vals", args... ) } );
 		
 		BASE_LIBS_SET_INITIALIZED;
 		
@@ -115,7 +126,7 @@ protected:
 		cmd_vel_cache_mutex_.unlock();
 	}
 	
-	tf::StampedTransform getTransformToTarget()
+	tf::StampedTransform getTransformToTarget() const
 	{
 		BASE_LIBS_CHECK_INITIALIZED;
 		
@@ -125,4 +136,4 @@ protected:
 
 }
 
-#endif // BASE_LIBS_BASE_LIBS_ROBOT_DRIVER_POLICY_H_
+#endif // BASE_LIBS_BASE_LIBS_ROBOT_CONTROLLER_POLICY_H_

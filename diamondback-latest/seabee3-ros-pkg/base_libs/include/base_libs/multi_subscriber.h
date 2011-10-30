@@ -108,7 +108,7 @@ public:
 	
 	// here, we only support adding one callback at a time, either through a standard or member function pointer
 	template<class __Message, class __CallerBase, class __Caller>
-	MultiSubscriber & addSubscriber( ros::NodeHandle & nh, const _Topic & topic_name, void( __CallerBase::*function_ptr )( const __Message & ), __Caller * caller, _SubscriberAdapterStorage storage = _SubscriberAdapterStorage() )
+	MultiSubscriber & addSubscriber( ros::NodeHandle & nh, const _Topic & topic_name, void( __CallerBase::*function_ptr )( const __Message & ), __Caller * const caller, _SubscriberAdapterStorage storage = _SubscriberAdapterStorage() )
 	{
 		return addSubscriber( nh, topic_name, base_libs::auto_bind( function_ptr, caller ), storage );
 	}
@@ -124,15 +124,16 @@ public:
 	}
 	
 	// check to see if a topic exists in the list of subscribers
-	bool exists( const _Topic & topic )
+	const bool & exists( const _Topic & topic ) const
 	{
 		return subscribers_.count( topic );
 	}
 	
 	// indexing operator; allows read-only access of subscribers_
-	const __Subscriber & operator[]( const _Topic & topic )
+	const __Subscriber & operator[]( const _Topic & topic ) const
 	{
-		if( subscribers_.count( topic ) ) return subscribers_[topic];
+		const auto & subscriber( subscribers_.find( topic ) );
+		if( subscriber != subscribers_.end() ) return subscriber->second;
 		return __Subscriber();
 	}
 };

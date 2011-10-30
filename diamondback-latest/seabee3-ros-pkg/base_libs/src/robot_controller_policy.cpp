@@ -1,5 +1,5 @@
 /***************************************************************************
- *  src/robot_driver_policy.cpp
+ *  src/robot_controller_policy.cpp
  *  --------------------
  * 
  *  Copyright (c) 2011, Edward T. Kaszubski ( ekaszubski@gmail.com )
@@ -33,4 +33,4 @@
  * 
  **************************************************************************/
 
-#include <base_libs/robot_driver_policy.h>
+#include <base_libs/robot_controller_policy.h>

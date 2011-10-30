@@ -90,7 +90,6 @@ public:
 	typedef std::string _Topic;
 	typedef std::vector<_Topic> _TopicArray;
 	typedef __Publisher _Publisher;
-	//typedef PublisherAdapter<__Publisher> _PublisherAdapter;
 	typedef PublisherAdapterStorage<__Publisher> _PublisherAdapterStorage;
 	typedef std::map<_Topic, __Publisher> _PublisherMap;
 
@@ -119,14 +118,22 @@ public:
 	// recursively process the message types in __MessagesSubset and
 	// create a publisher for each
 	template<class __MessagesSubset>
-	typename std::enable_if<(__MessagesSubset::num_types_ > 0 ), void>::type
-	createPublishers( ros::NodeHandle & nh, typename _TopicArray::iterator current_topic, const typename _TopicArray::iterator last_topic, _PublisherAdapterStorage & storage )
+	typename std::enable_if<(__MessagesSubset::num_types_ > 0 && !std::is_same<typename ContainerTypes<__MessagesSubset>::_Front, void>::value ), void>::type
+	createPublishers( ros::NodeHandle & nh, const typename _TopicArray::iterator & current_topic, const typename _TopicArray::iterator last_topic, _PublisherAdapterStorage & storage )
 	{
 		typedef typename ContainerTypes<__MessagesSubset>::_Front _CurrentMessageType;
 		PRINT_INFO( "Creating publisher [%s] on topic [%s/%s]", _CurrentMessageType::__s_getDataType().c_str(), nh.getNamespace().c_str(), current_topic->c_str() );
 		
 		publishers_[*current_topic] = PublisherAdapter<__Publisher, _CurrentMessageType>::createPublisher( nh, *current_topic, 10, storage );
-		createPublishers<typename ContainerTypes<__MessagesSubset>::_Rest>( nh, ++current_topic, last_topic, storage );
+		createPublishers<typename ContainerTypes<__MessagesSubset>::_Rest>( nh, current_topic + 1, last_topic, storage );
+	}
+	
+	// ignore void types
+	template<class __MessagesSubset>
+	typename std::enable_if<(__MessagesSubset::num_types_ > 0 && std::is_same<typename ContainerTypes<__MessagesSubset>::_Front, void>::value ), void>::type
+	createPublishers( ros::NodeHandle & nh, const typename _TopicArray::iterator & current_topic, const typename _TopicArray::iterator last_topic, _PublisherAdapterStorage & storage )
+	{
+		createPublishers<typename ContainerTypes<__MessagesSubset>::_Rest>( nh, current_topic + 1, last_topic, storage );
 	}
 	
 	// bottom-level in the createPublishers recursive algorithm
@@ -134,36 +141,38 @@ public:
 	// been registered
 	template<class __MessagesSubset>
 	typename std::enable_if<(__MessagesSubset::num_types_ == 0 ), void>::type
-	createPublishers( ros::NodeHandle & nh, typename _TopicArray::iterator current_topic, const typename _TopicArray::iterator last_topic, _PublisherAdapterStorage & storage )
+	createPublishers( ros::NodeHandle & nh, const typename _TopicArray::iterator & current_topic, const typename _TopicArray::iterator last_topic, _PublisherAdapterStorage & storage )
 	{
 		//PRINT_INFO( "Finished creating topics." );
 	}
 	
 	// check to see if a topic exists in the list of publishers
-	bool exists( const _Topic & topic )
+	bool exists( const _Topic & topic ) const
 	{
 		return publishers_.count( topic );
 	}
 	
 	// indexing operator; allows read-only access of publishers_
-	const __Publisher & operator[]( const _Topic & topic )
+	const __Publisher & operator[]( const _Topic & topic ) const
 	{
-		if( publishers_.count( topic ) ) return publishers_[topic];
+		const auto & publisher( publishers_.find( topic ) );
+		if( publisher != publishers_.end() ) return publisher->second;
 		return __Publisher();
 	}
 	
 	// given a list of key-value pairs, recurse through the list to
 	// publish the messages
 	template<class __Message, class... __Args>
-	void publish( const _Topic & topic, const __Message & msg, __Args&&... args )
+	void publish( const _Topic & topic, const __Message & msg, const __Args&&... args ) const
 	{
-		if( exists( topic ) ) publishers_[topic].publish( msg );
+		const auto & publisher( publishers_.find( topic ) );
+		if( publisher != publishers_.end() ) publisher->second.publish( msg );
 		publish( args... );
 	}
 	
 	// bottom-level of recursive publish() algorithm
 	// does nothing
-	void publish(){}
+	void publish() const {}
 };
 
 }

@@ -37,11 +37,13 @@
 #define SEABEE3_CONTROLS_SEABEE3_CONTROLS_SEABEE3_CONTROLS_H_
 
 #include <base_libs/node.h>
-#include <base_libs/robot_driver_policy.h>
+#include <base_libs/robot_controller_policy.h>
+// #include <controllers>
+#include <seabee3_driver/MotorVals.h>
 
-typedef base_libs::RobotDriverPolicy _RobotDriverPolicy;
+typedef base_libs::RobotControllerPolicy<seabee3_driver::MotorVals> _RobotControllerPolicy;
 
-BASE_LIBS_DECLARE_NODE( Seabee3Controls, _RobotDriverPolicy )
+BASE_LIBS_DECLARE_NODE( Seabee3Controls, _RobotControllerPolicy )
 
 BASE_LIBS_DECLARE_NODE_CLASS( Seabee3Controls )
 {
@@ -52,7 +54,7 @@ BASE_LIBS_DECLARE_NODE_CLASS( Seabee3Controls )
 	
 	void spinFirst()
 	{
-		_RobotDriverPolicy::init();
+		_RobotControllerPolicy::init();
 	}
 };
 

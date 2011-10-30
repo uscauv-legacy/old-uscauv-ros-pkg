@@ -115,7 +115,7 @@ public:
 		const ros::Time & to_frame_time,
 		const _TfFrameId & fixed_frame_id,
 		const double & wait_time = 0.05,
-		const bool & default_to_latest = true )
+		const bool & default_to_latest = true ) const
 	{
 		return lookupTransform(
 			from_frame_id,
@@ -134,7 +134,7 @@ public:
 		const ros::Time & to_frame_time,
 		const _TfFrameId & fixed_frame_id,
 		const ros::Duration & wait_time,
-		const bool & default_to_latest = true )
+		const bool & default_to_latest = true ) const
 	{
 		PRINT_DEBUG( "Looking up transform:\n [ %s-> %s ]\n( %f -> %f )...", from_frame_id.c_str(), to_frame_id.c_str(), from_frame_time.toSec(), to_frame_time.toSec() );
 		tf::StampedTransform transform( btTransform( tf::createIdentityQuaternion() ), ros::Time::now(), from_frame_id, to_frame_id );
@@ -202,7 +202,7 @@ public:
 		const _TfFrameId & from_frame_id,
 		const _TfFrameId & to_frame_id,
 		const double & wait_time = 0.05,
-		const bool & default_to_latest = true )
+		const bool & default_to_latest = true ) const
 	{
 		return lookupTransform(
 			from_frame_id,
@@ -216,7 +216,7 @@ public:
 		const _TfFrameId & to_frame_id,
 		const ros::Time & frame_time,
 		const double & wait_time = 0.05,
-		const bool & default_to_latest = true )
+		const bool & default_to_latest = true ) const
 	{
 		return lookupTransform(
 			from_frame_id,
@@ -230,7 +230,7 @@ public:
 		const _TfFrameId & to_frame_id,
 		const ros::Time & frame_time,
 		const ros::Duration & wait_time,
-		const bool & default_to_latest = true )
+		const bool & default_to_latest = true ) const
 	{
 		PRINT_DEBUG( "Looking up transform:\n [ %s-> %s ]\n( %f )...", from_frame_id.c_str(), to_frame_id.c_str(), frame_time.toSec() );
 		tf::StampedTransform transform( btTransform( tf::createIdentityQuaternion() ), ros::Time::now(), from_frame_id, to_frame_id );
@@ -288,7 +288,7 @@ public:
 	
 	bool transformExists(
 		const _TfFrameId & from_frame_id,
-		const _TfFrameId & to_frame_id )
+		const _TfFrameId & to_frame_id ) const
 	{
 		return transformExists(
 			from_frame_id,
@@ -299,7 +299,7 @@ public:
 	bool transformExists(
 		const _TfFrameId & from_frame_id,
 		const _TfFrameId & to_frame_id,
-		const ros::Time & frame_time )
+		const ros::Time & frame_time ) const
 	{
 		// to_frame and from_frame are flipped in the tf api here
 		return tf_listener_.canTransform(
@@ -313,7 +313,7 @@ public:
 		const ros::Time & from_frame_time,
 		const _TfFrameId & to_frame_id,
 		const ros::Time & to_frame_time,
-		const _TfFrameId & fixed_frame_id )
+		const _TfFrameId & fixed_frame_id ) const
 	{
 		// to_frame and from_frame are flipped in the tf api here
 		return tf_listener_.canTransform(

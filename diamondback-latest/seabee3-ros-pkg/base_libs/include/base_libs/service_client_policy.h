@@ -98,7 +98,7 @@ private:
 	 *  - If \param show_status_on_success and the attempt to connect succeeded, show that info
 	 * 
 	 *  \return is_valid_, the state of the service connection */
-	bool connectToService( const bool & show_status_on_success = false )
+	const bool & connectToService( const bool & show_status_on_success = false )
 	{
 		BASE_LIBS_CHECK_INITIALIZED;
 		

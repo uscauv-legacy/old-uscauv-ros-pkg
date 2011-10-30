@@ -91,7 +91,7 @@ protected:
 		return false;
 	}
 	
-	void registerCallback( _CallbackType external_callback )
+	void registerCallback( const _CallbackType & external_callback )
 	{
 		BASE_LIBS_CHECK_INITIALIZED;
 		

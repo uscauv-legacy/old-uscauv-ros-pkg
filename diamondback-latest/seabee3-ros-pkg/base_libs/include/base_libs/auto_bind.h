@@ -74,7 +74,7 @@ template<int N>
 struct auto_binder
 {
 	template <typename __CallerType, typename __ReturnType, typename... __ArgTypes, typename... __PlaceHolders>
-	static _AUTO_BIND_FUNCTION_TYPE<__ReturnType(__ArgTypes...)> auto_bind(__ReturnType(__CallerType::*function_ptr)(__ArgTypes...), __CallerType* caller, __PlaceHolders... placeholders )
+	static _AUTO_BIND_FUNCTION_TYPE<__ReturnType(__ArgTypes...)> auto_bind(__ReturnType(__CallerType::*function_ptr)(__ArgTypes...), __CallerType* const caller, __PlaceHolders... placeholders )
 	{
 		return auto_binder<N-1>::auto_bind( function_ptr, caller, placeholder<N>(), placeholders... );
 	}
@@ -96,7 +96,7 @@ template<>
 struct auto_binder<0>
 {
 	template <typename __CallerType, typename __ReturnType, typename... __ArgTypes, typename... __PlaceHolders>
-	static _AUTO_BIND_FUNCTION_TYPE<__ReturnType(__ArgTypes...)> auto_bind(__ReturnType(__CallerType::*function_ptr)(__ArgTypes...), __CallerType* caller, __PlaceHolders... placeholders )
+	static _AUTO_BIND_FUNCTION_TYPE<__ReturnType(__ArgTypes...)> auto_bind(__ReturnType(__CallerType::*function_ptr)(__ArgTypes...), __CallerType* const caller, __PlaceHolders... placeholders )
 	{
 		return _AUTO_BIND_FUNCTION_TYPE<__ReturnType(__ArgTypes...)>( std::bind( function_ptr, caller, placeholders... ) );
 	}
@@ -120,7 +120,7 @@ namespace base_libs
 {
 
 template <typename __CallerType, typename __ReturnType, typename... __ArgTypes>
-_AUTO_BIND_FUNCTION_TYPE<__ReturnType(__ArgTypes...)> auto_bind(__ReturnType(__CallerType::*function_ptr)(__ArgTypes...), __CallerType* caller)
+_AUTO_BIND_FUNCTION_TYPE<__ReturnType(__ArgTypes...)> auto_bind(__ReturnType(__CallerType::*function_ptr)(__ArgTypes...), __CallerType* const caller)
 {
 	return details::auto_binder<sizeof...(__ArgTypes)>::auto_bind( function_ptr, caller );
 }

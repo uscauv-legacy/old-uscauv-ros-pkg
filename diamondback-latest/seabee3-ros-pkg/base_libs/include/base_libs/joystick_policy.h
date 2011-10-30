@@ -54,38 +54,39 @@ BASE_LIBS_DECLARE_POLICY_CLASS( Joystick )
 	BASE_LIBS_MAKE_POLICY_NAME( Joystick )
 
 public:
-	typedef std::string _AxisName;
-	typedef int _AxisIndex;
-	typedef double _AxisScale;
-	typedef double _AxisValue;
 	typedef joy::Joy _JoystickMsg;
 	typedef geometry_msgs::Twist _VelocityMsg;
 	
 	struct Axis
 	{
-		_AxisName name_;
-		_AxisIndex index_;
-		_AxisScale scale_;
+		typedef std::string _Name;
+		typedef int _Index;
+		typedef double _Scale;
+		typedef double _Value;
+		
+		_Name name_;
+		_Index index_;
+		_Scale scale_;
 		bool is_button_;
 		
-		Axis( _AxisName name = _AxisName(), _AxisIndex index = _AxisIndex(), _AxisScale scale = _AxisScale(), bool is_button = false )
+		Axis( _Name name = _Name(), _Index index = _Index(), _Scale scale = _Scale(), bool is_button = false )
 		:
 			name_( name ), index_( index ), scale_( scale ), is_button_( is_button )
 		{
 			//
 		}
 		
-		inline _AxisValue getRawValue( const _JoystickMsg::ConstPtr & msg ) const
+		inline _Value getRawValue( const _JoystickMsg::ConstPtr & msg ) const
 		{
-			return msg ? ( is_button_ ? msg->buttons[index_] : msg->axes[index_] ) : _AxisValue();
+			return msg ? ( is_button_ ? msg->buttons[index_] : msg->axes[index_] ) : _Value();
 		}
 		
-		inline _AxisValue getValue( const _JoystickMsg::ConstPtr & msg ) const
+		inline _Value getValue( const _JoystickMsg::ConstPtr & msg ) const
 		{
 			return scale_ * getRawValue( msg );
 		}
 		
-		inline _AxisValue getValueAsButton( const _JoystickMsg::ConstPtr & msg ) const
+		inline _Value getValueAsButton( const _JoystickMsg::ConstPtr & msg ) const
 		{
 			return is_button_ ? getRawValue( msg ) : getValue( msg ) < 0.75;
 		}
@@ -104,7 +105,7 @@ public:
 	};
 	
 	typedef Axis _Axis;
-	typedef std::map<_AxisName, _Axis> _AxesMap;
+	typedef std::map<_Axis::_Name, _Axis> _AxesMap;
 
 protected:
 	ros::MultiPublisher<> multi_pub_;
@@ -142,20 +143,20 @@ protected:
 		joystick_timeout_ = ros::ParamReader<double, 1>::readParam( nh_rel, "keep_alive_period", 1.0 );
 		
 		// read as many axis#_index values as exist on the parameter server starting with axis0_index
-		auto axis_indices = ros::ParamReader<_AxisIndex, 0>::readParams( nh_rel, "axis", "_index", 0 );
-		auto axis_names = ros::ParamReader<_AxisName, 0>::readParams( nh_rel, "axis", "_name", 0 );
-		auto axis_scales = ros::ParamReader<_AxisScale, 0>::readParams( nh_rel, "axis", "_scale", 0 );
+		const auto axis_indices( ros::ParamReader<_Axis::_Index, 0>::readParams( nh_rel, "axis", "_index", 0 ) );
+		const auto axis_names( ros::ParamReader<_Axis::_Name, 0>::readParams( nh_rel, "axis", "_name", 0 ) );
+		const auto axis_scales( ros::ParamReader<_Axis::_Scale, 0>::readParams( nh_rel, "axis", "_scale", 0 ) );
 		
-		auto button_indices = ros::ParamReader<_AxisIndex, 0>::readParams( nh_rel, "button", "_index", 0 );
-		auto button_names = ros::ParamReader<_AxisName, 0>::readParams( nh_rel, "button", "_name", 0 );
+		const auto button_indices( ros::ParamReader<_Axis::_Index, 0>::readParams( nh_rel, "button", "_index", 0 ) );
+		const auto button_names( ros::ParamReader<_Axis::_Name, 0>::readParams( nh_rel, "button", "_name", 0 ) );
 		
 		// unroll the axis names and indices into a map from names to indices
 		for( unsigned int i = 0; i < axis_names.size() && i < axis_indices.size(); ++i )
 		{
-			const _AxisName axis_name = axis_names[i];
-			const _AxisIndex axis_index = axis_indices[i];
-			const _AxisScale axis_scale = axis_scales.size() > i ? axis_scales[i] : _AxisScale( 1.0 );
-			_Axis axis( axis_name, axis_index, axis_scale );
+			const _Axis::_Name & axis_name( axis_names[i] );
+			const _Axis::_Index & axis_index( axis_indices[i] );
+			const _Axis::_Scale & axis_scale( axis_scales.size() > i ? axis_scales[i] : _Axis::_Scale( 1.0 ) );
+			const _Axis axis( axis_name, axis_index, axis_scale );
 			
 			PRINT_INFO( "Adding axis: %s", axis.str().c_str() );
 			axes_map_[axis_name] = axis;
@@ -164,9 +165,9 @@ protected:
 		// unroll the button names and indices into a map from names to indices
 		for( unsigned int i = 0; i < button_names.size() && i < button_indices.size(); ++i )
 		{
-			const _AxisName axis_name = button_names[i];
-			const _AxisIndex axis_index = button_indices[i];
-			_Axis axis( axis_name, axis_index, 1.0, true );
+			const _Axis::_Name & axis_name( button_names[i] );
+			const _Axis::_Index & axis_index( button_indices[i] );
+			const _Axis axis( axis_name, axis_index, 1.0, true );
 			
 			PRINT_INFO( "Adding axis: %s", axis.str().c_str() );
 			axes_map_[axis_name] = axis;
@@ -183,11 +184,11 @@ protected:
 	
 	virtual BASE_LIBS_DECLARE_MESSAGE_CALLBACK( joystickCB, _JoystickMsg ){}
 	
-	bool updateVelocityComponent( const _AxisName & axis_name, _AxisValue & axis_value )
+	bool updateVelocityComponent( const _Axis::_Name & axis_name, _Axis::_Value & axis_value )
 	{
 		if( !last_joystick_message_ ) return false;
 		
-		const auto axis_it = axes_map_.find( axis_name );
+		const auto & axis_it = axes_map_.find( axis_name );
 		if( axis_it == axes_map_.end() ) return false;
 		
 		const _Axis & axis = axis_it->second;
@@ -198,14 +199,14 @@ protected:
 		return true;
 	}
 	
-	bool axisExists( const _AxisName & axis_name ) const
+	const bool & axisExists( const _Axis::_Name & axis_name ) const
 	{
 		return axes_map_.count( axis_name );
 	}
 	
-	_Axis getAxis( const _AxisName & axis_name ) const
+	const _Axis & getAxis( const _Axis::_Name & axis_name ) const
 	{
-		const auto axis_it = axes_map_.find( axis_name );
+		const auto & axis_it = axes_map_.find( axis_name );
 		if( axis_it == axes_map_.end() ) return _Axis();
 		return axis_it->second;
 	}
@@ -214,7 +215,7 @@ protected:
 	{
 		velocity_msg_ = makePtr<geometry_msgs::Twist>::_Shared( new geometry_msgs::Twist );
 		
-		const auto enable_axis_it = axes_map_.find( "enable" );
+		const auto & enable_axis_it = axes_map_.find( "enable" );
 		enabled_ = enable_axis_it == axes_map_.end() || enable_axis_it->second.getValue( last_joystick_message_ ) > 0;
 		
 		updateVelocityComponent( "linear.x", velocity_msg_->linear.x );
@@ -228,12 +229,12 @@ protected:
 		if( auto_publish ) publish();
 	}
 	
-	void publish()
+	void publish() const
 	{
 		multi_pub_.publish( "cmd_vel", velocity_msg_ );
 	}
 	
-	inline bool isEnabled() const
+	inline const bool & isEnabled() const
 	{
 		return enabled_;
 	}

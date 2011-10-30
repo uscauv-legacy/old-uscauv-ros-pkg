@@ -1,5 +1,5 @@
 /***************************************************************************
- *  test/robot_driver_policy.cpp
+ *  test/robot_controller_policy.cpp
  *  --------------------
  * 
  *  Copyright (c) 2011, Edward T. Kaszubski ( ekaszubski@gmail.com )
@@ -33,14 +33,14 @@
  * 
  **************************************************************************/
 
-#include <base_libs/robot_driver_policy.h>
 #include <base_libs/node.h>
+#include <base_libs/robot_controller_policy.h>
 
-BASE_LIBS_DECLARE_NODE( TestRobotDriverPolicy, base_libs::RobotDriverPolicy )
+BASE_LIBS_DECLARE_NODE( TestRobotControllerPolicy, base_libs::RobotControllerPolicy<> )
 
-BASE_LIBS_DECLARE_NODE_CLASS( TestRobotDriverPolicy )
+BASE_LIBS_DECLARE_NODE_CLASS( TestRobotControllerPolicy )
 {
-	BASE_LIBS_DECLARE_NODE_CONSTRUCTOR( TestRobotDriverPolicy ){}
+	BASE_LIBS_DECLARE_NODE_CONSTRUCTOR( TestRobotControllerPolicy ){}
 
 public:
 	void spinFirst()
@@ -49,4 +49,4 @@ public:
 	}
 };
 
-BASE_LIBS_INST_NODE( TestRobotDriverPolicyNode, "test_robot_driver_policy_node" )
+BASE_LIBS_INST_NODE( TestRobotControllerPolicyNode, "test_robot_controller_policy_node" )

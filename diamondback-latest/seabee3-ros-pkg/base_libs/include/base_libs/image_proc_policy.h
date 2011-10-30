@@ -186,7 +186,7 @@ protected:
 	}
 	
 	// publish specializaiton for sensor_msgs::Image::Ptr
-	void publishImages( const std::string & topic, const sensor_msgs::Image::Ptr & image_ptr )
+	void publishImages( const std::string & topic, const sensor_msgs::Image::Ptr & image_ptr ) const
 	{
 		//PRINT_INFO( "publishing image (CvImageConstPtr) on topic %s", topic.c_str() );
 		
@@ -194,7 +194,7 @@ protected:
 	}
 	
 	// publish specializaiton for cv_bridge::CvImageConstPtr
-	void publishImages( const std::string & topic, cv_bridge::CvImageConstPtr & image_ptr )
+	void publishImages( const std::string & topic, cv_bridge::CvImageConstPtr & image_ptr ) const
 	{
 		//PRINT_INFO( "publishing image (CvImageConstPtr) on topic %s", topic.c_str() );
 		
@@ -205,14 +205,14 @@ protected:
 	// enabled only if __Rest... is not empty
 	template<class __Image, class... __Rest>
 	typename std::enable_if<(sizeof...(__Rest) > 0), void>::type
-	publishImages( const std::string & topic, __Image & image, __Rest... rest )
+	publishImages( const std::string & topic, __Image & image, __Rest... rest ) const
 	{
 		// publish using specialization for __Image
 		publishImages( topic, image );
 		publishImages( rest... );
 	}
 	
-	sensor_msgs::Image::Ptr fromIplImage( IplImage * image_ptr, std::string frame_id = "" )
+	sensor_msgs::Image::Ptr fromIplImage( IplImage * image_ptr, std::string frame_id = "" ) const
 	{
 		//cv_bridge::CvImage image_wrapper;
 		

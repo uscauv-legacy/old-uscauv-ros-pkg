@@ -96,7 +96,7 @@ public:
 		if( server_ ) delete server_;
 	}
 	
-	void registerCallback( typename _ReconfigureServer::CallbackType external_callback )
+	void registerCallback( const typename _ReconfigureServer::CallbackType & external_callback )
 	{
 		BASE_LIBS_CHECK_INITIALIZED;
 		
@@ -109,13 +109,6 @@ private:
 		config_ = config;
 		if( external_callback_ ) external_callback_( config, level );
 	}
-
-/*
-protected:
-	void reconfigureCB( __ReconfigureType & config, uint32_t level )
-	{
-		//
-	}*/
 };
 
 }
