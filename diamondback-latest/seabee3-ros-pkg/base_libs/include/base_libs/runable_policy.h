@@ -65,7 +65,8 @@ protected:
 	
 	void preInit()
 	{
-		ros::NodeHandle & nh_rel = NodeHandlePolicy::getNodeHandle();
+		auto & nh_rel = NodeHandlePolicy::getNodeHandle();
+		
 		loop_rate_ = new ros::Rate( ros::ParamReader<double, 1>::readParam( nh_rel, "loop_rate", 10 ) );
 	}
 	

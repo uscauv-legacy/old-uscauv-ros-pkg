@@ -25,7 +25,8 @@ rosbuild_add_library( ${PROJECT_NAME} console.cpp
 									  image_proc_policy.cpp
 									  tf_tranceiver_policy.cpp
 									  joystick_policy.cpp
-									  robot_controller_policy.cpp )
+									  robot_controller_policy.cpp
+									  robot_driver_policy.cpp )
 									 
 #rosbuild_add_executable( test_base_image_proc test_base_image_proc.cpp )
 target_link_libraries( ${PROJECT_NAME} pthread boost_thread )

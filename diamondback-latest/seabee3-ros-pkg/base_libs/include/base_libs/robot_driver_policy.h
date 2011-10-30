@@ -1,5 +1,5 @@
 /***************************************************************************
- *  include/base_libs/service_server_policy.h
+ *  include/base_libs/robot_driver_policy.h
  *  --------------------
  * 
  *  Copyright (c) 2011, Edward T. Kaszubski ( ekaszubski@gmail.com )
@@ -33,33 +33,37 @@
  * 
  **************************************************************************/
 
-#ifndef BASE_LIBS_BASE_LIBS_SERVICE_SERVER_POLICY_H_
-#define BASE_LIBS_BASE_LIBS_SERVICE_SERVER_POLICY_H_
+#ifndef BASE_LIBS_BASE_LIBS_ROBOT_DRIVER_POLICY_H_
+#define BASE_LIBS_BASE_LIBS_ROBOT_DRIVER_POLICY_H_
 
 #include <base_libs/node_handle_policy.h>
-#include <base_libs/auto_bind.h>
-#include <ros/service_server.h>
+#include <base_libs/timed_policy.h>
+#include <base_libs/multi_subscriber.h>
+#include <base_libs/multi_publisher.h>
+#include <boost/thread/mutex.hpp>
+#include <std_msgs/Empty.h>
 
 namespace base_libs
 {
 
-BASE_LIBS_DECLARE_POLICY( ServiceServer, NodeHandlePolicy )
+BASE_LIBS_DECLARE_POLICY( RobotDriver, NodeHandlePolicy, TimedPolicy )
 
-template<class __Service, unsigned int __Id__ = 0>
-BASE_LIBS_DECLARE_POLICY_CLASS( ServiceServer )
+template<class __MotorValsMsg = std_msgs::Empty>
+BASE_LIBS_DECLARE_POLICY_CLASS( RobotDriver )
 {
-	BASE_LIBS_MAKE_POLICY_NAME( ServiceServer )
-	
+	BASE_LIBS_MAKE_POLICY_NAME( RobotDriver )
+
 protected:
-	typedef typename __Service::Request _ServiceRequest;
-	typedef typename __Service::Response _ServiceResponse;
-	typedef ServiceServerPolicy<__Service, __Id__> _ServiceServerPolicy;
-	typedef std::function<bool( _ServiceRequest &, _ServiceResponse & )> _CallbackType;
+	boost::mutex motor_vals_cache_mutex_;
+	typename __MotorValsMsg::ConstPtr motor_vals_cache_;
 	
-	ros::ServiceServer server_;
-	_CallbackType external_callback_;
+	ros::MultiSubscriber<> multi_sub_;
+	// publisher for sensor data, etc
+	ros::MultiPublisher<> multi_pub_;
 	
-	BASE_LIBS_DECLARE_POLICY_CONSTRUCTOR( ServiceServer ),
+	std::string robot_name_;
+	
+	BASE_LIBS_DECLARE_POLICY_CONSTRUCTOR( RobotDriver ),
 		initialized_( false )
 	{
 		printPolicyActionStart( "create", this );
@@ -72,33 +76,29 @@ protected:
 		
 		auto & nh_rel = NodeHandlePolicy::getNodeHandle();
 		
-		const std::string service_name_param( getMetaParamDef<std::string>( "service_name_param", "service_name", args... ) );
-		const std::string service_name( ros::ParamReader<std::string, 1>::readParam( nh_rel, service_name_param, "service" ) );
+		const auto robot_name_param = getMetaParamDef<std::string>( "robot_name_param", "robot_name", args... );
+		robot_name_ = ros::ParamReader<std::string, 1>::readParam( nh_rel, robot_name_param, "" );
 		
-		ros::NodeHandle service_nh( nh_rel, service_name );
-		PRINT_INFO( "Creating service server [%s] on topic [%s]", ros::service_traits::DataType<__Service>::value(), service_nh.getNamespace().c_str() );
-		
-		server_ = nh_rel.advertiseService( service_name, &_ServiceServerPolicy::serviceCB, this );
+		multi_sub_.addSubscriber( nh_rel, getMetaParamDef<std::string>( "motor_vals_topic_name_param", robot_name_.size() > 0 ? robot_name_ + "/cmd_vel" : "cmd_vel" , args... ), &RobotDriverPolicy::motorValsCB, this );
 		
 		BASE_LIBS_SET_INITIALIZED;
 		
 		printPolicyActionDone( "initialize", this );
 	}
 	
-	bool serviceCB( _ServiceRequest & request, _ServiceResponse & response )
-	{
-		if( external_callback_ ) return external_callback_( request, response );
-		return false;
-	}
-	
-	void registerCallback( const _CallbackType & external_callback )
+	BASE_LIBS_DECLARE_MESSAGE_CALLBACK( motorValsCB, typename __MotorValsMsg )
 	{
 		BASE_LIBS_CHECK_INITIALIZED;
 		
-		external_callback_ = external_callback;
+		if( motor_vals_cache_mutex_.try_lock() ) return;
+		
+		motor_vals_cache_ = msg;
+		TimedPolicy::update();
+		
+		motor_vals_cache_mutex_.unlock();
 	}
 };
 
 }
 
-#endif // BASE_LIBS_BASE_LIBS_SERVICE_SERVER_POLICY_H_
+#endif // BASE_LIBS_BASE_LIBS_ROBOT_DRIVER_POLICY_H_

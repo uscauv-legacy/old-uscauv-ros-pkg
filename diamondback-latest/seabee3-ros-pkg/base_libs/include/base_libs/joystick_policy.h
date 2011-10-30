@@ -134,7 +134,7 @@ protected:
 	
 	void preInit()
 	{
-		ros::NodeHandle & nh_rel = NodeHandlePolicy::getNodeHandle();
+		auto & nh_rel = NodeHandlePolicy::getNodeHandle();
 		
 		multi_pub_.addPublishers<geometry_msgs::Twist>( nh_rel, { "cmd_vel" } );
 		multi_sub_.addSubscriber( nh_rel, "joystick", &JoystickPolicy::joystickCB_0, this );

@@ -78,7 +78,8 @@ private:
 	{
 		printPolicyActionStart( "initialize", this );
 		
-		ros::NodeHandle & nh_rel = NodeHandlePolicy::getNodeHandle();
+		auto & nh_rel = NodeHandlePolicy::getNodeHandle();
+		
 		// look up the meta-param remap of the service name param in args..., if it exists
 		const std::string service_name_param = getMetaParamDef<std::string>( "service_name_param", "service_name", args... );
 		// look up the ros-param rempa of the service name on the ros parameter server, if it exists

@@ -1,5 +1,5 @@
 /***************************************************************************
- *  include/seabee3_controls/seabee3_controls.h
+ *  test/robot_driver_policy.cpp
  *  --------------------
  * 
  *  Copyright (c) 2011, Edward T. Kaszubski ( ekaszubski@gmail.com )
@@ -33,33 +33,20 @@
  * 
  **************************************************************************/
 
-#ifndef SEABEE3_CONTROLS_SEABEE3_CONTROLS_SEABEE3_CONTROLS_H_
-#define SEABEE3_CONTROLS_SEABEE3_CONTROLS_SEABEE3_CONTROLS_H_
-
 #include <base_libs/node.h>
-#include <base_libs/robot_controller_policy.h>
-// #include <controllers>
-#include <seabee3_driver/MotorVals.h>
+#include <base_libs/robot_driver_policy.h>
 
-typedef seabee3_driver::MotorVals _MotorValsMsg;
-typedef base_libs::RobotControllerPolicy<_MotorValsMsg> _RobotControllerPolicy;
+BASE_LIBS_DECLARE_NODE( TestRobotDriverPolicy, base_libs::RobotDriverPolicy<> )
 
-BASE_LIBS_DECLARE_NODE( Seabee3Controls, _RobotControllerPolicy )
-
-BASE_LIBS_DECLARE_NODE_CLASS( Seabee3Controls )
+BASE_LIBS_DECLARE_NODE_CLASS( TestRobotDriverPolicy )
 {
-	BASE_LIBS_DECLARE_NODE_CONSTRUCTOR( Seabee3Controls )
-	{
-		//
-	}
-	
+	BASE_LIBS_DECLARE_NODE_CONSTRUCTOR( TestRobotDriverPolicy ){}
+
+public:
 	void spinFirst()
 	{
-		auto & nh_rel = base_libs::RunablePolicy::getNodeHandle();
-		
-		nh_rel.setParam( "robot_name", "seabee3" );
-		_RobotControllerPolicy::init();
+		initAll();
 	}
 };
 
-#endif // SEABEE3_CONTROLS_SEABEE3_CONTROLS_SEABEE3_CONTROLS_H_
+BASE_LIBS_INST_NODE( TestRobotDriverPolicyNode, "test_robot_driver_policy_node" )

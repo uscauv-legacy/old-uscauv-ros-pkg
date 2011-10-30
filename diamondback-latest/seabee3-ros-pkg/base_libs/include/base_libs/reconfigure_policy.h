@@ -75,7 +75,7 @@ public:
 	{
 		printPolicyActionStart( "initialize", this );
 		
-		ros::NodeHandle & nh_rel = NodeHandlePolicy::getNodeHandle();
+		auto & nh_rel = NodeHandlePolicy::getNodeHandle();
 		
 		const std::string reconfigure_namespace_name( getMetaParamDef<std::string>( "reconfigure_namespace_param", "reconfigure_namespace", args... ) );
 		const std::string reconfigure_namespace( ros::ParamReader<std::string, 1>::readParam( nh_rel, reconfigure_namespace_name, "reconfigure" ) );
@@ -104,7 +104,7 @@ public:
 	}
 	
 private:
-	void reconfigureCB_0( __ReconfigureType & config, uint32_t level )
+	BASE_LIBS_DECLARE_RECONFIGURE_CALLBACK( reconfigureCB_0, __ReconfigureType )
 	{
 		config_ = config;
 		if( external_callback_ ) external_callback_( config, level );

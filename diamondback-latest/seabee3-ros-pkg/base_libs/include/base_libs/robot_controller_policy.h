@@ -41,22 +41,26 @@
 #include <base_libs/multi_publisher.h>
 #include <base_libs/timed_policy.h>
 #include <base_libs/geometry_message_conversions.h>
-#include <geometry_msgs/Twist.h>
 #include <boost/thread/mutex.hpp>
+#include <geometry_msgs/Twist.h>
+#include <std_msgs/Empty.h>
 
 namespace base_libs
 {
 
 BASE_LIBS_DECLARE_POLICY( RobotController, TfTranceiverPolicy, TimedPolicy )
 
-template<class __MotorValue = void>
+template<class __MotorValsMsg = std_msgs::Empty>
 BASE_LIBS_DECLARE_POLICY_CLASS( RobotController )
 {
 	BASE_LIBS_MAKE_POLICY_NAME( RobotController )
+
+public:
+	typedef geometry_msgs::Twist _VelocityMsg;
 	
 protected:
 	boost::mutex cmd_vel_cache_mutex_;
-	geometry_msgs::Twist::ConstPtr cmd_vel_cache_;
+	_VelocityMsg::ConstPtr cmd_vel_cache_;
 	ros::MultiSubscriber<> multi_sub_;
 	ros::MultiPublisher<> multi_pub_;
 	
@@ -77,12 +81,12 @@ protected:
 	{
 		printPolicyActionStart( "initialize", this );
 		
-		ros::NodeHandle & nh_rel = NodeHandlePolicy::getNodeHandle();
-		
-		multi_sub_.addSubscriber( nh_rel, getMetaParamDef<std::string>( "cmd_vel_topic_name", "cmd_vel", args... ), &RobotControllerPolicy::cmdVelCB, this );
+		auto & nh_rel = NodeHandlePolicy::getNodeHandle();
 		
 		const auto robot_name_param = getMetaParamDef<std::string>( "robot_name_param", "robot_name", args... );
 		robot_name_ = ros::ParamReader<std::string, 1>::readParam( nh_rel, robot_name_param, "" );
+		
+		multi_sub_.addSubscriber( nh_rel, getMetaParamDef<std::string>( "cmd_vel_topic_name_param", robot_name_.size() > 0 ? "/" + robot_name_ + "/cmd_vel" : "cmd_vel", args... ), &RobotControllerPolicy::cmdVelCB, this );
 		
 		const auto world_frame_name_param = getMetaParamDef<std::string>( "world_frame_name_param", "world_frame_name", args... );
 		world_frame_name_ = ros::ParamReader<std::string, 1>::readParam( nh_rel, world_frame_name_param, "/world" );
@@ -96,14 +100,14 @@ protected:
 		target_frame_name_ = robot_name_ + "/" + target_frame_name_;
 		robot_frame_name_ = robot_name_ + "/" + robot_frame_name_;
 		
-		multi_pub_.addPublishers<__MotorValue>( nh_rel, { getMetaParamDef<std::string>( "motor_vals_topic_name_param", "motor_vals", args... ) } );
+		multi_pub_.addPublishers<__MotorValsMsg>( nh_rel, { getMetaParamDef<std::string>( "motor_vals_topic_name_param", robot_name_.size() > 0 ? "/" + robot_name_ + "/motor_vals" : "motor_vals", args... ) } );
 		
 		BASE_LIBS_SET_INITIALIZED;
 		
 		printPolicyActionDone( "initialize", this );
 	}
 	
-	void cmdVelCB( const geometry_msgs::Twist::ConstPtr & msg )
+	BASE_LIBS_DECLARE_MESSAGE_CALLBACK( cmdVelCB, _VelocityMsg )
 	{
 		BASE_LIBS_CHECK_INITIALIZED;
 		

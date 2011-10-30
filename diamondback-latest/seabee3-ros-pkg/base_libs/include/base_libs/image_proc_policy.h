@@ -139,7 +139,7 @@ protected:
 		publisher_storage.image_transport_ = &image_transport_;
 		subscriber_storage.image_transport_ = &image_transport_;
 		
-		ros::NodeHandle & nh_rel = NodeHandlePolicy::getNodeHandle();
+		auto & nh_rel = NodeHandlePolicy::getNodeHandle();
 		
 		if( ros::ParamReader<bool, 1>::readParam( nh_rel, "subscribe_to_image", true ) )
 			image_subs_.addSubscriber( nh_rel, "image", &ImageProcPolicy::imageCB_0, this, subscriber_storage );
