@@ -137,6 +137,9 @@ public:
 	{
 		auto nh_rel = base_libs::RunablePolicy::getNodeHandle();
 		
+		nh_rel.setParam( "robot_name", "seabee3" );
+		_JoystickPolicy::init();
+		
 		nh_rel.setParam( "shooter1_service_name", "/seabee3/shooter1" );
 		_ServiceClientPolicy1::init( "service_name_param", std::string( "shooter1_service_name" ) );
 		

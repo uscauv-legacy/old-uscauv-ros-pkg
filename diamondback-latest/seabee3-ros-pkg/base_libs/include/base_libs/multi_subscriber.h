@@ -116,7 +116,8 @@ public:
 	template<class __Message>
 	MultiSubscriber & addSubscriber( ros::NodeHandle & nh, const _Topic & topic_name, const std::function< void(const boost::shared_ptr< __Message const > &)> & callback, _SubscriberAdapterStorage & storage )
 	{
-		PRINT_INFO( "Creating subscriber [%s] on topic %s/%s", __Message::__s_getDataType().c_str(), nh.getNamespace().c_str(), topic_name.c_str() );
+		const ros::NodeHandle topic_nh( nh, topic_name );
+		PRINT_INFO( ">>> Creating subscriber [ %s ] on topic [ %s ]", __Message::__s_getDataType().c_str(), topic_nh.getNamespace().c_str() );
 		
 		subscribers_[topic_name] = SubscriberAdapter<__Subscriber>::createSubscriber( nh, topic_name, 10, callback, storage );
 		

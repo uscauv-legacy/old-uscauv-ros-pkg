@@ -68,7 +68,9 @@ protected:
 		robot_name_,
 		world_frame_name_,
 		robot_frame_name_,
-		target_frame_name_;
+		target_frame_name_,
+		cmd_vel_topic_name_,
+		motor_vals_topic_name_;
 	
 	BASE_LIBS_DECLARE_POLICY_CONSTRUCTOR( RobotController ),
 		initialized_( false )
@@ -77,6 +79,16 @@ protected:
 		printPolicyActionDone( "create", this );
 	}
 	
+private:
+	void postInit()
+	{
+		auto & nh_rel = NodeHandlePolicy::getNodeHandle();
+		
+		multi_sub_.addSubscriber( nh_rel, cmd_vel_topic_name_, &RobotControllerPolicy::cmdVelCB, this );
+		multi_pub_.addPublishers<__MotorValsMsg>( nh_rel, { motor_vals_topic_name_ } );
+	}
+
+public:
 	BASE_LIBS_ENABLE_INIT
 	{
 		printPolicyActionStart( "initialize", this );
@@ -86,7 +98,7 @@ protected:
 		const auto robot_name_param = getMetaParamDef<std::string>( "robot_name_param", "robot_name", args... );
 		robot_name_ = ros::ParamReader<std::string, 1>::readParam( nh_rel, robot_name_param, "" );
 		
-		multi_sub_.addSubscriber( nh_rel, getMetaParamDef<std::string>( "cmd_vel_topic_name_param", robot_name_.size() > 0 ? "/" + robot_name_ + "/cmd_vel" : "cmd_vel", args... ), &RobotControllerPolicy::cmdVelCB, this );
+		cmd_vel_topic_name_ = getMetaParamDef<std::string>( "cmd_vel_topic_name_param", robot_name_.size() > 0 ? "/" + robot_name_ + "/cmd_vel" : "cmd_vel", args... );
 		
 		const auto world_frame_name_param = getMetaParamDef<std::string>( "world_frame_name_param", "world_frame_name", args... );
 		world_frame_name_ = ros::ParamReader<std::string, 1>::readParam( nh_rel, world_frame_name_param, "/world" );
@@ -99,8 +111,10 @@ protected:
 		
 		target_frame_name_ = robot_name_ + "/" + target_frame_name_;
 		robot_frame_name_ = robot_name_ + "/" + robot_frame_name_;
+
+		motor_vals_topic_name_ = getMetaParamDef<std::string>( "motor_vals_topic_name_param", robot_name_.size() > 0 ? "/" + robot_name_ + "/motor_vals" : "motor_vals", args... );
 		
-		multi_pub_.addPublishers<__MotorValsMsg>( nh_rel, { getMetaParamDef<std::string>( "motor_vals_topic_name_param", robot_name_.size() > 0 ? "/" + robot_name_ + "/motor_vals" : "motor_vals", args... ) } );
+		postInit();
 		
 		BASE_LIBS_SET_INITIALIZED;
 		
@@ -126,6 +140,9 @@ protected:
 		
 		// update world_frame_to_target_frame in tf now that we've added velocity*dt to it
 		publishTransform( world_frame_to_target_frame_last, now_ );
+		
+		typename __MotorValsMsg::Ptr motor_vals_msg( new __MotorValsMsg );
+		multi_pub_.publish( motor_vals_topic_name_, motor_vals_msg );
 		
 		cmd_vel_cache_mutex_.unlock();
 	}

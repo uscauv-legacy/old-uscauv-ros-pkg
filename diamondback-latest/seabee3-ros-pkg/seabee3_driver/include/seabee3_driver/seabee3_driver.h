@@ -66,6 +66,7 @@ BASE_LIBS_DECLARE_NODE_CLASS( Seabee3Driver )
 		
 		nh_rel.setParam( "robot_name", "seabee3" );
 		_RobotDriverPolicy::init();
+		_RobotDriverPolicy::registerCallback( base_libs::auto_bind( &Seabee3DriverNode::motorValsCB, this ) );
 		
 		nh_rel.setParam( "shooter1_service_name", "/seabee3/shooter1" );
 		_Shooter1ServiceServerPolicy::init( "service_name_param", std::string( "shooter1_service_name" ) );
@@ -82,6 +83,11 @@ BASE_LIBS_DECLARE_NODE_CLASS( Seabee3Driver )
 		nh_rel.setParam( "dropper2_service_name", "/seabee3/dropper2" );
 		_Dropper2ServiceServerPolicy::init( "service_name_param", std::string( "dropper2_service_name" ) );
 		_Dropper2ServiceServerPolicy::registerCallback( base_libs::auto_bind( &Seabee3DriverNode::dropper2CB, this ) );
+	}
+	
+	BASE_LIBS_DECLARE_MESSAGE_CALLBACK( motorValsCB, _MotorValsMsg )
+	{
+		PRINT_INFO( "Setting motor vals..." );
 	}
 	
 	BASE_LIBS_DECLARE_SERVICE_CALLBACK( shooter1CB, _FiringDeviceActionService )

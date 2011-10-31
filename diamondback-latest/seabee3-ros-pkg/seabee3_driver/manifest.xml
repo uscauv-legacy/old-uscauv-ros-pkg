@@ -13,7 +13,7 @@
   <!--depend package="seabee3_common"/-->
   <!-- runtime dependencies -->
   <!--depend package="xsens_driver"/-->
-  <export>
-    <cpp cflags="-I${prefix}/include -I${prefix}/msg/cpp -I${prefix}/srv/cpp" lflags="-Wl,-rpath,${prefix}/lib -L${prefix}/lib"/>
-  </export>
+  <!--export>
+    <cpp cflags="-I${prefix}/include -I${prefix}/msg_gen/cpp/include -I${prefix}/srv_gen/cpp/include" lflags="-Wl,-rpath,${prefix}/lib -L${prefix}/lib"/>
+  </export-->
 </package>

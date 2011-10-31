@@ -84,18 +84,19 @@ protected:
 		
 		printPolicyActionDone( "initialize", this );
 	}
-	
-	bool serviceCB( _ServiceRequest & request, _ServiceResponse & response )
-	{
-		if( external_callback_ ) return external_callback_( request, response );
-		return false;
-	}
-	
+
 	void registerCallback( const _CallbackType & external_callback )
 	{
 		BASE_LIBS_CHECK_INITIALIZED;
 		
 		external_callback_ = external_callback;
+	}
+
+private:
+	BASE_LIBS_DECLARE_SERVICE_CALLBACK( serviceCB, typename __Service )
+	{
+		if( external_callback_ ) return external_callback_( request, response );
+		return false;
 	}
 };
 

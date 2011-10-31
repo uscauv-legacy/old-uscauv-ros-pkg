@@ -109,7 +109,7 @@ public:
 		_TopicArray topic_names( topic_names_init.size() );
 		std::copy( topic_names_init.begin(), topic_names_init.end(), topic_names.begin() );
 		
-		PRINT_INFO( "Attempting to add %zu publishers...", topic_names.size() );
+		PRINT_INFO( "Attempting to add [ %zu ] publishers...", topic_names.size() );
 		createPublishers<Container<__Messages...> >( nh, topic_names.begin(), topic_names.end(), storage );
 		
 		return *this;
@@ -122,7 +122,9 @@ public:
 	createPublishers( ros::NodeHandle & nh, const typename _TopicArray::iterator & current_topic, const typename _TopicArray::iterator last_topic, _PublisherAdapterStorage & storage )
 	{
 		typedef typename ContainerTypes<__MessagesSubset>::_Front _CurrentMessageType;
-		PRINT_INFO( "Creating publisher [%s] on topic [%s/%s]", _CurrentMessageType::__s_getDataType().c_str(), nh.getNamespace().c_str(), current_topic->c_str() );
+		
+		const ros::NodeHandle topic_nh( nh, *current_topic );
+		PRINT_INFO( ">>> Creating publisher [ %s ] on topic [ %s ]", _CurrentMessageType::__s_getDataType().c_str(), topic_nh.getNamespace().c_str() );
 		
 		publishers_[*current_topic] = PublisherAdapter<__Publisher, _CurrentMessageType>::createPublisher( nh, *current_topic, 10, storage );
 		createPublishers<typename ContainerTypes<__MessagesSubset>::_Rest>( nh, current_topic + 1, last_topic, storage );
@@ -167,6 +169,7 @@ public:
 	{
 		const auto & publisher( publishers_.find( topic ) );
 		if( publisher != publishers_.end() ) publisher->second.publish( msg );
+		else PRINT_WARN( "Cannot publish to topic [ %s ]; topic is not managed by this multi-publisher", topic.c_str() );
 		publish( args... );
 	}
 	

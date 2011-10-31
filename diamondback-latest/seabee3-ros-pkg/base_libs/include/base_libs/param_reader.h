@@ -146,7 +146,7 @@ public:
 			{
 				std::stringstream param_value_ss;
 				param_value_ss << param_value;
-				PRINT_INFO( "Loaded param [ %s ] with value [ %s ]", param_name.c_str(), param_value_ss.str().c_str() );
+				PRINT_INFO( ">>> Loaded param [ %s ] with value [ %s ]", param_name.c_str(), param_value_ss.str().c_str() );
 				if( params.size() > i ) params[i] = param_value;
 				else params.push_back( param_value );
 				++n;
@@ -228,11 +228,11 @@ public:
 		
 		if( param_found )
 		{
-			PRINT_INFO( "> Using value [ %s ]", param_value_ss.str().c_str() );
+			PRINT_INFO( ">>> Using value [ %s ]", param_value_ss.str().c_str() );
 		}
 		else
 		{
-			PRINT_WARN( "> Defaulting to [ %s ]", param_value_ss.str().c_str() );
+			PRINT_WARN( ">>> Defaulting to [ %s ]", param_value_ss.str().c_str() );
 		}
 		
 		return  param_value;

@@ -107,7 +107,7 @@ public:
 	typedef Axis _Axis;
 	typedef std::map<_Axis::_Name, _Axis> _AxesMap;
 
-protected:
+private:
 	ros::MultiPublisher<> multi_pub_;
 	ros::MultiSubscriber<> multi_sub_;
 	
@@ -117,27 +117,43 @@ protected:
 	ros::Time last_joystick_message_time_;
 	bool enabled_;
 	double joystick_timeout_;
+	std::string cmd_vel_topic_name_;
 	
 	_AxesMap axes_map_;
 	
 
 	BASE_LIBS_DECLARE_POLICY_CONSTRUCTOR( Joystick ),
 		last_joystick_message_time_( ros::Time::now() ),
-		enabled_( false )
+		enabled_( false ),
+		initialized_( false )
 	{
 		printPolicyActionStart( "create", this );
 		
-		preInit();
+		//preInit();
 		
 		printPolicyActionDone( "create", this );
 	}
 	
-	void preInit()
+private:
+	void postInit()
 	{
 		auto & nh_rel = NodeHandlePolicy::getNodeHandle();
 		
-		multi_pub_.addPublishers<geometry_msgs::Twist>( nh_rel, { "cmd_vel" } );
+		multi_pub_.addPublishers<geometry_msgs::Twist>( nh_rel, { cmd_vel_topic_name_ } );
 		multi_sub_.addSubscriber( nh_rel, "joystick", &JoystickPolicy::joystickCB_0, this );
+	}
+
+public:
+	BASE_LIBS_ENABLE_INIT
+	{
+		printPolicyActionStart( "initialize", this );
+		
+		auto & nh_rel = NodeHandlePolicy::getNodeHandle();
+		
+		const auto robot_name_param = getMetaParamDef<std::string>( "robot_name_param", "robot_name", args... );
+		const auto robot_name = ros::ParamReader<std::string, 1>::readParam( nh_rel, robot_name_param, "" );
+		
+		cmd_vel_topic_name_ = getMetaParamDef<std::string>( "cmd_vel_topic_name_param", robot_name.size() > 0 ? "/" + robot_name + "/cmd_vel" : "cmd_vel", args... );
 		
 		// if we don't get any joystick messages after this much time, zero out all fields of the outgoing velocity message
 		joystick_timeout_ = ros::ParamReader<double, 1>::readParam( nh_rel, "keep_alive_period", 1.0 );
@@ -172,6 +188,12 @@ protected:
 			PRINT_INFO( "Adding axis: %s", axis.str().c_str() );
 			axes_map_[axis_name] = axis;
 		}
+		
+		postInit();
+		
+		BASE_LIBS_SET_INITIALIZED;
+		
+		printPolicyActionDone( "initialize", this );
 	}
 
 	BASE_LIBS_DECLARE_MESSAGE_CALLBACK( joystickCB_0, _JoystickMsg )
@@ -199,7 +221,7 @@ protected:
 		return true;
 	}
 	
-	const bool & axisExists( const _Axis::_Name & axis_name ) const
+	bool axisExists( const _Axis::_Name & axis_name ) const
 	{
 		return axes_map_.count( axis_name );
 	}
@@ -213,6 +235,8 @@ protected:
 	
 	void update( const bool & auto_publish = true )
 	{
+		BASE_LIBS_CHECK_INITIALIZED;
+		
 		velocity_msg_ = makePtr<geometry_msgs::Twist>::_Shared( new geometry_msgs::Twist );
 		
 		const auto & enable_axis_it = axes_map_.find( "enable" );
@@ -231,7 +255,7 @@ protected:
 	
 	void publish() const
 	{
-		multi_pub_.publish( "cmd_vel", velocity_msg_ );
+		multi_pub_.publish( cmd_vel_topic_name_, velocity_msg_ );
 	}
 	
 	inline const bool & isEnabled() const

@@ -38,6 +38,7 @@
 
 #include <type_traits>
 #include <string>
+#include <sstream>
 #include <stdlib.h>
 #include <base_libs/console.h>
 #include <boost/shared_ptr.hpp>
@@ -67,39 +68,81 @@ namespace base_libs
 	}
 	
 	template<class __Desired>
-	__Desired getMetaParamRec( const std::string & name, const __Desired & default_value )
+	__Desired getMetaParamRec( const std::string & name )
 	{
-		PRINT_WARN( "Failed to find key [%s]", name.c_str() );
+		PRINT_ERROR( ">>> Failed to find key [ %s ]", name.c_str() );
+		return __Desired();
+	}
+	
+	template<class __Desired>
+	__Desired getMetaParamDefRec( const std::string & name, const __Desired & default_value )
+	{
+		std::stringstream ss;
+		ss << default_value;
+		PRINT_WARN( ">>> Failed to find key [ %s ]; defaulting to [ %s ]", name.c_str(), ss.str().c_str() );
 		return default_value;
-		// fail at runtime
-		//abort();
 	}
 	
 	// ####
 	
 	template<class __Desired, class __Current, class... __Rest>
 	static typename std::enable_if<(!std::is_same<__Desired, __Current>::value), __Desired>::type
-	getMetaParamRec( const std::string & name, const __Desired & default_value, const std::string & current_name, __Current & current, __Rest&&... rest );
+	getMetaParamRec( const std::string & name, const std::string & current_name, __Current & current, __Rest&&... rest );
 	
 	template<class __Desired, class __Current, class... __Rest>
 	static typename std::enable_if<(std::is_same<__Desired, __Current>::value), __Desired>::type
-	getMetaParamRec( const std::string & name, const __Desired & default_value, const std::string & current_name, __Current & current, __Rest&&... rest );
+	getMetaParamRec( const std::string & name, const std::string & current_name, __Current & current, __Rest&&... rest );
+	
+	template<class __Desired, class __Current, class... __Rest>
+	static typename std::enable_if<(!std::is_same<__Desired, __Current>::value), __Desired>::type
+	getMetaParamDefRec( const std::string & name, const __Desired & default_value, const std::string & current_name, __Current & current, __Rest&&... rest );
+	
+	template<class __Desired, class __Current, class... __Rest>
+	static typename std::enable_if<(std::is_same<__Desired, __Current>::value), __Desired>::type
+	getMetaParamDefRec( const std::string & name, const __Desired & default_value, const std::string & current_name, __Current & current, __Rest&&... rest );
 	
 	// ####
 	
 	template<class __Desired, class __Current, class... __Rest>
 	static typename std::enable_if<(!std::is_same<__Desired, __Current>::value), __Desired>::type
-	getMetaParamRec( const std::string & name, const __Desired & default_value, const std::string & current_name, __Current & current, __Rest&&... rest )
+	getMetaParamRec( const std::string & name, const std::string & current_name, __Current & current, __Rest&&... rest )
 	{
-		return getMetaParamRec<__Desired>( name, default_value, rest... );
+		return getMetaParamRec<__Desired>( name, rest... );
+	}
+	
+	template<class __Desired, class __Current, class... __Rest>
+	static typename std::enable_if<(!std::is_same<__Desired, __Current>::value), __Desired>::type
+	getMetaParamDefRec( const std::string & name, const __Desired & default_value, const std::string & current_name, __Current & current, __Rest&&... rest )
+	{
+		return getMetaParamDefRec<__Desired>( name, default_value, rest... );
 	}
 	
 	template<class __Desired, class __Current, class... __Rest>
 	static typename std::enable_if<(std::is_same<__Desired, __Current>::value), __Desired>::type
-	getMetaParamRec( const std::string & name, const __Desired & default_value, const std::string & current_name, __Current & current, __Rest&&... rest )
+	getMetaParamRec( const std::string & name, const std::string & current_name, __Current & current, __Rest&&... rest )
 	{
-		PRINT_INFO( "Found key [%s]", name.c_str() );
-		return name == current_name ? current : getMetaParamRec<__Desired>( name, default_value, rest... );
+		if( name == current_name )
+		{
+			std::stringstream ss;
+			ss << current;
+			PRINT_INFO( "Found key [ %s ] with value [ %s ]", name.c_str(), ss.str().c_str() );
+			return current;
+		}
+		return getMetaParamRec<__Desired>( name, rest... );
+	}
+	
+	template<class __Desired, class __Current, class... __Rest>
+	static typename std::enable_if<(std::is_same<__Desired, __Current>::value), __Desired>::type
+	getMetaParamDefRec( const std::string & name, const __Desired & default_value, const std::string & current_name, __Current & current, __Rest&&... rest )
+	{
+		if( name == current_name )
+		{
+			std::stringstream ss;
+			ss << current;
+			PRINT_INFO( "Found key [ %s ] with value [ %s ]", name.c_str(), ss.str().c_str() );
+			return current;
+		}
+		return getMetaParamDefRec<__Desired>( name, default_value, rest... );
 	}
 	
 	// ####
@@ -109,13 +152,13 @@ namespace base_libs
 	{
 		// make sure desired type exists in list; otherwise fail at compile time
 		getFirstOfType<__Desired>( rest... );
-		return getMetaParamRec<__Desired>( name, __Desired(), rest... );
+		return getMetaParamRec<__Desired>( name, rest... );
 	}
 	
 	template<class __Desired, class... __Rest>
 	static __Desired getMetaParamDef( const std::string & name, const __Desired & default_value, __Rest&&... rest )
 	{
-		return getMetaParamRec<__Desired>( name, default_value, rest... );
+		return getMetaParamDefRec<__Desired>( name, default_value, rest... );
 	}
 	
 	template<class __Type>
