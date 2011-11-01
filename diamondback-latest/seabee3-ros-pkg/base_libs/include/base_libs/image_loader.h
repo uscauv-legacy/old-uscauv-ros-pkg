@@ -46,9 +46,9 @@
 #include <image_transport/image_transport.h>
 // for Mat
 #include <opencv/cv.h>
-#include <cxcore.h>
+#include <opencv/cxcore.h>
 // for image utilities like imread()
-#include "highgui.h"
+#include <opencv/highgui.h>
 //for CvBridge
 #include <cv_bridge/CvBridge.h>
 #include <base_libs/param_reader.h>

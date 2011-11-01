@@ -44,7 +44,7 @@
 #include <cv_bridge/CvBridge.h>
 #include <sensor_msgs/image_encodings.h>
 #include <opencv2/imgproc/imgproc.hpp>
-#include <opencv2/highgui/highgui.hpp>
+#include <opencv/highgui.h>
 
 // ## PublisherAdapterStorage for image_transport::Publisher ###########
 namespace ros
@@ -210,6 +210,17 @@ protected:
 		// publish using specialization for __Image
 		publishImages( topic, image );
 		publishImages( rest... );
+	}
+	
+	sensor_msgs::Image::Ptr fromMat( const cv::Mat & mat, std::string frame_id = "" ) const
+	{
+		cv_bridge::CvImage image_wrapper;
+		
+		image_wrapper.image = mat;
+		image_wrapper.encoding = "rgb8";
+		image_wrapper.header.frame_id = frame_id;
+		
+		return image_wrapper.toImageMsg();
 	}
 	
 	sensor_msgs::Image::Ptr fromIplImage( IplImage * image_ptr, std::string frame_id = "" ) const
