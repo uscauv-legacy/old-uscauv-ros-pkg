@@ -1,14 +1,14 @@
 /***************************************************************************
  *  include/base_libs/macros.h
  *  --------------------
- * 
+ *
  *  Copyright (c) 2011, Edward T. Kaszubski ( ekaszubski@gmail.com )
  *  All rights reserved.
- * 
+ *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions are
  *  met:
- *  
+ *
  *  * Redistributions of source code must retain the above copyright
  *    notice, this list of conditions and the following disclaimer.
  *  * Redistributions in binary form must reproduce the above
@@ -18,7 +18,7 @@
  *  * Neither the name of seabee3-ros-pkg nor the names of its
  *    contributors may be used to endorse or promote products derived from
  *    this software without specific prior written permission.
- *  
+ *
  *  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
  *  "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
  *  LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
@@ -30,7 +30,7 @@
  *  THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  *  (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  *  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- * 
+ *
  **************************************************************************/
 
 #ifndef BASE_LIBS_BASE_LIBS_MACROS_H_
@@ -131,6 +131,11 @@ void update( __Args&&... args )
 void callbackName( const __MessageType::ConstPtr & msg )
 
 // ---------------------------------------------------------------------
+#define BASE_LIBS_DECLARE_CONDITIONAL_MESSAGE_CALLBACK( callbackName, __MessageType, condition ) \
+typename std::enable_if<condition, void>::type \
+callbackName( const __MessageType::ConstPtr & msg )
+
+// ---------------------------------------------------------------------
 #define BASE_LIBS_DECLARE_SERVICE_CALLBACK( callbackName, __ServiceType ) \
 bool callbackName( __ServiceType::Request & request, __ServiceType::Response & response )
 
@@ -148,7 +153,29 @@ void processImage( cv_bridge::CvImageConstPtr & image_ptr_name )
 #define BASE_LIBS_SPIN_FIRST \
 void spinFirst()
 
+// ---------------------------------------------------------------------
 #define BASE_LIBS_SPIN_ONCE \
 void spinOnce()
+
+// ########## Type Enable/Disable Macros ###############################
+// ---------------------------------------------------------------------
+
+#define BASE_LIBS_ENABLE_IF( __ReturnType, condition ) \
+typename std::enable_if<(condition), __ReturnType>::type
+
+// ---------------------------------------------------------------------
+#define BASE_LIBS_ENABLE_IF_SAME( __ReturnType, __Type1, __Type2 ) \
+BASE_LIBS_ENABLE_IF( __ReturnType, ( std::is_same<__Type1, __Type2>::value ) )
+// "disable if not same" is an alias for "enable if same"
+#define BASE_LIBS_DISABLE_IF_NOT_SAME BASE_LIBS_ENABLE_IF_SAME
+
+// ---------------------------------------------------------------------
+#define BASE_LIBS_DISABLE_IF_SAME( __ReturnType, __Type1, __Type2 ) \
+BASE_LIBS_ENABLE_IF( __ReturnType, ( !std::is_same<__Type1, __Type2>::value ) )
+// "enable_if_not_same" is an alias for "disable_if_same"
+#define BASE_LIBS_ENABLE_IF_NOT_SAME BASE_LIBS_DISABLE_IF_SAME
+
+// use pair: ENABLE_IF_SAME  / ENABLE_IF_NOT_SAME
+// or:       DISABLE_IF_SAME / DISABLE_IF_NOT_SAME
 
 #endif // BASE_LIBS_BASE_LIBS_MACROS_H_

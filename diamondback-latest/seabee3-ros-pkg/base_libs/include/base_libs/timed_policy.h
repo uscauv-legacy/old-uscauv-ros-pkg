@@ -47,11 +47,15 @@ BASE_LIBS_DECLARE_POLICY( Timed, Policy )
 BASE_LIBS_DECLARE_POLICY_CLASS( Timed )
 {
 	BASE_LIBS_MAKE_POLICY_NAME( Timed )
+	
+public:
+	typedef ros::Time _Time;
+	typedef double _Duration;
 
 protected:
-	ros::Time last_time_;
-	ros::Time now_;
-	double dt_;
+	_Time last_time_;
+	_Time now_;
+	_Duration dt_;
 	
 	BASE_LIBS_DECLARE_POLICY_CONSTRUCTOR( Timed ),
 		last_time_( 0 ),
@@ -75,6 +79,10 @@ protected:
 		now_ = ros::Time::now();
 		dt_ = ( now_ - last_time_ ).toSec();
 	}
+	
+	inline const _Time & now(){ return now_; }
+	inline const _Time & last(){ return last_time_; }
+	inline const _Duration & dt(){ return dt_; }
 };
 
 }

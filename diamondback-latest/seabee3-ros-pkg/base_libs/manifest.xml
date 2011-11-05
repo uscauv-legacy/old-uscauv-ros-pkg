@@ -21,10 +21,10 @@
   <depend package="nodelet"/>
   <depend package="pluginlib"/>
   <depend package="joy"/>
-  
+
   <export>
 	<rosdoc config="rosdoc.yaml"/>
-	<cpp cflags="-std=c++0x -I${prefix}/include"/>
+	<cpp cflags="-std=c++0x -I${prefix}/include" lflags="-L${prefix}/lib -lbase_libs"/>
     <!--cpp cflags="-std=c++0x -I${prefix}/include" lflags="-Wl,-rpath,${prefix}/lib -L${prefix}/lib -lbase_libs"/-->
   </export>
 

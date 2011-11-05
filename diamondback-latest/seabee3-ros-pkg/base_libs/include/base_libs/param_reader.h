@@ -1,14 +1,14 @@
 /***************************************************************************
  *  include/base_libs/param_reader.h
  *  --------------------
- * 
+ *
  *  Copyright (c) 2011, Edward T. Kaszubski ( ekaszubski@gmail.com )
  *  All rights reserved.
- * 
+ *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions are
  *  met:
- *  
+ *
  *  * Redistributions of source code must retain the above copyright
  *    notice, this list of conditions and the following disclaimer.
  *  * Redistributions in binary form must reproduce the above
@@ -18,7 +18,7 @@
  *  * Neither the name of seabee3-ros-pkg nor the names of its
  *    contributors may be used to endorse or promote products derived from
  *    this software without specific prior written permission.
- *  
+ *
  *  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
  *  "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
  *  LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
@@ -30,8 +30,11 @@
  *  THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  *  (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  *  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- * 
+ *
  **************************************************************************/
+
+#ifndef BASE_LIBS_BASE_LIBS_PARAM_READER_H_
+#define BASE_LIBS_BASE_LIBS_PARAM_READER_H_
 
 #include <base_libs/console.h>
 #include <ros/param.h>
@@ -39,11 +42,6 @@
 #include <type_traits>
 #include <vector>
 #include <sstream>
-
-//BASE_LIBS_DECLARE_HEADER( BASE_LIBS, BASE_LIBS, PARAM_READER )
-
-#ifndef BASE_LIBS_BASE_LIBS_PARAM_READER_H_
-#define BASE_LIBS_BASE_LIBS_PARAM_READER_H_
 
 // a class that will read up to __Dim__ paramters with the name format "prefix_|n|postfix_"
 // a dim of 0 means "load all matching params that are found, without limit"
@@ -64,15 +62,15 @@ class ParamReader
 public:
 	typedef __Storage _Storage;
 	typedef std::vector<__Storage> _Array;
-	
+
 	ros::NodeHandle nh_;
 	std::string prefix_;
 	std::string postfix_;
 	unsigned int start_index_;
 	_Array params_;
-	
+
 	ParamReader(){}
-	
+
 	ParamReader(
 		ros::NodeHandle & nh,
 		const std::string & prefix,
@@ -86,7 +84,7 @@ public:
 	{
 		//
 	}
-	
+
 public:
 	_Array
 		readParams()
@@ -96,10 +94,10 @@ public:
 			prefix_,
 			postfix_,
 			start_index_ );
-		
+
 		return params_;
 	}
-	
+
 	static _Array
 		readParams(
 			ros::NodeHandle & nh,
@@ -109,7 +107,7 @@ public:
 	{
 		return readParams( nh, prefix, postfix, start_index, {} );
 	}
-	
+
 	static _Array
 		readParams(
 			ros::NodeHandle & nh,
@@ -120,26 +118,26 @@ public:
 	{
 		_Array params( defaults.size() );
 		std::copy( defaults.begin(), defaults.end(), params.begin() );
-		
+
 		bool new_param_found = true;
 	    unsigned int n = start_index;
 	    unsigned int i;
-	    
+
 	    std::stringstream num_params_ss;
 		if( __Dim__ > 0 ) num_params_ss << __Dim__;
 		else num_params_ss << "any";
-		
+
 		PRINT_INFO( "Attempting to load [ %s ] parameters in the form [ %s#%s ] starting with index [ %u ]", num_params_ss.str().c_str(), prefix.c_str(), postfix.c_str(), start_index );
-	    
+
 	    do
 	    {
 			i = n - start_index;
 			std::stringstream param_name_ss;
 			param_name_ss << prefix << n << postfix;
-			
+
 			__Storage param_value;
 			const std::string param_name = param_name_ss.str();
-			
+
 			if( nh.getParam(
 				param_name.c_str(),
 				param_value ) )
@@ -183,15 +181,15 @@ class ParamReader<__Storage, 1>
 {
 public:
 	ros::NodeHandle nh_;
-	
+
 	std::string param_name_;
-	
+
 	__Storage
 		default_value_,
 		last_value_;
-	
+
 	ParamReader(){}
-	
+
 	ParamReader(
 		ros::NodeHandle & nh,
 		const std::string & param_name = "",
@@ -203,7 +201,7 @@ public:
 	{
 		//
 	}
-	
+
 	__Storage
 		readParam()
 	{
@@ -212,7 +210,7 @@ public:
 			param_name_,
 			default_value_ );
 	}
-	
+
 	static __Storage
 		readParam(
 			ros::NodeHandle & nh,
@@ -220,12 +218,12 @@ public:
 			const __Storage & default_value = __Storage() )
 	{
 		__Storage param_value( default_value );
-		
+
 		const bool param_found( tryReadParam( nh, param_name, param_value ) );
-		
+
 		std::stringstream param_value_ss;
 		param_value_ss << param_value;
-		
+
 		if( param_found )
 		{
 			PRINT_INFO( ">>> Using value [ %s ]", param_value_ss.str().c_str() );
@@ -234,10 +232,10 @@ public:
 		{
 			PRINT_WARN( ">>> Defaulting to [ %s ]", param_value_ss.str().c_str() );
 		}
-		
+
 		return  param_value;
 	}
-	
+
 	static bool tryReadParam(
 		ros::NodeHandle & nh,
 		const std::string & param_name,
@@ -250,15 +248,15 @@ public:
 			PRINT_INFO( "Found param [ %s/%s ]",
 			nh.getNamespace().c_str(),
 			param_name.c_str() );
-			
+
 			return true;
 		}
-		
+
 		PRINT_WARN(
 			"Could not find param [ %s/%s ]",
 			nh.getNamespace().c_str(),
 			param_name.c_str() );
-		
+
 		return false;
 	}
 };
