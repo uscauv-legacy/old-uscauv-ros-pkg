@@ -178,4 +178,13 @@ BASE_LIBS_ENABLE_IF( __ReturnType, ( !std::is_same<__Type1, __Type2>::value ) )
 // use pair: ENABLE_IF_SAME  / ENABLE_IF_NOT_SAME
 // or:       DISABLE_IF_SAME / DISABLE_IF_NOT_SAME
 
+// ########## Internal Macros ##########################################
+// ---------------------------------------------------------------------
+#define BASE_LIBS_DECLARE_INTERNAL_NAMESPACE \
+namespace base_libs
+
+// ---------------------------------------------------------------------
+#define __BASE_LIBS_FUNCTION_TYPE \
+std::function
+
 #endif // BASE_LIBS_BASE_LIBS_MACROS_H_
