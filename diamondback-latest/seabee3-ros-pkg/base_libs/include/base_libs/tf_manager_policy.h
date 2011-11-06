@@ -124,7 +124,8 @@ public:
 		BASE_LIBS_CHECK_INITIALIZED;
 
 		auto lock = velocity_msg_cache_.tryLockAndUpdate( msg );
-		BASE_LIBS_TRY_LOCK_OR_RETURN( lock, "Dropping Twist message." );
+		const std::string & message_name = BASE_LIBS_GET_MESSAGE_NAME( _VelocityMsg );
+		BASE_LIBS_TRY_LOCK_OR_RETURN( lock, "Dropping message [ %s ]", message_name.c_str() );
 
 		BASE_LIBS_GET_POLICY_NAMESPACE( TfManager )::_CallbackTimer::update();
 

@@ -68,7 +68,7 @@ public:
 
 	BASE_LIBS_DECLARE_MESSAGE_CALLBACK( pointCB, geometry_msgs::Point )
 	{
-		printf( "Got point: [%f %f %f] %d\n", msg->x, msg->y, msg->z );
+		printf( "Got point: [%f %f %f]\n", msg->x, msg->y, msg->z );
 	}
 
 	BASE_LIBS_SPIN_ONCE

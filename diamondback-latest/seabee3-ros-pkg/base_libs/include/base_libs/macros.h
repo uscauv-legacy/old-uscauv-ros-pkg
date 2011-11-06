@@ -204,8 +204,8 @@ BASE_LIBS_ENABLE_IF( __ReturnType, ( !std::is_same<__Type1, __Type2>::value ) )
 
 // ########## Threading Macros #########################################
 // ---------------------------------------------------------------------
-#define BASE_LIBS_TRY_LOCK_OR_RETURN( lock_name, info_string ) \
-if( !lock_name ) PRINT_WARN( "Lock is busy. " info_string ); \
+#define BASE_LIBS_TRY_LOCK_OR_RETURN( lock_name, args... ) \
+if( !lock_name ) PRINT_WARN( "Lock is busy. " args ); \
 if( !lock_name ) return
 
 // ########## Internal Macros ##########################################
@@ -216,5 +216,10 @@ namespace base_libs
 // ---------------------------------------------------------------------
 #define __BASE_LIBS_FUNCTION_TYPE \
 std::function
+
+// ########## ROS Message Macros #######################################
+// ---------------------------------------------------------------------
+#define BASE_LIBS_GET_MESSAGE_NAME( __Message ) \
+__Message::__s_getDataType();
 
 #endif // BASE_LIBS_BASE_LIBS_MACROS_H_

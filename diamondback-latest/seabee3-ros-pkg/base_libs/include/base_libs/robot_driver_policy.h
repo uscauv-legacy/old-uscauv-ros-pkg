@@ -126,7 +126,9 @@ private:
 
 		// locks until "lock" goes out of context
 		auto lock = motor_vals_msg_cache_.tryLockAndUpdate( msg );
-		BASE_LIBS_TRY_LOCK_OR_RETURN( lock, "Dropping MotorVals message." );
+
+		const std::string & message_name = BASE_LIBS_GET_MESSAGE_NAME( __Message );
+		BASE_LIBS_TRY_LOCK_OR_RETURN( lock, "Dropping message [ %s ]", message_name.c_str() );
 
 		_MessageCallbackPolicy::invokeCallback( msg );
 

@@ -228,8 +228,10 @@ public:
 
 	const _Axis & getAxis( const _Axis::_Name & axis_name ) const
 	{
+		const static _Axis default_axis = _Axis();
+
 		const auto & axis_it = axes_map_.find( axis_name );
-		if( axis_it == axes_map_.end() ) return _Axis();
+		if( axis_it == axes_map_.end() ) return default_axis;
 		return axis_it->second;
 	}
 
