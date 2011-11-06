@@ -43,15 +43,15 @@
 #include <seabee3_driver/FiringDeviceAction.h>
 
 typedef seabee3_driver::MotorVals _MotorValsMsg;
-typedef base_libs::RobotDriverPolicy<_MotorValsMsg> _RobotDriverPolicy;
+typedef base_libs::RobotDriverPolicy<_MotorValsMsg> _RobotDriver;
 
 typedef seabee3_driver::FiringDeviceAction _FiringDeviceActionService;
-typedef base_libs::ServiceServerPolicy<_FiringDeviceActionService, 0> _Shooter1ServiceServerPolicy;
-typedef base_libs::ServiceServerPolicy<_FiringDeviceActionService, 1> _Shooter2ServiceServerPolicy;
-typedef base_libs::ServiceServerPolicy<_FiringDeviceActionService, 2> _Dropper1ServiceServerPolicy;
-typedef base_libs::ServiceServerPolicy<_FiringDeviceActionService, 3> _Dropper2ServiceServerPolicy;
+typedef base_libs::ServiceServerPolicy<_FiringDeviceActionService, 0> _Shooter1ServiceServer;
+typedef base_libs::ServiceServerPolicy<_FiringDeviceActionService, 1> _Shooter2ServiceServer;
+typedef base_libs::ServiceServerPolicy<_FiringDeviceActionService, 2> _Dropper1ServiceServer;
+typedef base_libs::ServiceServerPolicy<_FiringDeviceActionService, 3> _Dropper2ServiceServer;
 
-BASE_LIBS_DECLARE_NODE( Seabee3Driver, _RobotDriverPolicy, _Shooter1ServiceServerPolicy, _Shooter2ServiceServerPolicy, _Dropper1ServiceServerPolicy, _Dropper2ServiceServerPolicy )
+BASE_LIBS_DECLARE_NODE( Seabee3Driver, _RobotDriver, _Shooter1ServiceServer, _Shooter2ServiceServer, _Dropper1ServiceServer, _Dropper2ServiceServer )
 
 BASE_LIBS_DECLARE_NODE_CLASS( Seabee3Driver )
 {
@@ -65,24 +65,24 @@ BASE_LIBS_DECLARE_NODE_CLASS( Seabee3Driver )
 		auto & nh_rel = base_libs::RunablePolicy::getNodeHandle();
 
 		nh_rel.setParam( "robot_name", "seabee3" );
-		_RobotDriverPolicy::init();
-		_RobotDriverPolicy::registerCallback( base_libs::auto_bind( &Seabee3DriverNode::motorValsCB, this ) );
+		_RobotDriver::init();
+		_RobotDriver::registerCallback( base_libs::auto_bind( &Seabee3DriverNode::motorValsCB, this ) );
 
 		nh_rel.setParam( "shooter1_service_name", "/seabee3/shooter1" );
-		_Shooter1ServiceServerPolicy::init( "service_name_param", std::string( "shooter1_service_name" ) );
-		_Shooter1ServiceServerPolicy::registerCallback( base_libs::auto_bind( &Seabee3DriverNode::shooter1CB, this ) );
+		_Shooter1ServiceServer::init( "service_name_param", std::string( "shooter1_service_name" ) );
+		_Shooter1ServiceServer::registerCallback( base_libs::auto_bind( &Seabee3DriverNode::shooter1CB, this ) );
 
 		nh_rel.setParam( "shooter2_service_name", "/seabee3/shooter2" );
-		_Shooter2ServiceServerPolicy::init( "service_name_param", std::string( "shooter2_service_name" ) );
-		_Shooter2ServiceServerPolicy::registerCallback( base_libs::auto_bind( &Seabee3DriverNode::shooter2CB, this ) );
+		_Shooter2ServiceServer::init( "service_name_param", std::string( "shooter2_service_name" ) );
+		_Shooter2ServiceServer::registerCallback( base_libs::auto_bind( &Seabee3DriverNode::shooter2CB, this ) );
 
 		nh_rel.setParam( "dropper1_service_name", "/seabee3/dropper1" );
-		_Dropper1ServiceServerPolicy::init( "service_name_param", std::string( "dropper1_service_name" ) );
-		_Dropper1ServiceServerPolicy::registerCallback( base_libs::auto_bind( &Seabee3DriverNode::dropper1CB, this ) );
+		_Dropper1ServiceServer::init( "service_name_param", std::string( "dropper1_service_name" ) );
+		_Dropper1ServiceServer::registerCallback( base_libs::auto_bind( &Seabee3DriverNode::dropper1CB, this ) );
 
 		nh_rel.setParam( "dropper2_service_name", "/seabee3/dropper2" );
-		_Dropper2ServiceServerPolicy::init( "service_name_param", std::string( "dropper2_service_name" ) );
-		_Dropper2ServiceServerPolicy::registerCallback( base_libs::auto_bind( &Seabee3DriverNode::dropper2CB, this ) );
+		_Dropper2ServiceServer::init( "service_name_param", std::string( "dropper2_service_name" ) );
+		_Dropper2ServiceServer::registerCallback( base_libs::auto_bind( &Seabee3DriverNode::dropper2CB, this ) );
 	}
 
 	BASE_LIBS_DECLARE_MESSAGE_CALLBACK( motorValsCB, _MotorValsMsg )

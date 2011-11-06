@@ -42,9 +42,9 @@
 #include <seabee3_driver/MotorVals.h>
 
 typedef seabee3_driver::MotorVals _MotorValsMsg;
-typedef base_libs::RobotControllerPolicy<_MotorValsMsg> _RobotControllerPolicy;
+typedef base_libs::RobotControllerPolicy<_MotorValsMsg> _RobotController;
 
-BASE_LIBS_DECLARE_NODE( Seabee3Controls, _RobotControllerPolicy )
+BASE_LIBS_DECLARE_NODE( Seabee3Controls, _RobotController )
 
 BASE_LIBS_DECLARE_NODE_CLASS( Seabee3Controls )
 {
@@ -58,12 +58,12 @@ BASE_LIBS_DECLARE_NODE_CLASS( Seabee3Controls )
 		auto & nh_rel = base_libs::RunablePolicy::getNodeHandle();
 
 		nh_rel.setParam( "robot_name", "seabee3" );
-		_RobotControllerPolicy::init();
+		_RobotController::init();
 	}
 
 	BASE_LIBS_SPIN_ONCE
 	{
-		_RobotControllerPolicy::update();
+		_RobotController::update();
 	}
 };
 
