@@ -42,6 +42,7 @@
 #include <base_libs/tf_manager.h>
 #include <base_libs/multi_subscriber.h>
 #include <base_libs/geometry_message_conversions.h>
+#include <base_libs/threading.h>
 #include <geometry_msgs/Twist.h>
 
 /*! A policy to store and update multiple tf frames
@@ -68,9 +69,12 @@ BASE_LIBS_DECLARE_POLICY_CLASS( TfManager )
 public:
 	typedef geometry_msgs::Twist _VelocityMsg;
 
+	MessageCache<_VelocityMsg> velocity_msg_cache_;
+
 	std::string cmd_vel_topic_name_;
 	TfManager tf_manager_;
 	ros::MultiSubscriber<> multi_sub_;
+
 
 	BASE_LIBS_DECLARE_POLICY_CONSTRUCTOR( TfManager ),
 		initialized_( false )
@@ -118,6 +122,9 @@ public:
 	BASE_LIBS_DECLARE_MESSAGE_CALLBACK( cmdVelCB, _VelocityMsg )
 	{
 		BASE_LIBS_CHECK_INITIALIZED;
+
+		auto lock = velocity_msg_cache_.tryLockAndUpdate( msg );
+		BASE_LIBS_TRY_LOCK_OR_RETURN( lock, "Dropping Twist message." );
 
 		BASE_LIBS_GET_POLICY_NAMESPACE( TfManager )::_CallbackTimer::update();
 

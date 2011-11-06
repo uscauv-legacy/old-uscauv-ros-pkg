@@ -44,12 +44,12 @@ BASE_LIBS_DECLARE_NODE_CLASS( TestRobotControllerPolicy )
 	BASE_LIBS_DECLARE_NODE_CONSTRUCTOR( TestRobotControllerPolicy ){}
 
 public:
-	void spinFirst()
+	BASE_LIBS_SPIN_FIRST
 	{
 		initAll();
 	}
 
-	void spinOnce()
+	BASE_LIBS_SPIN_ONCE
 	{
 		_RobotControllerPolicy::update();
 	}

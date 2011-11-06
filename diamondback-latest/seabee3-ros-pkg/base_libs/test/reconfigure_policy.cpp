@@ -1,14 +1,14 @@
 /***************************************************************************
  *  test/reconfigure_policy.cpp
  *  --------------------
- * 
+ *
  *  Copyright (c) 2011, Edward T. Kaszubski ( ekaszubski@gmail.com )
  *  All rights reserved.
- * 
+ *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions are
  *  met:
- *  
+ *
  *  * Redistributions of source code must retain the above copyright
  *    notice, this list of conditions and the following disclaimer.
  *  * Redistributions in binary form must reproduce the above
@@ -18,7 +18,7 @@
  *  * Neither the name of seabee3-ros-pkg nor the names of its
  *    contributors may be used to endorse or promote products derived from
  *    this software without specific prior written permission.
- *  
+ *
  *  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
  *  "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
  *  LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
@@ -30,7 +30,7 @@
  *  THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  *  (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  *  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- * 
+ *
  **************************************************************************/
 
 #include <base_libs/node.h>
@@ -51,15 +51,15 @@ BASE_LIBS_DECLARE_NODE_CLASS( TestReconfigurePolicy )
 	{
 		//
 	}
-	
-	void spinFirst()
+
+	BASE_LIBS_SPIN_FIRST
 	{
 		/*! call init() on all initable policies
 		 *  initAll(); */
-		
+
 		/*! call init( ... ) on all initable policies
 		 *  initAll( "reconfigure_namespace_name", std::string( "reconfigure_namespace1" ) ); */
-		
+
 		/*! call init on just _TestConfigReconfigurePolicy
 		 *  All ReconfigurePolicy instances use getMetaParamDef to look up the key "reconfigure_namespace_param" in the list of init() params
 		 *  and default to "reconfigure_namspace" if no matching key is found. This value is then fed into a ParamReader as the name of a param.
@@ -69,33 +69,33 @@ BASE_LIBS_DECLARE_NODE_CLASS( TestReconfigurePolicy )
 		 *  Then a dynamic reconfigure server will be set up as: node_name/<reconfigure_ns>
 		 *  If this function was given no arguments, the ParamReader would instead try to find "node_name/reconfigure_namespace" (since the default value for they meta-param key
 		 *  "reconfigure_namespace_param", as defined in ReconfigurePolicy, is "reconfigure_namespace") or default to "reconfigure", etc */
-		 
+
 		_ReconfigurePolicy1::getNodeHandle().setParam( "reconfigure_namespace1", "reconfigure1" );
 		_ReconfigurePolicy1::init( "reconfigure_namespace_param", std::string( "reconfigure_namespace1" ) );
 		_ReconfigurePolicy1::registerCallback( base_libs::auto_bind( &TestReconfigurePolicyNode::reconfigureCB1, this ) );
-		
+
 		/// call init on just _Test2ConfigReconfigurePolicy
 		_ReconfigurePolicy2::getNodeHandle().setParam( "reconfigure_namespace2", "reconfigure2" );
 		_ReconfigurePolicy2::init( "reconfigure_namespace_param", std::string( "reconfigure_namespace2" ) );
 		_ReconfigurePolicy2::registerCallback( base_libs::auto_bind( &TestReconfigurePolicyNode::reconfigureCB2, this ) );
-		
+
 		/*! so now, when we run this node using the above inits, we can do:
 		 *  ./node_name _reconfigure_namespace1:=reconfigure1 _reconfigure_namespace2:=reconfigure2
 		 *  and our two dynamic reconfigure servers will work in harmony; the server for TestConfig
 		 *  will show up on /node_name/reconfigure1 and the server for TestConfig2 will show up on
 		 *  /node_name/reconfigure2 */
 	}
-	
-	void spinOnce()
+
+	BASE_LIBS_SPIN_ONCE
 	{
 		std::cout << "." << std::flush;
 	}
-	
+
 	BASE_LIBS_DECLARE_RECONFIGURE_CALLBACK( reconfigureCB1, _Config1 )
 	{
 		printf( "Got reconfigureCB1\n" );
 	}
-	
+
 	BASE_LIBS_DECLARE_RECONFIGURE_CALLBACK( reconfigureCB2, _Config2 )
 	{
 		printf( "Got reconfigureCB2\n" );

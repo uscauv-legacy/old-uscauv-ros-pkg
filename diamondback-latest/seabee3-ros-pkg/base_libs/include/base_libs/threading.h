@@ -1,5 +1,5 @@
 /***************************************************************************
- *  test/image_proc_policy.cpp
+ *  include/base_libs/threading.h
  *  --------------------
  *
  *  Copyright (c) 2011, Edward T. Kaszubski ( ekaszubski@gmail.com )
@@ -33,32 +33,44 @@
  *
  **************************************************************************/
 
-#include <base_libs/macros.h>
-#include <base_libs/node.h>
-#include <base_libs/image_proc_policy.h>
+#ifndef BASE_LIBS_BASE_LIBS_THREADING_H_
+#define BASE_LIBS_BASE_LIBS_THREADING_H_
 
-BASE_LIBS_DECLARE_NODE( TestImageProcPolicy, base_libs::ImageProcPolicy )
+#include <boost/thread/mutex.hpp>
 
-BASE_LIBS_DECLARE_NODE_CLASS( TestImageProcPolicy )
+namespace base_libs
 {
-	BASE_LIBS_DECLARE_NODE_CONSTRUCTOR( TestImageProcPolicy )
+	class Mutex
 	{
+	public:
+		boost::mutex mutex_;
+		typedef boost::unique_lock<boost::mutex> _UniqueLock;
 
-	}
+		_UniqueLock getLock()
+		{
+			return _UniqueLock( mutex_, boost::try_to_lock_t() );
+		}
+	};
 
-	IMAGE_PROC_PROCESS_IMAGE( image_ptr )
+	template<class __Storage>
+	class MutexedCache : public Mutex
 	{
-		IplImage * image = &IplImage( image_ptr->image );
+	public:
+		__Storage cache_;
 
-		//
+		_UniqueLock tryLockAndUpdate( const __Storage & cache )
+		{
+			auto lock = getLock();
+			if( lock ) cache_ = cache;
+			return lock;
+		}
+	};
 
-		publishImages( "output_image", image_ptr );
-	}
+	template<class __Message>
+	class MessageCache : public MutexedCache<typename __Message::ConstPtr>{};
 
-	BASE_LIBS_SPIN_ONCE
-	{
-		//
-	}
-};
+	template<>
+	class MessageCache<void>{};
+}
 
-BASE_LIBS_INST_NODE( TestImageProcPolicyNode, "test_image_proc_policy_node" )
+#endif // BASE_LIBS_BASE_LIBS_THREADING_H_

@@ -1,14 +1,14 @@
 /***************************************************************************
  *  test/service_server_policy.cpp
  *  --------------------
- * 
+ *
  *  Copyright (c) 2011, Edward T. Kaszubski ( ekaszubski@gmail.com )
  *  All rights reserved.
- * 
+ *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions are
  *  met:
- *  
+ *
  *  * Redistributions of source code must retain the above copyright
  *    notice, this list of conditions and the following disclaimer.
  *  * Redistributions in binary form must reproduce the above
@@ -18,7 +18,7 @@
  *  * Neither the name of seabee3-ros-pkg nor the names of its
  *    contributors may be used to endorse or promote products derived from
  *    this software without specific prior written permission.
- *  
+ *
  *  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
  *  "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
  *  LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
@@ -30,7 +30,7 @@
  *  THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  *  (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  *  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- * 
+ *
  **************************************************************************/
 
 #include <base_libs/node.h>
@@ -50,23 +50,23 @@ BASE_LIBS_DECLARE_NODE_CLASS( TestServiceServerPolicy )
 	BASE_LIBS_DECLARE_NODE_CONSTRUCTOR( TestServiceServerPolicy ){}
 
 public:
-	void spinFirst()
+	BASE_LIBS_SPIN_FIRST
 	{
 		//initAll();
-		
+
 		_ServiceServerPolicy1::init( "service_name_param", std::string( "service1_name" ) );
 		_ServiceServerPolicy1::registerCallback( base_libs::auto_bind( &TestServiceServerPolicyNode::service1CB, this ) );
-		
+
 		_ServiceServerPolicy2::init( "service_name_param", std::string( "service2_name" ) );
 		_ServiceServerPolicy2::registerCallback( base_libs::auto_bind( &TestServiceServerPolicyNode::service2CB, this ) );
 	}
-	
+
 	BASE_LIBS_DECLARE_SERVICE_CALLBACK( service1CB, _TestService1 )
 	{
 		PRINT_INFO( "Got service1CB" );
 		return true;
 	}
-	
+
 	BASE_LIBS_DECLARE_SERVICE_CALLBACK( service2CB, _TestService2 )
 	{
 		PRINT_INFO( "Got service2CB" );

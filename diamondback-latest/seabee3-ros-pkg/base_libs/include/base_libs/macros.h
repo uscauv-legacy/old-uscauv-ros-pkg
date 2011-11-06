@@ -202,6 +202,12 @@ BASE_LIBS_ENABLE_IF( __ReturnType, ( !std::is_same<__Type1, __Type2>::value ) )
 // use pair: ENABLE_IF_SAME  / ENABLE_IF_NOT_SAME
 // or:       DISABLE_IF_SAME / DISABLE_IF_NOT_SAME
 
+// ########## Threading Macros #########################################
+// ---------------------------------------------------------------------
+#define BASE_LIBS_TRY_LOCK_OR_RETURN( lock_name, info_string ) \
+if( !lock_name ) PRINT_WARN( "Lock is busy. " info_string ); \
+if( !lock_name ) return
+
 // ########## Internal Macros ##########################################
 // ---------------------------------------------------------------------
 #define BASE_LIBS_DECLARE_INTERNAL_NAMESPACE \

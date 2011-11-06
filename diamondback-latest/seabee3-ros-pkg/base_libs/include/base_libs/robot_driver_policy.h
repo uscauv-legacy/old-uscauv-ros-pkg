@@ -41,14 +41,10 @@
 #include <base_libs/callback_policy.h>
 #include <base_libs/multi_subscriber.h>
 #include <base_libs/multi_publisher.h>
-#include <boost/thread/mutex.hpp>
+#include <base_libs/threading.h>
 
 namespace base_libs
 {
-
-
-
-BASE_LIBS_DECLARE_POLICY( RobotDriver, NodeHandlePolicy, TimedPolicy<> )
 
 template<class __MotorValsMsg = void>
 class RobotDriverPolicy : public GenericPolicyAdapter<NodeHandlePolicy, TimedPolicy<>, MessageCallbackPolicy<__MotorValsMsg> >
@@ -59,8 +55,8 @@ protected:
 	typedef MessageCallbackPolicy<__MotorValsMsg> _MessageCallbackPolicy;
 	typedef GenericPolicyAdapter<NodeHandlePolicy, TimedPolicy<>, _MessageCallbackPolicy > _PolicyAdapter;
 	typedef void _EmptyMsg;
-	//boost::mutex motor_vals_cache_mutex_;
-	//typename __MotorValsMsg::ConstPtr motor_vals_cache_;
+
+	MessageCache<__MotorValsMsg> motor_vals_msg_cache_;
 
 	ros::MultiSubscriber<> multi_sub_;
 	// publisher for sensor data, etc
@@ -106,8 +102,9 @@ public:
 
 		const auto robot_name_param = getMetaParamDef<std::string>( "robot_name_param", "robot_name", args... );
 		robot_name_ = ros::ParamReader<std::string, 1>::readParam( nh_rel, robot_name_param, "" );
+		if( robot_name_.size() > 0 ) robot_name_.insert( 0, "/" );
 
-		motor_vals_topic_name_ = getMetaParamDef<std::string>( "motor_vals_topic_name_param", robot_name_.size() > 0 ? "/" + robot_name_ + "/motor_vals" : "motor_vals" , args... );
+		motor_vals_topic_name_ = getMetaParamDef<std::string>( "motor_vals_topic_name_param", robot_name_.size() > 0 ? robot_name_ + "/motor_vals" : "motor_vals" , args... );
 
 		postInit();
 
@@ -127,15 +124,13 @@ private:
 	{
 		BASE_LIBS_CHECK_INITIALIZED;
 
-		//if( !motor_vals_cache_mutex_.try_lock() ) return;
-
-		//motor_vals_cache_ = msg;
+		// locks until "lock" goes out of context
+		auto lock = motor_vals_msg_cache_.tryLockAndUpdate( msg );
+		BASE_LIBS_TRY_LOCK_OR_RETURN( lock, "Dropping MotorVals message." );
 
 		_MessageCallbackPolicy::invokeCallback( msg );
 
 		TimedPolicy<>::update();
-
-		//motor_vals_cache_mutex_.unlock();
 	}
 };
 

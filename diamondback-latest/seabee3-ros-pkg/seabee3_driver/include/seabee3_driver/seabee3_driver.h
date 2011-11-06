@@ -1,14 +1,14 @@
 /***************************************************************************
  *  include/seabee3_driver/seabee3_driver.h
  *  --------------------
- * 
+ *
  *  Copyright (c) 2011, Edward T. Kaszubski ( ekaszubski@gmail.com )
  *  All rights reserved.
- * 
+ *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions are
  *  met:
- *  
+ *
  *  * Redistributions of source code must retain the above copyright
  *    notice, this list of conditions and the following disclaimer.
  *  * Redistributions in binary form must reproduce the above
@@ -18,7 +18,7 @@
  *  * Neither the name of seabee3-ros-pkg nor the names of its
  *    contributors may be used to endorse or promote products derived from
  *    this software without specific prior written permission.
- *  
+ *
  *  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
  *  "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
  *  LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
@@ -30,7 +30,7 @@
  *  THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  *  (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  *  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- * 
+ *
  **************************************************************************/
 
 #ifndef SEABEE3_DRIVER_SEABEE3_DRIVER_SEABEE3_DRIVER_H_
@@ -59,55 +59,55 @@ BASE_LIBS_DECLARE_NODE_CLASS( Seabee3Driver )
 	{
 		//
 	}
-	
-	void spinFirst()
+
+	BASE_LIBS_SPIN_FIRST
 	{
 		auto & nh_rel = base_libs::RunablePolicy::getNodeHandle();
-		
+
 		nh_rel.setParam( "robot_name", "seabee3" );
 		_RobotDriverPolicy::init();
 		_RobotDriverPolicy::registerCallback( base_libs::auto_bind( &Seabee3DriverNode::motorValsCB, this ) );
-		
+
 		nh_rel.setParam( "shooter1_service_name", "/seabee3/shooter1" );
 		_Shooter1ServiceServerPolicy::init( "service_name_param", std::string( "shooter1_service_name" ) );
 		_Shooter1ServiceServerPolicy::registerCallback( base_libs::auto_bind( &Seabee3DriverNode::shooter1CB, this ) );
-		
+
 		nh_rel.setParam( "shooter2_service_name", "/seabee3/shooter2" );
 		_Shooter2ServiceServerPolicy::init( "service_name_param", std::string( "shooter2_service_name" ) );
 		_Shooter2ServiceServerPolicy::registerCallback( base_libs::auto_bind( &Seabee3DriverNode::shooter2CB, this ) );
-		
+
 		nh_rel.setParam( "dropper1_service_name", "/seabee3/dropper1" );
 		_Dropper1ServiceServerPolicy::init( "service_name_param", std::string( "dropper1_service_name" ) );
 		_Dropper1ServiceServerPolicy::registerCallback( base_libs::auto_bind( &Seabee3DriverNode::dropper1CB, this ) );
-		
+
 		nh_rel.setParam( "dropper2_service_name", "/seabee3/dropper2" );
 		_Dropper2ServiceServerPolicy::init( "service_name_param", std::string( "dropper2_service_name" ) );
 		_Dropper2ServiceServerPolicy::registerCallback( base_libs::auto_bind( &Seabee3DriverNode::dropper2CB, this ) );
 	}
-	
+
 	BASE_LIBS_DECLARE_MESSAGE_CALLBACK( motorValsCB, _MotorValsMsg )
 	{
 		PRINT_INFO( "Setting motor vals..." );
 	}
-	
+
 	BASE_LIBS_DECLARE_SERVICE_CALLBACK( shooter1CB, _FiringDeviceActionService )
 	{
 		PRINT_INFO( "Firing first torpedo!" );
 		return true;
 	}
-	
+
 	BASE_LIBS_DECLARE_SERVICE_CALLBACK( shooter2CB, _FiringDeviceActionService )
 	{
 		PRINT_INFO( "Firing second torpedo!" );
 		return true;
 	}
-	
+
 	BASE_LIBS_DECLARE_SERVICE_CALLBACK( dropper1CB, _FiringDeviceActionService )
 	{
 		PRINT_INFO( "Dropping first marker!" );
 		return true;
 	}
-	
+
 	BASE_LIBS_DECLARE_SERVICE_CALLBACK( dropper2CB, _FiringDeviceActionService )
 	{
 		PRINT_INFO( "Dropping second marker!" );

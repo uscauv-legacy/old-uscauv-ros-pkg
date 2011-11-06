@@ -120,8 +120,8 @@ public:
 		target_frame_name_ = robot_name_ + "/" + target_frame_name_;
 		robot_frame_name_ = robot_name_ + "/" + robot_frame_name_;
 
-		cmd_vel_topic_name_ = getMetaParamDef<std::string>( "cmd_vel_topic_name_param", robot_name_.size() > 0 ? "/" + robot_name_ + "/cmd_vel" : "cmd_vel", args... );
-		motor_vals_topic_name_ = getMetaParamDef<std::string>( "motor_vals_topic_name_param", robot_name_.size() > 0 ? "/" + robot_name_ + "/motor_vals" : "motor_vals", args... );
+		cmd_vel_topic_name_ = getMetaParamDef<std::string>( "cmd_vel_topic_name_param", robot_name_.size() > 0 ? robot_name_ + "/cmd_vel" : "cmd_vel", args... );
+		motor_vals_topic_name_ = getMetaParamDef<std::string>( "motor_vals_topic_name_param", robot_name_.size() > 0 ? robot_name_ + "/motor_vals" : "motor_vals", args... );
 
 		// make sure our frames are initialized in the manager (if any frame is already initialized it will not be modified here)
 		nh_rel.setParam( "frame_pair0", world_frame_name_ + "," + target_frame_name_ );

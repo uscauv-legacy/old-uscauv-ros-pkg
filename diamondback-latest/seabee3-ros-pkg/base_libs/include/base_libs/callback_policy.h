@@ -106,6 +106,7 @@ private:
 
 	__CallbackReturn invokeCallback( __CallbackArgs&&... args ) const
 	{
+		// in order to enable/disable functions with enable_if, they need to be directly dependent on some outer type
 		return invokeCallback_0<__CallbackReturn>( args... );
 	}
 };
