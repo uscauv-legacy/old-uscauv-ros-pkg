@@ -48,16 +48,16 @@ namespace base_libs
 
 
 
-BASE_LIBS_DECLARE_POLICY( RobotDriver, NodeHandlePolicy, TimedPolicy )
+BASE_LIBS_DECLARE_POLICY( RobotDriver, NodeHandlePolicy, TimedPolicy<> )
 
 template<class __MotorValsMsg = void>
-class RobotDriverPolicy : public GenericPolicyAdapter<NodeHandlePolicy, TimedPolicy, MessageCallbackPolicy<__MotorValsMsg> >
+class RobotDriverPolicy : public GenericPolicyAdapter<NodeHandlePolicy, TimedPolicy<>, MessageCallbackPolicy<__MotorValsMsg> >
 {
-	BASE_LIBS_MAKE_POLICY_NAME( RobotDriver )
+	BASE_LIBS_MAKE_POLICY_FUNCS( RobotDriver )
 
 protected:
 	typedef MessageCallbackPolicy<__MotorValsMsg> _MessageCallbackPolicy;
-	typedef GenericPolicyAdapter<NodeHandlePolicy, TimedPolicy, _MessageCallbackPolicy > _PolicyAdapter;
+	typedef GenericPolicyAdapter<NodeHandlePolicy, TimedPolicy<>, _MessageCallbackPolicy > _PolicyAdapter;
 	typedef void _EmptyMsg;
 	//boost::mutex motor_vals_cache_mutex_;
 	//typename __MotorValsMsg::ConstPtr motor_vals_cache_;
@@ -133,7 +133,7 @@ private:
 
 		_MessageCallbackPolicy::invokeCallback( msg );
 
-		TimedPolicy::update();
+		TimedPolicy<>::update();
 
 		//motor_vals_cache_mutex_.unlock();
 	}

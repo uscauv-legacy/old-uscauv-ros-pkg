@@ -36,9 +36,11 @@
 #ifndef BASE_LIBS_BASE_LIBS_TF_MANAGER_POLICY_H_
 #define BASE_LIBS_BASE_LIBS_TF_MANAGER_POLICY_H_
 
+#include <base_libs/node_handle_policy.h>
 #include <base_libs/tf_tranceiver_policy.h>
 #include <base_libs/timed_policy.h>
 #include <base_libs/tf_manager.h>
+#include <base_libs/multi_subscriber.h>
 #include <base_libs/geometry_message_conversions.h>
 #include <geometry_msgs/Twist.h>
 
@@ -51,26 +53,33 @@
 namespace base_libs
 {
 
-BASE_LIBS_DECLARE_POLICY( TfManager, TfTranceiverPolicy, TimedPolicy )
+BASE_LIBS_DECLARE_POLICY_NAMESPACE( TfManager )
+{
+typedef TimedPolicy<0> _UpdateTimer;
+typedef TimedPolicy<1> _CallbackTimer;
+}
+
+BASE_LIBS_DECLARE_POLICY( TfManager, NodeHandlePolicy, TfTranceiverPolicy, _UpdateTimer, _CallbackTimer )
 
 BASE_LIBS_DECLARE_POLICY_CLASS( TfManager )
 {
-	BASE_LIBS_MAKE_POLICY_NAME( TfManager )
+	BASE_LIBS_MAKE_POLICY_FUNCS( TfManager )
 
 public:
 	typedef geometry_msgs::Twist _VelocityMsg;
 
 	std::string cmd_vel_topic_name_;
 	TfManager tf_manager_;
+	ros::MultiSubscriber<> multi_sub_;
 
-	BASE_LIBS_DECLARE_POLICY_CONSTRUCTOR( TfManager )
+	BASE_LIBS_DECLARE_POLICY_CONSTRUCTOR( TfManager ),
+		initialized_( false )
 	{
 		printPolicyActionStart( "create", this );
-
 		printPolicyActionDone( "create", this );
 	}
 
-	/*void postInit()
+	void postInit()
 	{
 		auto & nh_rel = NodeHandlePolicy::getNodeHandle();
 
@@ -84,6 +93,20 @@ public:
 		auto & nh_rel = NodeHandlePolicy::getNodeHandle();
 
 		cmd_vel_topic_name_ = getMetaParamDef<std::string>( "cmd_vel_topic_name_param", "cmd_vel", args... );
+		const auto frame_pairs = ros::ParamReader<std::string, 0>::readParams( nh_rel, "frame_pair", "", 0 );
+
+		for( auto frame_pair = frame_pairs.begin(); frame_pair != frame_pairs.end(); ++frame_pair )
+		{
+			const auto separator_pos = frame_pair->find_first_of( "," );
+			if( separator_pos == std::string::npos )
+			{
+				PRINT_WARN( "Frame pair not properly formatted; format is: <from_frame>,<to_frame>" );
+				continue;
+			}
+			const auto & from_frame = frame_pair->substr( 0, separator_pos );
+			const auto & to_frame = frame_pair->substr( separator_pos + 1 );
+			registerFrames( from_frame, to_frame );
+		}
 
 		postInit();
 
@@ -95,15 +118,33 @@ public:
 	BASE_LIBS_DECLARE_MESSAGE_CALLBACK( cmdVelCB, _VelocityMsg )
 	{
 		BASE_LIBS_CHECK_INITIALIZED;
-	}*/
+
+		BASE_LIBS_GET_POLICY_NAMESPACE( TfManager )::_CallbackTimer::update();
+
+		updateFrames( msg );
+	}
 
 	/*! Publish all transforms stored in our TfManager */
 	void update()
 	{
+		auto & update_timer = BASE_LIBS_GET_POLICY_NAMESPACE( TfManager )::_UpdateTimer::getInstance();
+		update_timer.update();
+
+		const auto & transforms = tf_manager_.getTransforms();
+		PRINT_DEBUG( "Publishing %zu frames", transforms.size() );
+
+		for( auto transform = transforms.begin(); transform != transforms.end(); ++transform )
+		{
+			TfTranceiverPolicy::publishTransform( transform->second, update_timer.now() );
+		}
+	}
+
+	void updateFrames( const _VelocityMsg::ConstPtr & msg )
+	{
 		const auto & transforms = tf_manager_.getTransforms();
 		for( auto transform = transforms.begin(); transform != transforms.end(); ++transform )
 		{
-			TfTranceiverPolicy::publishTransform( transform->second, TimedPolicy::now() );
+			updateFrames( transform->first, msg );
 		}
 	}
 
@@ -115,7 +156,8 @@ public:
 	void updateFrames( const TfManager::_TfFrameId & frame_id, const _VelocityMsg::ConstPtr & msg, __Rest&&... rest )
 	{
 		// since no duration is specified, get the duration from our TimedPolicy and pass everything to the next updateFrames function
-		updateFrames( frame_id, msg, TimedPolicy::dt(), rest... );
+		const auto & dt = BASE_LIBS_GET_POLICY_NAMESPACE( TfManager )::_CallbackTimer::dt();
+		updateFrames( frame_id, msg, dt, rest... );
 	}
 
 	/*! Update a set of frames (recursively) given a mixed variadic template
@@ -124,7 +166,7 @@ public:
 	  @param dt : the duration for which the given velocity was experienced
 	  @param rest : the rest of the parameters in the variadic template */
 	template<class... __Rest>
-	void updateFrames( const TfManager::_TfFrameId & frame_id, const _VelocityMsg::ConstPtr & msg, const TimedPolicy::_Duration & dt, __Rest&&... rest )
+	void updateFrames( const TfManager::_TfFrameId & frame_id, const _VelocityMsg::ConstPtr & msg, const TimedPolicy<>::_Duration & dt, __Rest&&... rest )
 	{
 		// now that we have a TfManager::_Transform, pass everything to the next updateFrames function
 		updateFrames( updateFrameFromVelocity( frame_id, msg, dt ), rest... );
@@ -150,7 +192,15 @@ public:
 	template<class... __Rest>
 	void registerFrames( const TfManager::_TfFrameId & from_frame_id, const TfManager::_TfFrameId & to_frame_id, __Rest&&... rest )
 	{
-		if( !tf_manager_.exists( from_frame_id ) ) tf_manager_.updateTransforms( TfManager::_Transform( btTransform( tf::createIdentityQuaternion() ), ros::Time( 0 ), from_frame_id, to_frame_id ) );
+		if( tf_manager_.exists( to_frame_id ) )
+		{
+			PRINT_INFO( "Transform [ %s -> %s ] already registered", from_frame_id.c_str(), to_frame_id.c_str() );
+		}
+		else
+		{
+			PRINT_INFO( "Registering transform [ %s -> %s ]", from_frame_id.c_str(), to_frame_id.c_str() );
+			tf_manager_.updateTransforms( TfManager::_Transform( btTransform( tf::createIdentityQuaternion() ), ros::Time( 0 ), from_frame_id, to_frame_id ) );
+		}
 		registerFrames( rest... );
 	}
 
@@ -161,7 +211,7 @@ public:
 	  @param frame_id : the frame to update
 	  @param msg : the velocity message to pull values from
 	  @param dt : the duration during which the given velocity was experienced */
-	TfManager::_Transform updateFrameFromVelocity( const TfManager::_TfFrameId & frame_id, const _VelocityMsg::ConstPtr & msg, const TimedPolicy::_Duration & dt ) const
+	TfManager::_Transform updateFrameFromVelocity( const TfManager::_TfFrameId & frame_id, const _VelocityMsg::ConstPtr & msg, const TimedPolicy<>::_Duration & dt ) const
 	{
 		auto transform = tf_manager_[frame_id];
 
@@ -177,7 +227,7 @@ public:
 	  @param frame_ids : the list of frames to update; { "frame_id1", "frame_id2", "frame_idN" }
 	  @param msg : the velocity message to use when calculating the change in position/orientation of the frames
 	  @param dt : the duration to integrate velocity over when calculating the change in position/orientation of the frames */
-	void updateFramesFromVelocity( const std::initializer_list<TfManager::_TfFrameId> & frame_ids, const _VelocityMsg::ConstPtr & msg, const TimedPolicy::_Duration & dt )
+	void updateFramesFromVelocity( const std::initializer_list<TfManager::_TfFrameId> & frame_ids, const _VelocityMsg::ConstPtr & msg, const TimedPolicy<>::_Duration & dt )
 	{
 		for( auto frame_id = frame_ids.begin(); frame_id != frame_ids.end(); ++frame_id )
 		{

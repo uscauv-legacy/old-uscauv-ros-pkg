@@ -40,15 +40,31 @@
 // ########## Generic Policy Macros ####################################
 // ---------------------------------------------------------------------
 #define BASE_LIBS_DECLARE_POLICY( PolicyNameBase, __Policies... ) \
-typedef base_libs::GenericPolicyAdapter< __Policies > _##PolicyNameBase##PolicyAdapterType;
+BASE_LIBS_DECLARE_POLICY_NAMESPACE( PolicyNameBase ) \
+{ \
+typedef base_libs::GenericPolicyAdapter< __Policies > _##PolicyNameBase##PolicyAdapterType; \
+}
 
 // ---------------------------------------------------------------------
 #define BASE_LIBS_DECLARE_POLICY_CLASS( PolicyNameBase ) \
-class PolicyNameBase##Policy : public _##PolicyNameBase##PolicyAdapterType
+class PolicyNameBase##Policy : public BASE_LIBS_GET_POLICY_NAMESPACE( PolicyNameBase )::_##PolicyNameBase##PolicyAdapterType
 
 // ---------------------------------------------------------------------
 #define BASE_LIBS_MAKE_POLICY_NAME( PolicyNameBase ) \
-public: const static inline std::string name(){ return #PolicyNameBase; }
+public: const static inline std::string name() { return #PolicyNameBase; }
+
+// ---------------------------------------------------------------------
+// somehow this actually works for templated classes... [somuchwin]
+// So if you had: template<class SomeType> class SomePolicy{};
+// And: class SomeOtherPolicy : public SomePolicy{};
+// Within SomeOtherPolicy, you can say: auto & instance = SomePolicy::getInstance();
+#define BASE_LIBS_MAKE_POLICY_REFERENCE( PolicyNameBase ) \
+public: inline PolicyNameBase##Policy & getInstance() { return *this; }
+
+// ---------------------------------------------------------------------
+#define BASE_LIBS_MAKE_POLICY_FUNCS( PolicyNameBase ) \
+BASE_LIBS_MAKE_POLICY_NAME( PolicyNameBase ) \
+BASE_LIBS_MAKE_POLICY_REFERENCE( PolicyNameBase )
 
 // ---------------------------------------------------------------------
 #define BASE_LIBS_DECLARE_POLICY_CONSTRUCTOR( PolicyNameBase ) \
@@ -56,7 +72,15 @@ public: \
 	template<class... __Args> \
 	PolicyNameBase##Policy( __Args&&... args ) \
 	: \
-		_##PolicyNameBase##PolicyAdapterType( args... )
+		BASE_LIBS_GET_POLICY_NAMESPACE( PolicyNameBase )::_##PolicyNameBase##PolicyAdapterType( args... )
+
+// ---------------------------------------------------------------------
+#define BASE_LIBS_GET_POLICY_NAMESPACE( PolicyNameBase ) \
+PolicyNameBase##Policy_types
+
+// ---------------------------------------------------------------------
+#define BASE_LIBS_DECLARE_POLICY_NAMESPACE( PolicyNameBase ) \
+namespace BASE_LIBS_GET_POLICY_NAMESPACE( PolicyNameBase )
 
 // ########## Generic Node Macros ######################################
 // ---------------------------------------------------------------------

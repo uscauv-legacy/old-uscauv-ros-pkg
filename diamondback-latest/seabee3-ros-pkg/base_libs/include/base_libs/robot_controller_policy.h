@@ -37,19 +37,18 @@
 #define BASE_LIBS_BASE_LIBS_ROBOT_CONTROLLER_POLICY_H_
 
 #include <base_libs/tf_manager_policy.h>
-#include <base_libs/node_handle_policy.h>
-#include <base_libs/multi_subscriber.h>
+//#include <base_libs/multi_subscriber.h>
 #include <base_libs/multi_publisher.h>
 
 namespace base_libs
 {
 
-BASE_LIBS_DECLARE_POLICY( RobotController, TfManagerPolicy, NodeHandlePolicy )
+BASE_LIBS_DECLARE_POLICY( RobotController, TfManagerPolicy )
 
 template<class __MotorValsMsg = void>
 BASE_LIBS_DECLARE_POLICY_CLASS( RobotController )
 {
-	BASE_LIBS_MAKE_POLICY_NAME( RobotController )
+	BASE_LIBS_MAKE_POLICY_FUNCS( RobotController )
 
 public:
 	typedef void _EmptyMsg;
@@ -57,7 +56,7 @@ public:
 
 protected:
 	ros::MultiPublisher<> multi_pub_;
-	ros::MultiSubscriber<> multi_sub_;
+	//ros::MultiSubscriber<> multi_sub_;
 
 	std::string
 		robot_name_,
@@ -92,9 +91,8 @@ private:
 
 	void postInit()
 	{
-		auto & nh_rel = NodeHandlePolicy::getNodeHandle();
-
-		multi_sub_.addSubscriber( nh_rel, cmd_vel_topic_name_, &RobotControllerPolicy::cmdVelCB, this );
+		//auto & nh_rel = NodeHandlePolicy::getNodeHandle();
+		//multi_sub_.addSubscriber( nh_rel, cmd_vel_topic_name_, &RobotControllerPolicy::cmdVelCB, this );
 
 		createMotorValsPublisher<__MotorValsMsg>();
 	}
@@ -108,6 +106,7 @@ public:
 
 		const auto robot_name_param = getMetaParamDef<std::string>( "robot_name_param", "robot_name", args... );
 		robot_name_ = ros::ParamReader<std::string, 1>::readParam( nh_rel, robot_name_param, "" );
+		if( robot_name_.size() > 0 ) robot_name_.insert( 0, "/" );
 
 		const auto world_frame_name_param = getMetaParamDef<std::string>( "world_frame_name_param", "world_frame_name", args... );
 		world_frame_name_ = ros::ParamReader<std::string, 1>::readParam( nh_rel, world_frame_name_param, "/world" );
@@ -125,7 +124,10 @@ public:
 		motor_vals_topic_name_ = getMetaParamDef<std::string>( "motor_vals_topic_name_param", robot_name_.size() > 0 ? "/" + robot_name_ + "/motor_vals" : "motor_vals", args... );
 
 		// make sure our frames are initialized in the manager (if any frame is already initialized it will not be modified here)
-		TfManagerPolicy::registerFrames( world_frame_name_, target_frame_name_ );
+		nh_rel.setParam( "frame_pair0", world_frame_name_ + "," + target_frame_name_ );
+		//TfManagerPolicy::registerFrames( world_frame_name_, target_frame_name_ );
+
+		TfManagerPolicy::init( "cmd_vel_topic_name_param", cmd_vel_topic_name_, args... );
 
 		postInit();
 
@@ -134,18 +136,18 @@ public:
 		printPolicyActionDone( "initialize", this );
 	}
 
-	BASE_LIBS_DECLARE_MESSAGE_CALLBACK( cmdVelCB, _VelocityMsg )
+	/*BASE_LIBS_DECLARE_MESSAGE_CALLBACK( cmdVelCB, _VelocityMsg )
 	{
 		BASE_LIBS_CHECK_INITIALIZED;
 
-		TfManagerPolicy::TimedPolicy::update();
+		//TfManagerPolicy::TimedPolicy::update();
 		// update the frame by the given velocity (duration will be auto-calculated from our TimedPolicy)
-		TfManagerPolicy::updateFrames( target_frame_name_, msg );
+		//TfManagerPolicy::updateFrames( target_frame_name_, msg );
 
 		PRINT_INFO( "dt: %f", TfManagerPolicy::TimedPolicy::dt() );
 
-		publishMotorVals<__MotorValsMsg>();
-	}
+
+	}*/
 
 	// if our motor vals message type is empty, don't attempt to publish to its topic
 	template<class __Message>
@@ -167,13 +169,14 @@ public:
 
 		// publish all known transforms
 		TfManagerPolicy::update();
+		publishMotorVals<__MotorValsMsg>();
 	}
 
 	tf::StampedTransform getTransformToTarget() const
 	{
 		BASE_LIBS_CHECK_INITIALIZED;
 
-		return lookupTransform( robot_frame_name_, target_frame_name_, TimedPolicy::now() );
+		return lookupTransform( robot_frame_name_, target_frame_name_, ros::Time::now() );
 	}
 };
 

@@ -70,7 +70,7 @@ BASE_LIBS_DECLARE_POLICY( Callback, Policy )
 template<class __CallbackReturn, class... __CallbackArgs>
 BASE_LIBS_DECLARE_POLICY_CLASS( Callback )
 {
-	BASE_LIBS_MAKE_POLICY_NAME( Callback )
+	BASE_LIBS_MAKE_POLICY_FUNCS( Callback )
 
 private:
 	typedef adapters::CallbackAdapter<__CallbackReturn, __CallbackArgs...> _CallbackAdapter;

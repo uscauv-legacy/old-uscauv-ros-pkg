@@ -49,7 +49,7 @@ BASE_LIBS_DECLARE_POLICY( TfTranceiver, Policy )
 
 BASE_LIBS_DECLARE_POLICY_CLASS( TfTranceiver )
 {
-	BASE_LIBS_MAKE_POLICY_NAME( TfTranceiver )
+	BASE_LIBS_MAKE_POLICY_FUNCS( TfTranceiver )
 
 protected:
 	tf::TransformBroadcaster tf_publisher_;
@@ -71,12 +71,22 @@ public:
 		publishTransform( new_transform );
 	}
 
-	void publishTransform( const tf::StampedTransform & transform )
+	void publishTransform( const tf::StampedTransform & transform, const bool & fix_timestamp = true )
 	{
 		if( transform.frame_id_.size() == 0 || transform.child_frame_id_.size() == 0 )
 		{
 			PRINT_WARN( "Cannot publish StampedTransform with empty source frame or target frame id:\n[ %s -> %s ] : %f", transform.frame_id_.c_str(), transform.child_frame_id_.c_str(), transform.stamp_.toSec() );
 			return;
+		}
+
+		if( transform.stamp_.is_zero() )
+		{
+			if( fix_timestamp ) return publishTransform( transform, ros::Time::now() );
+			else
+			{
+				PRINT_WARN( "Cannot publish StampedTransform with zero timestamp" );
+				return;
+			}
 		}
 		PRINT_DEBUG( "Publishing %s -> %s [%f]", transform.frame_id_.c_str(), transform.child_frame_id_.c_str(), transform.stamp_.toSec() );
 		tf_publisher_.sendTransform( transform );
