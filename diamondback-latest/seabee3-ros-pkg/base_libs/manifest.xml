@@ -8,7 +8,9 @@
   <license>BSD</license>
   <review status="unreviewed" notes=""/>
   <url>http://ros.org/wiki/base_libs</url>
+  <depend package="rosbuild"/>
   <depend package="roscpp"/>
+  <depend package="cpp0x"/>
   <depend package="std_msgs"/>
   <depend package="geometry_msgs"/>
   <depend package="tf"/>
@@ -24,8 +26,8 @@
 
   <export>
 	<rosdoc config="rosdoc.yaml"/>
-	<cpp cflags="-std=c++0x -I${prefix}/include -Wno-deprecated-declarations" lflags="-L${prefix}/lib -lbase_libs"/>
-    <!--cpp cflags="-std=c++0x -I${prefix}/include" lflags="-Wl,-rpath,${prefix}/lib -L${prefix}/lib -lbase_libs"/-->
+	<cpp cflags="-I${prefix}/include -Wno-deprecated-declarations" lflags="-L${prefix}/lib -Wl,-rpath,${prefix}/lib -lbase_libs"/>
+	<rosbuild cmake_directory="${prefix}/cmake"/>
   </export>
 
 </package>

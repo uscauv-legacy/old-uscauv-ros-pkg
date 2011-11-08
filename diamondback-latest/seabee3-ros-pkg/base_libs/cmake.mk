@@ -10,6 +10,9 @@ any:
 	@mkdir -p build
 	cd build && cmake $(CMAKE_FLAGS) ..
 
+remake:
+	make clean;
+
 #forward all other commands, calling 'any' first if necessary
 %:
 	if [ -r build ]; then cd build && make $@ $(ROS_MAKE_FLAGS); else make any && make $@; fi
