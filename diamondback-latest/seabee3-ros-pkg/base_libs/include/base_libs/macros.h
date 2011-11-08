@@ -220,6 +220,7 @@ std::function
 // ########## ROS Message Macros #######################################
 // ---------------------------------------------------------------------
 #define BASE_LIBS_GET_MESSAGE_NAME( __Message ) \
-__Message::__s_getDataType();
+std::string( ros::message_traits::DataType<__Message>::value() )
+//#__Message::__s_getDataType();
 
 #endif // BASE_LIBS_BASE_LIBS_MACROS_H_

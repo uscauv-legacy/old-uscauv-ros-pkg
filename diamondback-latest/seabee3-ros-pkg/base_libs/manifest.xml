@@ -26,7 +26,7 @@
 
   <export>
 	<rosdoc config="rosdoc.yaml"/>
-	<cpp cflags="-I${prefix}/include -Wno-deprecated-declarations" lflags="-L${prefix}/lib -Wl,-rpath,${prefix}/lib -lbase_libs"/>
+	<cpp cflags="-I${prefix}/include" lflags="-L${prefix}/lib -Wl,-rpath,${prefix}/lib -lbase_libs"/>
 	<rosbuild cmake_directory="${prefix}/cmake"/>
   </export>
 
