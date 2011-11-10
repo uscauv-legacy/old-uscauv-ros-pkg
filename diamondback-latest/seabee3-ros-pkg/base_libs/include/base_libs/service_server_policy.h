@@ -37,16 +37,18 @@
 #define BASE_LIBS_BASE_LIBS_SERVICE_SERVER_POLICY_H_
 
 #include <base_libs/node_handle_policy.h>
+#include <base_libs/callback_policy.h>
 #include <base_libs/auto_bind.h>
 #include <ros/service_server.h>
 
 namespace base_libs
 {
 
-BASE_LIBS_DECLARE_POLICY( ServiceServer, NodeHandlePolicy )
+template<class __Service>
+BASE_LIBS_DECLARE_POLICY2( ServiceServer, NodeHandlePolicy, ServiceCallbackPolicy<__Service> )
 
 template<class __Service, unsigned int __Id__ = 0>
-BASE_LIBS_DECLARE_POLICY_CLASS( ServiceServer )
+BASE_LIBS_DECLARE_POLICY_CLASS2( ServiceServer, __Service )
 {
 	BASE_LIBS_MAKE_POLICY_FUNCS( ServiceServer )
 
@@ -54,12 +56,11 @@ protected:
 	typedef typename __Service::Request _ServiceRequest;
 	typedef typename __Service::Response _ServiceResponse;
 	typedef ServiceServerPolicy<__Service, __Id__> _ServiceServerPolicy;
-	typedef std::function<bool( _ServiceRequest &, _ServiceResponse & )> _CallbackType;
+	typedef ServiceCallbackPolicy<__Service> _ServiceCallbackPolicy;
 
 	ros::ServiceServer server_;
-	_CallbackType external_callback_;
 
-	BASE_LIBS_DECLARE_POLICY_CONSTRUCTOR( ServiceServer ),
+	BASE_LIBS_DECLARE_POLICY_CONSTRUCTOR2( ServiceServer, __Service ),
 		initialized_( false )
 	{
 		printPolicyActionStart( "create", this );
@@ -80,23 +81,17 @@ protected:
 
 		server_ = nh_rel.advertiseService( service_name, &_ServiceServerPolicy::serviceCB, this );
 
-		BASE_LIBS_SET_INITIALIZED;
+		BASE_LIBS_SET_INITIALIZED();
 
 		printPolicyActionDone( "initialize", this );
-	}
-
-	void registerCallback( const _CallbackType & external_callback )
-	{
-		BASE_LIBS_CHECK_INITIALIZED;
-
-		external_callback_ = external_callback;
 	}
 
 private:
 	BASE_LIBS_DECLARE_SERVICE_CALLBACK( serviceCB, typename __Service )
 	{
-		if( external_callback_ ) return external_callback_( request, response );
-		return false;
+		BASE_LIBS_ASSERT_INITIALIZED( false );
+
+		return _ServiceCallbackPolicy::invokeCallback( request, response );
 	}
 };
 

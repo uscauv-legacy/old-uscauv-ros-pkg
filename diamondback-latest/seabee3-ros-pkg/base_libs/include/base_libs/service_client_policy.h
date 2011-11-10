@@ -87,7 +87,7 @@ private:
 		service_topic_name_ = ros::NodeHandle( nh_rel, service_name_ ).getNamespace();
 		// now that we have a final value for the service name, create a service with that name
 
-		BASE_LIBS_SET_INITIALIZED;
+		BASE_LIBS_SET_INITIALIZED();
 
 		connectToService( true );
 
@@ -101,7 +101,7 @@ private:
 	 *  \return is_valid_, the state of the service connection */
 	const bool & connectToService( const bool & show_status_on_success = false )
 	{
-		BASE_LIBS_CHECK_INITIALIZED;
+		BASE_LIBS_ASSERT_INITIALIZED( is_valid_ );
 
 		ros::NodeHandle & nh_rel = NodeHandlePolicy::getNodeHandle();
 

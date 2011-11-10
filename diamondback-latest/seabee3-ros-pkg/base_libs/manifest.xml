@@ -23,6 +23,7 @@
   <depend package="nodelet"/>
   <depend package="pluginlib"/>
   <depend package="joy"/>
+  <depend package="actionlib"/>
 
   <export>
 	<rosdoc config="rosdoc.yaml"/>

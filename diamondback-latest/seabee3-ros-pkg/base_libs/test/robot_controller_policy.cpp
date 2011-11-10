@@ -35,8 +35,9 @@
 
 #include <base_libs/node.h>
 #include <base_libs/robot_controller_policy.h>
+#include <std_msgs/Empty.h>
 
-typedef base_libs::RobotControllerPolicy<> _RobotControllerPolicy;
+typedef base_libs::RobotControllerPolicy<std_msgs::Empty> _RobotControllerPolicy;
 BASE_LIBS_DECLARE_NODE( TestRobotControllerPolicy, _RobotControllerPolicy )
 
 BASE_LIBS_DECLARE_NODE_CLASS( TestRobotControllerPolicy )
@@ -51,7 +52,7 @@ public:
 
 	BASE_LIBS_SPIN_ONCE
 	{
-		_RobotControllerPolicy::update();
+		_RobotControllerPolicy::update( std_msgs::Empty() );
 	}
 };
 

@@ -86,7 +86,7 @@ public:
 
 		server_->setCallback( base_libs::auto_bind( &_ReconfigurePolicy::reconfigureCB_0, this ) );
 
-		BASE_LIBS_SET_INITIALIZED;
+		BASE_LIBS_SET_INITIALIZED();
 
 		printPolicyActionDone( "initialize", this );
 	}
@@ -98,7 +98,7 @@ public:
 
 	void registerCallback( const typename _ReconfigureServer::CallbackType & external_callback )
 	{
-		BASE_LIBS_CHECK_INITIALIZED;
+		BASE_LIBS_CHECK_INITIALIZED();
 
 		external_callback_ = external_callback;
 	}

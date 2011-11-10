@@ -60,7 +60,7 @@ typedef TimedPolicy<0> _UpdateTimer;
 typedef TimedPolicy<1> _CallbackTimer;
 }
 
-BASE_LIBS_DECLARE_POLICY( TfManager, NodeHandlePolicy, TfTranceiverPolicy, _UpdateTimer, _CallbackTimer )
+BASE_LIBS_DECLARE_POLICY( TfManager, NodeHandlePolicy, TfTranceiverPolicy, BASE_LIBS_GET_POLICY_NS( TfManager )::_UpdateTimer, BASE_LIBS_GET_POLICY_NS( TfManager )::_CallbackTimer )
 
 BASE_LIBS_DECLARE_POLICY_CLASS( TfManager )
 {
@@ -114,14 +114,14 @@ public:
 
 		postInit();
 
-		BASE_LIBS_SET_INITIALIZED;
+		BASE_LIBS_SET_INITIALIZED();
 
 		printPolicyActionDone( "initialize", this );
 	}
 
 	BASE_LIBS_DECLARE_MESSAGE_CALLBACK( cmdVelCB, _VelocityMsg )
 	{
-		BASE_LIBS_CHECK_INITIALIZED;
+		BASE_LIBS_ASSERT_INITIALIZED();
 
 		auto lock = velocity_msg_cache_.tryLockAndUpdate( msg );
 		const std::string & message_name = BASE_LIBS_GET_MESSAGE_NAME( _VelocityMsg );

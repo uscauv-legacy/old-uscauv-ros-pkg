@@ -41,44 +41,21 @@
 BASE_LIBS_DECLARE_INTERNAL_NAMESPACE
 {
 
-BASE_LIBS_DECLARE_POLICY_NAMESPACE( Callback )
-{
-
-// ########## CallbackAdapter ##################################################################################################################
-template<class __Return, class... __Args>
-struct CallbackAdapter
-{
-	typedef __BASE_LIBS_FUNCTION_TYPE<__Return( __Args&&... )> _CallbackType;
-
-	_CallbackType external_callback_;
-};
-
-/*
-// ########## MessageCallbackAdapter for ROS messages ##########################################################################################
-template<class __Message>
-struct MessageCallbackAdapter : public CallbackAdapter<void, const typename __Message::ConstPtr &>{};
-
-// ########## Specialization of MessageCallbackAdapter for empty/disabled (void) callbacks #####################################################
-template<>
-struct MessageCallbackAdapter<void>{};
-*/
-} // BASE_LIBS_DECLARE_POLICY_NAMESPACE( Callback )
-
-
 // ########## Generic callback policy for any kind of return type/arg types ####################################################################
 BASE_LIBS_DECLARE_POLICY( Callback, Policy )
 
+template<class __Signature> class CallbackPolicy;
+
 template<class __CallbackReturn, class... __CallbackArgs>
-BASE_LIBS_DECLARE_POLICY_CLASS( Callback )
+class CallbackPolicy<__CallbackReturn( __CallbackArgs... )> : public BASE_LIBS_GET_POLICY_ADAPTER_WITH_NS( Callback )
 {
 	BASE_LIBS_MAKE_POLICY_FUNCS( Callback )
 
 public:
-	typedef BASE_LIBS_GET_POLICY_NAMESPACE( Callback )::CallbackAdapter<__CallbackReturn, __CallbackArgs...> _CallbackAdapter;
-	typedef typename _CallbackAdapter::_CallbackType _CallbackType;
+	typedef __BASE_LIBS_FUNCTION_TYPE<__CallbackReturn( __CallbackArgs&&... )> _CallbackType;
 
 private:
-	_CallbackAdapter callback_adapter_;
+	_CallbackType external_callback_;
 
 	BASE_LIBS_DECLARE_POLICY_CONSTRUCTOR( Callback )
 	{
@@ -88,14 +65,14 @@ private:
 
 	void registerCallback( const _CallbackType & external_callback )
 	{
-		callback_adapter_.external_callback_ = external_callback;
+		external_callback_ = external_callback;
 	}
 
 	template<class __Return>
 	BASE_LIBS_ENABLE_IF_SAME( __CallbackReturn, __Return, void )
 	invokeCallback_0( __CallbackArgs&&... args ) const
 	{
-		if( callback_adapter_.external_callback_ ) callback_adapter_.external_callback_( args... );
+		if( external_callback_ ) external_callback_( args... );
 	}
 
 	template<class __Return>
@@ -104,8 +81,8 @@ private:
 	{
 		const static __CallbackReturn default_return = __CallbackReturn();
 
-		if( !callback_adapter_.external_callback_ ) return default_return;
-		return callback_adapter_.external_callback_( args... );
+		if( !external_callback_ ) return default_return;
+		return external_callback_( args... );
 	}
 
 	__CallbackReturn invokeCallback( __CallbackArgs&&... args ) const
@@ -115,48 +92,52 @@ private:
 	}
 };
 
-// ########## Base for common data in specializations of MessageCallbackPolicy #################################################################
-class MessageCallbackPolicyBase : public Policy
+// ########## Type Adapters for CallbackPolicy #################################################################################################
+BASE_LIBS_DECLARE_POLICY_NAMESPACE( Callback )
 {
-	BASE_LIBS_MAKE_POLICY_NAME( MessageCallback )
 
-	MessageCallbackPolicyBase()
+template<class __Signature> struct from_function;
+
+template<class __Return, class... __Args>
+struct from_function<__BASE_LIBS_FUNCTION_TYPE<__Return( __Args... )> >
+{
+	typedef CallbackPolicy<__Return( __Args... )> type;
+};
+
+} // BASE_LIBS_DECLARE_POLICY_NAMESPACE( Callback )
+
+// ########## Special callback policy for message-based callbacks ##############################################################################
+template<class __Message>
+class MessageCallbackPolicy : public CallbackPolicy<void( const typename __Message::ConstPtr & )>
+{
+	BASE_LIBS_MAKE_POLICY_FUNCS( MessageCallback )
+
+public:
+	typedef CallbackPolicy<void( const typename __Message::ConstPtr & )> _CallbackPolicy;
+
+	template<class... __Args>
+	MessageCallbackPolicy( __Args&&... args ) : _CallbackPolicy( args... )
 	{
 		printPolicyActionStart( "create", this );
 		printPolicyActionDone( "create", this );
 	}
 };
 
-// ########## Special callback policy for message-based callbacks ##############################################################################
-template<class __Message>
-class MessageCallbackPolicy : public MessageCallbackPolicyBase, public CallbackPolicy<void, const typename __Message::ConstPtr &>
+// ########## Special callback policy for service-based callbacks ##############################################################################
+template<class __Service>
+class ServiceCallbackPolicy : public CallbackPolicy<bool( typename __Service::Request &, typename __Service::Response & )>
 {
+	BASE_LIBS_MAKE_POLICY_FUNCS( ServiceCallback )
+
 public:
-	typedef CallbackPolicy<void, const typename __Message::ConstPtr &> _CallbackPolicy;
-	typedef typename _CallbackPolicy::_CallbackType _CallbackType;
-	typedef void _EmptyMsg;
+	typedef CallbackPolicy<bool( typename __Service::Request &, typename __Service::Response & )> _CallbackPolicy;
 
 	template<class... __Args>
-	MessageCallbackPolicy( __Args&&... args ) : _CallbackPolicy( args... )
+	ServiceCallbackPolicy( __Args&&... args ) : _CallbackPolicy( args... )
 	{
-		//
+		printPolicyActionStart( "create", this );
+		printPolicyActionDone( "create", this );
 	}
-
-	void registerCallback( const _CallbackType & external_callback )
-	{
-		_CallbackPolicy::registerCallback( external_callback );
-	}
-};
-
-// ########## Specialization of MessageCallbackPolicy for empty/disabled (void) messages #######################################################
-template<>
-class MessageCallbackPolicy<void> : public MessageCallbackPolicyBase, public CallbackPolicy<void>
-{
-public:
-	template<class... __Args>
-	MessageCallbackPolicy( __Args&&... args ) : CallbackPolicy<void>( args... ) {}
-
-	void registerCallback() {}
 };
 
 } // base_libs

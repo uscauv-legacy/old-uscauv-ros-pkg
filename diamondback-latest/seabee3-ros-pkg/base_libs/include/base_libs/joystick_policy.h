@@ -191,7 +191,7 @@ public:
 
 		postInit();
 
-		BASE_LIBS_SET_INITIALIZED;
+		BASE_LIBS_SET_INITIALIZED();
 
 		printPolicyActionDone( "initialize", this );
 	}
@@ -237,7 +237,7 @@ public:
 
 	void update( const bool & auto_publish = true )
 	{
-		BASE_LIBS_CHECK_INITIALIZED;
+		BASE_LIBS_ASSERT_INITIALIZED();
 
 		velocity_msg_ = makePtr<geometry_msgs::Twist>::_Shared( new geometry_msgs::Twist );
 

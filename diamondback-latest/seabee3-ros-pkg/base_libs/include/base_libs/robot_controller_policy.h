@@ -45,7 +45,7 @@ namespace base_libs
 
 BASE_LIBS_DECLARE_POLICY( RobotController, TfManagerPolicy )
 
-template<class __MotorValsMsg = void>
+template<class __MotorValsMsg>
 BASE_LIBS_DECLARE_POLICY_CLASS( RobotController )
 {
 	BASE_LIBS_MAKE_POLICY_FUNCS( RobotController )
@@ -74,27 +74,11 @@ protected:
 	}
 
 private:
-	// if our motor vals message type is empty, don't create a publisher for it
-	template<class __Message>
-	BASE_LIBS_ENABLE_IF_SAME( void, __Message, _EmptyMsg )
-	createMotorValsPublisher(){}
-
-	// if our motor vals message type is not empty, create a publisher for it
-	template<class __Message>
-	BASE_LIBS_ENABLE_IF_NOT_SAME( void, __Message, _EmptyMsg )
-	createMotorValsPublisher()
+	void postInit()
 	{
 		auto & nh_rel = NodeHandlePolicy::getNodeHandle();
 
 		multi_pub_.addPublishers<__MotorValsMsg>( nh_rel, { motor_vals_topic_name_ } );
-	}
-
-	void postInit()
-	{
-		//auto & nh_rel = NodeHandlePolicy::getNodeHandle();
-		//multi_sub_.addSubscriber( nh_rel, cmd_vel_topic_name_, &RobotControllerPolicy::cmdVelCB, this );
-
-		createMotorValsPublisher<__MotorValsMsg>();
 	}
 
 public:
@@ -131,50 +115,27 @@ public:
 
 		postInit();
 
-		BASE_LIBS_SET_INITIALIZED;
+		BASE_LIBS_SET_INITIALIZED();
 
 		printPolicyActionDone( "initialize", this );
 	}
 
-	/*BASE_LIBS_DECLARE_MESSAGE_CALLBACK( cmdVelCB, _VelocityMsg )
+	void update( const __MotorValsMsg & msg )
 	{
-		BASE_LIBS_CHECK_INITIALIZED;
-
-		//TfManagerPolicy::TimedPolicy::update();
-		// update the frame by the given velocity (duration will be auto-calculated from our TimedPolicy)
-		//TfManagerPolicy::updateFrames( target_frame_name_, msg );
-
-		PRINT_INFO( "dt: %f", TfManagerPolicy::TimedPolicy::dt() );
-
-
-	}*/
-
-	// if our motor vals message type is empty, don't attempt to publish to its topic
-	template<class __Message>
-	BASE_LIBS_ENABLE_IF_SAME( void, __Message, _EmptyMsg )
-	publishMotorVals(){}
-
-	// if our motor vals message type is not empty, publish it as usual
-	template<class __Message>
-	BASE_LIBS_ENABLE_IF_NOT_SAME( void, __Message, _EmptyMsg )
-	publishMotorVals()
-	{
-		typename __MotorValsMsg::Ptr motor_vals_msg( new __MotorValsMsg );
-		multi_pub_.publish( motor_vals_topic_name_, motor_vals_msg );
+		update( typename __MotorValsMsg::ConstPtr( new __MotorValsMsg( msg ) ) );
 	}
 
-	void update()
+	BASE_LIBS_DECLARE_MESSAGE_CALLBACK( update, typename __MotorValsMsg )
 	{
-		BASE_LIBS_CHECK_INITIALIZED;
-
 		// publish all known transforms
 		TfManagerPolicy::update();
-		publishMotorVals<__MotorValsMsg>();
+
+		multi_pub_.publish( motor_vals_topic_name_, msg );
 	}
 
 	tf::StampedTransform getTransformToTarget() const
 	{
-		BASE_LIBS_CHECK_INITIALIZED;
+		BASE_LIBS_CHECK_INITIALIZED();
 
 		return lookupTransform( robot_frame_name_, target_frame_name_, ros::Time::now() );
 	}

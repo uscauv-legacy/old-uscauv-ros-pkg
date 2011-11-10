@@ -39,17 +39,6 @@
 
 // ########## Generic Policy Macros ####################################
 // ---------------------------------------------------------------------
-#define BASE_LIBS_DECLARE_POLICY( PolicyNameBase, __Policies... ) \
-BASE_LIBS_DECLARE_POLICY_NAMESPACE( PolicyNameBase ) \
-{ \
-typedef base_libs::GenericPolicyAdapter< __Policies > _##PolicyNameBase##PolicyAdapterType; \
-}
-
-// ---------------------------------------------------------------------
-#define BASE_LIBS_DECLARE_POLICY_CLASS( PolicyNameBase ) \
-class PolicyNameBase##Policy : public BASE_LIBS_GET_POLICY_NAMESPACE( PolicyNameBase )::_##PolicyNameBase##PolicyAdapterType
-
-// ---------------------------------------------------------------------
 #define BASE_LIBS_MAKE_POLICY_NAME( PolicyNameBase ) \
 public: const static inline std::string name() { return #PolicyNameBase; }
 
@@ -67,20 +56,74 @@ BASE_LIBS_MAKE_POLICY_NAME( PolicyNameBase ) \
 BASE_LIBS_MAKE_POLICY_REFERENCE( PolicyNameBase )
 
 // ---------------------------------------------------------------------
+#define BASE_LIBS_GET_POLICY_NAMESPACE( PolicyNameBase ) \
+PolicyNameBase##Policy_types
+// ---------------------------------------------------------------------
+#define BASE_LIBS_GET_POLICY_NS( PolicyNameBase ) \
+BASE_LIBS_GET_POLICY_NAMESPACE( PolicyNameBase )
+
+// ---------------------------------------------------------------------
+#define BASE_LIBS_DECLARE_POLICY_NAMESPACE( PolicyNameBase ) \
+namespace BASE_LIBS_GET_POLICY_NAMESPACE( PolicyNameBase )
+// ---------------------------------------------------------------------
+#define BASE_LIBS_DECLARE_POLICY_NS( PolicyNameBase ) \
+BASE_LIBS_DECLARE_POLICY_NAMESPACE( PolicyNameBase )
+
+// ---------------------------------------------------------------------
+#define BASE_LIBS_GET_POLICY_ADAPTER( PolicyNameBase ) \
+PolicyNameBase##PolicyAdapter
+
+// ########## Pipeline for Policy with no dependent types ##############
+// ---------------------------------------------------------------------
+#define BASE_LIBS_GET_POLICY_ADAPTER_WITH_NS( PolicyNameBase ) \
+BASE_LIBS_GET_POLICY_NS( PolicyNameBase )::BASE_LIBS_GET_POLICY_ADAPTER( PolicyNameBase )
+
+// ---------------------------------------------------------------------
+#define BASE_LIBS_DECLARE_POLICY( PolicyNameBase, __Policies... ) \
+BASE_LIBS_DECLARE_POLICY_NS( PolicyNameBase ) \
+{ \
+typedef base_libs::GenericPolicyAdapter< __Policies > BASE_LIBS_GET_POLICY_ADAPTER( PolicyNameBase ); \
+}
+
+// ---------------------------------------------------------------------
+#define BASE_LIBS_DECLARE_POLICY_CLASS( PolicyNameBase ) \
+class PolicyNameBase##Policy : public BASE_LIBS_GET_POLICY_ADAPTER_WITH_NS( PolicyNameBase )
+
+// ---------------------------------------------------------------------
 #define BASE_LIBS_DECLARE_POLICY_CONSTRUCTOR( PolicyNameBase ) \
 public: \
 	template<class... __Args> \
 	PolicyNameBase##Policy( __Args&&... args ) \
 	: \
-		BASE_LIBS_GET_POLICY_NAMESPACE( PolicyNameBase )::_##PolicyNameBase##PolicyAdapterType( args... )
+		BASE_LIBS_GET_POLICY_ADAPTER_WITH_NS( PolicyNameBase )( args... )
+
+// ########## Pipeline for Policy with dependent types #################
+// ---------------------------------------------------------------------
+#define BASE_LIBS_GET_POLICY_ADAPTER2( PolicyNameBase, __Types... ) \
+BASE_LIBS_GET_POLICY_ADAPTER( PolicyNameBase )<__Types>
 
 // ---------------------------------------------------------------------
-#define BASE_LIBS_GET_POLICY_NAMESPACE( PolicyNameBase ) \
-PolicyNameBase##Policy_types
+#define BASE_LIBS_GET_POLICY_ADAPTER_WITH_NS2( PolicyNameBase, __Types... ) \
+BASE_LIBS_GET_POLICY_ADAPTER2( PolicyNameBase, __Types )
 
 // ---------------------------------------------------------------------
-#define BASE_LIBS_DECLARE_POLICY_NAMESPACE( PolicyNameBase ) \
-namespace BASE_LIBS_GET_POLICY_NAMESPACE( PolicyNameBase )
+#define BASE_LIBS_DECLARE_POLICY2( PolicyNameBase, __Policies... ) \
+struct BASE_LIBS_GET_POLICY_ADAPTER( PolicyNameBase ) \
+{ \
+	typedef base_libs::GenericPolicyAdapter< __Policies > type; \
+};
+
+// ---------------------------------------------------------------------
+#define BASE_LIBS_DECLARE_POLICY_CLASS2( PolicyNameBase, __Types... ) \
+class PolicyNameBase##Policy : public BASE_LIBS_GET_POLICY_ADAPTER_WITH_NS2( PolicyNameBase, __Types )::type
+
+// ---------------------------------------------------------------------
+#define BASE_LIBS_DECLARE_POLICY_CONSTRUCTOR2( PolicyNameBase, __Types... ) \
+public: \
+	template<class... __Args> \
+	PolicyNameBase##Policy( __Args&&... args ) \
+	: \
+		BASE_LIBS_GET_POLICY_ADAPTER_WITH_NS2( PolicyNameBase, __Types )::type( args... )
 
 // ########## Generic Node Macros ######################################
 // ---------------------------------------------------------------------
@@ -134,12 +177,16 @@ public: template<class... __Args> \
 void init( __Args&&... args )
 
 // ---------------------------------------------------------------------
-#define BASE_LIBS_CHECK_INITIALIZED \
+#define BASE_LIBS_ASSERT_INITIALIZED( return_val ) \
+BASE_LIBS_CHECK_INITIALIZED(); \
+if( !initialized_ ) return return_val
+// ---------------------------------------------------------------------
+#define BASE_LIBS_CHECK_INITIALIZED() \
 if( !initialized_ ) PRINT_ERROR( "Policy [%s] has not been initialized!", name().c_str() ); \
 if( !initialized_ ) PRINT_ERROR( "Some functionality may be disabled." )
 
 // ---------------------------------------------------------------------
-#define BASE_LIBS_SET_INITIALIZED \
+#define BASE_LIBS_SET_INITIALIZED() \
 this->setInitialized( true )
 
 // ########## Updateable Policy Macros #################################
@@ -151,21 +198,33 @@ void update( __Args&&... args )
 
 // ########## Generic Callback Macros ##################################
 // ---------------------------------------------------------------------
+#define BASE_LIBS_DECLARE_MESSAGE_CALLBACK2( callbackName, __MessageType, message_name ) \
+void callbackName( const __MessageType::ConstPtr & message_name )
+// ---------------------------------------------------------------------
 #define BASE_LIBS_DECLARE_MESSAGE_CALLBACK( callbackName, __MessageType ) \
-void callbackName( const __MessageType::ConstPtr & msg )
+BASE_LIBS_DECLARE_MESSAGE_CALLBACK2( callbackName, __MessageType, msg )
 
+// ---------------------------------------------------------------------
+#define BASE_LIBS_DECLARE_CONDITIONAL_MESSAGE_CALLBACK2( callbackName, __MessageType, message_name, condition ) \
+typename std::enable_if<condition, void>::type \
+callbackName( const __MessageType::ConstPtr & message_name )
 // ---------------------------------------------------------------------
 #define BASE_LIBS_DECLARE_CONDITIONAL_MESSAGE_CALLBACK( callbackName, __MessageType, condition ) \
-typename std::enable_if<condition, void>::type \
-callbackName( const __MessageType::ConstPtr & msg )
+BASE_LIBS_DECLARE_CONDITIONAL_MESSAGE_CALLBACK2( callbackName, __MessageType, msg, condition )
 
+// ---------------------------------------------------------------------
+#define BASE_LIBS_DECLARE_SERVICE_CALLBACK2( callbackName, __ServiceType, request_name, response_name ) \
+bool callbackName( __ServiceType::Request & request_name, __ServiceType::Response & response_name )
 // ---------------------------------------------------------------------
 #define BASE_LIBS_DECLARE_SERVICE_CALLBACK( callbackName, __ServiceType ) \
-bool callbackName( __ServiceType::Request & request, __ServiceType::Response & response )
+BASE_LIBS_DECLARE_SERVICE_CALLBACK2( callbackName, __ServiceType, request, response )
 
 // ---------------------------------------------------------------------
+#define BASE_LIBS_DECLARE_RECONFIGURE_CALLBACK2( callbackName, __ReconfigureType, config_name, level_name ) \
+void callbackName( __ReconfigureType & config_name, uint32_t level_name )
+// ---------------------------------------------------------------------
 #define BASE_LIBS_DECLARE_RECONFIGURE_CALLBACK( callbackName, __ReconfigureType ) \
-void callbackName( __ReconfigureType & config, uint32_t level )
+BASE_LIBS_DECLARE_RECONFIGURE_CALLBACK2( callbackName, __ReconfigureType, config, level )
 
 // ########## ImageProc Policy Macros ##################################
 // ---------------------------------------------------------------------
@@ -210,8 +269,11 @@ if( !lock_name ) return
 
 // ########## Internal Macros ##########################################
 // ---------------------------------------------------------------------
+#define BASE_LIBS_GET_INTERNAL_NAMESPACE \
+base_libs
+// ---------------------------------------------------------------------
 #define BASE_LIBS_DECLARE_INTERNAL_NAMESPACE \
-namespace base_libs
+namespace BASE_LIBS_GET_INTERNAL_NAMESPACE
 
 // ---------------------------------------------------------------------
 #define __BASE_LIBS_FUNCTION_TYPE \
