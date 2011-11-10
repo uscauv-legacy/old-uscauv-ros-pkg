@@ -63,7 +63,7 @@ BASE_LIBS_DECLARE_NODE_CLASS( Seabee3Controls )
 
 	BASE_LIBS_SPIN_ONCE
 	{
-		_RobotController::update();
+		_RobotController::update( _MotorValsMsg() );
 	}
 };
 
