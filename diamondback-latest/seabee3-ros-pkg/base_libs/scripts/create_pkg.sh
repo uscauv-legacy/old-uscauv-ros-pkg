@@ -38,8 +38,48 @@
 usage()
 {
         echo ""
-        echo "Usage: create_pkg package [-u user1, -u user2] [-d dependency1, -d dependency2] [-p project] [-n node1, -n node2] [-l nodelet1, -l nodelet2] [-s source1, -s source2]"
+        echo "Usage: create_pkg package [-u user1, -u user2] [-d dependency1, -d dependency2] [-p project] [-n node1, -n node2] [-l nodelet1, -l nodelet2] [-s source1, -s source2] [-i include_dir]"
         echo ""
+}
+
+addDep()
+{
+	echo "addDep $1"
+	if [ "$deps" == "" ]; then
+		deps=$1
+	else
+		deps="$deps $1"
+	fi
+}
+
+addSource()
+{
+	echo "addSource $1"
+	if [ "$sources" == "" ]; then
+		sources=$1
+	else
+		sources="$sources $1"
+	fi
+}
+
+addNode()
+{
+	echo "addNode $1"
+	if [ "$nodes" == "" ]; then
+		nodes=$1
+	else
+		nodes="$nodes $1"
+	fi
+}
+
+addNodelet()
+{
+	echo "addNodelet $1"
+	if [ "$nodelets" == "" ]; then
+		nodelets=$1
+	else
+		nodelets="$nodelets $1"
+	fi
 }
 
 if [ $# -le 0 ]; then
@@ -71,41 +111,34 @@ while [ "$1" != "" ]; do
 					shift
 					;;
 		-d )     	shift
-					if [ "$deps" == "" ]; then
-						deps="$1"
-					else
-						deps="$deps $1"
-					fi
-					shift
-					;;
-		-n )    	shift
-					if [ "$nodes" == "" ]; then
-						nodes="$1"
-					else
-						nodes="$nodes $1"
-					fi
-					shift
-					;;
-		-l )    	shift
-					if [ "$nodelets" == "" ]; then
-						nodelets="$1"
-					else
-						nodelets="$nodelets $1"
-					fi
+					addDep "$1"
 					shift
 					;;
 		-s )    	shift
-					if [ "$sources" == "" ]; then
-						sources="$1"
-					else
-						sources="$sources $1"
-					fi
+					addSource "$1"
+					shift
+					;;
+		-n )    	shift
+					addNode "$1"
+					shift
+					;;
+		-l )    	shift
+					addNodelet "$1"
+					shift
+					;;
+		-nl )       shift
+					addNode "$1"
+					addNodelet "$1"
+					shift
+					;;
+		-i )		shift
+					include_dir=$1
 					shift
 					;;
 		--help )    usage
 					exit
 					;;
-		-p ) shift
+		-p )        shift
 					project=$1
 					shift
 					;;
@@ -115,6 +148,7 @@ done
 if [ "$package" == "" ]; then usage; exit; fi
 if [ "$project" == "" ]; then project=$package; fi
 if [ "$users" == "" ]; then users=$default_user; fi
+if [ "$include_dir" == "" ]; then include_dir=$package; fi
 
 echo ""
 echo "Creating package $package with authors { $users }, dependencies { $deps }, sources { $sources }, nodes { $nodes }, and nodelets { $nodelets }."
@@ -220,7 +254,7 @@ example, the roscpp documentation has 'libros' group.
 
 */" >> $doxygen_file
 
-if [ "$sources" != "" ] || [ "$nodes" != "" ]; then mkdir -p include/$package; fi
+if [ "$sources" != "" ] || [ "$nodes" != "" ]; then mkdir -p include/$include_dir; fi
 
 if [ "$sources" != "" ]; then
 
@@ -263,17 +297,17 @@ echo "<library path=\"lib/lib$package""_nodelets\">" >> $nodelet_plugins_file
 fi
 
 for source in $sources; do
-  source_h_relpath="include/$package/$source.h"
+  source_h_relpath="include/$include_dir/$source.h"
   source_cpp_relpath="src/$source.cpp"
 
   touch $source_h_relpath
-  echo "#include <$package/$source.h>" >> $source_cpp_relpath
+  echo "#include <$include_dir/$source.h>" >> $source_cpp_relpath
 
   license_files="$license_files $source_h_relpath $source_cpp_relpath"
 done
 
 for node in $nodes; do
-  node_h_relpath="include/$package/$node.h"
+  node_h_relpath="include/$include_dir/$node.h"
   node_cpp_relpath="nodes/$node.cpp"
 
   echo "#ifndef $package""_$package""_$node""_H_
@@ -303,7 +337,7 @@ BASE_LIBS_DECLARE_NODE_CLASS( $node )
 
 #endif // $package""_$package""_$node""_H_" >> $node_h_relpath
 
-  echo "#include <$package/$node.h>
+  echo "#include <$include_dir/$node.h>
 BASE_LIBS_INST_NODE( $node""Node, \"$node""_node\" )" >> $node_cpp_relpath
 
   license_files="$license_files $node_h_relpath $node_cpp_relpath"
@@ -313,7 +347,7 @@ for nodelet in $nodelets; do
   nodelet_cpp_relpath="nodelets/$nodelet""_nodelet.cpp"
 
   echo "#include <base_libs/nodelet.h>
-#include <$package/$nodelet.h>
+#include <$include_dir/$nodelet.h>
 
 BASE_LIBS_DECLARE_NODELET( $package, $nodelet )
 

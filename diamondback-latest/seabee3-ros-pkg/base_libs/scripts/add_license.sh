@@ -42,7 +42,7 @@ usage()
         echo ""
 }
 
-if [ $# -le 1 ]; then
+if [ $# -le 0 ]; then
         usage
         exit
 fi
