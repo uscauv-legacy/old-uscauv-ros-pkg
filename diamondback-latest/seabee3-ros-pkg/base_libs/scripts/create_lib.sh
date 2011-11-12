@@ -51,7 +51,7 @@ package=$1; shift
 
 while [ "$1" != "" ]; do
 	case $1 in
-		-u )    shift
+		-u )        shift
 					if [ "$users_cmd" == "" ]; then
 						users_cmd="-u $1"
 					else
@@ -59,7 +59,7 @@ while [ "$1" != "" ]; do
 					fi
 					shift
 					;;
-		-d )     shift
+		-d )        shift
 					if [ "$deps_cmd" == "" ]; then
 						deps_cmd="-d $1"
 					else
