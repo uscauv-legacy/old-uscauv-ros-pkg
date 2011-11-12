@@ -4,12 +4,12 @@
      pipe_finder
 
   </description>
-  <author>kathryn</author>
+  <author>Kathryn Yu</author>
   <license>BSD</license>
   <review status="unreviewed" notes=""/>
   <url>http://ros.org/wiki/pipe_finder</url>
-  <depend package="base_libs"/>
-
+  <depend package="opencv2"/>
+  <export>
+    <cpp cflags="-I${prefix}/include" lflags="-Wl,-rpath,${prefix}/lib -L${prefix}/lib -lpipe_finder"/>
+  </export>
 </package>
-
-
