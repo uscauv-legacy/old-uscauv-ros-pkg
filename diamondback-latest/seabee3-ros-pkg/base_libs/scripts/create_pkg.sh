@@ -38,13 +38,12 @@
 usage()
 {
         echo ""
-        echo "Usage: create_pkg package [-u user1, -u user2] [-d dependency1, -d dependency2] [-p project] [-n node1, -n node2] [-l nodelet1, -l nodelet2] [-s source1, -s source2] [-i include_dir]"
+        echo "Usage: create_pkg package [-u user1 -u user2 ...] [-d dependency1 -d dependency2 ...] [-p project] [-i include_dir] [-n Node1Class -n Node2Class ...] [-l Nodelet1Class -l Nodelet2Class ...] [-s Source1Class -s Source2Class ...]"
         echo ""
 }
 
 addDep()
 {
-	echo "addDep $1"
 	if [ "$deps" == "" ]; then
 		deps=$1
 	else
@@ -54,7 +53,6 @@ addDep()
 
 addSource()
 {
-	echo "addSource $1"
 	if [ "$sources" == "" ]; then
 		sources=$1
 	else
@@ -64,7 +62,6 @@ addSource()
 
 addNode()
 {
-	echo "addNode $1"
 	if [ "$nodes" == "" ]; then
 		nodes=$1
 	else
@@ -74,7 +71,6 @@ addNode()
 
 addNodelet()
 {
-	echo "addNodelet $1"
 	if [ "$nodelets" == "" ]; then
 		nodelets=$1
 	else
@@ -297,21 +293,41 @@ echo "<library path=\"lib/lib$package""_nodelets\">" >> $nodelet_plugins_file
 fi
 
 for source in $sources; do
-  source_h_relpath="include/$include_dir/$source.h"
-  source_cpp_relpath="src/$source.cpp"
+  # convert SomeClassName to some_class_name
+  source_file=`echo "$source" | sed 's:[A-Z]:_&:2g' | tr A-Z a-z`
+  source_h_relpath="include/$include_dir/$source_file.h"
+  source_cpp_relpath="src/$source_file.cpp"
 
-  touch $source_h_relpath
-  echo "#include <$include_dir/$source.h>" >> $source_cpp_relpath
+ifdef_string=`echo "$package" | tr a-z A-Z | tr -d _`"_"
+ifdef_string="$ifdef_string"`echo "$include_dir" | tr a-z A-Z | tr -d _`"_"
+ifdef_string="$ifdef_string"`echo "$source_file" | tr a-z A-Z | tr -d _`"_H_"
+
+echo "#ifndef $ifdef_string
+#define $ifdef_string
+
+class $source
+{
+	//
+};
+
+#endif // $ifdef_string" >> $source_h_relpath
+  echo "#include <$include_dir/$source_file.h>" >> $source_cpp_relpath
 
   license_files="$license_files $source_h_relpath $source_cpp_relpath"
 done
 
 for node in $nodes; do
-  node_h_relpath="include/$include_dir/$node.h"
-  node_cpp_relpath="nodes/$node.cpp"
+  # convert SomeClassName to some_class_name
+  node_file=`echo "$node" | sed 's:[A-Z]:_&:2g' | tr A-Z a-z`
+  node_h_relpath="include/$include_dir/$node_file.h"
+  node_cpp_relpath="nodes/$node_file.cpp"
 
-  echo "#ifndef $package""_$package""_$node""_H_
-#define $package""_$package""_$node""_H_
+ifdef_string=`echo "$package" | tr a-z A-Z | tr -d _`"_"
+ifdef_string="$ifdef_string"`echo "$include_dir" | tr a-z A-Z | tr -d _`"_"
+ifdef_string="$ifdef_string"`echo "$node_file" | tr a-z A-Z | tr -d _`"_H_"
+
+  echo "#ifndef $ifdef_string
+#define $ifdef_string
 
 #include <base_libs/node.h>
 
@@ -335,25 +351,27 @@ BASE_LIBS_DECLARE_NODE_CLASS( $node )
 	}
 };
 
-#endif // $package""_$package""_$node""_H_" >> $node_h_relpath
+#endif // $ifdef_string" >> $node_h_relpath
 
-  echo "#include <$include_dir/$node.h>
-BASE_LIBS_INST_NODE( $node""Node, \"$node""_node\" )" >> $node_cpp_relpath
+  echo "#include <$include_dir/$node_file.h>
+BASE_LIBS_INST_NODE( $node""Node, \"$node_file\" )" >> $node_cpp_relpath
 
   license_files="$license_files $node_h_relpath $node_cpp_relpath"
 done
 
 for nodelet in $nodelets; do
-  nodelet_cpp_relpath="nodelets/$nodelet""_nodelet.cpp"
+  # convert SomeClassName to some_class_name
+  nodelet_file=`echo "$nodelet" | sed 's:[A-Z]:_&:2g' | tr A-Z a-z`
+  nodelet_cpp_relpath="nodelets/$nodelet_file.cpp"
 
   echo "#include <base_libs/nodelet.h>
-#include <$include_dir/$nodelet.h>
+#include <$include_dir/$nodelet_file.h>
 
 BASE_LIBS_DECLARE_NODELET( $package, $nodelet )
 
-BASE_LIBS_INST_NODELET( $package, $nodelet, $nodelet )" >> $nodelet_cpp_relpath
+BASE_LIBS_INST_NODELET( $package, $nodelet, $nodelet_file )" >> $nodelet_cpp_relpath
 
-echo "  <class name=\"$package/$nodelet\" type=\"$package::$nodelet""Nodelet\" base_class_type=\"nodelet::Nodelet\">
+echo "  <class name=\"$package/$nodelet_file\" type=\"$package::$nodelet""Nodelet\" base_class_type=\"nodelet::Nodelet\">
     <description>
       todo: fill this in
     </description>

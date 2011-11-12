@@ -38,7 +38,7 @@
 usage()
 {
         echo ""
-        echo "Usage: create_lib package [-u user] [-d dependency] [-p project] [-i include_dir] files"
+        echo "Usage: create_lib package [-u user] [-d dependency] [-p project] [-i include_dir] Class1 Class2 ..."
         echo ""
 }
 
@@ -88,4 +88,4 @@ done
 
 if [ "$package" == "" ]; then usage; exit; fi
 
-create_pkg $package $users_cmd $deps_cmd $project_cmd $sources_cmd $include_dir_cmd
+create_pkg $package $users_cmd $deps_cmd $project_cmd $include_dir_cmd $sources_cmd
