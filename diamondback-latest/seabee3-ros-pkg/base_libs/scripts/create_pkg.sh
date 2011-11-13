@@ -171,9 +171,7 @@ echo "  <license>BSD</license>
   <url>http://ros.org/wiki/$package</url>" >> $manifest_file
 
 if [ "$nodelets" != "" ]; then deps="nodelet $deps"; fi
-#if [ "$sources" != "" ]; then deps="base_libs $deps"; fi
-# we want base_libs as a dep in all cases; ( nodelets, nodes, and sources )
-deps="base_libs $deps"
+if [ "$sources" != "" ] || [ "$nodes" != "" ] || [ "$nodelets" != "" ]; then  deps="base_libs $deps"; fi
 
 for dep in $deps; do
   echo "  <depend package=\"$dep\"/>" >> $manifest_file
