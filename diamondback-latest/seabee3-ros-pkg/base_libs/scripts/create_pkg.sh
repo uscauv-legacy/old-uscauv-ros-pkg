@@ -171,7 +171,9 @@ echo "  <license>BSD</license>
   <url>http://ros.org/wiki/$package</url>" >> $manifest_file
 
 if [ "$nodelets" != "" ]; then deps="nodelet $deps"; fi
-if [ "$sources" != "" ]; then deps="base_libs $deps"; fi
+#if [ "$sources" != "" ]; then deps="base_libs $deps"; fi
+# we want base_libs as a dep in all cases; ( nodelets, nodes, and sources )
+deps="base_libs $deps"
 
 for dep in $deps; do
   echo "  <depend package=\"$dep\"/>" >> $manifest_file
@@ -292,15 +294,24 @@ echo "<library path=\"lib/lib$package""_nodelets\">" >> $nodelet_plugins_file
 
 fi
 
+# convert SomeEXPRClassName to some_expr_class_name
+# convert [a][AA] -> [a]_[AA] (all); convert [Aa] -> _[Aa] (2nd occurance onward) | convert A -> a (all)
+#convert_camel_case_to_snake_case="sed 's:\([a-z]\)\([A-Z][A-Z]\):\1_\2:g; s:[A-Z][a-z]:_&:2g' | tr A-Z a-z"
+
+#convert_lower_to_upper="tr a-z A-Z"
+#convert_remove_underscores="tr -d _"
+
+#make everything upper-case and remove underscores
+#convert_filename_component_to_ifdef_component="$convert_lower_to_upper | $convert_remove_underscores"
+
 for source in $sources; do
-  # convert SomeClassName to some_class_name
-  source_file=`echo "$source" | sed 's:[A-Z]:_&:2g' | tr A-Z a-z`
+  source_file=`echo $source | sed 's:\([a-z]\)\([A-Z][A-Z]\):\1_\2:g; s:[A-Z][a-z]:_&:2g' | tr A-Z a-z`
   source_h_relpath="include/$include_dir/$source_file.h"
   source_cpp_relpath="src/$source_file.cpp"
 
-ifdef_string=`echo "$package" | tr a-z A-Z | tr -d _`"_"
-ifdef_string="$ifdef_string"`echo "$include_dir" | tr a-z A-Z | tr -d _`"_"
-ifdef_string="$ifdef_string"`echo "$source_file" | tr a-z A-Z | tr -d _`"_H_"
+ifdef_string=`echo $package | tr a-z A-Z | tr -d _`"_"
+ifdef_string="$ifdef_string"`echo $include_dir | tr a-z A-Z | tr -d _`"_"
+ifdef_string="$ifdef_string"`echo $source_file | tr a-z A-Z | tr -d _`"_H_"
 
 echo "#ifndef $ifdef_string
 #define $ifdef_string
@@ -317,14 +328,13 @@ class $source
 done
 
 for node in $nodes; do
-  # convert SomeClassName to some_class_name
-  node_file=`echo "$node" | sed 's:[A-Z]:_&:2g' | tr A-Z a-z`
+  node_file=`echo "$node" | sed 's:\([a-z]\)\([A-Z][A-Z]\):\1_\2:g; s:[A-Z][a-z]:_&:2g' | tr A-Z a-z`
   node_h_relpath="include/$include_dir/$node_file.h"
   node_cpp_relpath="nodes/$node_file.cpp"
 
-ifdef_string=`echo "$package" | tr a-z A-Z | tr -d _`"_"
-ifdef_string="$ifdef_string"`echo "$include_dir" | tr a-z A-Z | tr -d _`"_"
-ifdef_string="$ifdef_string"`echo "$node_file" | tr a-z A-Z | tr -d _`"_H_"
+ifdef_string=`echo $package | tr a-z A-Z | tr -d _`"_"
+ifdef_string="$ifdef_string"`echo $include_dir | tr a-z A-Z | tr -d _`"_"
+ifdef_string="$ifdef_string"`echo $node_file | tr a-z A-Z | tr -d _`"_H_"
 
   echo "#ifndef $ifdef_string
 #define $ifdef_string
@@ -360,8 +370,7 @@ BASE_LIBS_INST_NODE( $node""Node, \"$node_file\" )" >> $node_cpp_relpath
 done
 
 for nodelet in $nodelets; do
-  # convert SomeClassName to some_class_name
-  nodelet_file=`echo "$nodelet" | sed 's:[A-Z]:_&:2g' | tr A-Z a-z`
+  nodelet_file=`echo "$nodelet" | sed 's:\([a-z]\)\([A-Z][A-Z]\):\1_\2:g; s:[A-Z][a-z]:_&:2g' | tr A-Z a-z`
   nodelet_cpp_relpath="nodelets/$nodelet_file.cpp"
 
   echo "#include <base_libs/nodelet.h>
