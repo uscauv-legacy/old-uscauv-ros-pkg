@@ -36,28 +36,28 @@
 #ifndef SEABEE3_TELEOP_SEABEE3_TELEOP_SEABEE3_TELEOP_H_
 #define SEABEE3_TELEOP_SEABEE3_TELEOP_SEABEE3_TELEOP_H_
 
-#include <base_libs/node.h>
-#include <base_libs/joystick_policy.h>
-#include <base_libs/service_client_policy.h>
+#include <quickdev/node.h>
+#include <quickdev/joystick_policy.h>
+#include <quickdev/service_client_policy.h>
 #include <seabee3_driver/FiringDeviceAction.h>
 
-typedef base_libs::JoystickPolicy _JoystickPolicy;
+typedef quickdev::JoystickPolicy _JoystickPolicy;
 typedef seabee3_driver::FiringDeviceAction _FiringDeviceActionService;
-typedef base_libs::ServiceClientPolicy<_FiringDeviceActionService, 0> _Shooter1ServiceClient;
-typedef base_libs::ServiceClientPolicy<_FiringDeviceActionService, 1> _Shooter2ServiceClient;
-typedef base_libs::ServiceClientPolicy<_FiringDeviceActionService, 2> _Dropper1ServiceClient;
-typedef base_libs::ServiceClientPolicy<_FiringDeviceActionService, 3> _Dropper2ServiceClient;
+typedef quickdev::ServiceClientPolicy<_FiringDeviceActionService, 0> _Shooter1ServiceClient;
+typedef quickdev::ServiceClientPolicy<_FiringDeviceActionService, 1> _Shooter2ServiceClient;
+typedef quickdev::ServiceClientPolicy<_FiringDeviceActionService, 2> _Dropper1ServiceClient;
+typedef quickdev::ServiceClientPolicy<_FiringDeviceActionService, 3> _Dropper2ServiceClient;
 
-BASE_LIBS_DECLARE_NODE( Seabee3Teleop, _JoystickPolicy, _Shooter1ServiceClient, _Shooter2ServiceClient, _Dropper1ServiceClient, _Dropper2ServiceClient )
+QUICKDEV_DECLARE_NODE( Seabee3Teleop, _JoystickPolicy, _Shooter1ServiceClient, _Shooter2ServiceClient, _Dropper1ServiceClient, _Dropper2ServiceClient )
 
-BASE_LIBS_DECLARE_NODE_CLASS( Seabee3Teleop )
+QUICKDEV_DECLARE_NODE_CLASS( Seabee3Teleop )
 {
 public:
 	int current_firing_device_;
 	int num_firing_devices_;
 	_JoystickPolicy::_Axis::_Name current_button_;
 
-	BASE_LIBS_DECLARE_NODE_CONSTRUCTOR( Seabee3Teleop ),
+	QUICKDEV_DECLARE_NODE_CONSTRUCTOR( Seabee3Teleop ),
 		current_firing_device_( 0 ),
 		num_firing_devices_( 4 ),
 		current_button_( "" )
@@ -89,7 +89,7 @@ public:
 		return false;
 	}
 
-	BASE_LIBS_DECLARE_MESSAGE_CALLBACK( joystickCB, _JoystickPolicy::_JoystickMsg )
+	QUICKDEV_DECLARE_MESSAGE_CALLBACK( joystickCB, _JoystickPolicy::_JoystickMsg )
 	{
 		if( JoystickPolicy::isEnabled() )
 		{
@@ -133,9 +133,9 @@ public:
 		}
 	}
 
-	BASE_LIBS_SPIN_FIRST
+	QUICKDEV_SPIN_FIRST
 	{
-		auto nh_rel = base_libs::RunablePolicy::getNodeHandle();
+		auto nh_rel = quickdev::RunablePolicy::getNodeHandle();
 
 		nh_rel.setParam( "robot_name", "seabee3" );
 		_JoystickPolicy::init();
@@ -154,7 +154,7 @@ public:
 
 	}
 
-	BASE_LIBS_SPIN_ONCE
+	QUICKDEV_SPIN_ONCE
 	{
 		_JoystickPolicy::update();
 	}

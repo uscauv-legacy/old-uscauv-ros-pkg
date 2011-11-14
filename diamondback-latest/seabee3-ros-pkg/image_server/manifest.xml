@@ -8,9 +8,9 @@
   <license>BSD</license>
   <review status="unreviewed" notes=""/>
   <url>http://ros.org/wiki/image_server</url>
-  <depend package="base_libs"/>
+  <depend package="quickdev_cpp"/>
   <depend package="nodelet"/>
-  
+
   <export>
 	<rosdoc config="rosdoc.yaml"/>
     <nodelet plugin="${prefix}/nodelets/nodelet_plugins.xml" />

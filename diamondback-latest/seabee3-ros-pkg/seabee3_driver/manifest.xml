@@ -9,7 +9,7 @@
   <review status="unreviewed" notes=""/>
   <url>http://ros.org/wiki/seabee3_driver</url>
   <!-- build dependencies -->
-  <depend package="base_libs"/>
+  <depend package="quickdev_cpp"/>
   <!--depend package="seabee3_common"/-->
   <!-- runtime dependencies -->
   <!--depend package="xsens_driver"/-->

@@ -36,79 +36,79 @@
 #ifndef SEABEE3_DRIVER_SEABEE3_DRIVER_SEABEE3_DRIVER_H_
 #define SEABEE3_DRIVER_SEABEE3_DRIVER_SEABEE3_DRIVER_H_
 
-#include <base_libs/node.h>
-#include <base_libs/robot_driver_policy.h>
-#include <base_libs/service_server_policy.h>
+#include <quickdev/node.h>
+#include <quickdev/robot_driver_policy.h>
+#include <quickdev/service_server_policy.h>
 #include <seabee3_driver/MotorVals.h>
 #include <seabee3_driver/FiringDeviceAction.h>
 
 typedef seabee3_driver::MotorVals _MotorValsMsg;
-typedef base_libs::RobotDriverPolicy<_MotorValsMsg> _RobotDriver;
+typedef quickdev::RobotDriverPolicy<_MotorValsMsg> _RobotDriver;
 
 typedef seabee3_driver::FiringDeviceAction _FiringDeviceActionService;
-typedef base_libs::ServiceServerPolicy<_FiringDeviceActionService, 0> _Shooter1ServiceServer;
-typedef base_libs::ServiceServerPolicy<_FiringDeviceActionService, 1> _Shooter2ServiceServer;
-typedef base_libs::ServiceServerPolicy<_FiringDeviceActionService, 2> _Dropper1ServiceServer;
-typedef base_libs::ServiceServerPolicy<_FiringDeviceActionService, 3> _Dropper2ServiceServer;
+typedef quickdev::ServiceServerPolicy<_FiringDeviceActionService, 0> _Shooter1ServiceServer;
+typedef quickdev::ServiceServerPolicy<_FiringDeviceActionService, 1> _Shooter2ServiceServer;
+typedef quickdev::ServiceServerPolicy<_FiringDeviceActionService, 2> _Dropper1ServiceServer;
+typedef quickdev::ServiceServerPolicy<_FiringDeviceActionService, 3> _Dropper2ServiceServer;
 
-BASE_LIBS_DECLARE_NODE( Seabee3Driver, _RobotDriver, _Shooter1ServiceServer, _Shooter2ServiceServer, _Dropper1ServiceServer, _Dropper2ServiceServer )
+QUICKDEV_DECLARE_NODE( Seabee3Driver, _RobotDriver, _Shooter1ServiceServer, _Shooter2ServiceServer, _Dropper1ServiceServer, _Dropper2ServiceServer )
 
-BASE_LIBS_DECLARE_NODE_CLASS( Seabee3Driver )
+QUICKDEV_DECLARE_NODE_CLASS( Seabee3Driver )
 {
-	BASE_LIBS_DECLARE_NODE_CONSTRUCTOR( Seabee3Driver )
+	QUICKDEV_DECLARE_NODE_CONSTRUCTOR( Seabee3Driver )
 	{
 		//
 	}
 
-	BASE_LIBS_SPIN_FIRST
+	QUICKDEV_SPIN_FIRST
 	{
-		auto & nh_rel = base_libs::RunablePolicy::getNodeHandle();
+		auto & nh_rel = quickdev::RunablePolicy::getNodeHandle();
 
 		nh_rel.setParam( "robot_name", "seabee3" );
 		_RobotDriver::init();
-		_RobotDriver::registerCallback( base_libs::auto_bind( &Seabee3DriverNode::motorValsCB, this ) );
+		_RobotDriver::registerCallback( quickdev::auto_bind( &Seabee3DriverNode::motorValsCB, this ) );
 
 		nh_rel.setParam( "shooter1_service_name", "/seabee3/shooter1" );
 		_Shooter1ServiceServer::init( "service_name_param", std::string( "shooter1_service_name" ) );
-		_Shooter1ServiceServer::registerCallback( base_libs::auto_bind( &Seabee3DriverNode::shooter1CB, this ) );
+		_Shooter1ServiceServer::registerCallback( quickdev::auto_bind( &Seabee3DriverNode::shooter1CB, this ) );
 
 		nh_rel.setParam( "shooter2_service_name", "/seabee3/shooter2" );
 		_Shooter2ServiceServer::init( "service_name_param", std::string( "shooter2_service_name" ) );
-		_Shooter2ServiceServer::registerCallback( base_libs::auto_bind( &Seabee3DriverNode::shooter2CB, this ) );
+		_Shooter2ServiceServer::registerCallback( quickdev::auto_bind( &Seabee3DriverNode::shooter2CB, this ) );
 
 		nh_rel.setParam( "dropper1_service_name", "/seabee3/dropper1" );
 		_Dropper1ServiceServer::init( "service_name_param", std::string( "dropper1_service_name" ) );
-		_Dropper1ServiceServer::registerCallback( base_libs::auto_bind( &Seabee3DriverNode::dropper1CB, this ) );
+		_Dropper1ServiceServer::registerCallback( quickdev::auto_bind( &Seabee3DriverNode::dropper1CB, this ) );
 
 		nh_rel.setParam( "dropper2_service_name", "/seabee3/dropper2" );
 		_Dropper2ServiceServer::init( "service_name_param", std::string( "dropper2_service_name" ) );
-		_Dropper2ServiceServer::registerCallback( base_libs::auto_bind( &Seabee3DriverNode::dropper2CB, this ) );
+		_Dropper2ServiceServer::registerCallback( quickdev::auto_bind( &Seabee3DriverNode::dropper2CB, this ) );
 	}
 
-	BASE_LIBS_DECLARE_MESSAGE_CALLBACK( motorValsCB, _MotorValsMsg )
+	QUICKDEV_DECLARE_MESSAGE_CALLBACK( motorValsCB, _MotorValsMsg )
 	{
 		PRINT_INFO( "Setting motor vals..." );
 	}
 
-	BASE_LIBS_DECLARE_SERVICE_CALLBACK( shooter1CB, _FiringDeviceActionService )
+	QUICKDEV_DECLARE_SERVICE_CALLBACK( shooter1CB, _FiringDeviceActionService )
 	{
 		PRINT_INFO( "Firing first torpedo!" );
 		return true;
 	}
 
-	BASE_LIBS_DECLARE_SERVICE_CALLBACK( shooter2CB, _FiringDeviceActionService )
+	QUICKDEV_DECLARE_SERVICE_CALLBACK( shooter2CB, _FiringDeviceActionService )
 	{
 		PRINT_INFO( "Firing second torpedo!" );
 		return true;
 	}
 
-	BASE_LIBS_DECLARE_SERVICE_CALLBACK( dropper1CB, _FiringDeviceActionService )
+	QUICKDEV_DECLARE_SERVICE_CALLBACK( dropper1CB, _FiringDeviceActionService )
 	{
 		PRINT_INFO( "Dropping first marker!" );
 		return true;
 	}
 
-	BASE_LIBS_DECLARE_SERVICE_CALLBACK( dropper2CB, _FiringDeviceActionService )
+	QUICKDEV_DECLARE_SERVICE_CALLBACK( dropper2CB, _FiringDeviceActionService )
 	{
 		PRINT_INFO( "Dropping second marker!" );
 		return true;

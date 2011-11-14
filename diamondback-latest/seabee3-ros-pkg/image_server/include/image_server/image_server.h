@@ -1,14 +1,14 @@
 /***************************************************************************
  *  include/image_server/image_server.h
  *  --------------------
- * 
+ *
  *  Copyright (c) 2011, Edward T. Kaszubski ( ekaszubski@gmail.com )
  *  All rights reserved.
- * 
+ *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions are
  *  met:
- *  
+ *
  *  * Redistributions of source code must retain the above copyright
  *    notice, this list of conditions and the following disclaimer.
  *  * Redistributions in binary form must reproduce the above
@@ -18,7 +18,7 @@
  *  * Neither the name of seabee3-ros-pkg nor the names of its
  *    contributors may be used to endorse or promote products derived from
  *    this software without specific prior written permission.
- *  
+ *
  *  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
  *  "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
  *  LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
@@ -30,24 +30,24 @@
  *  THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  *  (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  *  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- * 
+ *
  **************************************************************************/
 
 #ifndef IMAGE_SERVER_IMAGE_SERVER_IMAGE_SERVER_H_
 #define IMAGE_SERVER_IMAGE_SERVER_IMAGE_SERVER_H_
 
-#include <base_libs/image_proc_policy.h>
-#include <base_libs/reconfigure_policy.h>
-#include <base_libs/node.h>
-#include <base_libs/image_loader.h>
+#include <quickdev/image_proc_policy.h>
+#include <quickdev/reconfigure_policy.h>
+#include <quickdev/node.h>
+#include <quickdev/image_loader.h>
 #include <image_server/ImageServerConfig.h>
 
 typedef image_server::ImageServerConfig _ImageServerConfig;
-typedef base_libs::ReconfigurePolicy< _ImageServerConfig > _ImageServerConfigPolicy;
+typedef quickdev::ReconfigurePolicy< _ImageServerConfig > _ImageServerConfigPolicy;
 
-BASE_LIBS_DECLARE_NODE( ImageServer, base_libs::ImageProcPolicy, _ImageServerConfigPolicy )
+QUICKDEV_DECLARE_NODE( ImageServer, quickdev::ImageProcPolicy, _ImageServerConfigPolicy )
 
-BASE_LIBS_DECLARE_NODE_CLASS( ImageServer )
+QUICKDEV_DECLARE_NODE_CLASS( ImageServer )
 {
 private:
 	ImageLoader image_loader_;
@@ -58,22 +58,22 @@ public:
 	unsigned int current_frame_;
 	unsigned int direction_;
 
-	BASE_LIBS_DECLARE_NODE_CONSTRUCTOR( ImageServer ),
-		image_loader_( base_libs::getFirstOfType<ros::NodeHandle>( args... ) ),
+	QUICKDEV_DECLARE_NODE_CONSTRUCTOR( ImageServer ),
+		image_loader_( quickdev::getFirstOfType<ros::NodeHandle>( args... ) ),
 		last_next_image_state_( false ),
 		last_prev_image_state_( false ),
 		current_frame_( 0 ),
 		direction_( 0 )
 	{
-		
+
 	}
 
 	void spinFirst()
 	{
 		// we're fine with using the default values for all of our initializable policies
 		initAll();
-		_ImageServerConfigPolicy::registerCallback( base_libs::auto_bind( &ImageServerNode::reconfigureCB, this ) );
-		
+		_ImageServerConfigPolicy::registerCallback( quickdev::auto_bind( &ImageServerNode::reconfigureCB, this ) );
+
 		image_loader_.loadImages();
 	}
 
@@ -84,9 +84,9 @@ public:
 			if ( current_frame_ < image_loader_.image_cache_.size() )
 			{
 				ROS_INFO( "Publishing image %d [%dx%d]", current_frame_, image_loader_.image_cache_[current_frame_]->width, image_loader_.image_cache_[current_frame_]->height );
-				
+
 				publishImages( "output_image", fromIplImage( image_loader_.image_cache_[current_frame_] ) );
-				
+
 				//publishCvImage( image_loader_.image_cache_[current_frame_] );
 				if ( config_.auto_advance )
 				{
@@ -128,7 +128,7 @@ public:
 		}
 	}
 
-	BASE_LIBS_DECLARE_RECONFIGURE_CALLBACK( reconfigureCB, _ImageServerConfig )
+	QUICKDEV_DECLARE_RECONFIGURE_CALLBACK( reconfigureCB, _ImageServerConfig )
 	{
 		if ( config.auto_advance )
 		{

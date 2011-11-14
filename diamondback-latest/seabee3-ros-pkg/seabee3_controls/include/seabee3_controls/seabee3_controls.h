@@ -36,32 +36,32 @@
 #ifndef SEABEE3_CONTROLS_SEABEE3_CONTROLS_SEABEE3_CONTROLS_H_
 #define SEABEE3_CONTROLS_SEABEE3_CONTROLS_SEABEE3_CONTROLS_H_
 
-#include <base_libs/node.h>
-#include <base_libs/robot_controller_policy.h>
+#include <quickdev/node.h>
+#include <quickdev/robot_controller_policy.h>
 // #include <controllers>
 #include <seabee3_driver/MotorVals.h>
 
 typedef seabee3_driver::MotorVals _MotorValsMsg;
-typedef base_libs::RobotControllerPolicy<_MotorValsMsg> _RobotController;
+typedef quickdev::RobotControllerPolicy<_MotorValsMsg> _RobotController;
 
-BASE_LIBS_DECLARE_NODE( Seabee3Controls, _RobotController )
+QUICKDEV_DECLARE_NODE( Seabee3Controls, _RobotController )
 
-BASE_LIBS_DECLARE_NODE_CLASS( Seabee3Controls )
+QUICKDEV_DECLARE_NODE_CLASS( Seabee3Controls )
 {
-	BASE_LIBS_DECLARE_NODE_CONSTRUCTOR( Seabee3Controls )
+	QUICKDEV_DECLARE_NODE_CONSTRUCTOR( Seabee3Controls )
 	{
 		//
 	}
 
-	BASE_LIBS_SPIN_FIRST
+	QUICKDEV_SPIN_FIRST
 	{
-		auto & nh_rel = base_libs::RunablePolicy::getNodeHandle();
+		auto & nh_rel = quickdev::RunablePolicy::getNodeHandle();
 
 		nh_rel.setParam( "robot_name", "seabee3" );
 		_RobotController::init();
 	}
 
-	BASE_LIBS_SPIN_ONCE
+	QUICKDEV_SPIN_ONCE
 	{
 		_RobotController::update( _MotorValsMsg() );
 	}

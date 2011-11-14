@@ -1,14 +1,14 @@
 /***************************************************************************
  *  include/generic_tests/message_io_test_policy.h
  *  --------------------
- * 
+ *
  *  Copyright (c) 2011, Edward T. Kaszubski ( ekaszubski@gmail.com )
  *  All rights reserved.
- * 
+ *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions are
  *  met:
- *  
+ *
  *  * Redistributions of source code must retain the above copyright
  *    notice, this list of conditions and the following disclaimer.
  *  * Redistributions in binary form must reproduce the above
@@ -18,7 +18,7 @@
  *  * Neither the name of seabee3-ros-pkg nor the names of its
  *    contributors may be used to endorse or promote products derived from
  *    this software without specific prior written permission.
- *  
+ *
  *  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
  *  "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
  *  LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
@@ -30,27 +30,27 @@
  *  THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  *  (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  *  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- * 
+ *
  **************************************************************************/
 
 #ifndef GENERIC_TESTS_GENERIC_TESTS_MESSAGE_IO_TEST_POLICY_H_
 #define GENERIC_TESTS_GENERIC_TESTS_MESSAGE_IO_TEST_POLICY_H_
 
-#include <base_libs/node_handle_policy.h>
-#include <base_libs/multi_subscriber.h>
-#include <base_libs/multi_publisher.h>
-#include <base_libs/macros.h>
+#include <quickdev/node_handle_policy.h>
+#include <quickdev/multi_subscriber.h>
+#include <quickdev/multi_publisher.h>
+#include <quickdev/macros.h>
 #include <generic_tests/test.h>
 
-namespace base_libs
+namespace quickdev
 {
 
-BASE_LIBS_DECLARE_POLICY( MessageIOTest, NodeHandlePolicy )
+QUICKDEV_DECLARE_POLICY( MessageIOTest, NodeHandlePolicy )
 
 template<class __InputMessage, class __OutputMessage>
-BASE_LIBS_DECLARE_POLICY_CLASS( MessageIOTest )
+QUICKDEV_DECLARE_POLICY_CLASS( MessageIOTest )
 {
-	BASE_LIBS_MAKE_POLICY_NAME( MessageIOTest )
+	QUICKDEV_MAKE_POLICY_NAME( MessageIOTest )
 
 public:
 	typedef MessageIOTestPolicy<__InputMessage, __OutputMessage> _MessageIOTestPolicy;
@@ -58,17 +58,17 @@ public:
 private:
 	ros::MultiSubscriber<> multi_sub_;
 	ros::MultiPublisher<> multi_pub_;
-	
-	BASE_LIBS_DECLARE_POLICY_CONSTRUCTOR( MessageIOTest )
+
+	QUICKDEV_DECLARE_POLICY_CONSTRUCTOR( MessageIOTest )
 	{
 		//
 	}
-	
+
 	// input<__InputMessage> --> [node to test] --> output<__OutputMessage>
-	BASE_LIBS_ENABLE_INIT
+	QUICKDEV_ENABLE_INIT
 	{
 		auto & nh_rel = NodeHandlePolicy::getNodeHandle();
-		
+
 		// if "enable_publisher_param" is true, create a publisher
 		if( getMetaParamDef<bool>( "enable_publisher_param", false, args... ) )
 		{
@@ -77,21 +77,21 @@ private:
 			const std::string input_topic_name = ros::ParamReader<std::string, 1>::readParam( nh_rel, input_topic_name_param, "input" );
 			multi_pub_.addPublishers<__InputMessage>( nh_rel, { input_topic_name } );
 		}
-		
+
 		// get the output topic name
 		const std::string output_topic_name_param = getMetaParamDef<std::string>( "output_topic_name_param", "input_topic_name", args... );
 		const std::string output_topic_name = ros::ParamReader<std::string, 1>::readParam( nh_rel, output_topic_name_param, "output" );
 		multi_sub_.addSubscriber( nh_rel, output_topic_name, &_MessageIOTestPolicy::testOutputCB_0, this );
 	}
-	
+
 	// declare the callback for output from the node (extenral) this test is connected to
-	BASE_LIBS_DECLARE_MESSAGE_CALLBACK( testOutputCB_0, typename __OutputMessage )
+	QUICKDEV_DECLARE_MESSAGE_CALLBACK( testOutputCB_0, typename __OutputMessage )
 	{
 		testOutputCB( msg );
 	}
-	
+
 	// pass the output on to children of this policy
-	virtual BASE_LIBS_DECLARE_MESSAGE_CALLBACK( testOutputCB, typename __OutputMessage ){}
+	virtual QUICKDEV_DECLARE_MESSAGE_CALLBACK( testOutputCB, typename __OutputMessage ){}
 };
 
 }

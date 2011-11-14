@@ -8,7 +8,7 @@
   <license>BSD</license>
   <review status="unreviewed" notes=""/>
   <url>http://ros.org/wiki/generic_tests</url>
-  <depend package="base_libs"/>
+  <depend package="quickdev_cpp"/>
 
 </package>
 
