@@ -26,19 +26,22 @@ echo -n 'Configure environment variables? (y/n) '
 read res
 if [ "$res" == "y" ]; then
   sudo sh -c 'echo "source /opt/ros/diamondback/setup.bash" >> ~/.bashrc'
-  sudo sh -c 'echo "\nexport ROS_PACKAGE_PATH=\$ROS_PACKAGE_PATH:~/workspace" >> ~/.bashrc'
+  sudo sh -c 'echo "\nexport ROS_PACKAGE_PATH=\$ROS_PACKAGE_PATH:~/workspace/ros" >> ~/.bashrc'
   sudo sh -c 'echo "\nexport ROS_PARALLEL_JOBS=-j4" >> ~/.bashrc'
   . ~/.bashrc
 fi
 echo "----------"
 
 echo ""
-echo -n 'Install quickdev? (y/n)'
+echo -n 'Install quickdev? (y/n) '
 read res
 if [ "$res" == "y" ]; then
   mkdir -p ~/workspace/ros
+  echo "Downloading source..."
   svn co https://usc-ros-pkg.svn.sourceforge.net/svnroot/usc-ros-pkg/trunk/quickdev/ ~/workspace/ros/quickdev
+  echo "Installing dependencies..."
   rosdep install quickdev
+  echo "Compiling quickdev..."
   rosmake quickdev
 fi
 echo "----------"
@@ -48,6 +51,7 @@ echo -n 'Download seabee3-ros-pkg? (y/n) '
 read res
 if [ "$res" == "y" ]; then
   mkdir -p ~/workspace
+  echo "Downloading source..."
   svn co https://seabee3-ros-pkg.googlecode.com/svn/trunk/diamondback/ ~/workspace/ros/seabee3-ros-pkg
 fi
 echo "----------"
@@ -56,7 +60,9 @@ echo ""
 echo -n 'Compile seabee3-ros-pkg? (y/n) '
 read res
 if [ "$res" == "y" ]; then
+  echo "Installing dependencies..."
   rosdep install seabee3-ros-pkg
+  echo "Compiling seabee3-ros-pkg..."
   rosmake seabee3-ros-pkg
 fi
 echo "----------"
