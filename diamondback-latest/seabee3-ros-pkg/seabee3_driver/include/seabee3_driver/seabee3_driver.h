@@ -60,7 +60,7 @@ QUICKDEV_DECLARE_NODE_CLASS( Seabee3Driver )
 		//
 	}
 
-	QUICKDEV_SPIN_FIRST
+	QUICKDEV_SPIN_FIRST()
 	{
 		auto & nh_rel = quickdev::RunablePolicy::getNodeHandle();
 

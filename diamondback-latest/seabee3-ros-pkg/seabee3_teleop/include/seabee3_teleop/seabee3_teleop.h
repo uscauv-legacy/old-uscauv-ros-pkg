@@ -133,7 +133,7 @@ public:
 		}
 	}
 
-	QUICKDEV_SPIN_FIRST
+	QUICKDEV_SPIN_FIRST()
 	{
 		auto nh_rel = quickdev::RunablePolicy::getNodeHandle();
 
@@ -154,7 +154,7 @@ public:
 
 	}
 
-	QUICKDEV_SPIN_ONCE
+	QUICKDEV_SPIN_ONCE()
 	{
 		_JoystickPolicy::update();
 	}

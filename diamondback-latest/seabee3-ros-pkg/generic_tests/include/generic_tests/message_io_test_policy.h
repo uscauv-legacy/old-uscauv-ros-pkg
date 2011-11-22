@@ -65,7 +65,7 @@ private:
 	}
 
 	// input<__InputMessage> --> [node to test] --> output<__OutputMessage>
-	QUICKDEV_ENABLE_INIT
+	QUICKDEV_ENABLE_INIT()
 	{
 		auto & nh_rel = NodeHandlePolicy::getNodeHandle();
 

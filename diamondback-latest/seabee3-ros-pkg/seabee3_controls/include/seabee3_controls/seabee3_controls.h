@@ -53,7 +53,7 @@ QUICKDEV_DECLARE_NODE_CLASS( Seabee3Controls )
 		//
 	}
 
-	QUICKDEV_SPIN_FIRST
+	QUICKDEV_SPIN_FIRST()
 	{
 		auto & nh_rel = quickdev::RunablePolicy::getNodeHandle();
 
@@ -61,7 +61,7 @@ QUICKDEV_DECLARE_NODE_CLASS( Seabee3Controls )
 		_RobotController::init();
 	}
 
-	QUICKDEV_SPIN_ONCE
+	QUICKDEV_SPIN_ONCE()
 	{
 		_RobotController::update( _MotorValsMsg() );
 	}
