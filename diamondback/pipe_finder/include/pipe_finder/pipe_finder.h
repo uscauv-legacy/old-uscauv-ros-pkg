@@ -186,18 +186,19 @@ _Histogram shiftHistogram( _Histogram histogram )
 
 // compare candidate_hist to template_hist
 // compare histogram to a stored rectangle histogram.
+
+//INCREDIBLY ROUGH. Will fix as needed.
 double compareHistogram( _Histogram template_hist, _Histogram candidate_hist )
 {
-	//store differences into vector????
+	//store differences into vector
 	std::vector<unsigned int> delta;
 
-	//compare differences between two histograms???
+	//compare differences between two histograms
 	for (unsigned int i = 0; i < template_hist.size(); ++i)
 	{
 		delta.push_back( abs( template_hist[i] - candidate_hist[i] ) );
 	}
-	//pffffffffffft idk man
-	return 0;
+	//EDIT THIS
 }
 
 _Histogram generateScaledOrderedHistogram( _Contour contour, _Point some_centroid, unsigned int num_slices)
@@ -227,23 +228,29 @@ bool validatePerimeter( IplImage * input_image, _Contour contour )
 
 void adoptedProcessImage( const IplImage * ipl_image, std::vector<_Contour> & contours )
 {
-	//Shamelesly ripped off from Ed (is this even ok)
+	//Shamelesly ripped off from Ed
 
-				/*output_image = cvCreateImage( cvSize( ipl_image->width,
-													   ipl_image->height ),
-											 IPL_DEPTH_8U,
-											 3 );*/
+	/*output_image = cvCreateImage( cvSize( ipl_image->width,
+		ipl_image->height ),
+		IPL_DEPTH_8U,
+		3 );*/
 
-                cv::Mat current_image_mat( ipl_image );
-                contour::findContours( current_image_mat, contours );
-                // b, g, r
-                /*const CvScalar red = cvScalar( 0, 0, 255 );
-                cv::Mat output_image_mat( output_image_ );
-                cv::drawContours( output_image_mat,
-                                  contours,
-                                  -1,
-                                  red,
-                                  1 );*/
+	cv::Mat current_image_mat( ipl_image );
+	cv::Mat grayscaled_image_mat;
+
+	//grayscaling, may or may not be a great idea   
+	cvtColor(current_image_mat, grayscaled_image_mat, CV_RGB2GRAY);
+
+	contour::findContours( grayscaled_image_mat, contours );
+
+	// b, g, r
+	/*const CvScalar red = cvScalar( 0, 0, 255 );
+		cv::Mat output_image_mat( output_image_ );
+		cv::drawContours( output_image_mat,
+		contours,
+		-1,
+		red,
+		1 );*/
 }
 
 #endif // PIPEFINDER_PIPEFINDER_PIPEFINDER_H_

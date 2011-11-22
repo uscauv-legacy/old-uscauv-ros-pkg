@@ -45,53 +45,53 @@ using contour_types::_Point;
 
 int main(int argc, char* argv[])
 {
-    if(argc != 2)
-    {
-      std::cerr << "Usage: " << argv[0] << " FILENAME" << std::endl;
-      return -1;
-    } //Must pass an image in
+	if(argc != 2)
+	{
+		std::cerr << "Usage: " << argv[0] << " FILENAME" << std::endl;
+		return -1;
+	} //Must pass an image in
 
-IplImage * inputimage = &IplImage( imread(argv[1]) );
+	//IplImage * inputimage = &IplImage( imread(argv[1]) );
+	cv::Mat input_image_mat = imread(argv[1]);
+	IplImage input_image_ipl = input_image_mat;
+	//number of slices to divide the contours into
+	const unsigned int number_of_slices = 8;
 
-//number of slices to divide the contours into
-const unsigned int number_of_slices = 8;
+	//holds the vector of contours
+	std::vector<_Contour> contours;
+	//holds the contour in the above vector we care about
+	_Contour largest_blob;
+	//finds the centroid of the contour we care about
+	_Point the_centroid;
+	//makes the histogram we want
+	_Histogram final_histogram;
 
-//holds the vector of contours
-std::vector<_Contour> contours;
-//holds the contour in the above vector we care about
-_Contour largest_blob;
-//finds the centroid of the contour we care about
-_Point the_centroid;
-//makes the histogram we want
-_Histogram final_histogram;
+	//window for debugging purposes; check to see if image properly passed
+	namedWindow("original_image",1);
 
-//use window to verify we got a good blob for checking
-namedWindow("blob_to_check",1);
-
-	adoptedProcessImage( inputimage,
-						 contours );
-
-	imshow("blob_to_check", cv::Mat( inputimage ));
+	imshow("original_image", input_image_mat );
 	waitKey();
 
-//use the perimeters of the contours to make sure we pick a good blob
-unsigned int perimeter_to_check_by = 0, new_perimeter = 0;
+	adoptedProcessImage( &input_image_ipl, contours );
 
-for(auto contour = contours.begin(); contour != contours.end(); contour++)
-{
-	//if the perimeter is big enough
-	if(validatePerimeter(inputimage, *contour))
+	//use the perimeters of the contours to make sure we pick a good blob
+	unsigned int perimeter_to_check_by = 0, new_perimeter = 0;
+
+	for(auto contour = contours.begin(); contour != contours.end(); contour++)
 	{
-		//if the perimeter is larger than the last big blob we found
-		if(new_perimeter > perimeter_to_check_by)
+		//if the perimeter is big enough
+		if(validatePerimeter(&input_image_ipl, *contour))
 		{
-			largest_blob = *contour;
-			perimeter_to_check_by = new_perimeter;
+			//if the perimeter is larger than the last big blob we found
+			if(new_perimeter > perimeter_to_check_by)
+			{
+				largest_blob = *contour;
+				perimeter_to_check_by = new_perimeter;
+			}
 		}
 	}
-}
 
-if (perimeter_to_check_by == 0)
+	if (perimeter_to_check_by == 0)
 	{
 		//if you can't find a good perimeter, weeeh
 		std::cout<<"No valid blobs found."<<std::endl;
@@ -100,11 +100,11 @@ if (perimeter_to_check_by == 0)
 
 	//otherwise, get centroid
 	the_centroid = calculateCentroid( largest_blob.begin(),
-									  largest_blob.end() );
+			largest_blob.end() );
 	//so we can pass it here
 	final_histogram = generateScaledOrderedHistogram( largest_blob,
-													  the_centroid,
-											  		  number_of_slices );
+			the_centroid,
+			number_of_slices );
 	std::cout<<"If we're here, it maybe worked!"<<std::endl;
 
 	return 0;
