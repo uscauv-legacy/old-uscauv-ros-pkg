@@ -1,0 +1,8 @@
+<library path="lib/libxsens_driver_nodelets">
+
+  <class name="xsens_driver/xsens_driver" type="xsens_driver::xsens_driverNodelet" base_class_type="nodelet::Nodelet">
+    <description>
+      todo: fill this in
+    </description>
+  </class>
+</library>
