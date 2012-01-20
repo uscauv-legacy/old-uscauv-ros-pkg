@@ -18,13 +18,13 @@ set(EXECUTABLE_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/bin)
 set(LIBRARY_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/lib)
 
 # uncomment if you have defined messages
-#rosbuild_genmsg()
+rosbuild_genmsg()
 # uncomment if you have defined services
-#rosbuild_gensrv()
+rosbuild_gensrv()
 # uncomment if you have defined dynamic reconfigure files
 # Note: requires "rosbuild_include( quickdev_cpp dynamic_reconfigure )"
 #quickdev_gencfg()
 
 add_subdirectory( src )
 add_subdirectory( nodes )
-add_subdirectory( nodelets )
+#add_subdirectory( nodelets )

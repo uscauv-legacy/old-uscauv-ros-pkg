@@ -15,7 +15,7 @@
  *    copyright notice, this list of conditions and the following disclaimer
  *    in the documentation and/or other materials provided with the
  *    distribution.
- *  * Neither the name of seabee3-ros-pkg nor the names of its
+ *  * Neither the name of usc-ros-pkg nor the names of its
  *    contributors may be used to endorse or promote products derived from
  *    this software without specific prior written permission.
  *
@@ -39,11 +39,11 @@
 // These are not the codes you're looking for...probably
 // This file was auto-generated; you probably want to modify ../include/xsens_driver/xsens_driver_node.h
 
-// declare xsens_driver in namespace xsens_driver
+// declare XsensDriver in namespace xsens_driver
 //
-QUICKDEV_DECLARE_NODELET( xsens_driver, xsens_driver )
+QUICKDEV_DECLARE_NODELET( xsens_driver, XsensDriver )
 
 // instantiate our nodelet; this macro expands to a call to PLUGINLIB_DECLARE_CLASS and
-// registers our nodelet class xsens_driver::xsens_driver as xsens_driver/xsens_driver
+// registers our nodelet class xsens_driver::XsensDriver as xsens_driver/xsens_driver
 //
-QUICKDEV_INST_NODELET( xsens_driver, xsens_driver, xsens_driver )
+QUICKDEV_INST_NODELET( xsens_driver, XsensDriver, xsens_driver )

@@ -8,9 +8,10 @@ foreach( source ${ALL_SOURCES} )
     # source_src = foo.cpp
     # source_name = foo
     get_filename_component( source_name_base ${source} NAME_WE )
-    set( source_name ${source_name_base} )
+    set( source_name ${source_name_base}_node )
     set( source_src ${source} )
 
     # rosbuild_add_executable( foo foo.cpp )
     rosbuild_add_executable( ${source_name} ${source_src} )
+    target_link_libraries( ${source_name} ${PROJECT_NAME} )
 endforeach( source )
