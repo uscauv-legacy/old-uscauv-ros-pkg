@@ -27,4 +27,4 @@ rosbuild_gensrv()
 
 add_subdirectory( src )
 add_subdirectory( nodes )
-#add_subdirectory( nodelets )
+add_subdirectory( nodelets )
