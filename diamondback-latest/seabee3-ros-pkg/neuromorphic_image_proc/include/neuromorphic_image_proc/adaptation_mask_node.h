@@ -46,7 +46,11 @@ QUICKDEV_DECLARE_NODE_CLASS( AdaptationMask )
 {
     cv::Mat last_image_;
     cv::Mat adaptation_image_;
+    cv::Mat high_values_mask_;
+    cv::Mat adaptation_mask_;
+    cv::Mat adaptation_time_image_;
     cv::Mat adaptation_mask_image_;
+    const static unsigned int threshold_ = 30;
 
     QUICKDEV_DECLARE_NODE_CONSTRUCTOR( AdaptationMask )
     {
@@ -61,10 +65,18 @@ QUICKDEV_DECLARE_NODE_CLASS( AdaptationMask )
 
         image_pubs_.addPublishers<
             sensor_msgs::Image,
+            sensor_msgs::Image,
+            sensor_msgs::Image,
+            sensor_msgs::Image,
+            sensor_msgs::Image,
             sensor_msgs::Image>( nh_rel,
             {
                 "image_lab",
-                "image_adaptation"
+                "last_image_lab",
+                "high_values_mask",
+                "image_adaptation_time",
+                "image_adaptation",
+                "image_adaptation_mask"
             }, publisher_storage_ );
     }
 
@@ -83,22 +95,41 @@ QUICKDEV_DECLARE_NODE_CLASS( AdaptationMask )
         // find the difference for each pixel (in time)
         if( last_image_.empty() ) last_image_ = cv::Mat( lab_image.rows, lab_image.cols, CV_8UC3 );
         cv::absdiff( lab_image, last_image_, adaptation_image_ );
-        adaptation_image_ /= 3;
 
         // flatten the image (sum the channels)
         std::vector<cv::Mat> adaptation_images( 3 );
         cv::split( adaptation_image_, adaptation_images );
 
-        adaptation_mask_image_ = adaptation_images[0];
-        for( size_t i = 1; i < adaptation_images.size(); ++i )
+        //if( adaptation_mask_image_.empty() ) adaptation_mask_image_ = cv::Mat( adaptation_images[0].rows, adaptation_images[0].cols, adaptation_images[0].depth(), cv::Scalar( 0 ) );
+        if( adaptation_time_image_.empty() ) adaptation_time_image_ = cv::Mat( adaptation_mask_image_.rows, adaptation_mask_image_.cols, CV_8UC1 );
+        adaptation_time_image_ += 1;
+        adaptation_mask_image_ = adaptation_images[0] * 0.7 + adaptation_images[1] * 0.15 + adaptation_images[2] * 0.15 + adaptation_time_image_;
+        /*for( size_t i = 1; i < adaptation_images.size(); ++i )
         {
             adaptation_mask_image_ += adaptation_images[i];
-        }
+        }*/
+
+        //cv::Mat high_values_mask( adaptation_mask_image_.rows, adaptation_mask_image_.cols, CV_8UC1 );
+        cv::threshold( adaptation_mask_image_, high_values_mask_, threshold_, 255, CV_THRESH_BINARY );
+        cv::threshold( adaptation_mask_image_, adaptation_mask_, threshold_, 255, CV_THRESH_TOZERO_INV );
+
+        //cv::normalize( adaptation_mask_, adaptation_mask_, 255, 0, CV_MINMAX );
+
+        cv::GaussianBlur( adaptation_mask_, adaptation_mask_, cv::Size( 3, 3 ), 0 );
+        cv::GaussianBlur( high_values_mask_, high_values_mask_, cv::Size( 3, 3 ), 0 );
 
         publishImages( "image_lab", ImageProcPolicy::fromMat( lab_image ) );
+        publishImages( "high_values_mask", ImageProcPolicy::fromMat( high_values_mask_, "", "mono8" ) );
+        publishImages( "image_adaptation_time", ImageProcPolicy::fromMat( adaptation_time_image_, "", "mono8" ) );
         publishImages( "image_adaptation", ImageProcPolicy::fromMat( adaptation_mask_image_, "", "mono8" ) );
+        publishImages( "image_adaptation_mask", ImageProcPolicy::fromMat( adaptation_mask_, "", "mono8" ) );
 
-        last_image_ = lab_image;
+        lab_image.copyTo( last_image_, high_values_mask_ );
+        adaptation_time_image_.setTo( cv::Scalar( 0 ), high_values_mask_ );
+
+        publishImages( "last_image_lab", ImageProcPolicy::fromMat( last_image_ ) );
+
+        //last_image_ = lab_image;
     }
 
     QUICKDEV_SPIN_ONCE()
