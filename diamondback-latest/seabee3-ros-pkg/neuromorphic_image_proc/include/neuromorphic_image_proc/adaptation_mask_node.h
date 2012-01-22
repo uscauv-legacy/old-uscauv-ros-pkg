@@ -38,11 +38,18 @@
 
 #include <quickdev/node.h>
 #include <quickdev/image_proc_policy.h>
+#include <quickdev/feature.h>
 
 QUICKDEV_DECLARE_NODE( AdaptationMask, quickdev::ImageProcPolicy )
 
 QUICKDEV_DECLARE_NODE_CLASS( AdaptationMask )
 {
+    cv::Mat last_image_;
+    cv::Mat adaptation_image_;
+    cv::Mat adaptation_mask_image_;
+
+    const static double EUCLIDIAN_DISTANCE_TO_BYTE_SCALE = 255.0 / 441.67295593;
+
     QUICKDEV_DECLARE_NODE_CONSTRUCTOR( AdaptationMask )
     {
         //
@@ -54,7 +61,13 @@ QUICKDEV_DECLARE_NODE_CLASS( AdaptationMask )
 
         QUICKDEV_GET_RUNABLE_NODEHANDLE( nh_rel );
 
-        image_pubs_.addPublishers<sensor_msgs::Image>( nh_rel, {"image_lab", "image_adaptation"}, publisher_storage_ );
+        image_pubs_.addPublishers<
+            sensor_msgs::Image,
+            sensor_msgs::Image>( nh_rel,
+            {
+                "image_lab",
+                "image_adaptation"
+            }, publisher_storage_ );
     }
 
     IMAGE_PROC_PROCESS_IMAGE( image_ptr )
@@ -65,7 +78,38 @@ QUICKDEV_DECLARE_NODE_CLASS( AdaptationMask )
         cv::Mat lab_image;
         cv::cvtColor( image, lab_image, CV_BGR2Lab );
 
+        // convert our LAB image to float
+        cv::Mat lab_image_float;
+        lab_image.convertTo( lab_image_float, CV_32F );
+
+        // calculate the euclidian distance from the current pixel to the last pixel (in time)
+
+        // find the difference for each pixel (in time)
+        adaptation_image_ = lab_image_float - last_image_;
+
+        // square all pixels
+        cv::pow( adaptation_image_, 2, adaptation_image_ );
+
+        // flatten the image (sum the channels)
+        std::vector<cv::Mat> adaptation_images( 3 );
+        cv::split( adaptation_image_, adaptation_images );
+
+        adaptation_mask_image_ = adaptation_images[0];
+        for( size_t i = 1; i < adaptation_images.size(); ++i )
+        {
+            adaptation_mask_image_ += adaptation_images[i];
+        }
+
+        // take the square root of each pixel
+        cv::sqrt( adaptation_mask_image_, adaptation_mask_image_ );
+
+        cv::Mat adaptation_mask_image_byte;
+        adaptation_mask_image_.convertTo( adaptation_mask_image_byte, CV_8U, EUCLIDIAN_DISTANCE_TO_BYTE_SCALE );
+
         publishImages( "image_lab", ImageProcPolicy::fromMat( lab_image ) );
+        publishImages( "image_adaptation", ImageProcPolicy::fromMat( adaptation_mask_image_byte, "", "mono8" ) );
+
+        last_image_ = lab_image_float;
     }
 
     QUICKDEV_SPIN_ONCE()
