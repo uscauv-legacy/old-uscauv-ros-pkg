@@ -1,17 +1,18 @@
 <package>
-  <description brief="neuromorphic_image_proc">
+  <description brief="color_classifier">
 
-     neuromorphic_image_proc
+     color_classifier
 
   </description>
   <author>Edward T. Kaszubski ( ekaszubski@gmail.com )</author>
   <license>BSD</license>
   <review status="unreviewed" notes=""/>
-  <url>http://ros.org/wiki/neuromorphic_image_proc</url>
+  <url>http://ros.org/wiki/color_classifier</url>
   <depend package="quickdev_cpp"/>
   <depend package="nodelet"/>
+  <depend package="neuromorphic_image_proc"/>
+  <depend package="seabee3_common"/>
   <export>
-    <cpp cflags="-I${prefix}/include" lflags="-Wl,-rpath,${prefix}/lib -L${prefix}/lib -lneuromorphic_image_proc"/>
     <nodelet plugin="${prefix}/nodelets/nodelet_plugins.xml"/>
   </export>
 </package>
