@@ -4,22 +4,13 @@
      seabee3_controls
 
   </description>
-  <author>Edward T. Kaszubski</author>
+  <author>Edward T. Kaszubski ( ekaszubski@gmail.com )</author>
   <license>BSD</license>
   <review status="unreviewed" notes=""/>
   <url>http://ros.org/wiki/seabee3_controls</url>
-  <!-- build dependencies -->
   <depend package="quickdev_cpp"/>
-  <depend package="seabee3_driver"/> <!-- for Depth.msg, KillSwitch.msg, MotorCntl.msg, Pressure.msg -->
-  <!--depend package="std_msgs"/--> <!-- for Empty.msg -->
-  <!--depend package="std_srvs"/-->
-  <!-- runtime dependencies -->
-  <!--depend package="seabee3_physics"/>
-  <depend package="seabee3_stabilizer"/-->
+  <depend package="nodelet"/>
   <export>
-    <cpp cflags="-I${prefix}/include" lflags="-Wl,-rpath,${prefix}/lib -L${prefix}/lib"/>
+    <nodelet plugin="${prefix}/nodelets/nodelet_plugins.xml"/>
   </export>
-
 </package>
-
-

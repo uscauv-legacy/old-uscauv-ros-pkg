@@ -1,5 +1,5 @@
 /***************************************************************************
- *  include/seabee3_controls/seabee3_controls.h
+ *  nodelets/seabee3_controls.cpp
  *  --------------------
  *
  *  Copyright (c) 2011, Edward T. Kaszubski ( ekaszubski@gmail.com )
@@ -33,38 +33,17 @@
  *
  **************************************************************************/
 
-#ifndef SEABEE3_CONTROLS_SEABEE3_CONTROLS_SEABEE3_CONTROLS_H_
-#define SEABEE3_CONTROLS_SEABEE3_CONTROLS_SEABEE3_CONTROLS_H_
+#include <quickdev/nodelet.h>
+#include <seabee3_controls/seabee3_controls_node.h>
 
-#include <quickdev/node.h>
-#include <quickdev/robot_controller_policy.h>
-// #include <controllers>
-#include <seabee3_driver/MotorVals.h>
+// These are not the codes you're looking for...probably
+// This file was auto-generated; you probably want to modify ../include/seabee3_controls/seabee3_controls_node.h
 
-typedef seabee3_driver::MotorVals _MotorValsMsg;
-typedef quickdev::RobotControllerPolicy<_MotorValsMsg> _RobotController;
+// declare Seabee3Controls in namespace seabee3_controls
+//
+QUICKDEV_DECLARE_NODELET( seabee3_controls, Seabee3Controls )
 
-QUICKDEV_DECLARE_NODE( Seabee3Controls, _RobotController )
-
-QUICKDEV_DECLARE_NODE_CLASS( Seabee3Controls )
-{
-	QUICKDEV_DECLARE_NODE_CONSTRUCTOR( Seabee3Controls )
-	{
-		//
-	}
-
-	QUICKDEV_SPIN_FIRST()
-	{
-		auto & nh_rel = quickdev::RunablePolicy::getNodeHandle();
-
-		nh_rel.setParam( "robot_name", "seabee3" );
-		_RobotController::init();
-	}
-
-	QUICKDEV_SPIN_ONCE()
-	{
-		_RobotController::update( _MotorValsMsg() );
-	}
-};
-
-#endif // SEABEE3_CONTROLS_SEABEE3_CONTROLS_SEABEE3_CONTROLS_H_
+// instantiate our nodelet; this macro expands to a call to PLUGINLIB_DECLARE_CLASS and
+// registers our nodelet class seabee3_controls::Seabee3Controls as seabee3_controls/seabee3_controls
+//
+QUICKDEV_INST_NODELET( seabee3_controls, Seabee3Controls, seabee3_controls )

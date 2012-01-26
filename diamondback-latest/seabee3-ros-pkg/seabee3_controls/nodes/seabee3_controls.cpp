@@ -1,5 +1,5 @@
 /***************************************************************************
- *  nodes/seabee3_controls_node.cpp
+ *  nodes/seabee3_controls.cpp
  *  --------------------
  *
  *  Copyright (c) 2011, Edward T. Kaszubski ( ekaszubski@gmail.com )
@@ -33,6 +33,11 @@
  *
  **************************************************************************/
 
-#include <seabee3_controls/seabee3_controls.h>
+#include <seabee3_controls/seabee3_controls_node.h>
 
+// These are not the codes you're looking for...probably
+// This file was auto-generated; you probably want to modify ../include/seabee3_controls/seabee3_controls_node.h
+
+// instantiate our node; this macro expands to an int main( ... ) in which an instance of our node is created and started
+//
 QUICKDEV_INST_NODE( Seabee3ControlsNode, "seabee3_controls" )
