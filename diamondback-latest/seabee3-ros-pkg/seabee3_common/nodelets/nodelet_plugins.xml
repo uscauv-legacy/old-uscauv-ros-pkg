@@ -1,0 +1,8 @@
+<library path="lib/libseabee3_common_nodelets">
+
+  <class name="seabee3_common/image_array_viewer" type="seabee3_common::ImageArrayViewerNodelet" base_class_type="nodelet::Nodelet">
+    <description>
+      todo: fill this in
+    </description>
+  </class>
+</library>

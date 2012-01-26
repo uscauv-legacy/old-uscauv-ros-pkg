@@ -1,5 +1,5 @@
 /***************************************************************************
- *  nodelets/image_server_nodelet.cpp
+ *  nodelets/image_array_viewer.cpp
  *  --------------------
  *
  *  Copyright (c) 2011, Edward T. Kaszubski ( ekaszubski@gmail.com )
@@ -34,12 +34,16 @@
  **************************************************************************/
 
 #include <quickdev/nodelet.h>
-#include <image_server/image_server.h>
+#include <seabee3_common/image_array_viewer_node.h>
 
-// nodelet is designed to wrap an existing node; here, we want to wrap ImageServerNode
-// a new class, image_server::ImageServerNodelet, is created for this purpose
-QUICKDEV_DECLARE_NODELET( image_server, ImageServer )
+// These are not the codes you're looking for...probably
+// This file was auto-generated; you probably want to modify ../include/seabee3_common/image_array_viewer_node.h
 
-// wrapper around PLUGINLIB_DECLARE_CLASS
-// we want to wrap image_server::ImageServerNodelet and call it image_server
-QUICKDEV_INST_NODELET( image_server, ImageServer, image_server )
+// declare ImageArrayViewer in namespace seabee3_common
+//
+QUICKDEV_DECLARE_NODELET( seabee3_common, ImageArrayViewer )
+
+// instantiate our nodelet; this macro expands to a call to PLUGINLIB_DECLARE_CLASS and
+// registers our nodelet class seabee3_common::ImageArrayViewer as seabee3_common/image_array_viewer
+//
+QUICKDEV_INST_NODELET( seabee3_common, ImageArrayViewer, image_array_viewer )

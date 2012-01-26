@@ -1,5 +1,5 @@
 /***************************************************************************
- *  nodes/image_server_node.cpp
+ *  nodes/image_server.cpp
  *  --------------------
  *
  *  Copyright (c) 2011, Edward T. Kaszubski ( ekaszubski@gmail.com )
@@ -33,6 +33,6 @@
  *
  **************************************************************************/
 
-#include <image_server/image_server.h>
+#include <image_server/image_server_node.h>
 
 QUICKDEV_INST_NODE( ImageServerNode, "image_server" )

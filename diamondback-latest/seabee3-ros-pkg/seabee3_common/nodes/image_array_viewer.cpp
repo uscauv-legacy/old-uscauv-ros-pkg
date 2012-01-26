@@ -1,5 +1,5 @@
 /***************************************************************************
- *  include/seabee3_common/colors.h
+ *  nodes/image_array_viewer.cpp
  *  --------------------
  *
  *  Copyright (c) 2011, Edward T. Kaszubski ( ekaszubski@gmail.com )
@@ -33,12 +33,11 @@
  *
  **************************************************************************/
 
-#ifndef SEABEE3COMMON_COLORS_H_
-#define SEABEE3COMMON_COLORS_H_
+#include <seabee3_common/image_array_viewer_node.h>
 
-class Colors
-{
-    //
-};
+// These are not the codes you're looking for...probably
+// This file was auto-generated; you probably want to modify ../include/seabee3_common/image_array_viewer_node.h
 
-#endif // SEABEE3COMMON_COLORS_H_
+// instantiate our node; this macro expands to an int main( ... ) in which an instance of our node is created and started
+//
+QUICKDEV_INST_NODE( ImageArrayViewerNode, "image_array_viewer" )

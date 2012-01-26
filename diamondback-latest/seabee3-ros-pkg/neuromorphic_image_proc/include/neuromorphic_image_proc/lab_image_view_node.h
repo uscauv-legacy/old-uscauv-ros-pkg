@@ -87,7 +87,7 @@ QUICKDEV_DECLARE_NODE_CLASS( LabImageView )
         // copy b_image to this sub-matrix
         b_image.copyTo( combined_image_sub );
 
-        publishImages( "output_image", ImageProcPolicy::fromMat( combined_image, "", "mono8" ) );
+        publishImages( "output_image", quickdev::opencv_conversion::fromMat( combined_image, "", "mono8" ) );
 
         cv::imshow( "L_a_b", combined_image );
 

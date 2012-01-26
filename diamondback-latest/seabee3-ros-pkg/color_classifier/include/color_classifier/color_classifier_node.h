@@ -93,7 +93,8 @@ protected:
                 {
                     if( false ) continue;
                     auto const & desired_color = seabee3_common::colors::PIXELS[i];
-                    classified_images_[i].at<uchar>( y, x ) = std::numeric_limits<uchar>::max() * pixel.distanceTo<quickdev::feature::mode::distance::GAUSSIAN>( desired_color, 0.1 );
+                    quickdev::Feature<float> const sigma( 0.1f, 0.1f, 0.1f );
+                    classified_images_[i].at<uchar>( y, x ) = std::numeric_limits<uchar>::max() * pixel.distanceTo<quickdev::feature::mode::distance::GAUSSIAN>( desired_color, sigma, 1.0 );
                 }
             }
         }
@@ -103,12 +104,12 @@ protected:
 
         for( size_t i = 0; i < classified_images_.size(); ++i )
         {
-            named_image_array_message.images[i].image = *ImageProcPolicy::fromMat( classified_images_[i] );
+            named_image_array_message.images[i].image = *quickdev::opencv_conversion::fromMat( classified_images_[i] );
         }
 
         multi_pub_.publish( "classified_images", named_image_array_message );
 
-        publishImages( "output_adaptation_image", ImageProcPolicy::fromMat( mask ) );
+        publishImages( "output_adaptation_image", quickdev::opencv_conversion::fromMat( mask ) );
 
     }
 

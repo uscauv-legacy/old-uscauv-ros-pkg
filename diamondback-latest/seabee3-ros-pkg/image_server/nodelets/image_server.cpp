@@ -1,5 +1,5 @@
 /***************************************************************************
- *  include/neuromorphic_image_proc/adaptation_image_proc_policy.h
+ *  nodelets/image_server.cpp
  *  --------------------
  *
  *  Copyright (c) 2011, Edward T. Kaszubski ( ekaszubski@gmail.com )
@@ -33,50 +33,13 @@
  *
  **************************************************************************/
 
-#ifndef NEUROMORPHICIMAGEPROC_ADAPTATIONIMAGEPROCPOLICY_H_
-#define NEUROMORPHICIMAGEPROC_ADAPTATIONIMAGEPROCPOLICY_H_
+#include <quickdev/nodelet.h>
+#include <image_server/image_server_node.h>
 
-#include <quickdev/image_proc_policy.h>
+// nodelet is designed to wrap an existing node; here, we want to wrap ImageServerNode
+// a new class, image_server::ImageServerNodelet, is created for this purpose
+QUICKDEV_DECLARE_NODELET( image_server, ImageServer )
 
-QUICKDEV_DECLARE_POLICY_NS( AdaptationImageProc )
-{
-    typedef quickdev::ImageProcPolicy _ImageProcPolicy;
-}
-
-QUICKDEV_DECLARE_POLICY( AdaptationImageProc, _ImageProcPolicy )
-
-QUICKDEV_DECLARE_POLICY_CLASS( AdaptationImageProc )
-{
-    // create utility functions for this policy
-    //
-    QUICKDEV_MAKE_POLICY_FUNCS( AdaptationImageProc )
-
-    cv_bridge::CvImageConstPtr adaptation_mask_ptr_;
-
-    QUICKDEV_DECLARE_POLICY_CONSTRUCTOR( AdaptationImageProc )
-    {
-        printPolicyActionStart( "create", this );
-
-        preInit();
-
-        printPolicyActionDone( "create", this );
-    }
-
-    void preInit()
-    {
-        QUICKDEV_GET_NODEHANDLE( nh_rel );
-
-        // subscription to mask with pixel updates
-        image_subs_.addSubscriber( nh_rel, "adaptation_mask", &AdaptationImageProcPolicy::adaptationImageCB, this, subscriber_storage_ );
-
-        // publisher for modified mask
-        image_pubs_.addPublishers<sensor_msgs::Image>( nh_rel, {"output_adaptation_mask"}, publisher_storage_ );
-    }
-
-    void adaptationImageCB( const sensor_msgs::Image::ConstPtr & image_msg )
-    {
-        adaptation_mask_ptr_ = quickdev::opencv_conversion::fromImageMsg( image_msg );
-    }
-};
-
-#endif // NEUROMORPHICIMAGEPROC_ADAPTATIONIMAGEPROCPOLICY_H_
+// wrapper around PLUGINLIB_DECLARE_CLASS
+// we want to wrap image_server::ImageServerNodelet and call it image_server
+QUICKDEV_INST_NODELET( image_server, ImageServer, image_server )

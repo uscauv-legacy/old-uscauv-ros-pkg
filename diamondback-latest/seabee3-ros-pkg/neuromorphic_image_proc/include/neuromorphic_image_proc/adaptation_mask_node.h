@@ -91,8 +91,8 @@ QUICKDEV_DECLARE_NODE_CLASS( AdaptationMask )
         //cv::GaussianBlur( high_values_mask_, high_values_mask_, cv::Size( 3, 3 ), 0 );
         //cv::threshold( high_values_mask_, high_values_mask_, 127, 255, CV_THRESH_BINARY );
 
-        publishImages( "output_image", ImageProcPolicy::fromMat( lab_image ) );
-        publishImages( "output_adaptation_image", ImageProcPolicy::fromMat( high_values_mask_, "", "mono8" ) );
+        publishImages( "output_image", quickdev::opencv_conversion::fromMat( lab_image ) );
+        publishImages( "output_adaptation_image", quickdev::opencv_conversion::fromMat( high_values_mask_, "", "mono8" ) );
 
         lab_image.copyTo( last_image_, high_values_mask_ );
         adaptation_time_image_.setTo( cv::Scalar( 0 ), high_values_mask_ );

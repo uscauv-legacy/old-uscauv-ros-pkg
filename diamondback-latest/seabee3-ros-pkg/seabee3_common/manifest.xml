@@ -9,7 +9,9 @@
   <review status="unreviewed" notes=""/>
   <url>http://ros.org/wiki/seabee3_common</url>
   <depend package="quickdev_cpp"/>
+  <depend package="nodelet"/>
   <export>
     <cpp cflags="-I${prefix}/include" lflags="-Wl,-rpath,${prefix}/lib -L${prefix}/lib -lseabee3_common"/>
+    <nodelet plugin="${prefix}/nodelets/nodelet_plugins.xml"/>
   </export>
 </package>
