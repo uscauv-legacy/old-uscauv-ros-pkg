@@ -20,6 +20,8 @@ To be done at a later time:
 #include <iostream>
 #include <opencv2/opencv.hpp>
 #include <vector>
+#define CVCLOSE_ITR 1
+
 //#include <pipe_finder/pipe_finder.h>
 
 using namespace cv;
@@ -60,6 +62,10 @@ storage = cvCreateMemStorage(0);
 contours = cvCreateSeq(CV_SEQ_ELTYPE_POINT, sizeof(CvSeq), sizeof(CvPoint) , storage);
 
 cvtColor(input, gray_input, CV_RGB2GRAY);
+//clean up image
+cvMorphologyEx( &IplImage( gray_input ), &IplImage( gray_input ), 0, 0, CV_MOP_OPEN, CVCLOSE_ITR );
+cvMorphologyEx( &IplImage( gray_input ), &IplImage( gray_input ), 0, 0, CV_MOP_CLOSE, CVCLOSE_ITR );
+
 cvFindContours( &IplImage( gray_input ), storage, &contours, sizeof( CvContour ), CV_RETR_LIST, CV_CHAIN_APPROX_SIMPLE );	
 while(contours != NULL)
 {
