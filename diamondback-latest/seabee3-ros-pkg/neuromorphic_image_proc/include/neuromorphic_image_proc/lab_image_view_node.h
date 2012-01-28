@@ -43,7 +43,9 @@ QUICKDEV_DECLARE_NODE( LabImageView, quickdev::ImageProcPolicy )
 
 QUICKDEV_DECLARE_NODE_CLASS( LabImageView )
 {
-    QUICKDEV_DECLARE_NODE_CONSTRUCTOR( LabImageView )
+    std::vector<cv::Mat> image_channels_;
+    QUICKDEV_DECLARE_NODE_CONSTRUCTOR( LabImageView ),
+        image_channels_( 3 )
     {
         cv::namedWindow( "L_a_b", 0 );
     }
@@ -57,15 +59,13 @@ QUICKDEV_DECLARE_NODE_CLASS( LabImageView )
     {
         cv::Mat const & image = image_ptr->image;
 
-        std::vector<cv::Mat> image_channels( 3 );
-
         // split 3-channel image into 3 single-channel images
-        cv::split( image, image_channels );
+        cv::split( image, image_channels_ );
 
         // get named references to each resulting image
-        cv::Mat const & l_image = image_channels[0];
-        cv::Mat const & a_image = image_channels[1];
-        cv::Mat const & b_image = image_channels[2];
+        cv::Mat const & l_image = image_channels_[0];
+        cv::Mat const & a_image = image_channels_[1];
+        cv::Mat const & b_image = image_channels_[2];
 
         // allocate an image with the height of the original and the width of 3 times the original
         cv::Mat combined_image( image.rows, 3 * image.cols, CV_8UC1 );

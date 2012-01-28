@@ -1,5 +1,5 @@
 /***************************************************************************
- *  nodes/seabee3_driver_node.cpp
+ *  include/seabee3_driver/bee_stem3.h
  *  --------------------
  *
  *  Copyright (c) 2011, Edward T. Kaszubski ( ekaszubski@gmail.com )
@@ -33,6 +33,52 @@
  *
  **************************************************************************/
 
-#include <seabee3_driver/seabee3_driver.h>
+#ifndef SEABEE3DRIVER_BEESTEM3_H_
+#define SEABEE3DRIVER_BEESTEM3_H_
 
-QUICKDEV_INST_NODE( Seabee3DriverNode, "seabee3_driver" )
+#include <seabee3_common/movement.h>
+#include <quickdev/serial.h>
+//#include <common_utils/types.h>      // for byte
+#include <string>
+#include <vector>
+
+#define PID_DEPTH       0
+#define PID_HEADING     1
+#define PID_ENABLE      3
+#define PID_DISABLE     2
+
+#define DESIRED_DEPTH   0
+#define DESIRED_HEADING 1
+
+class BeeStem3
+{
+public:
+
+    //! Default constructor; see ModelComponent.H
+    BeeStem3( std::string default_device );
+
+    //! Destructor
+    ~BeeStem3();
+
+    bool getSensors( int &accelX, int &accelY, int &accelZ, int &compassHeading, int &compassPitch, int &compassRoll, int &internalPressure, int &externalPressure, int &desiredHeading,
+            int &desiredDepth, int &desiredSpeed, int &headingK, int &headingP, int &headingD, int &headingI, int &headingOutput, int &depthK, int &depthP, int &depthD, int &depthI, int &depthOutput,
+            char &killSwitch );
+
+    bool setPID( int pidMode, float k, float p, float i, float d );
+
+    // bool setDesiredValues(int16_t heading, int16_t depth, char speed, char markerDropper);
+    bool setDesiredHeading( int16_t heading );
+    bool setDesiredDepth( int16_t depth );
+    bool setDesiredSpeed( char speed );
+    void setThruster( int num, int val );
+    void startCompassCalibration();
+    void endCompassCalibration();
+
+    std::vector<int> mMotorControllerState;
+
+protected:
+    SerialPort * itsPort; //!< Serial port to use
+    pthread_mutex_t itsSerialLock;
+};
+
+#endif // SEABEE3DRIVER_BEESTEM3_H_

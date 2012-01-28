@@ -1,0 +1,8 @@
+<library path="lib/libseabee3_driver_nodelets">
+
+  <class name="seabee3_driver/seabee3_driver" type="seabee3_driver::Seabee3DriverNodelet" base_class_type="nodelet::Nodelet">
+    <description>
+      todo: fill this in
+    </description>
+  </class>
+</library>

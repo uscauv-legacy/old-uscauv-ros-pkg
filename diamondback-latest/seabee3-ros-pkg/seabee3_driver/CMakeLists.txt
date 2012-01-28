@@ -10,22 +10,22 @@ include($ENV{ROS_ROOT}/core/rosbuild/rosbuild.cmake)
 #set(ROS_BUILD_TYPE RelWithDebInfo)
 
 rosbuild_init()
+rosbuild_include( quickdev_cpp add_library_auto )
 rosbuild_include( quickdev_cpp dynamic_reconfigure )
 
 #set the default path for built executables to the "bin" directory
 set(EXECUTABLE_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/bin)
-
 #set the default path for built libraries to the "lib" directory
 set(LIBRARY_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/lib)
 
-# Auto-generated files for this package are under version control.
-# To make changes to these files, uncomment the following section,
-# build, then re-comment and commit the changes. Depending on the
-# state of this package, it may also be necessary to temporarily
-# rename the 'ROS_NOBUILD' file before the package will build.
-#
+# uncomment if you have defined messages
 rosbuild_genmsg()
+# uncomment if you have defined services
 rosbuild_gensrv()
+# uncomment if you have defined dynamic reconfigure files
+# Note: requires "rosbuild_include( quickdev_cpp dynamic_reconfigure )"
 quickdev_gencfg()
 
+add_subdirectory( src )
 add_subdirectory( nodes )
+add_subdirectory( nodelets )
