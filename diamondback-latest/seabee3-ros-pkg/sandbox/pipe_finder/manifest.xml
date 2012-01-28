@@ -1,0 +1,16 @@
+<package>
+  <description brief="pipe_finder">
+
+     pipe_finder
+
+  </description>
+  <author>kathryn</author>
+  <license>BSD</license>
+  <review status="unreviewed" notes=""/>
+  <url>http://ros.org/wiki/pipe_finder</url>
+  <depend package="quickdev_cpp"/>
+  <depend package="nodelet"/>
+  <export>
+    <nodelet plugin="${prefix}/nodelets/nodelet_plugins.xml"/>
+  </export>
+</package>
