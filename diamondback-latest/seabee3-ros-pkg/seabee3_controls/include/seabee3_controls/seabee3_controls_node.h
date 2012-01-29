@@ -55,10 +55,9 @@ QUICKDEV_DECLARE_NODE_CLASS( Seabee3Controls )
 
     QUICKDEV_SPIN_FIRST()
     {
-        auto & nh_rel = quickdev::RunablePolicy::getNodeHandle();
+        initPolicies<_RobotController>( "robot_name_param", std::string( "seabee3" ) );
 
-        nh_rel.setParam( "robot_name", "seabee3" );
-        _RobotController::init();
+        initPolicies<quickdev::policy::ALL>();
     }
 
     QUICKDEV_SPIN_ONCE()
