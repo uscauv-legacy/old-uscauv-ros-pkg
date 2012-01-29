@@ -55,7 +55,10 @@ class BeeStem3
 public:
 
     //! Default constructor; see ModelComponent.H
-    BeeStem3( std::string default_device );
+    BeeStem3();
+    BeeStem3( std::string const & default_device );
+
+    bool connect( std::string const & port );
 
     //! Destructor
     ~BeeStem3();
@@ -77,6 +80,8 @@ public:
     std::vector<int> mMotorControllerState;
 
 protected:
+    void initialize();
+
     SerialPort * itsPort; //!< Serial port to use
     pthread_mutex_t itsSerialLock;
 };

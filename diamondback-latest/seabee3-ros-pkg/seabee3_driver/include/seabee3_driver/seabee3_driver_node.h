@@ -73,7 +73,7 @@ QUICKDEV_DECLARE_NODE( Seabee3Driver, _RobotDriver, _Shooter1ServiceServer, _Sho
 
 QUICKDEV_DECLARE_NODE_CLASS( Seabee3Driver )
 {
-    boost::shared_ptr<BeeStem3Driver> bee_stem3_driver_;
+    BeeStem3Driver bee_stem3_driver_;
 
     QUICKDEV_DECLARE_NODE_CONSTRUCTOR( Seabee3Driver )
     {
@@ -84,6 +84,13 @@ QUICKDEV_DECLARE_NODE_CLASS( Seabee3Driver )
     {
         QUICKDEV_GET_RUNABLE_NODEHANDLE( nh_rel );
 
+        _RobotDriver::registerCallback( quickdev::auto_bind( &Seabee3DriverNode::motorValsCB, this ) );
+        _Shooter1ServiceServer::registerCallback( quickdev::auto_bind( &Seabee3DriverNode::shooter1CB, this ) );
+        _Shooter2ServiceServer::registerCallback( quickdev::auto_bind( &Seabee3DriverNode::shooter2CB, this ) );
+        _Dropper1ServiceServer::registerCallback( quickdev::auto_bind( &Seabee3DriverNode::dropper1CB, this ) );
+        _Dropper2ServiceServer::registerCallback( quickdev::auto_bind( &Seabee3DriverNode::dropper2CB, this ) );
+        _FakeSeabeeLiveParams::registerCallback( quickdev::auto_bind( &Seabee3DriverNode::reconfigureCB, this ) );
+
         initPolicies<
             _RobotDriver,
             _Shooter1ServiceServer,
@@ -91,7 +98,7 @@ QUICKDEV_DECLARE_NODE_CLASS( Seabee3Driver )
             _Dropper1ServiceServer,
             _Dropper2ServiceServer
         >(
-            "enable_key_ids", true,
+            "enable_key_ids", true, // enable keys with IDs appended for all policies in this group
             "robot_name_param", std::string( "seabee3" ),
             "service_name_param0", std::string( "/seabee3/shooter1" ),
             "service_name_param1", std::string( "/seabee3/shooter2" ),
@@ -101,12 +108,6 @@ QUICKDEV_DECLARE_NODE_CLASS( Seabee3Driver )
 
         // initialize any remaining policies
         initPolicies<quickdev::policy::ALL>();
-
-        _RobotDriver::registerCallback( quickdev::auto_bind( &Seabee3DriverNode::motorValsCB, this ) );
-        _Shooter1ServiceServer::registerCallback( quickdev::auto_bind( &Seabee3DriverNode::shooter1CB, this ) );
-        _Shooter2ServiceServer::registerCallback( quickdev::auto_bind( &Seabee3DriverNode::shooter2CB, this ) );
-        _Dropper1ServiceServer::registerCallback( quickdev::auto_bind( &Seabee3DriverNode::dropper1CB, this ) );
-        _Dropper2ServiceServer::registerCallback( quickdev::auto_bind( &Seabee3DriverNode::dropper2CB, this ) );
 
         multi_pub_.addPublishers<
             _DepthMsg,
@@ -119,36 +120,122 @@ QUICKDEV_DECLARE_NODE_CLASS( Seabee3Driver )
             "/seabee3/internal_pressure",
             "/seabee3/external_pressure"
         } );
+    }
 
+    inline double getDepthFromPressure( int const & observed_pressure ) const
+    {
+        return ( observed_pressure - config_.surface_pressure ) / config_.montalbos_per_meter;
+    }
+
+    QUICKDEV_SPIN_ONCE()
+    {
+        _PressureMsg intl_pressure_msg;
+        _PressureMsg extl_pressure_msg;
+        _DepthMsg depth_msg;
+        _KillSwitchMsg kill_switch_msg;
+
+        if( config_.simulate )
+        {
+            intl_pressure_msg.value = config_.internal_pressure;
+            extl_pressure_msg.value = config_.external_pressure;
+            kill_switch_msg.is_killed = config_.is_killed;
+        }
+        else
+        {
+            bee_stem3_driver_.readPressure( intl_pressure_msg.value, extl_pressure_msg.value );
+            bee_stem3_driver_.readKillSwitch( kill_switch_msg.is_killed );
+        }
+
+        depth_msg.value = getDepthFromPressure( extl_pressure_msg.value );
+
+        multi_pub_.publish(
+            "/seabee3/depth", depth_msg,
+            "/seabee3/kill_switch", kill_switch_msg,
+            "/seabee3/internal_pressure", intl_pressure_msg,
+            "/seabee3/external_pressure", extl_pressure_msg
+        );
+    }
+
+    bool executeFiringDeviceAction( seabee3_driver::FiringDeviceAction::Request &req,
+                                    seabee3_driver::FiringDeviceAction::Response &res,
+                                    int const & device_id )
+    {
+        if( !bee_stem3_driver_.connected() ) return false;
+
+        bool device_status = bee_stem3_driver_.getDeviceStatus( device_id );
+        switch ( req.action )
+        {
+        case seabee3_driver::FiringDeviceAction::Request::CHECK_STATUS:
+            break;
+        case seabee3_driver::FiringDeviceAction::Request::RESET_STATUS:
+            device_status = true;
+            break;
+        case seabee3_driver::FiringDeviceAction::Request::FIRE:
+            bee_stem3_driver_.fireDevice( device_id );
+            break;
+        }
+        res.is_loaded = device_status;
+        return true;
     }
 
     QUICKDEV_DECLARE_MESSAGE_CALLBACK( motorValsCB, _MotorValsMsg )
     {
-        PRINT_INFO( "Setting motor vals..." );
+        auto const & motors = msg->motors;
+        auto const & mask = msg->mask;
+        for( size_t i = 0; i < motors.size(); ++i )
+        {
+            //dir = i < movement_common::MotorControllerIDs::SHOOTER ? thruster_dir_cfg_[i] :
+            //                                                         1.0;
+            if( mask[i] )
+            {
+                auto const motor_value = motors[i];
+                if( config_.simulate )
+                {
+                    PRINT_INFO( "Setting motor id %zu to %d", i, motor_value );
+                }
+                else
+                {
+                    bee_stem3_driver_.setThruster( i, motor_value );
+                }
+            }
+        }
     }
 
     QUICKDEV_DECLARE_SERVICE_CALLBACK( shooter1CB, _FiringDeviceActionService )
     {
-        PRINT_INFO( "Firing first torpedo!" );
+        if( config_.simulate ) PRINT_INFO( "Firing first torpedo!" );
+        else return executeFiringDeviceAction( request, response, seabee3_common::movement::FiringDeviceIDs::shooter1 );
+
         return true;
     }
 
     QUICKDEV_DECLARE_SERVICE_CALLBACK( shooter2CB, _FiringDeviceActionService )
     {
-        PRINT_INFO( "Firing second torpedo!" );
+        if( config_.simulate ) PRINT_INFO( "Firing second torpedo!" );
+        else return executeFiringDeviceAction( request, response, seabee3_common::movement::FiringDeviceIDs::shooter2 );
+
         return true;
     }
 
     QUICKDEV_DECLARE_SERVICE_CALLBACK( dropper1CB, _FiringDeviceActionService )
     {
-        PRINT_INFO( "Dropping first marker!" );
+        if( config_.simulate ) PRINT_INFO( "Dropping first marker!" );
+        else return executeFiringDeviceAction( request, response, seabee3_common::movement::FiringDeviceIDs::dropper_stage1 );
+
         return true;
     }
 
     QUICKDEV_DECLARE_SERVICE_CALLBACK( dropper2CB, _FiringDeviceActionService )
     {
-        PRINT_INFO( "Dropping second marker!" );
+        if( config_.simulate ) PRINT_INFO( "Dropping second marker!" );
+        else return executeFiringDeviceAction( request, response, seabee3_common::movement::FiringDeviceIDs::dropper_stage2 );
+
         return true;
+    }
+
+    QUICKDEV_DECLARE_RECONFIGURE_CALLBACK( reconfigureCB, _FakeSeabeeCfg )
+    {
+        if( !config.simulate ) bee_stem3_driver_.connect( config.port );
     }
 };
 

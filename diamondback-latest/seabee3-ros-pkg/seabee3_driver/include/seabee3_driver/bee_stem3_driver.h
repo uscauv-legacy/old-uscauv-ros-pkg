@@ -70,22 +70,30 @@ public:
 
     struct BeeStemFlags
     {
-        bool init_flag_;
+        bool position_initialized_;
+        bool port_connected_;
 
         BeeStemFlags()
-        {
-            init_flag_ = false;
-        }
+        :
+            position_initialized_ ( false ),
+            port_connected_( false )
+        {}
     };
 
-    BeeStem3Driver( std::string port );
-
+    BeeStem3Driver();
+    BeeStem3Driver( std::string const & port );
     ~BeeStem3Driver();
+
+    void connect( std::string const & port, bool const & force_reconnect = false );
+    void reconnect( std::string const & port );
+    void reconnect();
+
+    bool const & connected() const;
 
     void readPressure( int & intl_pressure, int & extl_pressure );
     void readKillSwitch( int8_t & kill_switch );
 
-    bool & getDeviceStatus( int device_id );
+    bool const & getDeviceStatus( int const & device_id ) const;
     void fireDevice( int device_id );
 
     void setThruster( int id, int value );
@@ -98,7 +106,7 @@ public:
     FiringDeviceParams shooter1_params_, shooter2_params_, dropper1_params_, dropper2_params_;
 
 private:
-    BeeStem3 * bee_stem_3_;
+    BeeStem3 bee_stem_3_;
     void initPose();
 
     std::string port_;

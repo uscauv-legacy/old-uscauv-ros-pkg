@@ -37,32 +37,52 @@
 
 #define BS_CMD_DELAY 5000000
 
-// ######################################################################
-BeeStem3::BeeStem3( std::string default_device = "/dev/ttyUSB0" )
+BeeStem3::BeeStem3()
 {
-    printf( "making new serial object..." );
-    itsPort = new SerialPort();
-    // set a default config for our serial port:
-    printf( "configuring new serial object..." );
-    itsPort->configure( default_device.c_str(), 57600, "8N1", false, false, 1 );
-    //  itsPort->setBlocking(true);
+    initialize();
+}
 
-    itsPort->connect();
-
-    mMotorControllerState.resize( seabee3_common::movement::NUM_MOTOR_CONTROLLERS );
-
-    for ( size_t i = 0; i < mMotorControllerState.size(); i++ )
-    {
-        mMotorControllerState[i] = 0;
-    }
-
-    pthread_mutex_init( &itsSerialLock, NULL);
+// ######################################################################
+BeeStem3::BeeStem3( std::string const & default_device )
+{
+    initialize();
+    connect( default_device );
 }
 
 // ######################################################################
 BeeStem3::~BeeStem3()
 {
     pthread_mutex_destroy( &itsSerialLock );
+}
+
+void BeeStem3::initialize()
+{
+    itsPort = NULL;
+}
+
+bool BeeStem3::connect( std::string const & port )
+{
+    printf( "making new serial object..." );
+    if( itsPort ) delete itsPort;
+    itsPort = new SerialPort();
+    // set a default config for our serial port:
+    printf( "configuring new serial object..." );
+    itsPort->configure( port.c_str(), 57600, "8N1", false, false, 1 );
+    //  itsPort->setBlocking(true);
+
+    if( itsPort->connect() )
+    {
+        mMotorControllerState.resize( seabee3_common::movement::NUM_MOTOR_CONTROLLERS );
+
+        for ( size_t i = 0; i < mMotorControllerState.size(); i++ )
+        {
+            mMotorControllerState[i] = 0;
+        }
+
+        pthread_mutex_init( &itsSerialLock, NULL);
+    }
+
+    return itsPort->connected();
 }
 
 // ######################################################################
@@ -72,6 +92,8 @@ bool BeeStem3::getSensors( int &accelX, int &accelY, int &accelZ, int &compassHe
 //                          int &thruster1, int &thruster2,int &thruster3,
 //int &thruster4,int &thruster5,int &thruster6)
 {
+    if( itsPort && !itsPort->connected() ) return false;
+
     char readCmd = 0x00;
     char accel_data[3];
     unsigned char adc_data[32];
@@ -295,6 +317,8 @@ bool BeeStem3::getSensors( int &accelX, int &accelY, int &accelZ, int &compassHe
 
 bool BeeStem3::setPID( int pidMode, float k, float p, float i, float d )
 {
+    if( itsPort && !itsPort->connected() ) return false;
+
     printf( "INFO: pidMode: %d, k %f, p %f, i %f, %f", pidMode, k, p, i, d );
 
     char pidCmdK;
@@ -391,6 +415,7 @@ bool BeeStem3::setPID( int pidMode, float k, float p, float i, float d )
 
 void BeeStem3::setThruster( int num, int val )
 {
+    if( itsPort && !itsPort->connected() ) return;
     /** FIXED: If the kill switch is unplugged, this optimization
      **        will prevent a subset of the motors from
      **        re-starting once the kill swith is re-connected.
@@ -476,6 +501,8 @@ void BeeStem3::setThruster( int num, int val )
 
 bool BeeStem3::setDesiredHeading( int16_t heading )
 {
+    if( itsPort && !itsPort->connected() ) return false;
+
     char setDesiredHeadingCmd = 0x0b;
     char temp;
 
@@ -500,6 +527,8 @@ bool BeeStem3::setDesiredHeading( int16_t heading )
 
 bool BeeStem3::setDesiredDepth( int16_t depth )
 {
+    if( itsPort && !itsPort->connected() ) return false;
+
     char setDesiredDepthCmd = 0x0c;
     char temp;
 
@@ -524,6 +553,8 @@ bool BeeStem3::setDesiredDepth( int16_t depth )
 
 bool BeeStem3::setDesiredSpeed( char speed )
 {
+    if( itsPort && !itsPort->connected() ) return false;
+
     char setDesiredSpeedCmd = 0x0d;
     char temp;
 
@@ -543,6 +574,8 @@ bool BeeStem3::setDesiredSpeed( char speed )
 
 void BeeStem3::startCompassCalibration()
 {
+    if( itsPort && !itsPort->connected() ) return;
+
     char startCalibCmd = 0xe0;
     char temp;
 
@@ -558,6 +591,8 @@ void BeeStem3::startCompassCalibration()
 
 void BeeStem3::endCompassCalibration()
 {
+    if( itsPort && !itsPort->connected() ) return;
+
     char endCalibCmd = 0xe1;
     char temp;
 
