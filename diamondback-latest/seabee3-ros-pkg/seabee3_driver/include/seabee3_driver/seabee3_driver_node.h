@@ -235,7 +235,18 @@ QUICKDEV_DECLARE_NODE_CLASS( Seabee3Driver )
 
     QUICKDEV_DECLARE_RECONFIGURE_CALLBACK( reconfigureCB, _FakeSeabeeCfg )
     {
-        if( !config.simulate ) bee_stem3_driver_.connect( config.port );
+        if( !config.simulate )
+        {
+            bee_stem3_driver_.connect( config.port );
+            bee_stem3_driver_.shooter1_params_.trigger_time_ =  config.shooter1_trigger_time;
+            bee_stem3_driver_.shooter1_params_.trigger_value_ = config.shooter1_trigger_value;
+            bee_stem3_driver_.shooter2_params_.trigger_time_ =  config.shooter2_trigger_time;
+            bee_stem3_driver_.shooter2_params_.trigger_value_ = config.shooter2_trigger_value;
+            bee_stem3_driver_.dropper1_params_.trigger_time_ =  config.dropper1_trigger_time;
+            bee_stem3_driver_.dropper1_params_.trigger_value_ = config.dropper1_trigger_value;
+            bee_stem3_driver_.dropper2_params_.trigger_time_ =  config.dropper2_trigger_time;
+            bee_stem3_driver_.dropper2_params_.trigger_value_ = config.dropper2_trigger_value;
+        }
     }
 };
 
