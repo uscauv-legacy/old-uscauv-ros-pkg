@@ -230,7 +230,21 @@ public:
 			}
 
 			btVector3 lin_v_ = seabee_body_->getLinearVelocity();
-			btVector3 force_drag = -lin_v_ * reconfigure_params_.drag_constant;
+			//btVector3 force_drag = -lin_v_ * reconfigure_params_.drag_constant;
+			btVector3 force_drag;
+			
+			btScalar x_force = 0.5 * 1000 * 8.636 * lin_v_[0] * lin_v_[0] * 0.81;
+			btScalar y_force = 0.5 * 1000 * 1.143 * lin_v_[1] * lin_v_[1] * 0.42;
+			btScalar z_force = 0.5 * 1000 * 1.906 * lin_v_[2] * lin_v_[2] * 0.42;
+
+			//force_drag.setX( x_force );
+			//force_drag.setY( y_force );
+			//force_drag.setZ( z_force );			
+			
+			force_drag[0] = x_force;
+			force_drag[1] = y_force;
+			force_drag[2] = z_force;
+
 			if ( force_drag[0] != force_drag[0] )
 			{
 				force_drag[0] = 0.0;
@@ -238,7 +252,7 @@ public:
 				force_drag[2] = 0.0;
 			}
 			seabee_body_->applyForce( force_drag,
-				                      seabee_body_->getCenterOfMassPosition() );
+			                      seabee_body_->getCenterOfMassPosition() );
 			ROS_INFO( "lin_v_       %f, %f, %f",
 				      lin_v_[0],
 				      lin_v_[1],
