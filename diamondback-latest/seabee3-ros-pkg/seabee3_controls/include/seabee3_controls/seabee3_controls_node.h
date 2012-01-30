@@ -38,7 +38,7 @@
 
 #include <quickdev/node.h>
 #include <quickdev/robot_controller_policy.h>
-// #include <controllers>
+#include <quickdev/controllers/reconfigurable_pid.h>
 #include <seabee3_driver/MotorVals.h>
 
 typedef seabee3_driver::MotorVals _MotorValsMsg;
@@ -48,6 +48,10 @@ QUICKDEV_DECLARE_NODE( Seabee3Controls, _RobotController )
 
 QUICKDEV_DECLARE_NODE_CLASS( Seabee3Controls )
 {
+    typedef quickdev::ReconfigurablePID<6> _Pid6D;
+
+    _Pid6D pid_;
+
     QUICKDEV_DECLARE_NODE_CONSTRUCTOR( Seabee3Controls )
     {
         //
@@ -57,11 +61,21 @@ QUICKDEV_DECLARE_NODE_CLASS( Seabee3Controls )
     {
         initPolicies<_RobotController>( "robot_name_param", std::string( "seabee3" ) );
 
+        pid_.applySettings(
+            quickdev::make_shared( new _Pid6D::_Settings( "linear/x" ) ),
+            quickdev::make_shared( new _Pid6D::_Settings( "linear/y" ) ),
+            quickdev::make_shared( new _Pid6D::_Settings( "linear/z" ) ),
+            quickdev::make_shared( new _Pid6D::_Settings( "angular/x" ) ),
+            quickdev::make_shared( new _Pid6D::_Settings( "angular/y" ) ),
+            quickdev::make_shared( new _Pid6D::_Settings( "angular/z" ) )
+        );
+
         initPolicies<quickdev::policy::ALL>();
     }
 
     QUICKDEV_SPIN_ONCE()
     {
+        pid_.update<0>( 0, 0 );
         _RobotController::update( _MotorValsMsg() );
     }
 };
