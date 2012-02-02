@@ -36,14 +36,13 @@
 #include <quickdev/nodelet.h>
 #include <contour_matcher/contour_matcher_node.h>
 
-// These are not the codes you're looking for...probably
-// This file was auto-generated; you probably want to modify ../include/contour_matcher/contour_matcher_node.h
+// This file was auto-generated; the corresponding header file is ../include/contour_matcher/contour_matcher_node.h
 
-// declare ContourMatcher in namespace contour_matcher
+// Declare ContourMatcher in namespace contour_matcher
 //
 QUICKDEV_DECLARE_NODELET( contour_matcher, ContourMatcher )
 
-// instantiate our nodelet; this macro expands to a call to PLUGINLIB_DECLARE_CLASS and
+// Instantiate our nodelet; this macro expands to a call to PLUGINLIB_DECLARE_CLASS and
 // registers our nodelet class contour_matcher::ContourMatcher as contour_matcher/contour_matcher
 //
 QUICKDEV_INST_NODELET( contour_matcher, ContourMatcher, contour_matcher )

@@ -38,19 +38,19 @@
 
 #include <quickdev/node.h>
 
-// declare a node called ContourMatcherNode
-// a quickdev::RunablePolicy is automatically prepended to the list of policies our node will use
-// to use more policies, simply list them here:
+// Declare a node called ContourMatcherNode.
+// A quickdev::RunablePolicy is automatically prepended to the list of policies our node will use.
+// To use more policies, simply list them here:
 //
 // QUICKDEV_DECLARE_NODE( ContourMatcher, SomePolicy1, SomePolicy2 )
 //
 QUICKDEV_DECLARE_NODE( ContourMatcher )
 
-// declare a class called ContourMatcherNode
+// Declare a class called ContourMatcherNode
 //
 QUICKDEV_DECLARE_NODE_CLASS( ContourMatcher )
 {
-    // variable initializations can be appended to this constructor as a comma-separated list:
+    // Variable initializations can be appended to this constructor as a comma-separated list:
     //
     // QUICKDEV_DECLARE_NODE_CONSTRUCTOR( ContourMatcher ), member1_( some_value ), member2_( some_other_value ){}
     //
@@ -59,30 +59,34 @@ QUICKDEV_DECLARE_NODE_CLASS( ContourMatcher )
         //
     }
 
-    // this function is called by quickdev::RunablePolicy after all policies are constructed but just before the main loop is started
-    // all policy initialization should be done here
+    // This function is called by quickdev::RunablePolicy after all policies are constructed but just before the main loop is started.
+    // All policy initialization should be done here.
     //
     QUICKDEV_SPIN_FIRST()
     {
-        // say we had a policy called _SomePolicy that looked for the meta-parameter "some_value1_param" of type SomeType and
+        // Say we had a policy called _SomePolicy that looked for the meta-parameter "some_value1_param" of type SomeType and
         // "some_value2_param" of type SomeOtherType in its init function
-        // we can create those meta-params here and then pass them to all policies using initAll():
+        // We can create those meta-params here and then pass them to all policies using initPolicies<...>():
         //
-        // initAll( "some_value1_param", SomeType(), "some_value2_param", SomeOtherType() );
+        // initPolicies<quickdev::policy::ALL>( "some_value1_param", SomeType(), "some_value2_param", SomeOtherType() );
         //
-        // or we can pass those meta-params only to _SomePolicy using its init() function:
+        // Or we can pass those meta-params only to _SomePolicy by specifying its type:
         //
-        // _SomePolicy::init( "some_value1_param", SomeType(), "some_value2_param", SomeOtherType() );
+        // initPolicies<_SomePolicy>( "some_value1_param", SomeType(), "some_value2_param", SomeOtherType() );
         //
-        // if we don't want to initialize all policies and use their default values, we can simply call initAll() with no arguments
-        // note that most initable policies won't function properly unless their init() functions are called
-        // therefore, to get the default behavior from all policies, be sure to call initAll()
+        // If we want to initialize all policies and use their default values, we can simply call initPolicies<quickdev::policy::ALL>()
+        // with no arguments.
+        // Note that most initable policies won't function properly unless their init() functions are called directly or via initPolicies<...>().
+        // Furthermore, since each policy is required to track its initialization state, initPolicies<...>() is guaranteed to only call init()
+        // on policies that have yet to be initialized; therefore, calling initPolicies<quickdev::policy::ALL>() at the end of QUICKDEV_SPIN_FIRST()
+        // is always a safe operation.
+        // To instead force re-initialization, call forceInitPolicies<...>().
         //
-        initAll();
+        initPolicies<quickdev::policy::ALL>();
     }
 
-    // this opitonal function is called by quickdev::RunablePolicy at a fixed rate (defined by the ROS param _loop_rate)
-    // most updateable policies should have their update( ... ) functions called within this context
+    // This opitonal function is called by quickdev::RunablePolicy at a fixed rate (defined by the ROS param _loop_rate).
+    // Most updateable policies should have their update( ... ) functions called within this context.
     //
     QUICKDEV_SPIN_ONCE()
     {

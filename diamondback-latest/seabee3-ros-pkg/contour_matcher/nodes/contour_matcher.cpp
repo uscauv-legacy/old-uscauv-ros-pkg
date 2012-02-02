@@ -35,9 +35,8 @@
 
 #include <contour_matcher/contour_matcher_node.h>
 
-// These are not the codes you're looking for...probably
-// This file was auto-generated; you probably want to modify ../include/contour_matcher/contour_matcher_node.h
+// This file was auto-generated; the corresponding header file is ../include/contour_matcher/contour_matcher_node.h
 
-// instantiate our node; this macro expands to an int main( ... ) in which an instance of our node is created and started
+// Instantiate our node; this macro expands to an int main( ... ) in which an instance of our node is created and started
 //
 QUICKDEV_INST_NODE( ContourMatcherNode, "contour_matcher" )
