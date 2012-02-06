@@ -38,53 +38,91 @@
 
 #include <map>
 #include <vector>
+#include <array>
 
 namespace seabee3_common
 {
 namespace movement
 {
 
-const static int NUM_MOTOR_CONTROLLERS = 9;
+static int const NUM_MOTOR_CONTROLLERS = 9;
 namespace MotorControllerIDs
 {
-    const int FWD_RIGHT_THRUSTER = 3;
-    const int FWD_LEFT_THRUSTER = 1;
-    const int DEPTH_RIGHT_THRUSTER = 4;
-    const int DEPTH_LEFT_THRUSTER = 2;
-    const int STRAFE_FRONT_THRUSTER = 0;
-    const int STRAFE_BACK_THRUSTER = 5;
-    const int SHOOTER = 6;
-    const int DROPPER_STAGE1 = 7;
-    const int DROPPER_STAGE2 = 8;
+    static int const FWD_RIGHT_THRUSTER = 3;
+    static int const FWD_LEFT_THRUSTER = 1;
+    static int const DEPTH_RIGHT_THRUSTER = 4;
+    static int const DEPTH_LEFT_THRUSTER = 2;
+    static int const STRAFE_FRONT_THRUSTER = 0;
+    static int const STRAFE_BACK_THRUSTER = 5;
+    static int const SHOOTER = 6;
+    static int const DROPPER_STAGE1 = 7;
+    static int const DROPPER_STAGE2 = 8;
 };
 
-const static int NUM_FIRING_DEVICES = 4;
+static int const NUM_FIRING_DEVICES = 4;
 namespace FiringDeviceIDs
 {
-    const int shooter1 = 0;
-    const int shooter2 = 1;
-    const int dropper_stage1 = 2;
-    const int dropper_stage2 = 3;
+    static int const SHOOTER1 = 0;
+    static int const SHOOTER2 = 1;
+    static int const DROPPER_STAGE1 = 2;
+    static int const DROPPER_STAGE2 = 3;
 };
 
 namespace Axes
 {
-    const int speed = 0;
-    const int strafe = 1;
-    const int depth = 2;
+    static int const SPEED = 0;
+    static int const STRAFE = 1;
+    static int const DEPTH = 2;
 
-    const int roll = 3;
-    const int pitch = 4;
-    const int yaw = 5;
+    static int const ROLL = 3;
+    static int const PITCH = 4;
+    static int const YAW = 5;
 
-    const int speed_rel = 6;
-    const int strafe_rel = 7;
-    const int depth_rel = 8;
+    static int const SPEED_REL = 6;
+    static int const STRAFE_REL = 7;
+    static int const DEPTH_REL = 8;
 
-    const int roll_rel = 9;
-    const int pitch_rel = 10;
-    const int yaw_rel = 11;
+    static int const ROLL_REL = 9;
+    static int const PITCH_REL = 10;
+    static int const YAW_REL = 11;
 };
+
+namespace ThrusterPairs
+{
+    static std::array<std::array<int, 2>, 6> const values =
+    {{
+        // speed
+        {{
+            MotorControllerIDs::FWD_LEFT_THRUSTER,
+            MotorControllerIDs::FWD_RIGHT_THRUSTER
+        }},
+        // strafe
+        {{
+            MotorControllerIDs::STRAFE_FRONT_THRUSTER,
+            MotorControllerIDs::STRAFE_BACK_THRUSTER
+        }},
+        // depth
+        {{
+            MotorControllerIDs::DEPTH_LEFT_THRUSTER,
+            MotorControllerIDs::DEPTH_RIGHT_THRUSTER
+        }},
+        // roll
+        {{
+            MotorControllerIDs::DEPTH_LEFT_THRUSTER,
+            MotorControllerIDs::DEPTH_RIGHT_THRUSTER
+        }},
+        // pitch
+        {{
+            -1,
+            -1
+        }},
+        // yaw
+        {{
+            MotorControllerIDs::STRAFE_FRONT_THRUSTER,
+            MotorControllerIDs::STRAFE_BACK_THRUSTER
+        }}
+    }};
+}
 
 typedef std::map<int, int> ThrusterArrayCfg;
 

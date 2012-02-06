@@ -69,6 +69,8 @@ typedef seabee3_driver::Depth _DepthMsg;
 typedef seabee3_driver::KillSwitch _KillSwitchMsg;
 typedef seabee3_driver::Pressure _PressureMsg;
 
+using namespace seabee3_common;
+
 QUICKDEV_DECLARE_NODE( Seabee3Driver, _RobotDriver, _Shooter1ServiceServer, _Shooter2ServiceServer, _Dropper1ServiceServer, _Dropper2ServiceServer, _FakeSeabeeLiveParams )
 
 QUICKDEV_DECLARE_NODE_CLASS( Seabee3Driver )
@@ -91,13 +93,15 @@ QUICKDEV_DECLARE_NODE_CLASS( Seabee3Driver )
         _Dropper2ServiceServer::registerCallback( quickdev::auto_bind( &Seabee3DriverNode::dropper2CB, this ) );
         _FakeSeabeeLiveParams::registerCallback( quickdev::auto_bind( &Seabee3DriverNode::reconfigureCB, this ) );
 
-        initPolicies<
+        initPolicies
+        <
             _RobotDriver,
             _Shooter1ServiceServer,
             _Shooter2ServiceServer,
             _Dropper1ServiceServer,
             _Dropper2ServiceServer
-        >(
+        >
+        (
             "enable_key_ids", true, // enable keys with IDs appended for all policies in this group
             "robot_name_param", std::string( "seabee3" ),
             "service_name_param0", std::string( "/seabee3/shooter1" ),
@@ -109,17 +113,22 @@ QUICKDEV_DECLARE_NODE_CLASS( Seabee3Driver )
         // initialize any remaining policies
         initPolicies<quickdev::policy::ALL>();
 
-        multi_pub_.addPublishers<
+        multi_pub_.addPublishers
+        <
             _DepthMsg,
             _KillSwitchMsg,
             _PressureMsg,
             _PressureMsg
-        > ( nh_rel, {
-            "/seabee3/depth",
-            "/seabee3/kill_switch",
-            "/seabee3/internal_pressure",
-            "/seabee3/external_pressure"
-        } );
+        >
+        (
+            nh_rel,
+            {
+                "/seabee3/depth",
+                "/seabee3/kill_switch",
+                "/seabee3/internal_pressure",
+                "/seabee3/external_pressure"
+            }
+        );
     }
 
     inline double getDepthFromPressure( int const & observed_pressure ) const
@@ -204,7 +213,7 @@ QUICKDEV_DECLARE_NODE_CLASS( Seabee3Driver )
     QUICKDEV_DECLARE_SERVICE_CALLBACK( shooter1CB, _FiringDeviceActionService )
     {
         if( config_.simulate ) PRINT_INFO( "Firing first torpedo!" );
-        else return executeFiringDeviceAction( request, response, seabee3_common::movement::FiringDeviceIDs::shooter1 );
+        else return executeFiringDeviceAction( request, response, movement::FiringDeviceIDs::SHOOTER1 );
 
         return true;
     }
@@ -212,7 +221,7 @@ QUICKDEV_DECLARE_NODE_CLASS( Seabee3Driver )
     QUICKDEV_DECLARE_SERVICE_CALLBACK( shooter2CB, _FiringDeviceActionService )
     {
         if( config_.simulate ) PRINT_INFO( "Firing second torpedo!" );
-        else return executeFiringDeviceAction( request, response, seabee3_common::movement::FiringDeviceIDs::shooter2 );
+        else return executeFiringDeviceAction( request, response, movement::FiringDeviceIDs::SHOOTER2 );
 
         return true;
     }
@@ -220,7 +229,7 @@ QUICKDEV_DECLARE_NODE_CLASS( Seabee3Driver )
     QUICKDEV_DECLARE_SERVICE_CALLBACK( dropper1CB, _FiringDeviceActionService )
     {
         if( config_.simulate ) PRINT_INFO( "Dropping first marker!" );
-        else return executeFiringDeviceAction( request, response, seabee3_common::movement::FiringDeviceIDs::dropper_stage1 );
+        else return executeFiringDeviceAction( request, response, movement::FiringDeviceIDs::DROPPER_STAGE1 );
 
         return true;
     }
@@ -228,7 +237,7 @@ QUICKDEV_DECLARE_NODE_CLASS( Seabee3Driver )
     QUICKDEV_DECLARE_SERVICE_CALLBACK( dropper2CB, _FiringDeviceActionService )
     {
         if( config_.simulate ) PRINT_INFO( "Dropping second marker!" );
-        else return executeFiringDeviceAction( request, response, seabee3_common::movement::FiringDeviceIDs::dropper_stage2 );
+        else return executeFiringDeviceAction( request, response, movement::FiringDeviceIDs::DROPPER_STAGE2 );
 
         return true;
     }
