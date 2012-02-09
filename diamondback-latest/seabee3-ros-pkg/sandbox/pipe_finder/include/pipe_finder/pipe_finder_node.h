@@ -35,8 +35,10 @@
 
 #ifndef PIPEFINDER_PIPEFINDERNODE_H_
 #define PIPEFINDER_PIPEFINDERNODE_H_
+#define CVCLOSE_ITR 1
 
 #include <quickdev/node.h>
+#include <quickdev/image_proc_policy.h>
 
 // declare a node called PipeFinderNode
 // a quickdev::RunablePolicy is automatically prepended to the list of policies our node will use
@@ -44,7 +46,7 @@
 //
 // QUICKDEV_DECLARE_NODE( PipeFinder, SomePolicy1, SomePolicy2 )
 //
-QUICKDEV_DECLARE_NODE( PipeFinder )
+QUICKDEV_DECLARE_NODE( PipeFinder, quickdev::ImageProcPolicy )
 
 // declare a class called PipeFinderNode
 //
@@ -57,7 +59,8 @@ QUICKDEV_DECLARE_NODE_CLASS( PipeFinder )
     QUICKDEV_DECLARE_NODE_CONSTRUCTOR( PipeFinder )
     {
         //
-    }
+		cv::namedWindow( "Found_boxes", 0 );	
+	}
 
     // this function is called by quickdev::RunablePolicy after all policies are constructed but just before the main loop is started
     // all policy initialization should be done here
@@ -84,6 +87,85 @@ QUICKDEV_DECLARE_NODE_CLASS( PipeFinder )
     // this opitonal function is called by quickdev::RunablePolicy at a fixed rate (defined by the ROS param _loop_rate)
     // most updateable policies should have their update( ... ) functions called within this context
     //
+    
+    IMAGE_PROC_PROCESS_IMAGE( image_ptr )
+    {
+		const float ASPECT_RATIO_BOUNDARY = 1.5;
+		cv::Mat input = image_ptr->image;
+		cv::Mat gray_input;
+		std::vector<CvBox2D> usable_boxes;
+		CvMemStorage* storage;
+		CvSeq* contours;
+		CvBox2D box_to_check;
+		storage = cvCreateMemStorage(0);
+		contours = cvCreateSeq( 
+								CV_SEQ_ELTYPE_POINT, 
+								sizeof( CvSeq ), 
+								sizeof( CvPoint ), 
+								storage 
+							  );
+		//make 8uc1 Mat
+		cvtColor(input, gray_input, CV_RGB2GRAY);
+		
+		//clean up image
+		cvMorphologyEx( 
+						&IplImage( gray_input ), 
+						&IplImage( gray_input ), 
+						0, 
+						0, 
+						CV_MOP_OPEN, 
+						CVCLOSE_ITR 
+					  );
+		cvMorphologyEx( 
+						&IplImage( gray_input ),
+						&IplImage( gray_input ), 
+						0, 
+						0, 
+						CV_MOP_CLOSE, 
+						CVCLOSE_ITR 
+					   );
+		//begin contour finder
+		cvFindContours( 
+						&IplImage( gray_input ), 
+						storage, &contours, 
+						sizeof( CvContour ), 
+						CV_RETR_LIST, 
+						CV_CHAIN_APPROX_SIMPLE 
+					   );
+		//iterate through found contours					
+		while(contours != NULL)
+		{
+			float aspect_ratio = 0; 
+			if( contours->total >= 6 )
+			{
+				//make cvBox2D from potentialy usable contours, and find actual usable ones by their aspect ratios
+				box_to_check = cvFitEllipse2( contours );
+				if( box_to_check.size.width >= box_to_check.size.height )
+					aspect_ratio = box_to_check.size.width / box_to_check.size.height;
+				else
+					aspect_ratio = box_to_check.size.height / box_to_check.size.width;	
+					
+				if( aspect_ratio >= ASPECT_RATIO_BOUNDARY )
+				{
+					usable_boxes.push_back( box_to_check );
+					cvEllipseBox( 
+								  &IplImage( input ), 
+								  box_to_check, 
+								  CV_RGB( 255, 0, 0 ), 
+								  1, 
+								  8, 
+								  0 
+								 );
+				}
+			}
+			contours = contours->h_next;
+		}
+		//landmarks::Pipe pipe( cv::Point3( x, y, z ), rotation );
+		//multi_pub_.publish( "landmarks", pipe.createMsg() );
+		cv::imshow( "Found_boxes", input );
+        cvWaitKey( 20 );
+	}
+    
     QUICKDEV_SPIN_ONCE()
     {
         //
