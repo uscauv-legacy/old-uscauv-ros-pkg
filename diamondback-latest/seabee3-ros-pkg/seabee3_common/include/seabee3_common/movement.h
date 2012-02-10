@@ -45,7 +45,8 @@ namespace seabee3_common
 namespace movement
 {
 
-static int const NUM_MOTOR_CONTROLLERS = 9;
+static unsigned int const NUM_MOTOR_CONTROLLERS = 9;
+static unsigned int const NUM_THRUSTERS = 6;
 namespace MotorControllerIDs
 {
     static int const FWD_RIGHT_THRUSTER = 3;
@@ -57,9 +58,14 @@ namespace MotorControllerIDs
     static int const SHOOTER = 6;
     static int const DROPPER_STAGE1 = 7;
     static int const DROPPER_STAGE2 = 8;
+
+    static inline bool isThruster( int const & id )
+    {
+        return id != SHOOTER && id != DROPPER_STAGE1 && id != DROPPER_STAGE2;
+    }
 };
 
-static int const NUM_FIRING_DEVICES = 4;
+static unsigned int const NUM_FIRING_DEVICES = 4;
 namespace FiringDeviceIDs
 {
     static int const SHOOTER1 = 0;

@@ -1,0 +1,21 @@
+<launch>
+    <!-- args="x y z y p r frame1 frame2 hz" -->
+    <arg name="pi" value="3.14159265"/>
+    <arg name="pi_2" value="1.57079633"/>
+    <!-- front strafe -->
+    <node pkg="tf" type="static_transform_publisher" name="thruster0_tf" args="0.3 0 0 $(arg pi_2) 0 0 /seabee3/base_link /seabee3/thruster0 500" />
+    <!-- fwd left -->
+    <node pkg="tf" type="static_transform_publisher" name="thruster1_tf" args="0 0.2 0 -$(arg pi) 0 0 /seabee3/base_link /seabee3/thruster1 500" />
+
+    <!-- depth left -->
+    <node pkg="tf" type="static_transform_publisher" name="thruster2_tf" args="0 0.1 0 0 $(arg pi_2) 0 /seabee3/base_link /seabee3/thruster2 500" />
+    <!-- fwd right -->
+    <node pkg="tf" type="static_transform_publisher" name="thruster3_tf" args="0 -0.2 0 -$(arg pi) 0 0 /seabee3/base_link /seabee3/thruster3 500" />
+
+    <!-- depth right -->
+    <node pkg="tf" type="static_transform_publisher" name="thruster4_tf" args="0 -0.1 0 0 $(arg pi_2) 0 /seabee3/base_link /seabee3/thruster4 500" />
+    <!-- back strafe -->
+    <node pkg="tf" type="static_transform_publisher" name="thruster5_tf" args="-0.3 0 0 -$(arg pi_2) 0 0 /seabee3/base_link /seabee3/thruster5 500" />
+
+    <node pkg="tf" type="static_transform_publisher" name="camera2_tf" output="screen" args="0.157353 -0.155575 -0.0523748 0 $(arg pi_2) 0 /seabee3/base_link /camera2 500" />
+</launch>
