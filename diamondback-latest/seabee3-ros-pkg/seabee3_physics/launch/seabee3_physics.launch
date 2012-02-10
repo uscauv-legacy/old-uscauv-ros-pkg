@@ -1,0 +1,29 @@
+<launch>
+    <arg name="pkg" value="seabee3_physics" />
+    <arg name="type" value="seabee3_physics" />
+    <arg name="name" default="$(arg type)" />
+    <arg name="rate" default="30" />
+    <arg name="args" value="_loop_rate:=$(arg rate)" />
+    <arg name="manager" default="manager" />
+    <arg name="nodelet" default="false" />
+
+    <include file="$(find seabee3_launch)/robot_model_transforms.launch" />
+
+    <param name="/$(arg name)/reconfigure/thrust_to_force" type="double" value="0.11" />
+    <param name="/$(arg name)/reconfigure/drag_constant" type="double" value="50" />
+
+    <node
+        if="$(arg nodelet)"
+        pkg="nodelet"
+        type="nodelet"
+        name="$(arg name)"
+        args="load $(arg pkg)/$(arg type) $(arg manager) $(arg args)"
+        output="screen" />
+    <node
+        unless="$(arg nodelet)"
+        pkg="$(arg pkg)"
+        type="$(arg type)"
+        name="$(arg name)"
+        args="$(arg args)"
+        output="screen" />
+</launch>

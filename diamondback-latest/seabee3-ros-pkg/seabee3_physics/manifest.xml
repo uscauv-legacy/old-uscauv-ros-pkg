@@ -1,0 +1,19 @@
+<package>
+  <description brief="seabee3_physics">
+
+     seabee3_physics
+
+  </description>
+  <author>Edward T. Kaszubski ( ekaszubski@gmail.com ), Randolph C. Voorhies</author>
+  <license>BSD</license>
+  <review status="unreviewed" notes=""/>
+  <url>http://ros.org/wiki/seabee3_physics</url>
+  <depend package="quickdev_cpp"/>
+  <depend package="nodelet"/>
+  <depend package="bullet"/>
+  <depend package="seabee3_driver"/>
+  <depend package="seabee3_common"/>
+  <export>
+    <nodelet plugin="${prefix}/nodelets/nodelet_plugins.xml"/>
+  </export>
+</package>
