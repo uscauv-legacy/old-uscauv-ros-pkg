@@ -129,6 +129,8 @@ QUICKDEV_DECLARE_NODE_CLASS( Seabee3Physics )
         multi_sub_.addSubscriber( nh_rel, "motor_vals", &Seabee3PhysicsNode::motorValsCB, this );
         multi_sub_.addSubscriber( nh_rel, "kill_switch", &Seabee3PhysicsNode::killSwitchCB, this );
 
+        //multi_pub_.addPublishers<
+
         fetchThrusterTransforms();
 
         timer_.reset();
@@ -199,6 +201,7 @@ QUICKDEV_DECLARE_NODE_CLASS( Seabee3Physics )
         //btVector3 force_drag = -lin_v_ * reconfigure_params_.drag_constant;
         btVector3 force_drag;
 
+        //! Todo: The way these constants were calculated needs to be clearer (ie. they need to be functions of measurements of the sub)
         force_drag.setX( 0.5 * 1000 * 8.636 * lin_vel.x() * lin_vel.x() * 0.81 );
         force_drag.setY( 0.5 * 1000 * 1.143 * lin_vel.y() * lin_vel.y() * 0.42 );
         force_drag.setZ( 0.5 * 1000 * 1.906 * lin_vel.z() * lin_vel.z() * 0.42 );
@@ -220,12 +223,12 @@ QUICKDEV_DECLARE_NODE_CLASS( Seabee3Physics )
 //      geometry_msgs::Twist givens;
 //      givens_tf >> givens;
 
-//      btTransform center_of_mass;
+      //btTransform center_of_mass;
 //
-//      center_of_mass = seabee_body_->getCenterOfMassTransform();
-//      center_of_mass.setRotation( givens_tf.getRotation() );
-//      center_of_mass.getOrigin().setZ( givens_tf.getOrigin().getZ() );
-//      seabee_body_->setCenterOfMassTransform( center_of_mass );
+        //auto center_of_mass = seabee_body_->getCenterOfMassTransform();
+        //center_of_mass.setRotation( givens_tf.getRotation() );
+        //center_of_mass.getOrigin().setZ( givens_tf.getOrigin().getZ() );
+        //seabee_body_->setCenterOfMassTransform( center_of_mass );
 
 /*        seabee_body_->getMotionState()->getWorldTransform( world_transform );
         world_transform.setRotation( givens_tf.getRotation() );
@@ -240,7 +243,6 @@ QUICKDEV_DECLARE_NODE_CLASS( Seabee3Physics )
     seabee_body_->setLinearVelocity(linVel);*/
 
         seabee_body_->getMotionState()->getWorldTransform( world_transform );
-        //code to factor in drag
 
         printf( "Body Pos: %f %f %f\n",
                 world_transform.getOrigin().getX(),
