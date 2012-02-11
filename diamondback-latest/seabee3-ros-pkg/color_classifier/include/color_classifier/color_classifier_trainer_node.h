@@ -78,7 +78,7 @@ QUICKDEV_DECLARE_NODE_CLASS( ColorClassifierTrainer )
         // note that most initable policies won't function properly unless their init() functions are called
         // therefore, to get the default behavior from all policies, be sure to call initAll()
         //
-        initAll();
+        initPolicies<quickdev::policy::ALL>();
     }
 
     // this opitonal function is called by quickdev::RunablePolicy at a fixed rate (defined by the ROS param _loop_rate)

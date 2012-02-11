@@ -1,5 +1,5 @@
 /***************************************************************************
- *  nodes/seabee3_teleop_node.cpp
+ *  nodelets/seabee3_teleop.cpp
  *  --------------------
  *
  *  Copyright (c) 2011, Edward T. Kaszubski ( ekaszubski@gmail.com )
@@ -33,6 +33,16 @@
  *
  **************************************************************************/
 
-#include <seabee3_teleop/seabee3_teleop.h>
+#include <quickdev/nodelet.h>
+#include <seabee3_teleop/seabee3_teleop_node.h>
 
-QUICKDEV_INST_NODE( Seabee3TeleopNode, "seabee3_teleop" )
+// This file was auto-generated; the corresponding header file is ../include/seabee3_teleop/seabee3_teleop_node.h
+
+// Declare Seabee3Teleop in namespace seabee3_teleop
+//
+QUICKDEV_DECLARE_NODELET( seabee3_teleop, Seabee3Teleop )
+
+// Instantiate our nodelet; this macro expands to a call to PLUGINLIB_DECLARE_CLASS and
+// registers our nodelet class seabee3_teleop::Seabee3Teleop as seabee3_teleop/seabee3_teleop
+//
+QUICKDEV_INST_NODELET( seabee3_teleop, Seabee3Teleop, seabee3_teleop )

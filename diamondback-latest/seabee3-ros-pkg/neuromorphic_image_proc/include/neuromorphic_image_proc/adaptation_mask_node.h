@@ -59,7 +59,7 @@ QUICKDEV_DECLARE_NODE_CLASS( AdaptationMask )
 
     QUICKDEV_SPIN_FIRST()
     {
-        initAll();
+        initPolicies<quickdev::policy::ALL>();
     }
 
     IMAGE_PROC_PROCESS_IMAGE( image_ptr )

@@ -61,7 +61,7 @@ protected:
 
     QUICKDEV_SPIN_FIRST()
     {
-        initAll();
+        initPolicies<quickdev::policy::ALL>();
 
         QUICKDEV_GET_RUNABLE_NODEHANDLE( nh_rel );
 

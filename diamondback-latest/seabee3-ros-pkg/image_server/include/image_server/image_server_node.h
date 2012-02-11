@@ -70,9 +70,9 @@ public:
 
     void spinFirst()
     {
-        // we're fine with using the default values for all of our initializable policies
-        initAll();
         _ImageServerConfigPolicy::registerCallback( quickdev::auto_bind( &ImageServerNode::reconfigureCB, this ) );
+
+        initPolicies<quickdev::policy::ALL>();
 
         image_loader_.loadImages();
     }

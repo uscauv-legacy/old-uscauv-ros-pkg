@@ -1,5 +1,5 @@
 /***************************************************************************
- *  include/seabee3_common/ImageArrayViewer_node.h
+ *  nodes/seabee3_teleop.cpp
  *  --------------------
  *
  *  Copyright (c) 2011, Edward T. Kaszubski ( ekaszubski@gmail.com )
@@ -33,53 +33,10 @@
  *
  **************************************************************************/
 
-#ifndef SEABEE3COMMON_IMAGEARRAYVIEWERNODE_H_
-#define SEABEE3COMMON_IMAGEARRAYVIEWERNODE_H_
+#include <seabee3_teleop/seabee3_teleop_node.h>
 
-#include <quickdev/node.h>
-#include <quickdev/image_proc_policy.h>
-#include <seabee3_common/NamedImageArray.h>
+// This file was auto-generated; the corresponding header file is ../include/seabee3_teleop/seabee3_teleop_node.h
 
-QUICKDEV_DECLARE_NODE( ImageArrayViewer )
-
-QUICKDEV_DECLARE_NODE_CLASS( ImageArrayViewer )
-{
-    typedef seabee3_common::NamedImageArray _NamedImageArrayMsg;
-    ros::MultiSubscriber<> multi_sub_;
-
-    QUICKDEV_DECLARE_NODE_CONSTRUCTOR( ImageArrayViewer )
-    {
-        //
-    }
-
-    QUICKDEV_SPIN_FIRST()
-    {
-        initPolicies<quickdev::policy::ALL>();
-
-        QUICKDEV_GET_RUNABLE_NODEHANDLE( nh_rel );
-
-        multi_sub_.addSubscriber( nh_rel, "images", &ImageArrayViewerNode::imagesCB, this );
-    }
-
-    QUICKDEV_DECLARE_MESSAGE_CALLBACK( imagesCB, _NamedImageArrayMsg )
-    {
-        for( auto named_image_msg = msg->images.begin(); named_image_msg != msg->images.end(); ++named_image_msg )
-        {
-            cv::namedWindow( named_image_msg->name, 0 );
-
-            auto cv_image_ptr = quickdev::opencv_conversion::fromImageMsg( named_image_msg->image );
-            cv::Mat const & image = cv_image_ptr->image;
-
-            cv::imshow( named_image_msg->name, image );
-        }
-
-        cvWaitKey( 20 );
-    }
-
-    QUICKDEV_SPIN_ONCE()
-    {
-        //
-    }
-};
-
-#endif // SEABEE3COMMON_IMAGEARRAYVIEWERNODE_H_
+// Instantiate our node; this macro expands to an int main( ... ) in which an instance of our node is created and started
+//
+QUICKDEV_INST_NODE( Seabee3TeleopNode, "seabee3_teleop" )

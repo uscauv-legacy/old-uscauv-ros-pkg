@@ -257,31 +257,11 @@ private:
         return true;
     }
 
-    // this function is called by quickdev::RunablePolicy after all policies are constructed but just before the main loop is started
-    // all policy initialization should be done here
-    //
     QUICKDEV_SPIN_FIRST()
     {
-        // say we had a policy called _SomePolicy that looked for the meta-parameter "some_value1_param" of type SomeType and
-        // "some_value2_param" of type SomeOtherType in its init function
-        // we can create those meta-params here and then pass them to all policies using initAll():
-        //
-        // initAll( "some_value1_param", SomeType(), "some_value2_param", SomeOtherType() );
-        //
-        // or we can pass those meta-params only to _SomePolicy using its init() function:
-        //
-        // _SomePolicy::init( "some_value1_param", SomeType(), "some_value2_param", SomeOtherType() );
-        //
-        // if we don't want to initialize all policies and use their default values, we can simply call initAll() with no arguments
-        // note that most initable policies won't function properly unless their init() functions are called
-        // therefore, to get the default behavior from all policies, be sure to call initAll()
-        //
-        initAll();
+        initPolicies<quickdev::policy::ALL>();
     }
 
-    // this opitonal function is called by quickdev::RunablePolicy at a fixed rate (defined by the ROS param _loop_rate)
-    // most updateable policies should have their update( ... ) functions called within this context
-    //
     QUICKDEV_SPIN_ONCE()
     {
         if ( autocalibrate_ && !drift_calibrated_ ) runRPYDriftCalibration();
