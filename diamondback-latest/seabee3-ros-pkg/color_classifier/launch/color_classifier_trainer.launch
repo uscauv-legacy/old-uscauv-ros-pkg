@@ -1,9 +1,12 @@
 <launch>
+    <arg name="frame" default="frame0006" />
+    <arg name="color" default="green" />
+    <arg name="ext" default="jpg" />
     <arg name="pkg" value="color_classifier" />
-    <arg name="type" value="color_classifier_trainer" />
-    <arg name="name" default="$(arg type)" />
+    <arg name="name" value="color_classifier_trainer" />
+    <arg name="type" default="$(arg name)_node" />
     <arg name="rate" default="30" />
-    <arg name="args" value="_loop_rate:=$(arg rate)" />
+    <arg name="args" value="_loop_rate:=$(arg rate) _color_name:=$(arg color) _src_image_uri:=$(find seabee3_data)/frames/$(arg frame).$(arg ext) _mask_image_uri:=$(find seabee3_data)/frames/$(arg frame)_$(arg color)_mask.$(arg ext)" />
     <arg name="manager" default="manager" />
     <arg name="nodelet" default="false" />
     <node

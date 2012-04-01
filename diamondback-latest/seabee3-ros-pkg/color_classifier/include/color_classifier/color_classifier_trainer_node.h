@@ -38,55 +38,84 @@
 
 #include <quickdev/node.h>
 
-// declare a node called ColorClassifierTrainerNode
-// a quickdev::RunablePolicy is automatically prepended to the list of policies our node will use
-// to use more policies, simply list them here:
-//
-// QUICKDEV_DECLARE_NODE( ColorClassifierTrainer, SomePolicy1, SomePolicy2 )
-//
+#include <quickdev/gaussian_pdf.h>
+#include <quickdev/param_reader.h>
+
+#include <opencv/cv.h>
+#include <opencv/highgui.h>
+//#include <opencv/imgproc.h>
+
 QUICKDEV_DECLARE_NODE( ColorClassifierTrainer )
 
-// declare a class called ColorClassifierTrainerNode
-//
 QUICKDEV_DECLARE_NODE_CLASS( ColorClassifierTrainer )
 {
-    // variable initializations can be appended to this constructor as a comma-separated list:
-    //
-    // QUICKDEV_DECLARE_NODE_CONSTRUCTOR( ColorClassifierTrainer ), member1_( some_value ), member2_( some_other_value ){}
-    //
     QUICKDEV_DECLARE_NODE_CONSTRUCTOR( ColorClassifierTrainer )
     {
         //
     }
 
-    // this function is called by quickdev::RunablePolicy after all policies are constructed but just before the main loop is started
-    // all policy initialization should be done here
-    //
     QUICKDEV_SPIN_FIRST()
     {
-        // say we had a policy called _SomePolicy that looked for the meta-parameter "some_value1_param" of type SomeType and
-        // "some_value2_param" of type SomeOtherType in its init function
-        // we can create those meta-params here and then pass them to all policies using initAll():
-        //
-        // initAll( "some_value1_param", SomeType(), "some_value2_param", SomeOtherType() );
-        //
-        // or we can pass those meta-params only to _SomePolicy using its init() function:
-        //
-        // _SomePolicy::init( "some_value1_param", SomeType(), "some_value2_param", SomeOtherType() );
-        //
-        // if we don't want to initialize all policies and use their default values, we can simply call initAll() with no arguments
-        // note that most initable policies won't function properly unless their init() functions are called
-        // therefore, to get the default behavior from all policies, be sure to call initAll()
-        //
+        QUICKDEV_GET_RUNABLE_NODEHANDLE( nh_rel );
+
+        typedef quickdev::GaussianPDF<3> _ColorModel;
+        typedef _ColorModel::_DataPoint _DataPoint;
+
+        auto src_image_uri = ros::ParamReader<std::string, 1>::readParam( nh_rel, "src_image_uri", "" );
+        auto mask_image_uri = ros::ParamReader<std::string, 1>::readParam( nh_rel, "mask_image_uri", "" );
+        auto color_name = ros::ParamReader<std::string, 1>::readParam( nh_rel, "color_name", "" );
+
         initPolicies<quickdev::policy::ALL>();
+
+        // load color
+        cv::Mat const input_image = cv::imread( src_image_uri );
+        // load grayscale
+        cv::Mat const mask_image = cv::imread( mask_image_uri, 0 );
+        // convert to Lab
+        cv::Mat input_image_lab;
+        cv::cvtColor( input_image, input_image_lab, CV_BGR2Lab );
+
+        // build up our color model
+        _ColorModel color_model_;
+
+        for( int y = 0; y < mask_image.size().height; y++ )
+        {
+            for( int x = 0; x < mask_image.size().width; x++ )
+            {
+                auto const & mask_pixel = mask_image.at<unsigned char>( y, x );
+
+                // ignore "black" pixels
+                if( mask_pixel <= 255 / 2 ) continue;
+
+                auto const & lab_pixel = input_image_lab.at<cv::Vec3b>( y, x );
+                color_model_.push_back( _DataPoint( (double)lab_pixel[0], (double)lab_pixel[1], (double)lab_pixel[2] ) );
+            }
+        }
+
+        auto const & mean = color_model_.updateMean();
+        auto const & covariance = color_model_.updateCovariance();
+
+        std::cout << mean << std::endl;
+
+        std::cout << covariance << std::endl;
+
+        for( size_t i = 0; i < mean.size(); ++i )
+        {
+            std::stringstream index_ss;
+            index_ss << i;
+            auto const index_str = index_ss.str();
+
+            nh_rel.setParam( "model/" + color_name + "/mean/elem" + index_str, mean[i] );
+
+            nh_rel.setParam( "model/" + color_name + "/cov/elem" + index_str, covariance( i, i ) );
+        }
+
+        auto const dump_result = system( std::string( "rosparam dump `rospack find color_classifier`/params/model.yaml /color_classifier_trainer/model/" ).c_str() );
     }
 
-    // this opitonal function is called by quickdev::RunablePolicy at a fixed rate (defined by the ROS param _loop_rate)
-    // most updateable policies should have their update( ... ) functions called within this context
-    //
     QUICKDEV_SPIN_ONCE()
     {
-        //
+        interrupt();
     }
 };
 
