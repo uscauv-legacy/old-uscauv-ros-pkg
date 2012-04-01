@@ -8,6 +8,7 @@
     <arg name="nodelet" default="false" />
 
     <rosparam param="/$(arg name)/pid" command="load" file="$(find seabee3_controls)/params/pid.yaml" />
+    <rosparam param="/$(arg name)/reconfigure" command="load" file="$(find seabee3_controls)/params/reconfigure.yaml" />
 
     <node
         if="$(arg nodelet)"

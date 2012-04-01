@@ -39,8 +39,12 @@
 #include <quickdev/node.h>
 #include <quickdev/robot_controller_policy.h>
 #include <quickdev/service_server_policy.h>
+#include <quickdev/reconfigure_policy.h>
 #include <quickdev/controllers/reconfigurable_pid.h>
+#include <quickdev/math.h>
 #include <seabee3_common/movement.h>
+
+#include <seabee3_controls/Seabee3ControlsConfig.h>
 
 #include <seabee3_driver/MotorVals.h>
 
@@ -52,9 +56,12 @@ typedef std_srvs::Empty _ResetPoseService;
 typedef quickdev::RobotControllerPolicy<_MotorValsMsg> _RobotController;
 typedef quickdev::ServiceServerPolicy<_ResetPoseService, 0> _ResetPoseServiceServer;
 
+typedef seabee3_controls::Seabee3ControlsConfig _Seabee3ControlsCfg;
+typedef quickdev::ReconfigurePolicy<_Seabee3ControlsCfg> _Seabee3ControlsLiveParams;
+
 using namespace seabee3_common;
 
-QUICKDEV_DECLARE_NODE( Seabee3Controls, _RobotController, _ResetPoseServiceServer )
+QUICKDEV_DECLARE_NODE( Seabee3Controls, _RobotController, _ResetPoseServiceServer, _Seabee3ControlsLiveParams )
 
 QUICKDEV_DECLARE_NODE_CLASS( Seabee3Controls )
 {
@@ -70,6 +77,7 @@ QUICKDEV_DECLARE_NODE_CLASS( Seabee3Controls )
     QUICKDEV_SPIN_FIRST()
     {
         _ResetPoseServiceServer::registerCallback( quickdev::auto_bind( &Seabee3ControlsNode::resetPoseCB, this ) );
+        _Seabee3ControlsLiveParams::registerCallback( quickdev::auto_bind( &Seabee3ControlsNode::reconfigureCB, this ) );
 
         initPolicies
         <
@@ -80,6 +88,8 @@ QUICKDEV_DECLARE_NODE_CLASS( Seabee3Controls )
             "robot_name_param", std::string( "seabee3" ),
             "service_name_param", std::string( "/seabee3/reset_pose" )
         );
+
+        initPolicies<quickdev::policy::ALL>();
 
         pid_.applySettings(
             quickdev::make_shared( new _Pid6D::_Settings( "linear/x" ) ),
@@ -92,8 +102,8 @@ QUICKDEV_DECLARE_NODE_CLASS( Seabee3Controls )
 
         initPolicies<quickdev::policy::ALL>();
 
-        //btVector3 const rotation = unit::make_unit( btQuaternion( 0.1, 0.2, 0.3 ) );
-        //printf( "%f %f %f\n", rotation.x(), rotation.y(), rotation.z() );
+//        btVector3 const rotation = unit::make_unit( btQuaternion( 0.1, 0.2, 0.3 ) );
+//        printf( "%f %f %f\n", rotation.x(), rotation.y(), rotation.z() );
     }
 
     template<int __Axis__, typename std::enable_if<(__Axis__ == movement::Axes::SPEED), int>::type = 0>
@@ -139,6 +149,7 @@ QUICKDEV_DECLARE_NODE_CLASS( Seabee3Controls )
 
     void normalizeMotorValsMsg( _MotorValsMsg & msg )
     {
+        // do thruster pair scaling
         for( size_t i = 0; i < movement::ThrusterPairs::values.size(); ++i )
         {
             auto const & motor1_id = movement::ThrusterPairs::values[i][0];
@@ -163,6 +174,17 @@ QUICKDEV_DECLARE_NODE_CLASS( Seabee3Controls )
 
 //                printf( "-> [%i, %i]\n", value1, value2 );
             }
+        }
+
+        // apply deadzones and floor values on a per-thruster basis
+        for( size_t i = 0; i < msg.motors.size(); ++i )
+        {
+            if( !msg.mask[i] ) continue;
+
+            auto & value = msg.motors[i];
+            // if outputs are nonzero, normalize them to be within [-100, -15] [15, 100]
+            if( abs( value ) > config_.motor_speed_deadzone ) value = quickdev::sign( value ) * config_.motor_speed_floor + value * (double)( 100 - config_.motor_speed_floor ) / 100.0;
+            else value = 0;
         }
     }
 
@@ -215,6 +237,8 @@ QUICKDEV_DECLARE_NODE_CLASS( Seabee3Controls )
         // ensure all motor values are properly normalized
         normalizeMotorValsMsg( motor_vals_msg );
 
+        std::cout << "----------" << std::endl;
+
         _RobotController::update( motor_vals_msg );
     }
 
@@ -222,6 +246,11 @@ QUICKDEV_DECLARE_NODE_CLASS( Seabee3Controls )
     {
         _RobotController::resetPose();
         return true;
+    }
+
+    QUICKDEV_DECLARE_RECONFIGURE_CALLBACK( reconfigureCB, _Seabee3ControlsCfg )
+    {
+        //
     }
 };
 

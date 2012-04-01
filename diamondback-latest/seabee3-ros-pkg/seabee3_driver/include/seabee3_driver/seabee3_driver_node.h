@@ -76,10 +76,11 @@ QUICKDEV_DECLARE_NODE( Seabee3Driver, _RobotDriver, _Shooter1ServiceServer, _Sho
 QUICKDEV_DECLARE_NODE_CLASS( Seabee3Driver )
 {
     BeeStem3Driver bee_stem3_driver_;
+    std::array<int, movement::NUM_THRUSTERS> motor_dirs_;
 
     QUICKDEV_DECLARE_NODE_CONSTRUCTOR( Seabee3Driver )
     {
-        //
+        motor_dirs_.fill( 1 );
     }
 
     QUICKDEV_SPIN_FIRST()
@@ -193,11 +194,11 @@ QUICKDEV_DECLARE_NODE_CLASS( Seabee3Driver )
         auto const & mask = msg->mask;
         for( size_t i = 0; i < motors.size(); ++i )
         {
-            //dir = i < movement_common::MotorControllerIDs::SHOOTER ? thruster_dir_cfg_[i] :
-            //                                                         1.0;
             if( mask[i] )
             {
-                auto const motor_value = motors[i];
+                auto motor_value = motor_dirs_[i] * motors[i];
+                if( motor_value != 0 && abs( motor_value ) < config_.motor_speed_floor ) motor_value = 0;
+
                 if( config_.simulate )
                 {
                     PRINT_INFO( "Setting motor id %zu to %d", i, motor_value );
@@ -256,6 +257,13 @@ QUICKDEV_DECLARE_NODE_CLASS( Seabee3Driver )
             bee_stem3_driver_.dropper2_params_.trigger_time_ =  config.dropper2_trigger_time;
             bee_stem3_driver_.dropper2_params_.trigger_value_ = config.dropper2_trigger_value;
         }
+
+        motor_dirs_[movement::MotorControllerIDs::FWD_RIGHT_THRUSTER] =    config.fwd_right_thruster_dir;
+        motor_dirs_[movement::MotorControllerIDs::FWD_LEFT_THRUSTER] =     config.fwd_left_thruster_dir;
+        motor_dirs_[movement::MotorControllerIDs::DEPTH_RIGHT_THRUSTER] =  config.depth_right_thruster_dir;
+        motor_dirs_[movement::MotorControllerIDs::DEPTH_LEFT_THRUSTER] =   config.depth_left_thruster_dir;
+        motor_dirs_[movement::MotorControllerIDs::STRAFE_FRONT_THRUSTER] = config.strafe_front_thruster_dir;
+        motor_dirs_[movement::MotorControllerIDs::STRAFE_BACK_THRUSTER] =  config.strafe_back_thruster_dir;
     }
 };
 

@@ -416,26 +416,26 @@ bool BeeStem3::setPID( int pidMode, float k, float p, float i, float d )
 void BeeStem3::setThruster( int num, int val )
 {
     if( itsPort && !itsPort->connected() ) return;
-    /** FIXED: If the kill switch is unplugged, this optimization
-     **        will prevent a subset of the motors from
-     **        re-starting once the kill swith is re-connected.
-     **        A motor will fall into this subset if and only if
-     **        its motor value is the same both before and after
-     **        the kill switch is unplugged. A motor from this
-     **        subset can have its behavior returned to normal if
-     **        its motor value is changed after the kill switch
-     **        has been re-connected.
-     **
-     **        This fix prevents any motors from falling into the
-     **        subset mentioned above.
-     ** ---------------------------------------------------------
-     ** //don't bother setting it if it's already at this value
-     ** if ( val == mMotorControllerState[num] )
-     ** {
-     **     return;
-     ** }
-     ** ---------------------------------------------------------
-     **/
+    /*! FIXED: If the kill switch is unplugged, this optimization
+     *         will prevent a subset of the motors from
+     *         re-starting once the kill swith is re-connected.
+     *         A motor will fall into this subset if and only if
+     *         its motor value is the same both before and after
+     *         the kill switch is unplugged. A motor from this
+     *         subset can have its behavior returned to normal if
+     *         its motor value is changed after the kill switch
+     *         has been re-connected.
+     *
+     *         This fix prevents any motors from falling into the
+     *         subset mentioned above.
+     *  ---------------------------------------------------------
+     *  //don't bother setting it if it's already at this value
+     *  if ( val == mMotorControllerState[num] )
+     *  {
+     *      return;
+     *  }
+     *  ---------------------------------------------------------
+     */
 
     mMotorControllerState[num] = val; //save the new state
     printf( "Set thruster [%d]:%d\n", num, val );
