@@ -1,0 +1,5 @@
+{dropper1_trigger_time: 125, dropper1_trigger_value: 75, dropper2_trigger_time: 125,
+  dropper2_trigger_value: 55, external_pressure: 890, internal_pressure: 3000, is_killed: true,
+  montalbos_per_meter: 37.5, port: /dev/seabee_pwrboard, shooter1_trigger_time: 100,
+  shooter1_trigger_value: 75, shooter2_trigger_time: 100, shooter2_trigger_value: -75,
+  surface_pressure: 890}
