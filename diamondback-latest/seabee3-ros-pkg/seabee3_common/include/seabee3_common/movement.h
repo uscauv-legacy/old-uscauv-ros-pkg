@@ -63,7 +63,7 @@ namespace MotorControllerIDs
     {
         return id != SHOOTER && id != DROPPER_STAGE1 && id != DROPPER_STAGE2;
     }
-};
+}
 
 static unsigned int const NUM_FIRING_DEVICES = 4;
 namespace FiringDeviceIDs
@@ -72,7 +72,7 @@ namespace FiringDeviceIDs
     static int const SHOOTER2 = 1;
     static int const DROPPER_STAGE1 = 2;
     static int const DROPPER_STAGE2 = 3;
-};
+}
 
 namespace Axes
 {
@@ -91,7 +91,7 @@ namespace Axes
     static int const ROLL_REL = 9;
     static int const PITCH_REL = 10;
     static int const YAW_REL = 11;
-};
+}
 
 namespace ThrusterPairs
 {
@@ -129,22 +129,6 @@ namespace ThrusterPairs
         }}
     }};
 }
-
-typedef std::map<int, int> ThrusterArrayCfg;
-
-// define the direction of each thruster in an array that is responsible for controlling a single axis of movement
-struct AxisArrayCfg
-{
-    std::vector<double> thrusters;
-    double & at( const unsigned int & i )
-    {
-        if ( thrusters.size() < i )
-        {
-            thrusters.resize( i );
-        }
-        return thrusters.at( i - 1 );
-    }
-};
 
 } // movement
 } // seabee3_common
