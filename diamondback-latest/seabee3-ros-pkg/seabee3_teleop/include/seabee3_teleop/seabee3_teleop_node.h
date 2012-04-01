@@ -39,16 +39,21 @@
 #include <quickdev/node.h>
 #include <quickdev/joystick_policy.h>
 #include <quickdev/service_client_policy.h>
+
 #include <seabee3_driver/FiringDeviceAction.h>
+#include <std_srvs/Empty.h>
 
 typedef quickdev::JoystickPolicy _JoystickPolicy;
 typedef seabee3_driver::FiringDeviceAction _FiringDeviceActionService;
+typedef std_srvs::Empty _ResetPoseService;
+
 typedef quickdev::ServiceClientPolicy<_FiringDeviceActionService, 0> _Shooter1ServiceClient;
 typedef quickdev::ServiceClientPolicy<_FiringDeviceActionService, 1> _Shooter2ServiceClient;
 typedef quickdev::ServiceClientPolicy<_FiringDeviceActionService, 2> _Dropper1ServiceClient;
 typedef quickdev::ServiceClientPolicy<_FiringDeviceActionService, 3> _Dropper2ServiceClient;
+typedef quickdev::ServiceClientPolicy<_ResetPoseService, 4> _ResetPoseServiceClient;
 
-QUICKDEV_DECLARE_NODE( Seabee3Teleop, _JoystickPolicy, _Shooter1ServiceClient, _Shooter2ServiceClient, _Dropper1ServiceClient, _Dropper2ServiceClient )
+QUICKDEV_DECLARE_NODE( Seabee3Teleop, _JoystickPolicy, _Shooter1ServiceClient, _Shooter2ServiceClient, _Dropper1ServiceClient, _Dropper2ServiceClient, _ResetPoseServiceClient )
 
 QUICKDEV_DECLARE_NODE_CLASS( Seabee3Teleop )
 {
@@ -65,7 +70,7 @@ public:
         //
     }
 
-    bool tryGetButtonLock( const _JoystickPolicy::_Axis & axis, const _JoystickPolicy::_JoystickMsg::ConstPtr & msg )
+    bool tryGetButtonLock( _JoystickPolicy::_Axis const & axis, _JoystickPolicy::_JoystickMsg::ConstPtr const & msg )
     {
         if( axis.getValueAsButton( msg ) > 0 )
         {
@@ -93,9 +98,12 @@ public:
     {
         if( JoystickPolicy::isEnabled() )
         {
-            const auto & next_firing_device_axis = _JoystickPolicy::getAxis( "next_firing_device" );
-            const auto & prev_firing_device_axis = _JoystickPolicy::getAxis( "prev_firing_device" );
-            const auto & fire_device_axis = _JoystickPolicy::getAxis( "fire_device" );
+            auto const & next_firing_device_axis = _JoystickPolicy::getAxis( "next_firing_device" );
+            auto const & prev_firing_device_axis = _JoystickPolicy::getAxis( "prev_firing_device" );
+            auto const & fire_device_axis = _JoystickPolicy::getAxis( "fire_device" );
+            auto const & reset_pose_axis = _JoystickPolicy::getAxis( "reset_pose" );
+
+            auto const last_firing_device = current_firing_device_;
 
             if( tryGetButtonLock( next_firing_device_axis, msg ) ) ++current_firing_device_;
             if( tryGetButtonLock( prev_firing_device_axis, msg ) ) --current_firing_device_;
@@ -106,7 +114,14 @@ public:
                 if( current_firing_device_ < 0 ) current_firing_device_ = num_firing_devices_ - 1;
             }
 
+            if( last_firing_device != current_firing_device_ ) PRINT_INFO( "Changed to firing device: %i", current_firing_device_ );
+
             if( tryGetButtonLock( fire_device_axis, msg ) ) fireCurrentDevice();
+            if( tryGetButtonLock( reset_pose_axis, msg ) )
+            {
+                _ResetPoseService service;
+                _ResetPoseServiceClient::callService( service );
+            }
         }
     }
 
@@ -141,7 +156,8 @@ public:
             _Shooter1ServiceClient,
             _Shooter2ServiceClient,
             _Dropper1ServiceClient,
-            _Dropper2ServiceClient
+            _Dropper2ServiceClient,
+            _ResetPoseServiceClient
         >
         (
             "enable_key_ids", true, // enable keys with IDs appended for all policies in this group
@@ -149,7 +165,8 @@ public:
             "service_name_param0", std::string( "/seabee3/shooter1" ),
             "service_name_param1", std::string( "/seabee3/shooter2" ),
             "service_name_param2", std::string( "/seabee3/dropper1" ),
-            "service_name_param3", std::string( "/seabee3/dropper2" )
+            "service_name_param3", std::string( "/seabee3/dropper2" ),
+            "service_name_param4", std::string( "/seabee3/reset_pose" )
         );
 
         // initialize any remaining policies

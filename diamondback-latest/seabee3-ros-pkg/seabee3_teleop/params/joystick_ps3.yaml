@@ -1,0 +1,6 @@
+{axis0_index: 1, axis0_name: linear.x, axis0_scale: 1.5, axis1_index: 0, axis1_name: linear.y,
+  axis1_scale: 0.75, axis2_index: 3, axis2_name: linear.z, axis2_scale: 0.14999999999999999,
+  axis3_index: 2, axis3_name: angular.z, axis3_scale: 1.5707963300000001, axis4_index: 9.0,
+  axis4_name: fire_device, axis4_scale: -1.0, button0_index: 10, button0_name: enable,
+  button1_index: 13, button1_name: next_firing_device, button2_index: 14, button2_name: prev_firing_device,
+  button3_index: 2, button3_name: reset_pose, keep_alive_period: 0.5 }
