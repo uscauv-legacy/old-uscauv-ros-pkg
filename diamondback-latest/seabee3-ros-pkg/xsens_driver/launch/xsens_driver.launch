@@ -1,7 +1,7 @@
 <launch>
     <arg name="pkg" value="xsens_driver" />
     <arg name="name" value="xsens_driver" />
-    <arg name="type" default="$(arg type)_node" />
+    <arg name="type" default="$(arg name)_node" />
     <arg name="rate" default="30" />
     <arg name="args" value="_loop_rate:=$(arg rate)" />
     <arg name="manager" default="manager" />
