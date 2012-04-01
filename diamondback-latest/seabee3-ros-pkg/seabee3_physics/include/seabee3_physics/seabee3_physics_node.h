@@ -44,6 +44,7 @@
 #include <quickdev/time.h>
 #include <quickdev/multi_publisher.h>
 #include <quickdev/multi_subscriber.h>
+#include <quickdev/threading.h>
 
 #include <seabee3_common/movement.h>
 
@@ -110,7 +111,7 @@ QUICKDEV_DECLARE_NODE_CLASS( Seabee3Physics )
         seabee_motion_state_ = quickdev::make_shared( new btDefaultMotionState( btTransform( btQuaternion( 0, 0, 0, 1 ), btVector3( 0, 0, 0 ) ) ) );
 
         // She weighs 35kg
-        btScalar seabee_mass = 100;
+        btScalar seabee_mass = 400;
         btVector3 seabee_inertia( 0, 0, 0 );
         seabee_shape_->calculateLocalInertia( seabee_mass, seabee_inertia );
 
@@ -131,11 +132,12 @@ QUICKDEV_DECLARE_NODE_CLASS( Seabee3Physics )
 
         //multi_pub_.addPublishers<
 
-        fetchThrusterTransforms();
-
         timer_.reset();
 
         initPolicies<quickdev::policy::ALL>();
+
+        // attempt to fetch thruster transforms
+        if( !quickdev::tryFunc( quickdev::auto_bind( &Seabee3PhysicsNode::fetchThrusterTransforms, this ), 10, 500000 ) ) RunablePolicy::interrupt();
     }
 
     void fetchThrusterTransforms()
@@ -172,7 +174,7 @@ QUICKDEV_DECLARE_NODE_CLASS( Seabee3Physics )
             auto const & current_thruster_tf = thruster_transforms_.at(i);
 
             // our thrust comes out of the x-axis of the motor
-            btVector3 const force_vec( thrust, 0, 0 );
+            btVector3 const force_vec( -thrust, 0, 0 );
 
             // the position of the thruster with respect to the center of the sub
             btVector3 const & force_rel_pos = current_thruster_tf.getOrigin();
@@ -199,17 +201,19 @@ QUICKDEV_DECLARE_NODE_CLASS( Seabee3Physics )
 
         btVector3 const & lin_vel = seabee_body_->getLinearVelocity();
         //btVector3 force_drag = -lin_v_ * reconfigure_params_.drag_constant;
+/*
         btVector3 force_drag;
 
         //! Todo: The way these constants were calculated needs to be clearer (ie. they need to be functions of measurements of the sub)
-        force_drag.setX( 0.5 * 1000 * 8.636 * lin_vel.x() * lin_vel.x() * 0.81 );
-        force_drag.setY( 0.5 * 1000 * 1.143 * lin_vel.y() * lin_vel.y() * 0.42 );
-        force_drag.setZ( 0.5 * 1000 * 1.906 * lin_vel.z() * lin_vel.z() * 0.42 );
+        force_drag.setX( -0.5 * 1000 * 8.636 * lin_vel.x() * lin_vel.x() * 0.81 );
+        force_drag.setY( -0.5 * 1000 * 1.143 * lin_vel.y() * lin_vel.y() * 0.42 );
+        force_drag.setZ( -0.5 * 1000 * 1.906 * lin_vel.z() * lin_vel.z() * 0.42 );
 
         seabee_body_->applyForce( force_drag, seabee_body_->getCenterOfMassPosition() );
 
-        ROS_INFO( "lin_vel: %f, %f, %f", lin_vel.x(), lin_vel.y(), lin_vel.z() );
         ROS_INFO( "Drag Force: %f ... Sub Speed: %f", force_drag.length(), lin_vel.length() );
+*/
+        ROS_INFO( "lin_vel: %f, %f, %f", lin_vel.x(), lin_vel.y(), lin_vel.z() );
 
         auto const & dt = timer_.update();
 
@@ -256,7 +260,7 @@ QUICKDEV_DECLARE_NODE_CLASS( Seabee3Physics )
     {
         for( size_t i = 0; i < movement::NUM_THRUSTERS; ++i )
         {
-            if( msg->mask.at(i) ) thruster_values_[i] = msg->motors.at(i);
+            thruster_values_[i] = msg->motors.at(i);
         }
     }
 

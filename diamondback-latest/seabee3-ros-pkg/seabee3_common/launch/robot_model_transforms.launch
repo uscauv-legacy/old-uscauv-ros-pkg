@@ -1,21 +1,28 @@
 <launch>
     <!-- args="x y z y p r frame1 frame2 hz" -->
+
+    <arg name="sleep" default="100"/>
+    <arg name="snap_to_physics_link" default="true"/>
+
     <arg name="pi" value="3.14159265"/>
     <arg name="pi_2" value="1.57079633"/>
+
     <!-- front strafe -->
-    <node pkg="tf" type="static_transform_publisher" name="thruster0_tf" args="0.3 0 0 $(arg pi_2) 0 0 /seabee3/base_link /seabee3/thruster0 500" />
+    <node pkg="tf" type="static_transform_publisher" name="thruster0_tf" args="0.3 0 0 $(arg pi_2) 0 0 /seabee3/base_link /seabee3/thruster0 $(arg sleep)" />
     <!-- fwd left -->
-    <node pkg="tf" type="static_transform_publisher" name="thruster1_tf" args="0 0.2 0 -$(arg pi) 0 0 /seabee3/base_link /seabee3/thruster1 500" />
+    <node pkg="tf" type="static_transform_publisher" name="thruster1_tf" args="0 0.2 0 -$(arg pi) 0 0 /seabee3/base_link /seabee3/thruster1 $(arg sleep)" />
 
     <!-- depth left -->
-    <node pkg="tf" type="static_transform_publisher" name="thruster2_tf" args="0 0.1 0 0 $(arg pi_2) 0 /seabee3/base_link /seabee3/thruster2 500" />
+    <node pkg="tf" type="static_transform_publisher" name="thruster2_tf" args="0 0.1 0 0 $(arg pi_2) 0 /seabee3/base_link /seabee3/thruster2 $(arg sleep)" />
     <!-- fwd right -->
-    <node pkg="tf" type="static_transform_publisher" name="thruster3_tf" args="0 -0.2 0 -$(arg pi) 0 0 /seabee3/base_link /seabee3/thruster3 500" />
+    <node pkg="tf" type="static_transform_publisher" name="thruster3_tf" args="0 -0.2 0 -$(arg pi) 0 0 /seabee3/base_link /seabee3/thruster3 $(arg sleep)" />
 
     <!-- depth right -->
-    <node pkg="tf" type="static_transform_publisher" name="thruster4_tf" args="0 -0.1 0 0 $(arg pi_2) 0 /seabee3/base_link /seabee3/thruster4 500" />
+    <node pkg="tf" type="static_transform_publisher" name="thruster4_tf" args="0 -0.1 0 0 $(arg pi_2) 0 /seabee3/base_link /seabee3/thruster4 $(arg sleep)" />
     <!-- back strafe -->
-    <node pkg="tf" type="static_transform_publisher" name="thruster5_tf" args="-0.3 0 0 -$(arg pi_2) 0 0 /seabee3/base_link /seabee3/thruster5 500" />
+    <node pkg="tf" type="static_transform_publisher" name="thruster5_tf" args="-0.3 0 0 -$(arg pi_2) 0 0 /seabee3/base_link /seabee3/thruster5 $(arg sleep)" />
 
-    <node pkg="tf" type="static_transform_publisher" name="camera2_tf" output="screen" args="0.157353 -0.155575 -0.0523748 0 $(arg pi_2) 0 /seabee3/base_link /camera2 500" />
+    <node pkg="tf" type="static_transform_publisher" name="camera2_tf" output="screen" args="0.157353 -0.155575 -0.0523748 0 $(arg pi_2) 0 /seabee3/base_link /camera2 $(arg sleep)" />
+
+    <node if="$(arg snap_to_physics_link)" pkg="tf" type="static_transform_publisher" name="physics_link_to_base_link" output="screen" args="0 0 0 0 0 0 /seabee3/physics_link /seabee3/base_link $(arg sleep)" />
 </launch>

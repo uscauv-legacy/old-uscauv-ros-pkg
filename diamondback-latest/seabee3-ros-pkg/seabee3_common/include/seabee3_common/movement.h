@@ -114,8 +114,8 @@ namespace ThrusterPairs
         }},
         // roll
         {{
-            MotorControllerIDs::DEPTH_LEFT_THRUSTER,
-            MotorControllerIDs::DEPTH_RIGHT_THRUSTER
+            -1, // MotorControllerIDs::DEPTH_LEFT_THRUSTER,
+            -1 // MotorControllerIDs::DEPTH_RIGHT_THRUSTER
         }},
         // pitch
         {{

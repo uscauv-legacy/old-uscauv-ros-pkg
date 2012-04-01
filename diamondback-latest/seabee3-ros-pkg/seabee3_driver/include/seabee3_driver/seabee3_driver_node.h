@@ -190,6 +190,8 @@ QUICKDEV_DECLARE_NODE_CLASS( Seabee3Driver )
 
     QUICKDEV_DECLARE_MESSAGE_CALLBACK( motorValsCB, _MotorValsMsg )
     {
+        if( config_.simulate && config_.is_killed ) return;
+
         auto const & motors = msg->motors;
         auto const & mask = msg->mask;
         for( size_t i = 0; i < motors.size(); ++i )

@@ -122,6 +122,14 @@ public:
                 _ResetPoseService service;
                 _ResetPoseServiceClient::callService( service );
             }
+
+/*
+            auto const & rotate_pos_180_axis = _JoystickPolicy::getAxis( "rotate_pos_180" );
+            auto const & rotate_neg_180_axis = _JoystickPolicy::getAxis( "rotate_neg_180" );
+
+            if( tryGetButtonLock( rotate_pos_180_axis, msg ) ) getVelocityMsg().angular.x += 180;
+            if( tryGetButtonLock( rotate_neg_180_axis, msg ) ) getVelocityMsg().angular.x -= 180;
+*/
         }
     }
 
