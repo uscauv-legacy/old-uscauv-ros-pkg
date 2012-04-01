@@ -38,16 +38,23 @@
 
 #include <quickdev/node.h>
 #include <quickdev/robot_controller_policy.h>
+#include <quickdev/service_server_policy.h>
 #include <quickdev/controllers/reconfigurable_pid.h>
 #include <seabee3_common/movement.h>
+
 #include <seabee3_driver/MotorVals.h>
 
+#include <std_srvs/Empty.h>
+
 typedef seabee3_driver::MotorVals _MotorValsMsg;
+typedef std_srvs::Empty _ResetPoseService;
+
 typedef quickdev::RobotControllerPolicy<_MotorValsMsg> _RobotController;
+typedef quickdev::ServiceServerPolicy<_ResetPoseService, 0> _ResetPoseServiceServer;
 
 using namespace seabee3_common;
 
-QUICKDEV_DECLARE_NODE( Seabee3Controls, _RobotController )
+QUICKDEV_DECLARE_NODE( Seabee3Controls, _RobotController, _ResetPoseServiceServer )
 
 QUICKDEV_DECLARE_NODE_CLASS( Seabee3Controls )
 {
@@ -62,7 +69,17 @@ QUICKDEV_DECLARE_NODE_CLASS( Seabee3Controls )
 
     QUICKDEV_SPIN_FIRST()
     {
-        initPolicies<_RobotController>( "robot_name_param", std::string( "seabee3" ) );
+        _ResetPoseServiceServer::registerCallback( quickdev::auto_bind( &Seabee3ControlsNode::resetPoseCB, this ) );
+
+        initPolicies
+        <
+            _RobotController,
+            _ResetPoseServiceServer
+        >
+        (
+            "robot_name_param", std::string( "seabee3" ),
+            "service_name_param", std::string( "/seabee3/reset_pose" )
+        );
 
         pid_.applySettings(
             quickdev::make_shared( new _Pid6D::_Settings( "linear/x" ) ),
@@ -75,8 +92,8 @@ QUICKDEV_DECLARE_NODE_CLASS( Seabee3Controls )
 
         initPolicies<quickdev::policy::ALL>();
 
-        btVector3 const rotation = unit::make_unit( btQuaternion( 0.1, 0.2, 0.3 ) );
-        printf( "%f %f %f\n", rotation.x(), rotation.y(), rotation.z() );
+        //btVector3 const rotation = unit::make_unit( btQuaternion( 0.1, 0.2, 0.3 ) );
+        //printf( "%f %f %f\n", rotation.x(), rotation.y(), rotation.z() );
     }
 
     template<int __Axis__, typename std::enable_if<(__Axis__ == movement::Axes::SPEED), int>::type = 0>
@@ -135,7 +152,7 @@ QUICKDEV_DECLARE_NODE_CLASS( Seabee3Controls )
                 auto & value2 = msg.motors[motor2_id];
                 auto const magnitude = std::max( abs( value1 ), abs( value2 ) );
 
-                printf( "normalizing axis [%zu] [%i, %i : %i]\n", i, value1, value2, magnitude );
+//                printf( "normalizing axis [%zu] [%i, %i : %i]\n", i, value1, value2, magnitude );
 
                 if( magnitude > 100 )
                 {
@@ -144,7 +161,7 @@ QUICKDEV_DECLARE_NODE_CLASS( Seabee3Controls )
                     value2 *= scale;
                 }
 
-                printf( "-> [%i, %i]\n", value1, value2 );
+//                printf( "-> [%i, %i]\n", value1, value2 );
             }
         }
     }
@@ -158,7 +175,7 @@ QUICKDEV_DECLARE_NODE_CLASS( Seabee3Controls )
         // calculate pose error
         btVector3 const linear_error_vec = unit::make_unit( transform_to_target.getOrigin() );
         btVector3 const angular_error_vec = unit::make_unit( transform_to_target.getRotation() );
-
+/*
         printf( "error [%f %f %f] [%f %f %f]\n",
             linear_error_vec.x(),
             linear_error_vec.y(),
@@ -167,7 +184,7 @@ QUICKDEV_DECLARE_NODE_CLASS( Seabee3Controls )
             angular_error_vec.y(),
             angular_error_vec.z()
         );
-
+*/
         btVector3 linear_output_vec;
         btVector3 angular_output_vec;
 
@@ -176,10 +193,10 @@ QUICKDEV_DECLARE_NODE_CLASS( Seabee3Controls )
         linear_output_vec.setY( pid_.linear_.y_.update( 0, linear_error_vec.y() ) );
         linear_output_vec.setZ( pid_.linear_.z_.update( 0, linear_error_vec.z() ) );
 
-        //angular_output_vec.setX( pid_.angular_.x_.update( 0, angular_error_vec.x() ) );
-        //angular_output_vec.setY( pid_.angular_.y_.update( 0, angular_error_vec.y() ) );
+//        angular_output_vec.setX( pid_.angular_.x_.update( 0, angular_error_vec.x() ) );
+//        angular_output_vec.setY( pid_.angular_.y_.update( 0, angular_error_vec.y() ) );
         angular_output_vec.setZ( pid_.angular_.z_.update( 0, angular_error_vec.z() ) );
-
+/*
         printf( "pid [%f %f %f] [%f %f %f]\n",
             linear_output_vec.x(),
             linear_output_vec.y(),
@@ -188,7 +205,7 @@ QUICKDEV_DECLARE_NODE_CLASS( Seabee3Controls )
             angular_output_vec.y(),
             angular_output_vec.z()
         );
-
+*/
         // convert axis output values into motor values
         updateMotorValsMsg<movement::Axes::SPEED>( motor_vals_msg, linear_output_vec, angular_output_vec );
         updateMotorValsMsg<movement::Axes::STRAFE>( motor_vals_msg, linear_output_vec, angular_output_vec );
@@ -199,6 +216,12 @@ QUICKDEV_DECLARE_NODE_CLASS( Seabee3Controls )
         normalizeMotorValsMsg( motor_vals_msg );
 
         _RobotController::update( motor_vals_msg );
+    }
+
+    QUICKDEV_DECLARE_SERVICE_CALLBACK( resetPoseCB, _ResetPoseService )
+    {
+        _RobotController::resetPose();
+        return true;
     }
 };
 

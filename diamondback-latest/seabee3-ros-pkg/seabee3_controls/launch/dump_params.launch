@@ -1,0 +1,3 @@
+<launch>
+    <rosparam command="dump" ns="/seabee3_controls_node/pid" file="$(find seabee3_controls)/params/pid.yaml" />
+</launch>

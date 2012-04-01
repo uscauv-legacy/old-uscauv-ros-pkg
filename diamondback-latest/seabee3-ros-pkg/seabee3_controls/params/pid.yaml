@@ -1,0 +1,8 @@
+angular:
+  x: {d: 0.6, i: 0.01, output_dir: 1.0, output_max: 100.0, output_min: -100.0, p: 100.0}
+  y: {d: 0.6, i: 0.01, output_dir: 1.0, output_max: 100.0, output_min: -100.0, p: 100.0}
+  z: {d: 0.2, i: 0.001, output_dir: 1.0, output_max: 100.0, output_min: -100.0, p: 50.0}
+linear:
+  x: {d: 1.0, i: 1.0, output_dir: 1.0, output_max: 100.0, output_min: -100.0, p: 1.0}
+  y: {d: 0.0, i: 0.0, output_dir: 1.0, output_max: 100.0, output_min: -100.0, p: 1.0}
+  z: {d: 0.6, i: 0.05, output_dir: 1.0, output_max: 100.0, output_min: -100.0, p: 114.59}

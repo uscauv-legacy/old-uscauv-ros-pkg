@@ -1,11 +1,14 @@
 <launch>
     <arg name="pkg" value="seabee3_controls" />
-    <arg name="type" value="seabee3_controls" />
-    <arg name="name" default="$(arg type)" />
+    <arg name="name" value="seabee3_controls" />
+    <arg name="type" default="$(arg name)_node" />
     <arg name="rate" default="30" />
     <arg name="args" value="_loop_rate:=$(arg rate)" />
     <arg name="manager" default="manager" />
     <arg name="nodelet" default="false" />
+
+    <rosparam param="/$(arg name)/pid" command="load" file="$(find seabee3_controls)/params/pid.yaml" />
+
     <node
         if="$(arg nodelet)"
         pkg="nodelet"
