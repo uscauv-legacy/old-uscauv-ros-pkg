@@ -196,6 +196,11 @@ QUICKDEV_DECLARE_NODE_CLASS( Seabee3Driver )
         auto const & mask = msg->mask;
         for( size_t i = 0; i < motors.size(); ++i )
         {
+            if( config_.override_kill_switch )
+            {
+                bee_stem3_driver_.setThruster( i, 0 );
+                continue;
+            }
             if( mask[i] )
             {
                 auto motor_value = motor_dirs_[i] * motors[i];
