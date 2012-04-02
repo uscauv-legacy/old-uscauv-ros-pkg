@@ -1,7 +1,7 @@
 {depth_left_thruster_dir: -1, depth_right_thruster_dir: -1, dropper1_trigger_time: 125,
   dropper1_trigger_value: 75, dropper2_trigger_time: 125, dropper2_trigger_value: 55,
   external_pressure: 890, fwd_left_thruster_dir: -1, fwd_right_thruster_dir: -1, internal_pressure: 3000,
-  is_killed: true, montalbos_per_meter: 37.5, motor_speed_floor: 15, port: /dev/seabee_pwrboard,
-  shooter1_trigger_time: 100, shooter1_trigger_value: 75, shooter2_trigger_time: 100,
-  shooter2_trigger_value: -75, simulate: false, strafe_back_thruster_dir: 1, strafe_front_thruster_dir: -1,
-  surface_pressure: 890}
+  is_killed: true, montalbos_per_meter: 37.5, motor_speed_floor: 5, override_kill_switch: false,
+  port: /dev/seabee_pwrboard, shooter1_trigger_time: 100, shooter1_trigger_value: 75,
+  shooter2_trigger_time: 100, shooter2_trigger_value: -75, strafe_back_thruster_dir: 1,
+  strafe_front_thruster_dir: -1, surface_pressure: 890}
