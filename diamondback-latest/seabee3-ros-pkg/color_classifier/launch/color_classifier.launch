@@ -1,17 +1,22 @@
 <launch>
+    <arg name="source" default="adaptation_mask" />
+
     <arg name="pkg" value="color_classifier" />
-    <arg name="type" value="color_classifier" />
-    <arg name="name" default="$(arg type)" />
-    <arg name="rate" default="30" />
-    <arg name="args" value="_loop_rate:=$(arg rate)" />
+    <arg name="name" value="color_classifier" />
+    <arg name="type" default="$(arg name)_node" />
+    <arg name="rate" default="25" />
+    <arg name="args" value="_loop_rate:=$(arg rate) ~adaptation_mask:=/$(arg source)/output_adaptation_mask ~image:=/$(arg source)/output_image" />
     <arg name="manager" default="manager" />
     <arg name="nodelet" default="false" />
+
+    <rosparam param="/$(arg name)/model" command="load" file="$(find color_classifier)/params/model.yaml" />
+
     <node
         if="$(arg nodelet)"
         pkg="nodelet"
         type="nodelet"
         name="$(arg name)"
-        args="load $(arg pkg)/$(arg type) $(arg manager) $(arg args)"
+        args="load $(arg pkg)/$(arg name) $(arg manager) $(arg args)"
         output="screen" />
     <node
         unless="$(arg nodelet)"

@@ -71,6 +71,19 @@ QUICKDEV_DECLARE_NODE_CLASS( ColorClassifierTrainer )
         cv::Mat const input_image = cv::imread( src_image_uri );
         // load grayscale
         cv::Mat const mask_image = cv::imread( mask_image_uri, 0 );
+
+        if( input_image.empty() )
+        {
+            PRINT_ERROR( "Input image is empty; exiting" );
+            exit( 1 );
+        }
+
+        if( mask_image.empty() )
+        {
+            PRINT_ERROR( "Mask image is empty; exiting" );
+            exit( 1 );
+        }
+
         // convert to Lab
         cv::Mat input_image_lab;
         cv::cvtColor( input_image, input_image_lab, CV_BGR2Lab );
@@ -84,13 +97,15 @@ QUICKDEV_DECLARE_NODE_CLASS( ColorClassifierTrainer )
             {
                 auto const & mask_pixel = mask_image.at<unsigned char>( y, x );
 
-                // ignore "black" pixels
+                // ignore "black" mask pixels
                 if( mask_pixel <= 255 / 2 ) continue;
 
                 auto const & lab_pixel = input_image_lab.at<cv::Vec3b>( y, x );
                 color_model_.push_back( _DataPoint( (double)lab_pixel[0], (double)lab_pixel[1], (double)lab_pixel[2] ) );
             }
         }
+
+        std::cout << "Sampling from " << color_model_.size() << " data points." << std::endl;
 
         auto const & mean = color_model_.updateMean();
         auto const & covariance = color_model_.updateCovariance();

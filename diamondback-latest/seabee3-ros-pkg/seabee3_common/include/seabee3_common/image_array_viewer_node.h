@@ -63,12 +63,14 @@ QUICKDEV_DECLARE_NODE_CLASS( ImageArrayViewer )
 
     QUICKDEV_DECLARE_MESSAGE_CALLBACK( imagesCB, _NamedImageArrayMsg )
     {
-        for( auto named_image_msg = msg->images.begin(); named_image_msg != msg->images.end(); ++named_image_msg )
+        for( auto named_image_msg = msg->images.cbegin(); named_image_msg != msg->images.cend(); ++named_image_msg )
         {
             cv::namedWindow( named_image_msg->name, 0 );
 
-            auto cv_image_ptr = quickdev::opencv_conversion::fromImageMsg( named_image_msg->image );
+            auto const cv_image_ptr = quickdev::opencv_conversion::fromImageMsg( named_image_msg->image );
             cv::Mat const & image = cv_image_ptr->image;
+
+            PRINT_INFO( "Got %s image %ix%i", named_image_msg->name.c_str(), image.size().width, image.size().height );
 
             cv::imshow( named_image_msg->name, image );
         }

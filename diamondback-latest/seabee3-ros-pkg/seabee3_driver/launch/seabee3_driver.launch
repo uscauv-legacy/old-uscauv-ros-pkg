@@ -16,7 +16,7 @@
         pkg="nodelet"
         type="nodelet"
         name="$(arg name)"
-        args="load $(arg pkg)/$(arg type) $(arg manager) $(arg args)"
+        args="load $(arg pkg)/$(arg name) $(arg manager) $(arg args)"
         output="screen" />
     <node
         unless="$(arg nodelet)"

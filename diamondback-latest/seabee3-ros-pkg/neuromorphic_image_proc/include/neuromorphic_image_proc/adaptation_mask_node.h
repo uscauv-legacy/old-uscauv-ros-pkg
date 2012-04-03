@@ -70,6 +70,8 @@ QUICKDEV_DECLARE_NODE_CLASS( AdaptationMask )
         cv::Mat lab_image;
         cv::cvtColor( image, lab_image, CV_BGR2Lab );
 
+        cv::GaussianBlur( lab_image, lab_image, cv::Size( 3, 3 ), 0 );
+
         // convert our LAB image to float
         //cv::Mat lab_image_float;
         //lab_image.convertTo( lab_image_float, CV_32F );
@@ -92,7 +94,7 @@ QUICKDEV_DECLARE_NODE_CLASS( AdaptationMask )
         //cv::threshold( high_values_mask_, high_values_mask_, 127, 255, CV_THRESH_BINARY );
 
         publishImages( "output_image", quickdev::opencv_conversion::fromMat( lab_image ) );
-        publishImages( "output_adaptation_image", quickdev::opencv_conversion::fromMat( high_values_mask_, "", "mono8" ) );
+        publishImages( "output_adaptation_mask", quickdev::opencv_conversion::fromMat( high_values_mask_, "", "mono8" ) );
 
         lab_image.copyTo( last_image_, high_values_mask_ );
         adaptation_time_image_.setTo( cv::Scalar( 0 ), high_values_mask_ );

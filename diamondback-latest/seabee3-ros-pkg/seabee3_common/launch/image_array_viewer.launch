@@ -1,9 +1,11 @@
 <launch>
+    <arg name="source" default="" />
+
     <arg name="pkg" value="seabee3_common" />
-    <arg name="type" value="image_array_viewer" />
-    <arg name="name" default="$(arg type)" />
+    <arg name="name" value="image_array_viewer" />
+    <arg name="type" default="$(arg name)_node" />
     <arg name="rate" default="30" />
-    <arg name="args" value="_loop_rate:=$(arg rate)" />
+    <arg name="args" value="_loop_rate:=$(arg rate) ~images:=$(arg source)" />
     <arg name="manager" default="manager" />
     <arg name="nodelet" default="false" />
     <node
@@ -11,30 +13,7 @@
         pkg="nodelet"
         type="nodelet"
         name="$(arg name)"
-        args="load $(arg pkg)/$(arg type) $(arg manager) $(arg args)"
-        output="screen" />
-    <node
-        unless="$(arg nodelet)"
-        pkg="$(arg pkg)"
-        type="$(arg type)"
-        name="$(arg name)"
-        args="$(arg args)"
-        output="screen" />
-</launch>
-<launch>
-    <arg name="pkg" value="seabee3_common" />
-    <arg name="type" value="image_array_viewer" />
-    <arg name="name" default="$(arg type)" />
-    <arg name="rate" default="30" />
-    <arg name="args" value="_loop_rate:=$(arg rate)" />
-    <arg name="manager" default="manager" />
-    <arg name="nodelet" default="false" />
-    <node
-        if="$(arg nodelet)"
-        pkg="nodelet"
-        type="nodelet"
-        name="$(arg name)"
-        args="load $(arg pkg)/$(arg type) $(arg manager) $(arg args)"
+        args="load $(arg pkg)/$(arg name) $(arg manager) $(arg args)"
         output="screen" />
     <node
         unless="$(arg nodelet)"
