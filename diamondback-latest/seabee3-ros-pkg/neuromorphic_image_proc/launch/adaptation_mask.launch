@@ -1,11 +1,11 @@
 <launch>
-    <arg name="source" default="image_server" />
+    <arg name="source" default="/image_server/output_image" />
 
     <arg name="pkg" value="neuromorphic_image_proc" />
     <arg name="name" value="adaptation_mask" />
     <arg name="type" default="$(arg name)_node" />
     <arg name="rate" default="20" />
-    <arg name="args" value="_loop_rate:=$(arg rate) ~image:=/$(arg source)/output_image" />
+    <arg name="args" value="_loop_rate:=$(arg rate) ~image:=$(arg source)" />
     <arg name="manager" default="manager" />
     <arg name="nodelet" default="false" />
     <node
