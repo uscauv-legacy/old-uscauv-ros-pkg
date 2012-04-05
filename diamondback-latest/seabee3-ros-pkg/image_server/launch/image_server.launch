@@ -1,7 +1,7 @@
 <launch>
     <arg name="path_prefix" default="$(find seabee3_data)/frames/" />
     <arg name="file_prefix" default="frame00" />
-    <arg name="ext" default=".jpg" />
+    <arg name="ext" default="jpg" />
     <arg name="digits" default="2" />
     <arg name="start" default="0" />
     <arg name="end" default="16" />
@@ -12,7 +12,7 @@
     <arg name="name" default="image_server" />
     <arg name="type" value="$(arg name)_node" />
     <arg name="rate" default="15" />
-    <arg name="args" value="_loop_rate:=$(arg rate) _prefix:=$(arg path_prefix)$(arg file_prefix) _ext:='$(arg ext)' _digits:=$(arg digits) _start:=$(arg start) _end:=$(arg end) _width:=$(arg width) _height:=$(arg height)" />
+    <arg name="args" value="_loop_rate:=$(arg rate) _prefix:=$(arg path_prefix)$(arg file_prefix) _ext:='.$(arg ext)' _digits:=$(arg digits) _start:=$(arg start) _end:=$(arg end) _width:=$(arg width) _height:=$(arg height)" />
     <arg name="manager" default="manager" />
     <arg name="nodelet" default="false" />
 
