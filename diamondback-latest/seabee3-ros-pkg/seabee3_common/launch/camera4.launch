@@ -1,0 +1,7 @@
+<launch>
+    <include file="$(find seabee3_common)/launch/robot_model_transforms.launch" />
+    <include file="$(find seabee3_common)/launch/generic_camera.launch" >
+        <arg name="camera_name" value="camera4" />
+        <arg name="guid" value="00b09d010090f9d6" />
+    </include>
+</launch>
