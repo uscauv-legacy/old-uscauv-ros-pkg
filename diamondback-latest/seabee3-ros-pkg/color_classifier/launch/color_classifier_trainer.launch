@@ -11,6 +11,8 @@
     <arg name="manager" default="manager" />
     <arg name="nodelet" default="false" />
 
+    <rosparam param="/$(arg name)/model" command="load" file="$(find color_classifier)/params/model.yaml" />
+
     <node
         if="$(arg nodelet)"
         pkg="nodelet"

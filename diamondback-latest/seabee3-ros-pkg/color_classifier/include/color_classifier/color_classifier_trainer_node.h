@@ -84,9 +84,9 @@ QUICKDEV_DECLARE_NODE_CLASS( ColorClassifierTrainer )
             exit( 1 );
         }
 
-        // convert to Lab
+        // convert to target color space
         cv::Mat input_image_lab;
-        cv::cvtColor( input_image, input_image_lab, CV_BGR2Lab );
+        cv::cvtColor( input_image, input_image_lab, CV_BGR2HLS );
 
         // build up our color model
         _ColorModel color_model_;

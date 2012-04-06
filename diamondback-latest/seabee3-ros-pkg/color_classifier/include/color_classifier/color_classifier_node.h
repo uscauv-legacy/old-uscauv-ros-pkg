@@ -158,7 +158,8 @@ protected:
 
                     if( classified_image.size() != image.size() ) classified_image.create( image.size(), CV_8UC1 );
 
-                    auto const match_quality = 1.0 - pixel.distanceTo<quickdev::feature::mode::distance::GAUSSIAN_FAST>( target_color.mean_, target_color.covariance_, 0.25 );
+                    //auto const match_quality = 1.0 - 50 * pixel.distanceTo<quickdev::feature::mode::distance::GAUSSIAN>( target_color.mean_, target_color.covariance_, 50.0 );
+                    auto const match_quality = 1.0 - pixel.distanceTo<quickdev::feature::mode::distance::GAUSSIAN_FAST>( target_color.mean_, target_color.covariance_, 0.5 );
                     classified_image.at<uchar>( y, x ) = std::numeric_limits<uchar>::max() * match_quality;
 
 //                    PRINT_INFO( "%zu %zu %f %u", x, y, match_quality, classified_image.at<uchar>( y, x ) );
