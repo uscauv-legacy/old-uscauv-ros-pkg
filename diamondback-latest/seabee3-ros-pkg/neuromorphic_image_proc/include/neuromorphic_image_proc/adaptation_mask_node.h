@@ -67,18 +67,20 @@ QUICKDEV_DECLARE_NODE_CLASS( AdaptationMask )
         //IplImage * image = &IplImage( image_ptr->image );
 
         cv::Mat const & image = image_ptr->image;
-        cv::Mat lab_image;
-        cv::cvtColor( image, lab_image, CV_BGR2Lab );
+        //cv::Mat lab_image;
+        cv::Mat hsl_image;
+        //cv::cvtColor( image, lab_image, CV_BGR2Lab );
+        cv::cvtColor( image, hsl_image, CV_BGR2HLS );
 
-        cv::GaussianBlur( lab_image, lab_image, cv::Size( 3, 3 ), 0 );
+        cv::GaussianBlur( hsl_image, hsl_image, cv::Size( 3, 3 ), 0 );
 
         // convert our LAB image to float
         //cv::Mat lab_image_float;
         //lab_image.convertTo( lab_image_float, CV_32F );
 
         // find the difference for each pixel (in time)
-        if( last_image_.empty() ) last_image_ = cv::Mat( lab_image.rows, lab_image.cols, CV_8UC3 );
-        cv::absdiff( lab_image, last_image_, adaptation_image_ );
+        if( last_image_.empty() ) last_image_ = cv::Mat( hsl_image.rows, hsl_image.cols, CV_8UC3 );
+        cv::absdiff( hsl_image, last_image_, adaptation_image_ );
 
         // flatten the image (sum the channels)
         std::vector<cv::Mat> adaptation_images( 3 );
@@ -86,17 +88,17 @@ QUICKDEV_DECLARE_NODE_CLASS( AdaptationMask )
 
         if( adaptation_time_image_.empty() ) adaptation_time_image_ = cv::Mat( adaptation_mask_image_.rows, adaptation_mask_image_.cols, CV_8UC1 );
         adaptation_time_image_ += 1;
-        adaptation_mask_image_ = adaptation_images[0] * 0.7 + adaptation_images[1] * 0.15 + adaptation_images[2] * 0.15 + adaptation_time_image_;
+        adaptation_mask_image_ = adaptation_images[0] * 0.33 + adaptation_images[1] * 0.33 + adaptation_images[2] * 0.33 + adaptation_time_image_;
 
         cv::threshold( adaptation_mask_image_, high_values_mask_, threshold_, 255, CV_THRESH_BINARY );
 
         //cv::GaussianBlur( high_values_mask_, high_values_mask_, cv::Size( 3, 3 ), 0 );
         //cv::threshold( high_values_mask_, high_values_mask_, 127, 255, CV_THRESH_BINARY );
 
-        publishImages( "output_image", quickdev::opencv_conversion::fromMat( lab_image ) );
+        publishImages( "output_image", quickdev::opencv_conversion::fromMat( hsl_image ) );
         publishImages( "output_adaptation_mask", quickdev::opencv_conversion::fromMat( high_values_mask_, "", "mono8" ) );
 
-        lab_image.copyTo( last_image_, high_values_mask_ );
+        hsl_image.copyTo( last_image_, high_values_mask_ );
         adaptation_time_image_.setTo( cv::Scalar( 0 ), high_values_mask_ );
     }
 
