@@ -25,4 +25,11 @@
         name="$(arg name)"
         args="$(arg args)"
         output="screen" />
+
+<!-- if we're simulating, show the reconfigure window by default -->
+    <arg name="show_reconfigure" default="$(arg simulate)" />
+    <include file="$(find quickdev_cpp)/launch/dynamic_reconfigure.launch" >
+        <arg name="enable" value="$(arg show_reconfigure)" />
+        <arg name="name" value="$(arg name)" />
+    </include>
 </launch>
