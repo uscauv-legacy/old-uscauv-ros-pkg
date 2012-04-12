@@ -212,7 +212,9 @@ QUICKDEV_DECLARE_NODE_CLASS( PipeFinder )
 										storage 
 									  );
 				//make 8uc1 Mat
-				cvtColor(input, gray_input, CV_RGB2GRAY);
+				//cvtColor(input, gray_input, CV_RGB2GRAY);
+				threshold(input, gray_input, 240, 255, CV_THRESH_BINARY);
+				
 
 				cv::Mat elem = cv::getStructuringElement(cv::MORPH_RECT, cv::Size(5,5));
 				cv::morphologyEx(gray_input, gray_input, cv::MORPH_OPEN, elem, cv::Point(-1,-1), 3);
