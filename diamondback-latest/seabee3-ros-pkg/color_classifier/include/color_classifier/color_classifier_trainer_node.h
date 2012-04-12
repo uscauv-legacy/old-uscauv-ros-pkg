@@ -114,6 +114,7 @@ QUICKDEV_DECLARE_NODE_CLASS( ColorClassifierTrainer )
 
         std::cout << covariance << std::endl;
 
+        // Output mean and variance (not full covariance)
         for( size_t i = 0; i < mean.size(); ++i )
         {
             std::stringstream index_ss;
@@ -124,7 +125,16 @@ QUICKDEV_DECLARE_NODE_CLASS( ColorClassifierTrainer )
 
             nh_rel.setParam( "model/" + color_name + "/cov/elem" + index_str, covariance( i, i ) );
         }
+/* Output full covariance
+        for( size_t i = 0; i < covariance.size(); ++i )
+        {
+            std::stringstream index_ss;
+            index_ss << i;
+            auto const index_str = index_ss.str();
 
+            nh_rel.setParam( "model/" + color_name + "/cov/elem" + index_str, covariance[i] );
+        }
+*/
         auto const dump_result = system( std::string( "rosparam dump `rospack find color_classifier`/params/model.yaml /color_classifier_trainer/model/" ).c_str() );
     }
 
