@@ -215,11 +215,11 @@ QUICKDEV_DECLARE_NODE_CLASS( Seabee3Physics )
 
         ROS_INFO( "lin_vel: %f, %f, %f", lin_vel.x(), lin_vel.y(), lin_vel.z() );
 
-        btVector3 torque;
+        /*btVector3 torque;
 
         double _torque[3] = {0,0,0};
 
-        for ( int i = 2; i < 50; i++ ) {
+        for ( int i = 1; i < 2; i++ ) {
 
            _torque[0] += force_drag.getX() * 0.66 / i;
            _torque[1] += force_drag.getY() * 0.66 / i;
@@ -227,13 +227,13 @@ QUICKDEV_DECLARE_NODE_CLASS( Seabee3Physics )
 
            }
 
-        torque.setX( _torque[0] );
-        torque.setY( _torque[1] );
-        torque.setZ( _torque[2] );
+        torque.setX( -1*_torque[0] );
+        torque.setY( -1*_torque[1] );
+        torque.setZ( -1*_torque[2] );
 
         seabee_body_->applyTorque( torque );
 
-        ROS_INFO( "Torque: %f", torque.length() );
+        ROS_INFO( "Torque: %f", torque.length() );*/
 
         auto const & dt = timer_.update();
 
