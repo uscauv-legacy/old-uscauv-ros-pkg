@@ -111,7 +111,7 @@ QUICKDEV_DECLARE_NODE_CLASS( Seabee3Physics )
         seabee_motion_state_ = quickdev::make_shared( new btDefaultMotionState( btTransform( btQuaternion( 0, 0, 0, 1 ), btVector3( 0, 0, 0 ) ) ) );
 
         // She weighs 35kg
-        btScalar seabee_mass = 400;
+        btScalar seabee_mass = 35;
         btVector3 seabee_inertia( 0, 0, 0 );
         seabee_shape_->calculateLocalInertia( seabee_mass, seabee_inertia );
 
@@ -201,19 +201,39 @@ QUICKDEV_DECLARE_NODE_CLASS( Seabee3Physics )
 
         btVector3 const & lin_vel = seabee_body_->getLinearVelocity();
         //btVector3 force_drag = -lin_v_ * reconfigure_params_.drag_constant;
-/*
+
         btVector3 force_drag;
 
         //! Todo: The way these constants were calculated needs to be clearer (ie. they need to be functions of measurements of the sub)
-        force_drag.setX( -0.5 * 1000 * 8.636 * lin_vel.x() * lin_vel.x() * 0.81 );
-        force_drag.setY( -0.5 * 1000 * 1.143 * lin_vel.y() * lin_vel.y() * 0.42 );
-        force_drag.setZ( -0.5 * 1000 * 1.906 * lin_vel.z() * lin_vel.z() * 0.42 );
+        force_drag.setX( -0.5 * 1000 * 0.66 * 0.35 * lin_vel.x() * lin_vel.x() * 0.81 );
+        force_drag.setY( -0.5 * 1000 * 0.66 * 0.35 * lin_vel.y() * lin_vel.y() * 0.42 );
+        force_drag.setZ( -0.5 * 1000 * 0.66 * 0.66  * lin_vel.z() * lin_vel.z() * 0.42 );
 
         seabee_body_->applyForce( force_drag, seabee_body_->getCenterOfMassPosition() );
 
         ROS_INFO( "Drag Force: %f ... Sub Speed: %f", force_drag.length(), lin_vel.length() );
-*/
+
         ROS_INFO( "lin_vel: %f, %f, %f", lin_vel.x(), lin_vel.y(), lin_vel.z() );
+
+        btVector3 torque;
+
+        double _torque[3] = {0,0,0};
+
+        for ( int i = 2; i < 50; i++ ) {
+
+           _torque[0] += force_drag.getX() * 0.66 / i;
+           _torque[1] += force_drag.getY() * 0.66 / i;
+           _torque[2] += force_drag.getZ() * 0.35 / i;
+
+           }
+
+        torque.setX( _torque[0] );
+        torque.setY( _torque[1] );
+        torque.setZ( _torque[2] );
+
+        seabee_body_->applyTorque( torque );
+
+        ROS_INFO( "Torque: %f", torque.length() );
 
         auto const & dt = timer_.update();
 
