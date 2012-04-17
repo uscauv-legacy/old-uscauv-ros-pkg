@@ -108,7 +108,7 @@ private:
     QUICKDEV_DECLARE_NODE_CONSTRUCTOR( XsensDriver )
     {
         QUICKDEV_GET_RUNABLE_NODEHANDLE( nh_rel );
-        nh_rel.param( "port", port_, std::string( "/dev/ttyUSB0" ) );
+        nh_rel.param( "port", port_, std::string( "/dev/seabee/imu" ) );
         nh_rel.param( "frame_id", frame_id_, std::string( "imu" ) );
         nh_rel.param( "autocalibrate", autocalibrate_, true );
         nh_rel.param( "orientation_stdev", orientation_stdev_, 0.035 );
@@ -127,7 +127,7 @@ private:
         calibrate_rpy_drift_srv_ = nh_rel.advertiseService( "calibrate_rpy_drift", &XsensDriverNode::calibrateRPYDriftCB, this );
         calibrate_rpy_ori_srv_ = nh_rel.advertiseService( "calibrate_rpy_ori", &XsensDriverNode::calibrateRPYOriCB, this );
 
-        imu_driver_ = new XSensDriver();
+        imu_driver_ = new XSensDriver( port_ );
         if ( !imu_driver_->initMe() )
         {
             ROS_FATAL( "Failed to connect to IMU. Exiting..." );

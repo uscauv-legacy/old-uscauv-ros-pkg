@@ -19,55 +19,55 @@ class XSensDriver
 {
 public:
 
-	struct Mode
-	{
-		const static int quat = 0;
-		const static int euler = 1;
-		const static int cos_mat = 2;
-	};
+    struct Mode
+    {
+        const static int quat = 0;
+        const static int euler = 1;
+        const static int cos_mat = 2;
+    };
 
-	struct Vector3
-	{
-		double x;
-		double y;
-		double z;
-	};
+    struct Vector3
+    {
+        double x;
+        double y;
+        double z;
+    };
 
-	XSensDriver( std::string port = "" );
+    XSensDriver( std::string const & port = "" );
 
-	~XSensDriver();
+    ~XSensDriver();
 
-	bool updateData();
+    bool updateData();
 
-	bool initMe();
-	int doHardwareScan( xsens::Cmt3 &, CmtDeviceId[] );
-	void doMtSettings( xsens::Cmt3 &, CmtOutputMode &, CmtOutputSettings &, CmtDeviceId[] );
+    bool initMe();
+    int doHardwareScan( xsens::Cmt3 &, CmtDeviceId[] );
+    void doMtSettings( xsens::Cmt3 &, CmtOutputMode &, CmtOutputSettings &, CmtDeviceId[] );
 
-	Vector3 accel_;
-	Vector3 gyro_;
-	Vector3 mag_;
-	Vector3 ori_;
+    Vector3 accel_;
+    Vector3 gyro_;
+    Vector3 mag_;
+    Vector3 ori_;
 
 private:
-	xsens::Cmt3 cmt3;
-	CmtDeviceId deviceIds[256];
+    xsens::Cmt3 cmt3;
+    CmtDeviceId deviceIds[256];
 
-	CmtOutputMode mode;
-	CmtOutputSettings settings;
+    CmtOutputMode mode;
+    CmtOutputSettings settings;
 
-	XsensResultValue res;
+    std::string port_;
 
-	CmtCalData caldata;
-	CmtQuat qat_data;
-	CmtEuler euler_data;
-	CmtMatrix matrix_data;
-	double tdata;
+    XsensResultValue res;
 
-	std::string port_;
+    CmtCalData caldata;
+    CmtQuat qat_data;
+    CmtEuler euler_data;
+    CmtMatrix matrix_data;
+    double tdata;
 
-	xsens::Packet * packet;
+    xsens::Packet * packet;
 
-	bool inited;
+    bool inited;
 };
 
 #endif
