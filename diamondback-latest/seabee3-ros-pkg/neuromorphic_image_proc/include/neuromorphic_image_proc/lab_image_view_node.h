@@ -39,7 +39,9 @@
 #include <quickdev/node.h>
 #include <quickdev/image_proc_policy.h>
 
-QUICKDEV_DECLARE_NODE( LabImageView, quickdev::ImageProcPolicy )
+typedef quickdev::ImageProcPolicy _ImageProcPolicy;
+
+QUICKDEV_DECLARE_NODE( LabImageView, _ImageProcPolicy )
 
 QUICKDEV_DECLARE_NODE_CLASS( LabImageView )
 {
@@ -52,12 +54,17 @@ QUICKDEV_DECLARE_NODE_CLASS( LabImageView )
 
     QUICKDEV_SPIN_FIRST()
     {
+        initPolicies<_ImageProcPolicy>
+        (
+            "image_callback_param", quickdev::auto_bind( &LabImageViewNode::imageCB, this )
+        );
+
         initPolicies<quickdev::policy::ALL>();
     }
 
-    IMAGE_PROC_PROCESS_IMAGE( image_ptr )
+    QUICKDEV_DECLARE_IMAGE_CALLBACK( imageCB )
     {
-        cv::Mat const & image = image_ptr->image;
+        cv::Mat const & image = image_msg->image;
 
         // split 3-channel image into 3 single-channel images
         cv::split( image, image_channels_ );

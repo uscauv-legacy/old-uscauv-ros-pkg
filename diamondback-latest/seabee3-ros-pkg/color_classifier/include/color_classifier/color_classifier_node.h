@@ -69,6 +69,7 @@ QUICKDEV_DECLARE_NODE( ColorClassifier, AdaptationImageProcPolicy )
 QUICKDEV_DECLARE_NODE_CLASS( ColorClassifier )
 {
 protected:
+//    typedef quickdev::ImageProcPolicy _ImageProcPolicy;
     typedef seabee3_common::NamedImageArray _NamedImageArrayMsg;
     typedef ClassifiedColor _ClassifiedColor;
     typedef _ClassifiedColor::_Mean _ColorMean;
@@ -90,6 +91,10 @@ protected:
         initPolicies<quickdev::policy::ALL>();
 
         QUICKDEV_GET_RUNABLE_NODEHANDLE( nh_rel );
+
+        AdaptationImageProcPolicy::registerCombinedImageCallback( quickdev::auto_bind( &ColorClassifierNode::imagesCB, this ) );
+
+//        _ImageProcPolicy::addImagePublisher( "classified_images" );
 
         multi_pub_.addPublishers<_NamedImageArrayMsg>( nh_rel, {"classified_images"} );
 
@@ -113,20 +118,17 @@ protected:
         }
     }
 
-    IMAGE_PROC_PROCESS_IMAGE( image_ptr )
+    void imagesCB( cv_bridge::CvImageConstPtr const & image_msg, cv_bridge::CvImageConstPtr const & mask_msg )
     {
-        std::cout.precision( 5 );
-        cv::Mat const & image = image_ptr->image;
-        cv::Mat const & mask = adaptation_mask_ptr_ ? adaptation_mask_ptr_->image : cv::Mat();
+//        std::cout << "Getting image from message" << std::endl;
+        cv::Mat const & image = image_msg->image;
+//        std::cout << "Getting mask from message" << std::endl;
+        cv::Mat const & mask = mask_msg->image;
 
 //        cv::Mat_<cv::Vec3b>::const_iterator current_image_pixel = image.begin<cv::Vec3b>();
 //        cv::Mat_<uchar>::const_iterator current_mask_pixel = mask.begin<uchar>();
 
-        auto const have_mask = !mask.empty();
-
-        if( !have_mask ) PRINT_WARN( "No mask available; processing entire image" );
-
-        std::map<std::string, size_t> num_pixels_processed_map;
+//        std::map<std::string, size_t> num_pixels_processed_map;
 
 //        for( size_t x = 610; x < 616; ++x )
         for( size_t x = 0; x < (size_t)image.size().width; ++x )
@@ -135,11 +137,8 @@ protected:
             for( size_t y = 0; y < (size_t)image.size().height; ++y )
             {
 //                PRINT_INFO( "Checking mask %zu %zu", x, y );
-                if( have_mask )
-                {
-                    auto const & mask_pixel = mask.at<uchar>( y, x );
-                    if( !mask_pixel ) continue;
-                }
+                auto const & mask_pixel = mask.at<uchar>( y, x );
+                if( !mask_pixel ) continue;
 
                 auto const & raw_pixel = image.at<cv::Vec3b>( y, x );
                 auto const & pixel = quickdev::pixel::make_pixel<float>( raw_pixel );
@@ -164,9 +163,9 @@ protected:
 
 //                    PRINT_INFO( "%zu %zu %f %u", x, y, match_quality, classified_image.at<uchar>( y, x ) );
 
-                    if( num_pixels_processed_map.find( target_color_name ) == num_pixels_processed_map.end() ) num_pixels_processed_map[target_color_name] = 0;
+//                    if( num_pixels_processed_map.find( target_color_name ) == num_pixels_processed_map.end() ) num_pixels_processed_map[target_color_name] = 0;
 
-                    num_pixels_processed_map[target_color_name] ++;
+//                    num_pixels_processed_map[target_color_name] ++;
                 }
 /*
                 for( size_t i = 0; i < classified_images_.size(); ++i )
@@ -179,12 +178,12 @@ protected:
 */
             }
         }
-
+/*
         for( auto pixel_stats_it = num_pixels_processed_map.cbegin(); pixel_stats_it != num_pixels_processed_map.cend(); ++pixel_stats_it )
         {
             PRINT_INFO( "Processed %f%% of candidate %s pixels", 100 * (float)pixel_stats_it->second / ( image.size().width * image.size().height ), pixel_stats_it->first.c_str() );
         }
-
+*/
         _NamedImageArrayMsg named_image_array_message;
         named_image_array_message.images.resize( classified_images_.size() );
 

@@ -7,7 +7,7 @@ include($ENV{ROS_ROOT}/core/rosbuild/rosbuild.cmake)
 #  Release        : w/o debug symbols, w/ optimization
 #  RelWithDebInfo : w/ debug symbols, w/ optimization
 #  MinSizeRel     : w/o debug symbols, w/ optimization, stripped binaries
-#set(ROS_BUILD_TYPE RelWithDebInfo)
+set(ROS_BUILD_TYPE Release)
 
 rosbuild_init()
 
@@ -23,6 +23,10 @@ set(LIBRARY_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/lib)
 # uncomment if you have defined dynamic reconfigure files
 # Note: requires "rosbuild_include( quickdev_cpp dynamic_reconfigure )"
 #quickdev_gencfg()
+
+#if(CMAKE_COMPILER_IS_GNUCXX)
+#    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O4")        ## Optimize
+#endif()
 
 add_subdirectory( nodes )
 add_subdirectory( nodelets )

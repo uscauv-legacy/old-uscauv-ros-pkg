@@ -37,10 +37,12 @@
 #define NEUROMORPHICIMAGEPROC_ADAPTATIONMASK_H_
 
 #include <quickdev/node.h>
-#include <neuromorphic_image_proc/adaptation_image_proc_policy.h>
+#include <quickdev/image_proc_policy.h>
 #include <quickdev/feature.h>
 
-QUICKDEV_DECLARE_NODE( AdaptationMask, AdaptationImageProcPolicy )
+typedef quickdev::ImageProcPolicy _ImageProcPolicy;
+
+QUICKDEV_DECLARE_NODE( AdaptationMask, _ImageProcPolicy )
 
 QUICKDEV_DECLARE_NODE_CLASS( AdaptationMask )
 {
@@ -59,14 +61,18 @@ QUICKDEV_DECLARE_NODE_CLASS( AdaptationMask )
 
     QUICKDEV_SPIN_FIRST()
     {
+        initPolicies<_ImageProcPolicy>( "image_callback_param", quickdev::auto_bind( &AdaptationMaskNode::imageCB, this ) );
+
+        _ImageProcPolicy::addImagePublisher( "output_adaptation_mask" );
+
         initPolicies<quickdev::policy::ALL>();
     }
 
-    IMAGE_PROC_PROCESS_IMAGE( image_ptr )
+    QUICKDEV_DECLARE_IMAGE_CALLBACK( imageCB )
     {
         //IplImage * image = &IplImage( image_ptr->image );
 
-        cv::Mat const & image = image_ptr->image;
+        cv::Mat const & image = image_msg->image;
         //cv::Mat lab_image;
         cv::Mat hsl_image;
         //cv::cvtColor( image, lab_image, CV_BGR2Lab );
@@ -95,8 +101,19 @@ QUICKDEV_DECLARE_NODE_CLASS( AdaptationMask )
         //cv::GaussianBlur( high_values_mask_, high_values_mask_, cv::Size( 3, 3 ), 0 );
         //cv::threshold( high_values_mask_, high_values_mask_, 127, 255, CV_THRESH_BINARY );
 
-        publishImages( "output_image", quickdev::opencv_conversion::fromMat( hsl_image ) );
-        publishImages( "output_adaptation_mask", quickdev::opencv_conversion::fromMat( high_values_mask_, "", "mono8" ) );
+        auto const now = ros::Time::now();
+
+        auto output_image_msg = quickdev::opencv_conversion::fromMat( hsl_image );
+        output_image_msg->header.stamp = now;
+
+        auto output_adaptation_mask_msg = quickdev::opencv_conversion::fromMat( high_values_mask_, "", "mono8" );
+        output_adaptation_mask_msg->header.stamp = now;
+
+        publishImages
+        (
+            "output_image", output_image_msg,
+            "output_adaptation_mask", output_adaptation_mask_msg
+        );
 
         hsl_image.copyTo( last_image_, high_values_mask_ );
         adaptation_time_image_.setTo( cv::Scalar( 0 ), high_values_mask_ );

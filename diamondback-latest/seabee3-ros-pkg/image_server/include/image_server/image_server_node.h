@@ -43,9 +43,11 @@
 #include <image_server/ImageServerConfig.h>
 
 typedef image_server::ImageServerConfig _ImageServerConfig;
+
+typedef quickdev::ImageProcPolicy _ImageProcPolicy;
 typedef quickdev::ReconfigurePolicy< _ImageServerConfig > _ImageServerConfigPolicy;
 
-QUICKDEV_DECLARE_NODE( ImageServer, quickdev::ImageProcPolicy, _ImageServerConfigPolicy )
+QUICKDEV_DECLARE_NODE( ImageServer, _ImageProcPolicy, _ImageServerConfigPolicy )
 
 QUICKDEV_DECLARE_NODE_CLASS( ImageServer )
 {
@@ -71,6 +73,11 @@ public:
     void spinFirst()
     {
         _ImageServerConfigPolicy::registerCallback( quickdev::auto_bind( &ImageServerNode::reconfigureCB, this ) );
+
+        initPolicies<_ImageProcPolicy>
+        (
+            "subscribe_to_image_param", false
+        );
 
         initPolicies<quickdev::policy::ALL>();
 

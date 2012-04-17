@@ -62,7 +62,7 @@ QUICKDEV_DECLARE_NODE( PipeFinder )
 //
 QUICKDEV_DECLARE_NODE_CLASS( PipeFinder )
 {
-	ros::MultiSubscriber<> multi_sub_;
+    ros::MultiSubscriber<> multi_sub_;
     // variable initializations can be appended to this constructor as a comma-separated list:
     //
     // QUICKDEV_DECLARE_NODE_CONSTRUCTOR( PipeFinder ), member1_( some_value ), member2_( some_other_value ){}
@@ -70,8 +70,8 @@ QUICKDEV_DECLARE_NODE_CLASS( PipeFinder )
     QUICKDEV_DECLARE_NODE_CONSTRUCTOR( PipeFinder )
     {
         //
-		cv::namedWindow( "Found_boxes", 0 );	
-	}
+        cv::namedWindow( "Found_boxes", 0 );
+    }
 
     // this function is called by quickdev::RunablePolicy after all policies are constructed but just before the main loop is started
     // all policy initialization should be done here
@@ -93,7 +93,7 @@ QUICKDEV_DECLARE_NODE_CLASS( PipeFinder )
         // therefore, to get the default behavior from all policies, be sure to call initAll()
         //
         //initAll();
-        
+
         initPolicies<quickdev::policy::ALL>();
 
         QUICKDEV_GET_RUNABLE_NODEHANDLE( nh_rel );
@@ -104,172 +104,180 @@ QUICKDEV_DECLARE_NODE_CLASS( PipeFinder )
     // this opitonal function is called by quickdev::RunablePolicy at a fixed rate (defined by the ROS param _loop_rate)
     // most updateable policies should have their update( ... ) functions called within this context
     //
-    
+
     /*IMAGE_PROC_PROCESS_IMAGE( image_ptr )
     {
-		const float ASPECT_RATIO_BOUNDARY = 1.5;
-		const float perimScale = 10;
-		cv::Mat input = image_ptr->image;
-		cv::Mat gray_input;
-		std::vector<CvBox2D> usable_boxes;
-		CvMemStorage* storage;
-		CvSeq* contours;
-		CvBox2D box_to_check;
-		storage = cvCreateMemStorage(0);
-		contours = cvCreateSeq( 
-								CV_SEQ_ELTYPE_POINT, 
-								sizeof( CvSeq ), 
-								sizeof( CvPoint ), 
-								storage 
-							  );
-		//make 8uc1 Mat
-		cvtColor(input, gray_input, CV_RGB2GRAY);
-		
-		//clean up image
-		cv::Mat elem = cv::getStructuringElement(cv::MORPH_RECT, cv::Size(5,5));
-		cv::morphologyEx(gray_input, gray_input, cv::MORPH_OPEN, elem, cv::Point(-1,-1), 3);
-		//cv::morphologyEx(gray_input, gray_input, elem, cv::MORPH_OPEN, cv::Point(-1,-1), 3);
-		
-				//begin contour finder
-		cvFindContours( 
-						&IplImage( gray_input ), 
-						storage, &contours, 
-						sizeof( CvContour ), 
-						CV_RETR_LIST, 
-						CV_CHAIN_APPROX_SIMPLE 
-					   );
-		//iterate through found contours					
-		while(contours != NULL)
-		{
-			float aspect_ratio = 0; 
-			if( contours->total >= 6 )
-			{
-				//make cvBox2D from potentialy usable contours, and find actual usable ones by their aspect ratios
-				box_to_check = cvFitEllipse2( contours );
-				if( box_to_check.size.width >= box_to_check.size.height )
-					aspect_ratio = box_to_check.size.width / box_to_check.size.height;
-				else
-					aspect_ratio = box_to_check.size.height / box_to_check.size.width;	
-					
-				if( aspect_ratio >= ASPECT_RATIO_BOUNDARY )
-				{
-				 //sort usable contours by their perimeter, discard those that are too small					
-					double perimeterbound = (gray_input.rows + gray_input.cols)/perimScale; 
-					double totalperimeter = box_to_check.size.width * 2 + box_to_check.size.height * 2;
-					
-					if (totalperimeter >= perimeterbound)
-					{
-						usable_boxes.push_back( box_to_check );
-						cvEllipseBox( 
-									  &IplImage( input ), 
-									  box_to_check, 
-									  CV_RGB( 255, 0, 0 ), 
-									  3, 
-									  8, 
-									  0 
-									 );
-					 } //end perimeter check
-				} //end aspect ratio check
-			} //end contour total check
-			
-			contours = contours->h_next;
-		}
-		//landmarks::Pipe pipe( cv::Point3( x, y, z ), rotation );
-		//multi_pub_.publish( "landmarks", pipe.createMsg() );
-		cv::imshow( "Found_boxes", input );
+        const float ASPECT_RATIO_BOUNDARY = 1.5;
+        const float perimScale = 10;
+        cv::Mat input = image_ptr->image;
+        cv::Mat gray_input;
+        std::vector<CvBox2D> usable_boxes;
+        CvMemStorage* storage;
+        CvSeq* contours;
+        CvBox2D box_to_check;
+        storage = cvCreateMemStorage(0);
+        contours = cvCreateSeq(
+                                CV_SEQ_ELTYPE_POINT,
+                                sizeof( CvSeq ),
+                                sizeof( CvPoint ),
+                                storage
+                              );
+        //make 8uc1 Mat
+        cvtColor(input, gray_input, CV_RGB2GRAY);
+
+        //clean up image
+        cv::Mat elem = cv::getStructuringElement(cv::MORPH_RECT, cv::Size(5,5));
+        cv::morphologyEx(gray_input, gray_input, cv::MORPH_OPEN, elem, cv::Point(-1,-1), 3);
+        //cv::morphologyEx(gray_input, gray_input, elem, cv::MORPH_OPEN, cv::Point(-1,-1), 3);
+
+                //begin contour finder
+        cvFindContours(
+                        &IplImage( gray_input ),
+                        storage, &contours,
+                        sizeof( CvContour ),
+                        CV_RETR_LIST,
+                        CV_CHAIN_APPROX_SIMPLE
+                       );
+        //iterate through found contours
+        while(contours != NULL)
+        {
+            float aspect_ratio = 0;
+            if( contours->total >= 6 )
+            {
+                //make cvBox2D from potentialy usable contours, and find actual usable ones by their aspect ratios
+                box_to_check = cvFitEllipse2( contours );
+                if( box_to_check.size.width >= box_to_check.size.height )
+                    aspect_ratio = box_to_check.size.width / box_to_check.size.height;
+                else
+                    aspect_ratio = box_to_check.size.height / box_to_check.size.width;
+
+                if( aspect_ratio >= ASPECT_RATIO_BOUNDARY )
+                {
+                 //sort usable contours by their perimeter, discard those that are too small
+                    double perimeterbound = (gray_input.rows + gray_input.cols)/perimScale;
+                    double totalperimeter = box_to_check.size.width * 2 + box_to_check.size.height * 2;
+
+                    if (totalperimeter >= perimeterbound)
+                    {
+                        usable_boxes.push_back( box_to_check );
+                        cvEllipseBox(
+                                      &IplImage( input ),
+                                      box_to_check,
+                                      CV_RGB( 255, 0, 0 ),
+                                      3,
+                                      8,
+                                      0
+                                     );
+                     } //end perimeter check
+                } //end aspect ratio check
+            } //end contour total check
+
+            contours = contours->h_next;
+        }
+        //landmarks::Pipe pipe( cv::Point3( x, y, z ), rotation );
+        //multi_pub_.publish( "landmarks", pipe.createMsg() );
+        cv::imshow( "Found_boxes", input );
         cvWaitKey( 20 );
-	}*/
-	
-	QUICKDEV_DECLARE_MESSAGE_CALLBACK( imagesCB, _NamedImageArrayMsg )
+    }*/
+
+    QUICKDEV_DECLARE_MESSAGE_CALLBACK( imagesCB, _NamedImageArrayMsg )
     {
+        PRINT_INFO( "Got images callback" );
         for( auto named_image_msg = msg->images.cbegin(); named_image_msg != msg->images.cend(); ++named_image_msg )
         {
-			// named_image_msg->name == "orange"
-			if( strcmp(named_image_msg->name.c_str(), "orange") )
-			{
-				cv::namedWindow( named_image_msg->name, 0 );
+            PRINT_INFO( "Current image message has name %s", named_image_msg->name.c_str() );
+            // named_image_msg->name == "orange"
+            if( named_image_msg->name == "orange" )
+            {
+                cv::namedWindow( named_image_msg->name, 0 );
 
-				auto const cv_image_ptr = quickdev::opencv_conversion::fromImageMsg( named_image_msg->image );
-				cv::Mat const & input = cv_image_ptr->image;
+                auto const cv_image_ptr = quickdev::opencv_conversion::fromImageMsg( named_image_msg->image );
+                cv::Mat const & input = cv_image_ptr->image;
+                cv::Mat debug_image( input.size(), CV_8UC3 );
+                IplImage debug_image_ipl( debug_image );
 
-				PRINT_INFO( "Got %s image %ix%i", named_image_msg->name.c_str(), input.size().width, input.size().height );
+                PRINT_INFO( "Got %s image %ix%i", named_image_msg->name.c_str(), input.size().width, input.size().height );
 
-				cv::imshow( named_image_msg->name, input );
-					
-				const float ASPECT_RATIO_BOUNDARY = 1.5;
-				const float perimScale = 10;
-				//cv::Mat input = image_ptr->image;
-				cv::Mat gray_input;
-				std::vector<CvBox2D> usable_boxes;
-				CvMemStorage* storage;
-				CvSeq* contours;
-				CvBox2D box_to_check;
-				storage = cvCreateMemStorage(0);
-				contours = cvCreateSeq( 
-										CV_SEQ_ELTYPE_POINT, 
-										sizeof( CvSeq ), 
-										sizeof( CvPoint ), 
-										storage 
-									  );
-				//make 8uc1 Mat
-				//cvtColor(input, gray_input, CV_RGB2GRAY);
-				threshold(input, gray_input, 240, 255, CV_THRESH_BINARY);
-				
+                cv::imshow( named_image_msg->name, input );
 
-				cv::Mat elem = cv::getStructuringElement(cv::MORPH_RECT, cv::Size(5,5));
-				cv::morphologyEx(gray_input, gray_input, cv::MORPH_OPEN, elem, cv::Point(-1,-1), 3);
-				
-				//begin contour finder
-				cvFindContours( 
-								&IplImage( gray_input ), 
-								storage, &contours, 
-								sizeof( CvContour ), 
-								CV_RETR_LIST, 
-								CV_CHAIN_APPROX_SIMPLE 
-							   );
-				//iterate through found contours					
-				while(contours != NULL)
-				{
-					float aspect_ratio = 0; 
-					if( contours->total >= 6 )
-					{
-						//make cvBox2D from potentialy usable contours, and find actual usable ones by their aspect ratios
-						box_to_check = cvFitEllipse2( contours );
-						if( box_to_check.size.width >= box_to_check.size.height )
-							aspect_ratio = box_to_check.size.width / box_to_check.size.height;
-						else
-							aspect_ratio = box_to_check.size.height / box_to_check.size.width;	
-							
-						if( aspect_ratio >= ASPECT_RATIO_BOUNDARY )
-						{
-						 //sort usable contours by their perimeter, discard those that are too small					
-							double perimeterbound = (gray_input.rows + gray_input.cols)/perimScale; 
-							double totalperimeter = box_to_check.size.width * 2 + box_to_check.size.height * 2;
-							
-							if (totalperimeter >= perimeterbound)
-							{
-								usable_boxes.push_back( box_to_check );
-								cvEllipseBox( 
-											  &IplImage( input ), 
-											  box_to_check, 
-											  CV_RGB( 255, 0, 0 ), 
-											  3, 
-											  8, 
-											  0 
-											 );
-							 } //end perimeter check
-						} //end aspect ratio check
-					} //end contour total check
-					
-					contours = contours->h_next;
-				}
-				cv::imshow( "Found_boxes", input );
-			} //end if orange
-	}
+                const float ASPECT_RATIO_BOUNDARY = 1.5;
+                const float perimScale = 10;
+                //cv::Mat input = image_ptr->image;
+                cv::Mat gray_input;
+                std::vector<CvBox2D> usable_boxes;
+                CvMemStorage* storage;
+                CvSeq* contours;
+                CvBox2D box_to_check;
+                storage = cvCreateMemStorage(0);
+                contours = cvCreateSeq(
+                                        CV_SEQ_ELTYPE_POINT,
+                                        sizeof( CvSeq ),
+                                        sizeof( CvPoint ),
+                                        storage
+                                      );
+                //make 8uc1 Mat
+                //cvtColor(input, gray_input, CV_RGB2GRAY);
+                threshold(input, gray_input, 127, 255, CV_THRESH_BINARY);
+
+
+                cv::Mat elem = cv::getStructuringElement(cv::MORPH_RECT, cv::Size(5,5));
+                cv::morphologyEx(gray_input, gray_input, cv::MORPH_OPEN, elem, cv::Point(-1,-1), 3);
+
+                IplImage gray_input_ipl( gray_input );
+/*
+                //begin contour finder
+                cvFindContours(
+                                &gray_input_ipl,
+                                storage, &contours,
+                                sizeof( CvContour ),
+                                CV_RETR_LIST,
+                                CV_CHAIN_APPROX_SIMPLE
+                               );
+
+                //iterate through found contours
+                while(contours != NULL)
+                {
+                    float aspect_ratio = 0;
+                    if( contours->total >= 6 )
+                    {
+                        //make cvBox2D from potentialy usable contours, and find actual usable ones by their aspect ratios
+                        box_to_check = cvFitEllipse2( contours );
+                        if( box_to_check.size.width >= box_to_check.size.height )
+                            aspect_ratio = box_to_check.size.width / box_to_check.size.height;
+                        else
+                            aspect_ratio = box_to_check.size.height / box_to_check.size.width;
+
+                        if( aspect_ratio >= ASPECT_RATIO_BOUNDARY )
+                        {
+                         //sort usable contours by their perimeter, discard those that are too small
+                            double perimeterbound = (gray_input.rows + gray_input.cols)/perimScale;
+                            double totalperimeter = box_to_check.size.width * 2 + box_to_check.size.height * 2;
+
+                            if (totalperimeter >= perimeterbound)
+                            {
+                                usable_boxes.push_back( box_to_check );
+                                cvEllipseBox(
+                                              &debug_image_ipl,
+                                              box_to_check,
+                                              CV_RGB( 255, 0, 0 ),
+                                              3,
+                                              8,
+                                              0
+                                             );
+                             } //end perimeter check
+                        } //end aspect ratio check
+                    } //end contour total check
+
+                    contours = contours->h_next;
+                }
+*/
+                cv::imshow( "Found_boxes", gray_input );
+            } //end if orange
+        }
 
         cvWaitKey( 20 );
     }
-    
+
     QUICKDEV_SPIN_ONCE()
     {
         //

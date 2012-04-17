@@ -37,13 +37,16 @@
 #define NEUROMORPHICIMAGEPROC_ADAPTATIONIMAGEPROCPOLICY_H_
 
 #include <quickdev/image_proc_policy.h>
+#include <quickdev/callback_policy.h>
+#include <mutex>
 
 QUICKDEV_DECLARE_POLICY_NS( AdaptationImageProc )
 {
     typedef quickdev::ImageProcPolicy _ImageProcPolicy;
+    typedef quickdev::CallbackPolicy<void( cv_bridge::CvImageConstPtr const &, cv_bridge::CvImageConstPtr const & )> _CombinedImageCallbackPolicy;
 }
 
-QUICKDEV_DECLARE_POLICY( AdaptationImageProc, _ImageProcPolicy )
+QUICKDEV_DECLARE_POLICY( AdaptationImageProc, _ImageProcPolicy, _CombinedImageCallbackPolicy )
 
 QUICKDEV_DECLARE_POLICY_CLASS( AdaptationImageProc )
 {
@@ -51,31 +54,239 @@ QUICKDEV_DECLARE_POLICY_CLASS( AdaptationImageProc )
     //
     QUICKDEV_MAKE_POLICY_FUNCS( AdaptationImageProc )
 
-    cv_bridge::CvImageConstPtr adaptation_mask_ptr_;
+    typedef QUICKDEV_GET_POLICY_NS( AdaptationImageProc )::_ImageProcPolicy _ImageProcPolicy;
+    typedef QUICKDEV_GET_POLICY_NS( AdaptationImageProc )::_CombinedImageCallbackPolicy _CombinedImageCallbackPolicy;
+    typedef cv_bridge::CvImageConstPtr _CvImageMsgPtr;
 
-    QUICKDEV_DECLARE_POLICY_CONSTRUCTOR( AdaptationImageProc )
+    _CvImageMsgPtr image_ptr_;
+    _CvImageMsgPtr adaptation_mask_ptr_;
+
+    std::deque<_CvImageMsgPtr> image_queue_;
+    std::deque<_CvImageMsgPtr> mask_queue_;
+
+    std::deque<_CvImageMsgPtr> visited_images_;
+    std::deque<_CvImageMsgPtr> visited_masks_;
+
+    std::mutex synced_callback_mutex_;
+
+    QUICKDEV_DECLARE_POLICY_CONSTRUCTOR( AdaptationImageProc ),
+        initialized_( false )
     {
         printPolicyActionStart( "create", this );
-
-        preInit();
-
         printPolicyActionDone( "create", this );
     }
 
-    void preInit()
+    QUICKDEV_ENABLE_INIT()
     {
-        QUICKDEV_GET_NODEHANDLE( nh_rel );
+        initPolicies<_ImageProcPolicy>
+        (
+            "image_callback_param", quickdev::auto_bind( &AdaptationImageProcPolicy::imageCB, this )
+        );
 
         // subscription to mask with pixel updates
-        image_subs_.addSubscriber( nh_rel, "adaptation_mask", &AdaptationImageProcPolicy::adaptationImageCB, this, subscriber_storage_ );
+        _ImageProcPolicy::addImageSubscriber( "adaptation_mask", quickdev::auto_bind( &AdaptationImageProcPolicy::adaptationImageCB, this ) );
 
         // publisher for modified mask
-        image_pubs_.addPublishers<sensor_msgs::Image>( nh_rel, {"output_adaptation_mask"}, publisher_storage_ );
+        _ImageProcPolicy::addImagePublisher( "output_adaptation_mask" );
+
+        QUICKDEV_SET_INITIALIZED();
     }
 
-    void adaptationImageCB( const sensor_msgs::Image::ConstPtr & image_msg )
+    template<class... __Args>
+    void registerCombinedImageCallback( __Args&&... args )
     {
-        adaptation_mask_ptr_ = quickdev::opencv_conversion::fromImageMsg( image_msg );
+        _CombinedImageCallbackPolicy::registerCallback( std::forward<__Args>( args )... );
+    }
+
+    void tryCallSyncedImagesCB()
+    {
+//        std::cout << "Looking for image/mask pair; waiting for lock..." << std::endl;
+        synced_callback_mutex_.lock();
+//        std::cout << "Looking for image/mask pair; acquired lock..." << std::endl;
+
+//        std::cout << "Trying to find mask/image pair; cached " << visited_images_.size() << " old images and " << visited_masks_.size() << " old masks" << std::endl;
+
+/*
+        in    vis
+
+        i m | i m
+        ----|----
+        0 2 | - -
+        1 3 | - -
+        2 4 | - -
+        3 0 | - -
+        4 1 | - -
+
+        i m | i m
+        ----|----
+        1 3 | 0 2
+        2 4 | - -
+        3 0 | - -
+        4 1 | - -
+
+        i m | i m
+        ----|----
+        2 4 | 0 2
+        3 0 | 1 3
+        4 1 | - -
+
+        i m | i m
+        ----|----
+        3 4 | 0 3
+        4 0 | 1 -
+        - 1 | - -
+
+        i m | i m
+        ----|----
+        4 4 | 0 -
+        - 0 | 1 -
+        - 1 | - -
+
+        i m | i m
+        ----|----
+        - 0 | 0 -
+        - 1 | 1 -
+
+        i m | i m
+        ----|----
+        - 0 | 0 -
+
+        i m | i m
+        ----|----
+*/
+        //! storage for a copy of the current image
+        _CvImageMsgPtr current_image;
+        //! storage for a copy of the current mask
+        _CvImageMsgPtr current_mask;
+
+        //! storage for a copy of the image, if we find it
+        _CvImageMsgPtr matched_image;
+        //! storage for a copy of the mask, if we find it
+        _CvImageMsgPtr matched_mask;
+        //! flag to indicate whether we've found the pair of images
+        bool match_found = false;
+
+        // while no match has been found and there's at least one new image or mask to process
+        while( !match_found && !( image_queue_.empty() && mask_queue_.empty() ) )
+        {
+            // if we have a new image
+            if( !image_queue_.empty() )
+            {
+//                std::cout << "Looking for image/mask pair; using new image" << std::endl;
+                current_image = image_queue_.front();
+                image_queue_.pop_front();
+            }
+
+            // if we have a new mask
+            if( !mask_queue_.empty() )
+            {
+//                std::cout << "Looking for image/mask pair; using new mask" << std::endl;
+                current_mask = mask_queue_.front();
+                mask_queue_.pop_front();
+            }
+
+            // if the first pair of images matches
+            if( current_image && current_mask && current_image->header.stamp == current_mask->header.stamp )
+            {
+//                std::cout << "Looking for image/mask pair; new messages match" << std::endl;
+                match_found = true;
+                matched_image = current_image;
+                matched_mask = current_mask;
+            }
+            else
+            {
+//                std::cout << "Looking for image/mask pair; new messages don't match; looking through " << visited_images_.size() << " old images and " << visited_masks_.size() << " old masks" << std::endl;
+                // if we have a new mask
+                if( !match_found && current_mask )
+                {
+                    // try to find a matching image
+                    for( auto visited_images_it = visited_images_.begin(); visited_images_it != visited_images_.end(); ++visited_images_it )
+                    {
+                        if( current_mask->header.stamp == (*visited_images_it)->header.stamp )
+                        {
+//                            std::cout << "Looking for image/mask pair; matched current mask to old image" << std::endl;
+                            match_found = true;
+                            matched_image = *visited_images_it;
+                            matched_mask = current_mask;
+
+                            visited_images_.erase( visited_images_it );
+
+                            break;
+                        }
+                    }
+                }
+                // if we have a new image
+                if( !match_found && current_image )
+                {
+                    // try to find a matching mask
+                    for( auto visited_masks_it = visited_masks_.begin(); visited_masks_it != visited_masks_.end(); ++visited_masks_it )
+                    {
+                        if( current_image->header.stamp == (*visited_masks_it)->header.stamp )
+                        {
+//                            std::cout << "Looking for image/mask pair; matched current image to old mask" << std::endl;
+                            match_found = true;
+                            matched_image = current_image;
+                            matched_mask = *visited_masks_it;
+
+                            visited_masks_.erase( visited_masks_it );
+
+                            break;
+                        }
+                    }
+                }
+
+                // if we didn't find any matches, or if we did but the current image wasn't matched
+                if( current_image && ( !match_found || current_image != matched_image ) ) visited_images_.push_back( current_image );
+                // if we didn't find any matches, or if we did but the current mask wasn't matched
+                if( current_mask && ( !match_found || current_mask != matched_mask ) ) visited_masks_.push_back( current_mask );
+            }
+        }
+
+        // if we found a match, pass it to the registered caller
+        if( match_found )
+        {
+//            std::cout << "Looking for image/mask pair; found matching pair; invoking registered callback" << std::endl;
+            _CombinedImageCallbackPolicy::invokeCallback( matched_image, matched_mask );
+//            std::cout << "Looking for image/mask pair; found matching pair; registered callback completed" << std::endl;
+        }
+
+        // unblock dependent callbacks
+//        std::cout << "Looking for image/mask pair; releasing lock..." << std::endl;
+        synced_callback_mutex_.unlock();
+    }
+
+    QUICKDEV_DECLARE_IMAGE_CALLBACK( imageCB )
+    {
+//        std::cout << "Got new image; waiting for lock..." << std::endl;
+        synced_callback_mutex_.lock();
+//        std::cout << "Got new image; acquired lock" << std::endl;
+
+        //while( image_queue_.size() >= 10 ) image_queue_.pop_front();
+        image_queue_.push_back( image_msg );
+
+//        PRINT_INFO( "%zu images waiting to be processed.", image_queue_.size() );
+
+//        std::cout << "Got new image; releasing lock" << std::endl;
+        synced_callback_mutex_.unlock();
+
+        tryCallSyncedImagesCB();
+    }
+
+    QUICKDEV_DECLARE_IMAGE_CALLBACK( adaptationImageCB )
+    {
+//        std::cout << "Got new mask; waiting for lock..." << std::endl;
+        synced_callback_mutex_.lock();
+//        std::cout << "Got new mask; acquired lock" << std::endl;
+
+        //while( mask_queue_.size() >= 10 ) adaptation_mask_queue_.pop_front();
+        mask_queue_.push_back( image_msg );
+
+//        PRINT_INFO( "%zu masks waiting to be processed.", mask_queue_.size() );
+
+//        std::cout << "Got new mask; releasing lock" << std::endl;
+        synced_callback_mutex_.unlock();
+
+        tryCallSyncedImagesCB();
     }
 };
 
