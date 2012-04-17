@@ -1,4 +1,6 @@
 <launch>
+    <arg name="simulate" default="false" />
+
     <arg name="pkg" value="xsens_driver" />
     <arg name="name" value="xsens_driver" />
     <arg name="type" default="$(arg name)_node" />

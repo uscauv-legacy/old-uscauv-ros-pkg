@@ -1,0 +1,11 @@
+<launch>
+    <arg name="simulate" default="false" />
+
+    <include file="$(find seabee3_driver)/launch/seabee3_driver.launch" >
+        <arg name="simulate" value="$(arg simulate)" />
+    </include>
+
+    <include file="$(find xsens_driver)/launch/xsens_driver.launch" >
+        <arg name="simulate" value="$(arg simulate)" />
+    </include>
+</launch>
