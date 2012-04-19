@@ -98,8 +98,12 @@ protected:
 
         multi_pub_.addPublishers<_NamedImageArrayMsg>( nh_rel, {"classified_images"} );
 
-        std::vector<std::string> const known_color_names = { "orange" };//ros::ParamReader<std::string, 0>::readParams( nh_rel, "color", "_name", 0 );
-        enabled_colors_["orange"] = true;
+        auto const known_color_names = ros::ParamReader<std::string, 0>::readParams( nh_rel, "model/color", "_name", 0 );
+
+        for( auto color_it = known_color_names.cbegin(); color_it != known_color_names.cend(); ++color_it )
+        {
+            enabled_colors_[*color_it] = true;
+        }
 
         for( auto color_name_it = known_color_names.cbegin(); color_name_it != known_color_names.cend(); ++color_name_it )
         {
