@@ -2,7 +2,7 @@
  *  include/seabee3_physics/seabee3_physics_node.h
  *  --------------------
  *
- *  Copyright (c) 2011, Edward T. Kaszubski ( ekaszubski@gmail.com )
+ *  Copyright (c) 2011, Edward T. Kaszubski ( ekaszubski@gmail.com ), Dhruv Monga ( dhruvmonga@gmail.com )
  *  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
@@ -202,7 +202,7 @@ QUICKDEV_DECLARE_NODE_CLASS( Seabee3Physics )
         btVector3 const & lin_vel = seabee_body_->getLinearVelocity();
         //btVector3 force_drag = -lin_v_ * reconfigure_params_.drag_constant;
 
-        btVector3 force_drag;
+        /* btVector3 force_drag;
 
         //! Todo: The way these constants were calculated needs to be clearer (ie. they need to be functions of measurements of the sub)
         force_drag.setX( -0.5 * 1000 * 0.66 * 0.35 * lin_vel.x() * lin_vel.x() * 0.81 );
@@ -211,7 +211,7 @@ QUICKDEV_DECLARE_NODE_CLASS( Seabee3Physics )
 
         seabee_body_->applyForce( force_drag, seabee_body_->getCenterOfMassPosition() );
 
-        ROS_INFO( "Drag Force: %f ... Sub Speed: %f", force_drag.length(), lin_vel.length() );
+        ROS_INFO( "Drag Force: %f ... Sub Speed: %f", force_drag.length(), lin_vel.length() );*/
 
         ROS_INFO( "lin_vel: %f, %f, %f", lin_vel.x(), lin_vel.y(), lin_vel.z() );
 
@@ -221,9 +221,9 @@ QUICKDEV_DECLARE_NODE_CLASS( Seabee3Physics )
 
         for ( int i = 1; i < 2; i++ ) {
 
-           _torque[0] += force_drag.getX() * 0.66 / i;
-           _torque[1] += force_drag.getY() * 0.66 / i;
-           _torque[2] += force_drag.getZ() * 0.35 / i;
+           _torque[0] += force_drag.getY() * force_drag.getZ() * 0.66 / i;
+           _torque[1] += force_drag.getX() * force_drag.getZ() * 0.66 / i;
+           _torque[2] += force_drag.getX() * force_drag.getY() * 0.35 / i;
 
            }
 
@@ -237,7 +237,12 @@ QUICKDEV_DECLARE_NODE_CLASS( Seabee3Physics )
 
         auto const & dt = timer_.update();
 
-        //seabee_body_->applyDamping(dt);
+        btScalar ang_damping = 0.3;
+        btScalar lin_damping = 0.3;
+
+        seabee_body_->setDamping ( lin_damping, ang_damping );
+
+        seabee_body_->applyDamping(dt);
 
         // Step the physics simulation; increase the simulation's time by dt (dt is variable); interpolate by up to 2 steps when dt is not the ideal @loop_rate_seconds_ time
         dynamics_world_->stepSimulation( dt, 2, getLoopRateSeconds() );
