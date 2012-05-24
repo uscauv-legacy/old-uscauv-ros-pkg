@@ -40,6 +40,7 @@
 #include <quickdev/node.h>
 #include <queue> // for queue
 #include <tf/tf.h> // for tf::Vector3
+#include <quickdev/tf_tranceiver_policy.h>
 #include <xsens_driver/xsens_driver.h> // for XSensDriver
 #include <geometry_msgs/Vector3.h>
 #include <math.h> //for pow, sqrt
@@ -52,6 +53,8 @@
 //srvs
 #include <xsens_driver/CalibrateRPY.h> // for CalibrateRPY
 #include <std_srvs/Empty.h> //for Empty
+
+typedef quickdev::TfTranceiverPolicy _TfTranceiverPolicy;
 
 void operator +=( XSensDriver::Vector3 & v1, tf::Vector3 & v2 )
 {
@@ -71,7 +74,7 @@ DECLARE_UNIT_CONVERSION_LAMBDA( _XSensVector3, _Vector3, xsens_vec, return _Vect
 //
 // QUICKDEV_DECLARE_NODE( XsensDriver, SomePolicy1, SomePolicy2 )
 //
-QUICKDEV_DECLARE_NODE( XsensDriver )
+QUICKDEV_DECLARE_NODE( XsensDriver, _TfTranceiverPolicy )
 
 // declare a class called XsensDriverNode
 //
@@ -293,6 +296,8 @@ private:
         custom_imu_msg.ori.z = Radian( Degree( custom_imu_msg.ori.z ) );
 
         tf::Quaternion ori( temp.z(), temp.y(), temp.x() );
+
+        _TfTranceiverPolicy::publishTransform( btTransform( ori, btVector3( 0, 0, 0 ) ), "/world", "/seabee3/imu" );
 
         imu_msg.orientation.w = ori.w();
         imu_msg.orientation.x = ori.x();
