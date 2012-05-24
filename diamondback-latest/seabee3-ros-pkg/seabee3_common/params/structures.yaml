@@ -1,0 +1,13 @@
+hull: { dynamics: "hull", frame: "/seabee3/hull" }
+sensor_pod1: { dynamics: "sensor_pod", frame: "/seabee3/sensor_pod1", parent: "hull" }
+sensor_pod2: { dynamics: "sensor_pod", frame: "/seabee3/sensor_pod2", parent: "hull" }
+sensor_pod3: { dynamics: "sensor_pod", frame: "/seabee3/sensor_pod3", parent: "hull" }
+sensor_pod4: { dynamics: "sensor_pod", frame: "/seabee3/sensor_pod4", parent: "hull" }
+thruster1: { dynamics: "thruster", frame: "/seabee3/thruster1", parent: "hull" }
+thruster2: { dynamics: "thruster", frame: "/seabee3/thruster2", parent: "hull" }
+thruster3: { dynamics: "thruster", frame: "/seabee3/thruster3", parent: "hull" }
+thruster4: { dynamics: "thruster", frame: "/seabee3/thruster4", parent: "hull" }
+thruster5: { dynamics: "thruster", frame: "/seabee3/thruster5", parent: "hull" }
+thruster6: { dynamics: "thruster", frame: "/seabee3/thruster6", parent: "hull" }
+battery1: { dynamics: "battery", frame: "/seabee3/battery1", parent: "hull" }
+battery2: { dynamics: "battery", frame: "/seabee3/battery2", parent: "hull" }
