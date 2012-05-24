@@ -69,6 +69,8 @@ typedef seabee3_driver::Depth _DepthMsg;
 typedef seabee3_driver::KillSwitch _KillSwitchMsg;
 typedef seabee3_driver::Pressure _PressureMsg;
 
+typedef quickdev::TfTranceiverPolicy _TfTranceiverPolicy;
+
 using namespace seabee3_common;
 
 QUICKDEV_DECLARE_NODE( Seabee3Driver, _RobotDriver, _Shooter1ServiceServer, _Shooter2ServiceServer, _Dropper1ServiceServer, _Dropper2ServiceServer, _FakeSeabeeLiveParams )
@@ -76,7 +78,7 @@ QUICKDEV_DECLARE_NODE( Seabee3Driver, _RobotDriver, _Shooter1ServiceServer, _Sho
 QUICKDEV_DECLARE_NODE_CLASS( Seabee3Driver )
 {
     BeeStem3Driver bee_stem3_driver_;
-    std::array<int, movement::NUM_THRUSTERS> motor_dirs_;
+    std::array<int, movement::NUM_MOTOR_CONTROLLERS> motor_dirs_;
 
     QUICKDEV_DECLARE_NODE_CONSTRUCTOR( Seabee3Driver )
     {
@@ -156,7 +158,9 @@ QUICKDEV_DECLARE_NODE_CLASS( Seabee3Driver )
             bee_stem3_driver_.readKillSwitch( kill_switch_msg.is_killed );
         }
 
-        depth_msg.value = getDepthFromPressure( extl_pressure_msg.value );
+        auto const depth = getDepthFromPressure( extl_pressure_msg.value );
+
+        depth_msg.value = depth;
 
         multi_pub_.publish(
             "/seabee3/depth", depth_msg,
@@ -164,6 +168,8 @@ QUICKDEV_DECLARE_NODE_CLASS( Seabee3Driver )
             "/seabee3/internal_pressure", intl_pressure_msg,
             "/seabee3/external_pressure", extl_pressure_msg
         );
+
+        _TfTranceiverPolicy::publishTransform( btTransform( btQuaternion( 0, 0, 0, 1 ), btVector3( 0, 0, -depth ) ), "/world", "/seabee3/depth" );
     }
 
     bool executeFiringDeviceAction( seabee3_driver::FiringDeviceAction::Request &req,
