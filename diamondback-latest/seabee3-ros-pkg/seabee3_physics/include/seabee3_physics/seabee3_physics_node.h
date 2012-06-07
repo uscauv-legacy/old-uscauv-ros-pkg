@@ -249,40 +249,45 @@ QUICKDEV_DECLARE_NODE_CLASS( Seabee3Physics )
 
         seabee_body_->getMotionState()->getWorldTransform( world_transform );
 
-        for ( size_t i = 0; i < movement::NUM_THRUSTERS; i++ )
+        // apply forces from thrusters
+        if( !is_killed_ )
         {
-            if( !movement::MotorControllerIDs::isThruster( i ) ) continue;
+            for ( size_t i = 0; i < movement::NUM_THRUSTERS; i++ )
+            {
+                if( !movement::MotorControllerIDs::isThruster( i ) ) continue;
 
-            auto const thrust = is_killed ? 0.0 : thruster_values_.at(i) * thrust_to_force;
+                auto const thrust = is_killed ? 0.0 : thruster_values_.at(i) * thrust_to_force;
 
-            auto const & current_thruster_tf = thruster_transforms_.at(i);
+                auto const & current_thruster_tf = thruster_transforms_.at(i);
 
-            // our thrust comes out of the x-axis of the motor
-            btVector3 const force_vec( -thrust, 0, 0 );
+                // our thrust comes out of the x-axis of the motor
+                btVector3 const force_vec( -thrust, 0, 0 );
 
-            // the position of the thruster with respect to the center of the sub
-            btVector3 const & force_rel_pos = current_thruster_tf.getOrigin();
+                // the position of the thruster with respect to the center of the sub
+                btVector3 const & force_rel_pos = current_thruster_tf.getOrigin();
 
-            ROS_INFO( "MOTOR%Zu THRUST: %f (%f,%f,%f) @ (%f,%f,%f)",
-                      i,
-                      thrust,
-                      force_vec.x(),
-                      force_vec.y(),
-                      force_vec.z(),
-                      force_rel_pos.x(),
-                      force_rel_pos.y(),
-                      force_rel_pos.z() );
+                ROS_INFO( "MOTOR%Zu THRUST: %f (%f,%f,%f) @ (%f,%f,%f)",
+                          i,
+                          thrust,
+                          force_vec.x(),
+                          force_vec.y(),
+                          force_vec.z(),
+                          force_rel_pos.x(),
+                          force_rel_pos.y(),
+                          force_rel_pos.z() );
 
-            // the direction of the thruster with respect to the world
-            btTransform const force_rotation( world_transform.getRotation() * current_thruster_tf.getRotation() );
+                // the direction of the thruster with respect to the world
+                btTransform const force_rotation( world_transform.getRotation() * current_thruster_tf.getRotation() );
 
-            // the final, rotated force
-            auto const rotated_force( force_rotation * force_vec );
+                // the final, rotated force
+                auto const rotated_force( force_rotation * force_vec );
 
-            // apply @rotated_force at @force_rel_pos
-            seabee_body_->applyForce( rotated_force, force_rel_pos );
+                // apply @rotated_force at @force_rel_pos
+                seabee_body_->applyForce( rotated_force, force_rel_pos );
+            }
         }
 
+        // apply drag force on a per-axis basis
         btVector3 const & linear_velocity = seabee_body_->getLinearVelocity();
         btVector3 drag_force( -config_.drag_x * linear_velocity.x(), -config_.drag_y * linear_velocity.y(), -config_.drag_z * linear_velocity.z() );
 
