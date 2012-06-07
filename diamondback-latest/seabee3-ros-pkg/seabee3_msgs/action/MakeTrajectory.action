@@ -1,0 +1,11 @@
+# goal
+
+# the waypoints we want to hit along this trajectory
+seabee3_msgs/TrajectoryWaypoint[] waypoints
+---
+# result
+
+# the resulting trajectory
+seabee3_msgs/Trajectory trajectory
+---
+# feedback

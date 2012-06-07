@@ -1,0 +1,3 @@
+duration length
+seabee3_msgs/TrajectoryWaypoint initial_state
+geometry_msgs/TwistWithCovariance acceleration

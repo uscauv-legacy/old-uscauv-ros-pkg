@@ -1,0 +1,11 @@
+# goal
+# list of colors for the filter, with "+/-" prepended to enable/disable the color
+# "+all"/"-all" enables/disables all colors
+# { "-all", "+green", "+orange" }
+string[] settings
+---
+# response
+# the resulting settings
+string[] settings
+---
+# feedback

@@ -1,0 +1,20 @@
+# goal
+
+# the target trajectory
+seabee3_msgs/Trajectory trajectory
+---
+# result
+
+# the ending state
+seabee3_msgs/TrajectoryWaypoint final_waypoint
+---
+# feedback
+
+# the interval we're trying to achieve
+seabee3_msgs/TrajectoryInterval target_interval
+
+# where we thought we'd be at this point in the interval
+seabee3_msgs/TrajectoryWaypoint expected_state
+
+# where we actually are
+seabee3_msgs/TrajectoryWaypoint current_state
