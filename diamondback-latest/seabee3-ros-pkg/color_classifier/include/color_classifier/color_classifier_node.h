@@ -37,13 +37,21 @@
 #define COLORCLASSIFIER_COLORCLASSIFIERNODE_H_
 
 #include <quickdev/node.h>
+
+// policies
 #include <neuromorphic_image_proc/adaptation_image_proc_policy.h>
 
+// objects
 #include <quickdev/pixel.h>
 #include <quickdev/param_reader.h>
+
+// utils
 #include <limits>
 
-#include <seabee3_common/NamedImageArray.h>
+// msgs
+#include <seabee3_msgs/NamedImageArray.h>
+
+typedef seabee3_msgs::NamedImageArray _NamedImageArrayMsg;
 
 struct ClassifiedColor
 {
@@ -70,7 +78,6 @@ QUICKDEV_DECLARE_NODE_CLASS( ColorClassifier )
 {
 protected:
 //    typedef quickdev::ImageProcPolicy _ImageProcPolicy;
-    typedef seabee3_common::NamedImageArray _NamedImageArrayMsg;
     typedef ClassifiedColor _ClassifiedColor;
     typedef _ClassifiedColor::_Mean _ColorMean;
     typedef _ClassifiedColor::_Covariance _ColorCovariance;

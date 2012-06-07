@@ -24,9 +24,5 @@ set(LIBRARY_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/lib)
 # Note: requires "rosbuild_include( quickdev_cpp dynamic_reconfigure )"
 #quickdev_gencfg()
 
-#if(CMAKE_COMPILER_IS_GNUCXX)
-#    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O4")        ## Optimize
-#endif()
-
 add_subdirectory( nodes )
 add_subdirectory( nodelets )

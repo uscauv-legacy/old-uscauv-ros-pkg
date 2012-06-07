@@ -36,25 +36,44 @@
 #ifndef XSENSDRIVER_XSENSDRIVER_H_
 #define XSENSDRIVER_XSENSDRIVER_H_
 
-//tools
 #include <quickdev/node.h>
+
+// policies
+#include <quickdev/tf_tranceiver_policy.h>
+#include <quickdev/service_server_policy.h>
+
+// objects
+#include <quickdev/multi_publisher.h>
 #include <queue> // for queue
 #include <tf/tf.h> // for tf::Vector3
-#include <quickdev/tf_tranceiver_policy.h>
 #include <xsens_driver/xsens_driver.h> // for XSensDriver
-#include <geometry_msgs/Vector3.h>
+
+// utils
 #include <math.h> //for pow, sqrt
 #include <quickdev/unit_conversions.h> // for unit conversions, specifically radian <-> degree
 #include <quickdev/message_conversions.h> // for message conversions, specifically btVector3 <-> geometry_msgs::Vector3
+
 //msgs
+#include <geometry_msgs/Vector3.h>
 #include <sensor_msgs/Imu.h> // for outgoing IMU data;
-#include <xsens_driver/Imu.h> // for backwards-compatibility; also gives euler angles
+#include <seabee3_msgs/Imu.h> // for backwards-compatibility; also gives euler angles
 #include <std_msgs/Bool.h> //for Bool
+
 //srvs
-#include <xsens_driver/CalibrateRPY.h> // for CalibrateRPY
+#include <seabee3_msgs/CalibrateRPY.h> // for CalibrateRPY
 #include <std_srvs/Empty.h> //for Empty
 
+typedef sensor_msgs::Imu _ImuMsg;
+typedef seabee3_msgs::Imu _SeabeeImuMsg;
+typedef std_msgs::Bool _BoolMsg;
+
+typedef seabee3_msgs::CalibrateRPY _CalibrateRPYSrv;
+typedef std_srvs::Empty _EmptySrv;
+
 typedef quickdev::TfTranceiverPolicy _TfTranceiverPolicy;
+typedef quickdev::ServiceServerPolicy<_CalibrateRPYSrv, 0> _CalibrateRPYDriftServiceServerPolicy;
+typedef quickdev::ServiceServerPolicy<_CalibrateRPYSrv, 1> _CalibrateRPYOriServiceServerPolicy;
+
 
 void operator +=( XSensDriver::Vector3 & v1, tf::Vector3 & v2 )
 {
@@ -74,13 +93,15 @@ DECLARE_UNIT_CONVERSION_LAMBDA( _XSensVector3, _Vector3, xsens_vec, return _Vect
 //
 // QUICKDEV_DECLARE_NODE( XsensDriver, SomePolicy1, SomePolicy2 )
 //
-QUICKDEV_DECLARE_NODE( XsensDriver, _TfTranceiverPolicy )
+QUICKDEV_DECLARE_NODE( XsensDriver, _TfTranceiverPolicy, _CalibrateRPYDriftServiceServerPolicy, _CalibrateRPYOriServiceServerPolicy )
 
 // declare a class called XsensDriverNode
 //
 QUICKDEV_DECLARE_NODE_CLASS( XsensDriver )
 {
 private:
+    ros::MultiPublisher<> multi_pub_;
+
     std::queue<tf::Vector3> ori_data_cache_;
 
     // offset from imu's "north"
@@ -95,20 +116,15 @@ private:
 
     int drift_calibration_steps_, ori_calibration_steps_;
 
-    ros::Publisher imu_pub_;
-    ros::Publisher custom_imu_pub_;
-    ros::Publisher is_calibrated_pub_;
-    ros::ServiceServer calibrate_rpy_drift_srv_;
-    ros::ServiceServer calibrate_rpy_ori_srv_;
-
-    XSensDriver * imu_driver_;
+    boost::shared_ptr<XSensDriver> imu_driver_ptr_;
     const static unsigned int IMU_DATA_CACHE_SIZE = 2;
 
-    // variable initializations can be appended to this constructor as a comma-separated list:
-    //
-    // QUICKDEV_DECLARE_NODE_CONSTRUCTOR( XsensDriver ), member1_( some_value ), member2_( some_other_value ){}
-    //
     QUICKDEV_DECLARE_NODE_CONSTRUCTOR( XsensDriver )
+    {
+        initPolicies<QUICKDEV_GET_RUNABLE_POLICY()>();
+    }
+
+    QUICKDEV_SPIN_FIRST()
     {
         QUICKDEV_GET_RUNABLE_NODEHANDLE( nh_rel );
         nh_rel.param( "port", port_, std::string( "/dev/seabee/imu" ) );
@@ -124,35 +140,52 @@ private:
 
         drift_calibrated_ = true;
 
-        imu_pub_ = nh_rel.advertise<sensor_msgs::Imu> ( "data", 1 );
-        custom_imu_pub_ = nh_rel.advertise<xsens_driver::Imu> ( "/xsens/custom_data", 1 );
-        is_calibrated_pub_ = nh_rel.advertise<std_msgs::Bool> ( "is_calibrated", 1 );
-        calibrate_rpy_drift_srv_ = nh_rel.advertiseService( "calibrate_rpy_drift", &XsensDriverNode::calibrateRPYDriftCB, this );
-        calibrate_rpy_ori_srv_ = nh_rel.advertiseService( "calibrate_rpy_ori", &XsensDriverNode::calibrateRPYOriCB, this );
+        multi_pub_.addPublishers
+        <
+            _ImuMsg,
+            _SeabeeImuMsg,
+            _BoolMsg
+        >( nh_rel,
+        {
+            "imu",
+            "seabee_imu",
+            "is_calibrated"
+        } );
 
-        imu_driver_ = new XSensDriver( port_ );
-        if ( !imu_driver_->initMe() )
+        _CalibrateRPYDriftServiceServerPolicy::registerCallback( quickdev::auto_bind( &XsensDriverNode::calibrateRPYDriftCB, this ) );
+        _CalibrateRPYOriServiceServerPolicy::registerCallback( quickdev::auto_bind( &XsensDriverNode::calibrateRPYOriCB, this ) );
+
+        initPolicies
+        <
+            _CalibrateRPYDriftServiceServerPolicy,
+            _CalibrateRPYOriServiceServerPolicy
+        >
+        (
+            "enable_key_ids", true,
+            "service_name_param0", std::string( "calibrate_rpy_drift" ),
+            "service_name_param1", std::string( "calibrate_rpy_ori" )
+        );
+
+        imu_driver_ptr_ = boost::make_shared<XSensDriver>( port_ );
+        if ( !imu_driver_ptr_->initMe() )
         {
             ROS_FATAL( "Failed to connect to IMU. Exiting..." );
             _Exit( 1 );
         }
-    }
 
-    ~XsensDriverNode()
-    {
-        delete imu_driver_;
+        initPolicies<quickdev::policy::ALL>();
     }
 
     void updateIMUData()
     {
-        if ( !imu_driver_->updateData() )
+        if ( !imu_driver_ptr_->updateData() )
         {
             ROS_WARN( "Failed to update data during this cycle..." );
         }
         else
         {
             tf::Vector3 temp;
-            temp = unit::make_unit( imu_driver_->ori_ );
+            temp = unit::make_unit( imu_driver_ptr_->ori_ );
 
             while ( ori_data_cache_.size() >= IMU_DATA_CACHE_SIZE )
             {
@@ -181,9 +214,9 @@ private:
 
         ROS_INFO( "Drift rate: %f Max drift rate: %f", drift_rate, max_drift_rate_ );
 
-        std_msgs::Bool is_calibrated_msg;
+        _BoolMsg is_calibrated_msg;
         is_calibrated_msg.data = drift_calibrated_;
-        is_calibrated_pub_.publish( is_calibrated_msg );
+        multi_pub_.publish( "is_calibrated", is_calibrated_msg );
     }
 
     void runRPYOriCalibration()
@@ -197,7 +230,7 @@ private:
         ROS_INFO( "Running ori calibration..." );
         //reset the vector to <0, 0, 0>
         ori_comp_ *= 0.0;
-        for ( int i = 0; i < n && ros::ok(); i++ )
+        for ( size_t i = 0; i < n && ros::ok(); ++i )
         {
             updateIMUData();
             ori_comp_ += ori_data_cache_.front();
@@ -221,7 +254,7 @@ private:
         drift_comp_ *= 0.0;
         updateIMUData();
         drift_comp_ = ori_data_cache_.front();
-        for ( int i = 0; i < n && ros::ok(); i++ )
+        for ( size_t i = 0; i < n && ros::ok(); ++i )
         {
             updateIMUData();
             ros::spinOnce();
@@ -232,21 +265,21 @@ private:
     }
 
     // entry point for service
-    bool calibrateRPYOriCB( xsens_driver::CalibrateRPY::Request &req, xsens_driver::CalibrateRPY::Response &res )
+    QUICKDEV_DECLARE_SERVICE_CALLBACK( calibrateRPYOriCB, _CalibrateRPYSrv )
     {
-        runRPYOriCalibration( req.num_samples );
+        runRPYOriCalibration( request.num_samples );
 
-        res.calibration = unit::make_unit( ori_comp_ );
+        response.calibration = unit::make_unit( ori_comp_ );
 
         return true;
     }
 
     // entry point for service
-    bool calibrateRPYDriftCB( xsens_driver::CalibrateRPY::Request &req, xsens_driver::CalibrateRPY::Response &res )
+    QUICKDEV_DECLARE_SERVICE_CALLBACK( calibrateRPYDriftCB, _CalibrateRPYSrv )
     {
-        runRPYDriftCalibration( req.num_samples );
+        runRPYDriftCalibration( request.num_samples );
 
-        res.calibration = unit::make_unit( drift_comp_ );
+        response.calibration = unit::make_unit( drift_comp_ );
 
         checkCalibration();
 
@@ -254,46 +287,41 @@ private:
     }
 
     // entry point for service
-    bool calibrateCB( std_srvs::Empty::Request & req, std_srvs::Empty::Response & res )
+    QUICKDEV_DECLARE_SERVICE_CALLBACK( calibrateCB, _EmptySrv )
     {
         runFullCalibration();
         return true;
-    }
-
-    QUICKDEV_SPIN_FIRST()
-    {
-        initPolicies<quickdev::policy::ALL>();
     }
 
     QUICKDEV_SPIN_ONCE()
     {
         if ( autocalibrate_ && !drift_calibrated_ ) runRPYDriftCalibration();
 
-        sensor_msgs::Imu imu_msg;
-        xsens_driver::Imu custom_imu_msg;
+        _ImuMsg imu_msg;
+        _SeabeeImuMsg seabee_imu_msg;
 
         updateIMUData();
 
-        imu_msg.linear_acceleration = unit::make_unit( imu_driver_->accel_ );
-        imu_msg.angular_velocity = unit::make_unit( imu_driver_->gyro_ );
+        imu_msg.linear_acceleration = unit::make_unit( imu_driver_ptr_->accel_ );
+        imu_msg.angular_velocity = unit::make_unit( imu_driver_ptr_->gyro_ );
 
-        custom_imu_msg.accel = unit::make_unit( imu_driver_->accel_ );
-        custom_imu_msg.gyro = unit::make_unit( imu_driver_->gyro_ );
-        custom_imu_msg.mag = unit::make_unit( imu_driver_->mag_ );
+        seabee_imu_msg.accel = unit::make_unit( imu_driver_ptr_->accel_ );
+        seabee_imu_msg.gyro = unit::make_unit( imu_driver_ptr_->gyro_ );
+        seabee_imu_msg.mag = unit::make_unit( imu_driver_ptr_->mag_ );
 
         // drift_comp_total_ += drift_comp_;
 
-        imu_driver_->ori_ += drift_comp_total_;
+        imu_driver_ptr_->ori_ += drift_comp_total_;
 
         tf::Vector3 temp;
-        temp = unit::make_unit( imu_driver_->ori_ );
+        temp = unit::make_unit( imu_driver_ptr_->ori_ );
         temp += ori_comp_;
 
-        custom_imu_msg.ori = unit::make_unit( temp );
+        seabee_imu_msg.ori = unit::make_unit( temp );
 
-        custom_imu_msg.ori.x = Radian( Degree( custom_imu_msg.ori.x ) );
-        custom_imu_msg.ori.y = Radian( Degree( custom_imu_msg.ori.y ) );
-        custom_imu_msg.ori.z = Radian( Degree( custom_imu_msg.ori.z ) );
+        seabee_imu_msg.ori.x = Radian( Degree( seabee_imu_msg.ori.x ) );
+        seabee_imu_msg.ori.y = Radian( Degree( seabee_imu_msg.ori.y ) );
+        seabee_imu_msg.ori.z = Radian( Degree( seabee_imu_msg.ori.z ) );
 
         tf::Quaternion ori( temp.z(), temp.y(), temp.x() );
 
@@ -308,8 +336,7 @@ private:
         imu_msg.linear_acceleration_covariance[0] = imu_msg.linear_acceleration_covariance[4] = imu_msg.linear_acceleration_covariance[8] = linear_acceleration_stdev_ * linear_acceleration_stdev_;
         imu_msg.orientation_covariance[0] = imu_msg.orientation_covariance[4] = imu_msg.orientation_covariance[8] = orientation_stdev_ * orientation_stdev_;
 
-        imu_pub_.publish( imu_msg );
-        custom_imu_pub_.publish( custom_imu_msg );
+        multi_pub_.publish( "imu", imu_msg, "seabee_imu", seabee_imu_msg );
         //imu_pub_raw_.publish( msg_raw );
     }
 };

@@ -37,16 +37,21 @@
 #define SEABEE3TELEOP_SEABEE3TELEOPNODE_H_
 
 #include <quickdev/node.h>
+
+// policies
 #include <quickdev/joystick_policy.h>
 #include <quickdev/service_client_policy.h>
 
-#include <seabee3_driver/FiringDeviceAction.h>
+// actions
+#include <seabee3_msgs/FiringDeviceAction.h>
+
+// srvs
 #include <std_srvs/Empty.h>
 
-typedef quickdev::JoystickPolicy _JoystickPolicy;
-typedef seabee3_driver::FiringDeviceAction _FiringDeviceActionService;
+typedef seabee3_msgs::FiringDeviceAction _FiringDeviceActionService;
 typedef std_srvs::Empty _ResetPoseService;
 
+typedef quickdev::JoystickPolicy _JoystickPolicy;
 typedef quickdev::ServiceClientPolicy<_FiringDeviceActionService, 0> _Shooter1ServiceClient;
 typedef quickdev::ServiceClientPolicy<_FiringDeviceActionService, 1> _Shooter2ServiceClient;
 typedef quickdev::ServiceClientPolicy<_FiringDeviceActionService, 2> _Dropper1ServiceClient;

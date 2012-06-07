@@ -10,7 +10,7 @@
   <url>http://ros.org/wiki/pipe_finder</url>
   <depend package="quickdev_cpp"/>
   <depend package="nodelet"/>
-  <depend package="seabee3_common"/>
+  <depend package="seabee3_msgs"/>
   <export>
     <nodelet plugin="${prefix}/nodelets/nodelet_plugins.xml"/>
   </export>

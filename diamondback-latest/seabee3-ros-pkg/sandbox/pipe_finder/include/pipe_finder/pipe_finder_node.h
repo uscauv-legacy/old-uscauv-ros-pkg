@@ -39,16 +39,18 @@
 
 #include <quickdev/node.h>
 
+// objects
 #include <quickdev/multi_subscriber.h>
 
+// utils
 #include <quickdev/opencv_conversion.h>
-
 #include <opencv/cv.h>
 #include <opencv/highgui.h>
 
-#include <seabee3_common/NamedImageArray.h>
+// msgs
+#include <seabee3_msgs/NamedImageArray.h>
 
-typedef seabee3_common::NamedImageArray _NamedImageArrayMsg;
+typedef seabee3_msgs::NamedImageArray _NamedImageArrayMsg;
 
 // declare a node called PipeFinderNode
 // a quickdev::RunablePolicy is automatically prepended to the list of policies our node will use

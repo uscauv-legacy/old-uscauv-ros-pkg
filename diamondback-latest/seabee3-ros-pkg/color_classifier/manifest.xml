@@ -11,7 +11,7 @@
   <depend package="quickdev_cpp"/>
   <depend package="nodelet"/>
   <depend package="neuromorphic_image_proc"/>
-  <depend package="seabee3_common"/>
+  <depend package="seabee3_msgs"/>
   <export>
     <nodelet plugin="${prefix}/nodelets/nodelet_plugins.xml"/>
   </export>

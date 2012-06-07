@@ -37,8 +37,12 @@
 #define NEUROMORPHICIMAGEPROC_ADAPTATIONIMAGEPROCPOLICY_H_
 
 #include <quickdev/image_proc_policy.h>
-#include <quickdev/callback_policy.h>
+
+// objects
 #include <mutex>
+
+// policies
+#include <quickdev/callback_policy.h>
 
 QUICKDEV_DECLARE_POLICY_NS( AdaptationImageProc )
 {

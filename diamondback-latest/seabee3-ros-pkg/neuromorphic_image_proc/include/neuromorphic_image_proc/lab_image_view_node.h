@@ -37,6 +37,8 @@
 #define NEUROMORPHICIMAGEPROC_LABIMAGEVIEW_H_
 
 #include <quickdev/node.h>
+
+// policies
 #include <quickdev/image_proc_policy.h>
 
 typedef quickdev::ImageProcPolicy _ImageProcPolicy;

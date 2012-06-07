@@ -37,26 +37,36 @@
 #define SEABEE3CONTROLS_SEABEE3CONTROLSNODE_H_
 
 #include <quickdev/node.h>
+
+// policies
 #include <quickdev/robot_controller_policy.h>
 #include <quickdev/service_server_policy.h>
 #include <quickdev/reconfigure_policy.h>
+
+// objects
 #include <quickdev/controllers/reconfigurable_pid.h>
+
+// utils
 #include <quickdev/math.h>
 #include <seabee3_common/movement.h>
 
-#include <seabee3_controls/Seabee3ControlsConfig.h>
+// msgs
+#include <seabee3_msgs/MotorVals.h>
 
-#include <seabee3_driver/MotorVals.h>
-
+// srvs
 #include <std_srvs/Empty.h>
 
-typedef seabee3_driver::MotorVals _MotorValsMsg;
+// cfgs
+#include <seabee3_controls/Seabee3ControlsConfig.h>
+
+typedef seabee3_msgs::MotorVals _MotorValsMsg;
+
 typedef std_srvs::Empty _ResetPoseService;
 
-typedef quickdev::RobotControllerPolicy<_MotorValsMsg> _RobotController;
-typedef quickdev::ServiceServerPolicy<_ResetPoseService, 0> _ResetPoseServiceServer;
-
 typedef seabee3_controls::Seabee3ControlsConfig _Seabee3ControlsCfg;
+
+typedef quickdev::RobotControllerPolicy<_MotorValsMsg> _RobotController;
+typedef quickdev::ServiceServerPolicy<_ResetPoseService> _ResetPoseServiceServer;
 typedef quickdev::ReconfigurePolicy<_Seabee3ControlsCfg> _Seabee3ControlsLiveParams;
 
 using namespace seabee3_common;

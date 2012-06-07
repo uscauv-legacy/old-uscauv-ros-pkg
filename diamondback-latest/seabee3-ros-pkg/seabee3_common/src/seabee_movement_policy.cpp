@@ -1,5 +1,5 @@
 /***************************************************************************
- *  include/seabee3_common/ImageArrayViewer_node.h
+ *  src/seabee_movement_policy.cpp
  *  --------------------
  *
  *  Copyright (c) 2011, Edward T. Kaszubski ( ekaszubski@gmail.com )
@@ -33,60 +33,4 @@
  *
  **************************************************************************/
 
-#ifndef SEABEE3COMMON_IMAGEARRAYVIEWERNODE_H_
-#define SEABEE3COMMON_IMAGEARRAYVIEWERNODE_H_
-
-#include <quickdev/node.h>
-
-// policies
-#include <quickdev/image_proc_policy.h>
-
-// msgs
-#include <seabee3_msgs/NamedImageArray.h>
-
-typedef seabee3_msgs::NamedImageArray _NamedImageArrayMsg;
-
-QUICKDEV_DECLARE_NODE( ImageArrayViewer )
-
-QUICKDEV_DECLARE_NODE_CLASS( ImageArrayViewer )
-{
-    ros::MultiSubscriber<> multi_sub_;
-
-    QUICKDEV_DECLARE_NODE_CONSTRUCTOR( ImageArrayViewer )
-    {
-        //
-    }
-
-    QUICKDEV_SPIN_FIRST()
-    {
-        initPolicies<quickdev::policy::ALL>();
-
-        QUICKDEV_GET_RUNABLE_NODEHANDLE( nh_rel );
-
-        multi_sub_.addSubscriber( nh_rel, "images", &ImageArrayViewerNode::imagesCB, this );
-    }
-
-    QUICKDEV_DECLARE_MESSAGE_CALLBACK( imagesCB, _NamedImageArrayMsg )
-    {
-        for( auto named_image_msg = msg->images.cbegin(); named_image_msg != msg->images.cend(); ++named_image_msg )
-        {
-            cv::namedWindow( named_image_msg->name, 0 );
-
-            auto const cv_image_ptr = quickdev::opencv_conversion::fromImageMsg( named_image_msg->image );
-            cv::Mat const & image = cv_image_ptr->image;
-
-            PRINT_INFO( "Got %s image %ix%i", named_image_msg->name.c_str(), image.size().width, image.size().height );
-
-            cv::imshow( named_image_msg->name, image );
-        }
-
-        cvWaitKey( 20 );
-    }
-
-    QUICKDEV_SPIN_ONCE()
-    {
-        //
-    }
-};
-
-#endif // SEABEE3COMMON_IMAGEARRAYVIEWERNODE_H_
+#include <seabee3_common/seabee_movement_policy.h>

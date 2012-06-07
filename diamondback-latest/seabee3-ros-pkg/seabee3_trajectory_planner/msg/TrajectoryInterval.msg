@@ -1,3 +1,0 @@
-Duration length
-seabee3_trajectory_planner/TrajectoryWaypoint initial_state
-geometry_msgs/TwistWithCovariance acceleration

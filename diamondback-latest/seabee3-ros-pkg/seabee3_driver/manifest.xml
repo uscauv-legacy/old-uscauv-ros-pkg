@@ -10,6 +10,7 @@
   <url>http://ros.org/wiki/seabee3_driver</url>
   <depend package="quickdev_cpp"/>
   <depend package="nodelet"/>
+  <depend package="seabee3_msgs"/>
   <depend package="seabee3_common"/>
   <export>
     <cpp cflags="-I${prefix}/include" lflags="-Wl,-rpath,${prefix}/lib -L${prefix}/lib -lseabee3_driver"/>

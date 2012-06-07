@@ -37,7 +37,11 @@
 #define NEUROMORPHICIMAGEPROC_ADAPTATIONMASK_H_
 
 #include <quickdev/node.h>
+
+// policies
 #include <quickdev/image_proc_policy.h>
+
+// objects
 #include <quickdev/feature.h>
 
 typedef quickdev::ImageProcPolicy _ImageProcPolicy;

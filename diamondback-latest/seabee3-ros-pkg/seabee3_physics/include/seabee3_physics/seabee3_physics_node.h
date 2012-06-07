@@ -53,16 +53,17 @@
 #include "btBulletDynamicsCommon.h"
 
 // msgs
-#include <seabee3_driver/MotorVals.h>
-#include <seabee3_driver/KillSwitch.h>
+#include <seabee3_msgs/MotorVals.h>
+#include <seabee3_msgs/KillSwitch.h>
 
 // cfgs
 #include <seabee3_physics/Seabee3PhysicsConfig.h>
 
 using namespace seabee3_common;
 
-typedef seabee3_driver::MotorVals _MotorValsMsg;
-typedef seabee3_driver::KillSwitch _KillSwitchMsg;
+typedef seabee3_msgs::MotorVals _MotorValsMsg;
+typedef seabee3_msgs::KillSwitch _KillSwitchMsg;
+
 typedef seabee3_physics::Seabee3PhysicsConfig _Seabee3PhysicsConfig;
 
 typedef quickdev::ReconfigurePolicy<_Seabee3PhysicsConfig> _Seabee3PhysicsLiveParams;
@@ -334,14 +335,14 @@ QUICKDEV_DECLARE_NODE_CLASS( Seabee3Physics )
                 world_transform.getOrigin().getY(),
                 world_transform.getOrigin().getZ() );
 
-        _TfTranceiverPolicy::publishTransform( world_transform, "/world", "/seabee3/physics_link" );
+        _TfTranceiverPolicy::publishTransform( world_transform, "/world", "/seabee3/odometry/physics" );
     }
 
     QUICKDEV_DECLARE_MESSAGE_CALLBACK( motorValsCB, _MotorValsMsg )
     {
-        for( size_t i = 0; i < movement::NUM_THRUSTERS; ++i )
+        for( size_t i = 0; i < msg->mask.size(); ++i )
         {
-            thruster_values_[i] = msg->motors.at(i);
+            if( movement::MotorControllerIDs::isThruster( i ) && msg->mask.at( i ) ) thruster_values_[i] = msg->motors.at( i );
         }
     }
 

@@ -133,47 +133,6 @@ public:
     }
 };
 
-// =============================================================================================================================================
-// =============================================================================================================================================
-
-    // #########################################################################################################################################
-    //! Update the existing landmark filter in-place
-    /*!
-     * - Passing a narrowing filter item follwed by a widening filter item will remove the narrowing filter item
-     * - Passing a widening filter item followed by a narrowing filter item will remove the widening filter item
-     * - Passing two or more narrowing filter items will join the filter items
-     * - Passing an inverted filter item will widen the search, ie { Buoy(), -Buoy( RED ) } will result in all buoys except for red ones
-     * - Passing only an inverted filter item will function as if Landmark() was prepended to the list of arguments
-     *
-     * - Passing just a Landmark() will clear the filter and accept any kind of landmark
-     * - Passing a Buoy() will accept any kind of buoy
-     * - Passing a Buoy( seabee_common::colors::RED ) will only accept red buoys
-     *
-     * - Passing { Landmark(), Buoy(), Pipe(), Buoy( RED ) } will result in only pipes and red buoys
-     * - Passing { Landmark(), -Buoy( RED ), -Buoy( GREEN ), Pipe() } will result in pipes and yellow buoys
-     */
-    template<class... __Args>
-    void updateLandmarkFilter( Landmark const & landmark, __Args&&... landmarks );
-
-    // #########################################################################################################################################
-    //! Only look for landmarks that match the given filter
-    /*!
-     * - Calling this function will reset the filter, then apply the given changes
-     *
-     * - To accept all landmarks, pass: Landmark()
-     * - To accept no landmarks, pass: -Landmark()
-     */
-    template<class... __Args>
-    void setLandmarkFilter( Landmark const & landmark, __Args&&... landmarks );
-
-    // #########################################################################################################################################
-    //! Set (not update) the landmark filter to the specified value and return the resulting landmarks
-    template<class... __Args>
-    std::map<std::string, Landmark> getLandmarks( Landmark const & landmark, __Args&&... landmarks );
-
-    //! Just get the resulting landmarks
-    std::map<std::string, Landmark> getLandmarks();
-
 } // seabee
 
 #endif // SEABEE3COMMON_RECOGNITIONPRIMITIVES_H_

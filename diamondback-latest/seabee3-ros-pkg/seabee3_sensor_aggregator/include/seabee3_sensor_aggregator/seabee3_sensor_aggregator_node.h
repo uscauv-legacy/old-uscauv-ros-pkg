@@ -38,18 +38,22 @@
 
 #include <quickdev/node.h>
 
+// policies
 #include <quickdev/tf_tranceiver_policy.h>
 
+// objects
 #include <quickdev/multi_subscriber.h>
 #include <quickdev/multi_publisher.h>
 
+// utils
 #include <quickdev/geometry_message_conversions.h>
 
-#include <seabee3_driver/Depth.h>
-#include <xsens_driver/Imu.h>
+// msgs
+#include <seabee3_msgs/Depth.h>
+#include <seabee3_msgs/Imu.h>
 
-typedef seabee3_driver::Depth _DepthMsg;
-typedef xsens_driver::Imu _ImuMsg;
+typedef seabee3_msgs::Depth _DepthMsg;
+typedef seabee3_msgs::Imu _ImuMsg;
 
 typedef quickdev::TfTranceiverPolicy _TfTranceiverPolicy;
 

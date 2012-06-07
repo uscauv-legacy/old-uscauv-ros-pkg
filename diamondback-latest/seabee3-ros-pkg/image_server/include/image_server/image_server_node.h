@@ -36,10 +36,16 @@
 #ifndef IMAGESERVER_IMAGESERVERNODE_H_
 #define IMAGESERVER_IMAGESERVERNODE_H_
 
+#include <quickdev/node.h>
+
+// objects
+#include <quickdev/image_loader.h>
+
+// policies
 #include <quickdev/image_proc_policy.h>
 #include <quickdev/reconfigure_policy.h>
-#include <quickdev/node.h>
-#include <quickdev/image_loader.h>
+
+// cfgs
 #include <image_server/ImageServerConfig.h>
 
 typedef image_server::ImageServerConfig _ImageServerConfig;

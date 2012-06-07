@@ -38,37 +38,41 @@
 
 #include <quickdev/node.h>
 
+// policies
 #include <quickdev/robot_driver_policy.h>
 #include <quickdev/service_server_policy.h>
 #include <quickdev/reconfigure_policy.h>
 
-#include <seabee3_driver/MotorVals.h>
-#include <seabee3_driver/Depth.h>
-#include <seabee3_driver/KillSwitch.h>
-#include <seabee3_driver/Pressure.h>
-
-#include <seabee3_driver/FiringDeviceAction.h>
-
-#include <seabee3_driver/FakeSeabeeConfig.h>
-
+// objects
 #include <seabee3_driver/bee_stem3_driver.h>
 
-typedef seabee3_driver::MotorVals _MotorValsMsg;
-typedef quickdev::RobotDriverPolicy<_MotorValsMsg> _RobotDriver;
+// msgs
+#include <seabee3_msgs/MotorVals.h>
+#include <seabee3_msgs/Depth.h>
+#include <seabee3_msgs/KillSwitch.h>
+#include <seabee3_msgs/Pressure.h>
 
-typedef seabee3_driver::FiringDeviceAction _FiringDeviceActionService;
+// actions
+#include <seabee3_msgs/FiringDeviceAction.h>
+
+// cfgs
+#include <seabee3_driver/FakeSeabeeConfig.h>
+
+typedef seabee3_msgs::MotorVals _MotorValsMsg;
+typedef seabee3_msgs::Depth _DepthMsg;
+typedef seabee3_msgs::KillSwitch _KillSwitchMsg;
+typedef seabee3_msgs::Pressure _PressureMsg;
+
+typedef seabee3_msgs::FiringDeviceAction _FiringDeviceActionService;
+
+typedef seabee3_driver::FakeSeabeeConfig _FakeSeabeeCfg;
+
+typedef quickdev::RobotDriverPolicy<_MotorValsMsg> _RobotDriver;
 typedef quickdev::ServiceServerPolicy<_FiringDeviceActionService, 0> _Shooter1ServiceServer;
 typedef quickdev::ServiceServerPolicy<_FiringDeviceActionService, 1> _Shooter2ServiceServer;
 typedef quickdev::ServiceServerPolicy<_FiringDeviceActionService, 2> _Dropper1ServiceServer;
 typedef quickdev::ServiceServerPolicy<_FiringDeviceActionService, 3> _Dropper2ServiceServer;
-
-typedef seabee3_driver::FakeSeabeeConfig _FakeSeabeeCfg;
 typedef quickdev::ReconfigurePolicy<_FakeSeabeeCfg> _FakeSeabeeLiveParams;
-
-typedef seabee3_driver::Depth _DepthMsg;
-typedef seabee3_driver::KillSwitch _KillSwitchMsg;
-typedef seabee3_driver::Pressure _PressureMsg;
-
 typedef quickdev::TfTranceiverPolicy _TfTranceiverPolicy;
 
 using namespace seabee3_common;
@@ -82,7 +86,7 @@ QUICKDEV_DECLARE_NODE_CLASS( Seabee3Driver )
 
     QUICKDEV_DECLARE_NODE_CONSTRUCTOR( Seabee3Driver )
     {
-        motor_dirs_.fill( 1 );
+        //
     }
 
     QUICKDEV_SPIN_FIRST()
@@ -132,6 +136,34 @@ QUICKDEV_DECLARE_NODE_CLASS( Seabee3Driver )
                 "/seabee3/external_pressure"
             }
         );
+
+        // assign a default value to the slot for all thrusters
+        std::map<std::string, int> motor_dirs_map;
+        for( size_t i = 0; i < movement::NUM_MOTOR_CONTROLLERS; ++i )
+        {
+            std::stringstream ss;
+            ss << i;
+            motor_dirs_map[ss.str()] = 1;
+        }
+
+        // read in any user overrides to the thruster directions
+        auto motor_dirs_param = quickdev::ParamReader::readParam<std::map<std::string, int> >( nh_rel, "motor_dirs" );
+
+        // overwrite default values with user values
+        for( auto motor_dirs_it = motor_dirs_param.begin(); motor_dirs_it != motor_dirs_param.end(); ++motor_dirs_it )
+        {
+            motor_dirs_map[motor_dirs_it->first] = motor_dirs_it->second;
+        }
+
+        // store final values in an array
+        for( size_t i = 0; i < motor_dirs_.size(); ++i )
+        {
+            std::stringstream ss;
+            ss << i;
+            auto motor_dirs_it = motor_dirs_map.find( ss.str() );
+
+            if( motor_dirs_it != motor_dirs_map.end() ) motor_dirs_[i] = motor_dirs_it->second;
+        }
     }
 
     inline double getDepthFromPressure( int const & observed_pressure ) const
@@ -172,8 +204,8 @@ QUICKDEV_DECLARE_NODE_CLASS( Seabee3Driver )
         _TfTranceiverPolicy::publishTransform( btTransform( btQuaternion( 0, 0, 0, 1 ), btVector3( 0, 0, -depth ) ), "/world", "/seabee3/depth" );
     }
 
-    bool executeFiringDeviceAction( seabee3_driver::FiringDeviceAction::Request &req,
-                                    seabee3_driver::FiringDeviceAction::Response &res,
+    bool executeFiringDeviceAction( _FiringDeviceActionService::Request &req,
+                                    _FiringDeviceActionService::Response &res,
                                     int const & device_id )
     {
         if( !bee_stem3_driver_.connected() ) return false;
@@ -181,12 +213,12 @@ QUICKDEV_DECLARE_NODE_CLASS( Seabee3Driver )
         bool device_status = bee_stem3_driver_.getDeviceStatus( device_id );
         switch ( req.action )
         {
-        case seabee3_driver::FiringDeviceAction::Request::CHECK_STATUS:
+        case _FiringDeviceActionService::Request::CHECK_STATUS:
             break;
-        case seabee3_driver::FiringDeviceAction::Request::RESET_STATUS:
+        case _FiringDeviceActionService::Request::RESET_STATUS:
             device_status = true;
             break;
-        case seabee3_driver::FiringDeviceAction::Request::FIRE:
+        case _FiringDeviceActionService::Request::FIRE:
             bee_stem3_driver_.fireDevice( device_id );
             break;
         }
