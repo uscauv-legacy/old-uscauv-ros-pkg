@@ -306,8 +306,8 @@ QUICKDEV_DECLARE_NODE_CLASS( Seabee3Physics )
         dynamics_world_->stepSimulation( dt, 2, getLoopRateSeconds() );
 
         //tf::Transform givens_tf;
-        auto const imu_transform = _TfTranceiverPolicy::tryLookupTransform( "/world", "/seabee3/imu" );
-        auto const depth_transform = _TfTranceiverPolicy::tryLookupTransform( "/world", "/seabee3/depth" );
+        auto const imu_transform = _TfTranceiverPolicy::tryLookupTransform( "/world", "/seabee3/sensors/imu" );
+        auto const depth_transform = _TfTranceiverPolicy::tryLookupTransform( "/world", "/seabee3/sensors/depth" );
 //      geometry_msgs::Twist givens;
 //      givens_tf >> givens;
 
@@ -335,7 +335,7 @@ QUICKDEV_DECLARE_NODE_CLASS( Seabee3Physics )
                 world_transform.getOrigin().getY(),
                 world_transform.getOrigin().getZ() );
 
-        _TfTranceiverPolicy::publishTransform( world_transform, "/world", "/seabee3/odometry/physics" );
+        _TfTranceiverPolicy::publishTransform( world_transform, "/world", "/seabee3/physics/pose" );
     }
 
     QUICKDEV_DECLARE_MESSAGE_CALLBACK( motorValsCB, _MotorValsMsg )

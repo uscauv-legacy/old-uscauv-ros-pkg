@@ -1,0 +1,12 @@
+<package>
+  <description brief="seabee3_actions">
+
+     seabee3_actions
+
+  </description>
+  <author>Edward T. Kaszubski ( ekaszubski@gmail.com )</author>
+  <license>BSD</license>
+  <review status="unreviewed" notes=""/>
+  <url>http://ros.org/wiki/seabee3_actions</url>
+  <depend package="actionlib"/>
+</package>

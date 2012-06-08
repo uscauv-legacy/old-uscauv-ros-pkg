@@ -52,7 +52,7 @@
 #include <seabee3_msgs/KillSwitch.h>
 #include <seabee3_msgs/Pressure.h>
 
-// actions
+// service
 #include <seabee3_msgs/FiringDeviceAction.h>
 
 // cfgs
@@ -201,7 +201,7 @@ QUICKDEV_DECLARE_NODE_CLASS( Seabee3Driver )
             "/seabee3/external_pressure", extl_pressure_msg
         );
 
-        _TfTranceiverPolicy::publishTransform( btTransform( btQuaternion( 0, 0, 0, 1 ), btVector3( 0, 0, -depth ) ), "/world", "/seabee3/depth" );
+        _TfTranceiverPolicy::publishTransform( btTransform( btQuaternion( 0, 0, 0, 1 ), btVector3( 0, 0, -depth ) ), "/world", "/seabee3/sensors/depth" );
     }
 
     bool executeFiringDeviceAction( _FiringDeviceActionService::Request &req,

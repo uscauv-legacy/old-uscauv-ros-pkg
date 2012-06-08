@@ -325,7 +325,7 @@ private:
 
         tf::Quaternion ori( temp.z(), temp.y(), temp.x() );
 
-        _TfTranceiverPolicy::publishTransform( btTransform( ori, btVector3( 0, 0, 0 ) ), "/world", "/seabee3/imu" );
+        _TfTranceiverPolicy::publishTransform( btTransform( ori, btVector3( 0, 0, 0 ) ), "/world", "/seabee3/sensors/yaw" );
 
         imu_msg.orientation.w = ori.w();
         imu_msg.orientation.x = ori.x();
