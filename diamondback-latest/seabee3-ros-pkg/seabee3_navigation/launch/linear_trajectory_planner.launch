@@ -1,6 +1,6 @@
 <launch>
-    <arg name="pkg" value="seabee3_trajectory_planner" />
-    <arg name="name" default="spline_trajectory_planner" />
+    <arg name="pkg" value="seabee3_navigation" />
+    <arg name="name" default="linear_trajectory_planner" />
     <arg name="type" default="$(arg name)_node" />
     <arg name="rate" default="30" />
     <arg name="args" value="_loop_rate:=$(arg rate)" />

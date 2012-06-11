@@ -1,5 +1,5 @@
 /***************************************************************************
- *  src/trajectory_planner_policy.cpp
+ *  nodelets/linear_trajectory_planner.cpp
  *  --------------------
  *
  *  Copyright (c) 2011, Edward T. Kaszubski ( ekaszubski@gmail.com )
@@ -33,4 +33,16 @@
  *
  **************************************************************************/
 
-#include <seabee3_trajectory_planner/trajectory_planner_policy.h>
+#include <quickdev/nodelet.h>
+#include <seabee3_navigation/linear_trajectory_planner_node.h>
+
+// This file was auto-generated; the corresponding header file is ../include/seabee3_navigation/linear_trajectory_planner_node.h
+
+// Declare LinearTrajectoryPlanner in namespace seabee3_navigation
+//
+QUICKDEV_DECLARE_NODELET( seabee3_navigation, LinearTrajectoryPlanner )
+
+// Instantiate our nodelet; this macro expands to a call to PLUGINLIB_DECLARE_CLASS and
+// registers our nodelet class seabee3_navigation::LinearTrajectoryPlanner as seabee3_navigation/linear_trajectory_planner
+//
+QUICKDEV_INST_NODELET( seabee3_navigation, LinearTrajectoryPlanner, linear_trajectory_planner )

@@ -1,5 +1,5 @@
 /***************************************************************************
- *  include/seabee3_trajectory_planner/linear_trajectory_planner_node.h
+ *  include/seabee3_navigation/trajectory_follower_node.h
  *  --------------------
  *
  *  Copyright (c) 2011, Edward T. Kaszubski ( ekaszubski@gmail.com )
@@ -33,28 +33,28 @@
  *
  **************************************************************************/
 
-#ifndef SEABEE3TRAJECTORYPLANNER_LINEARTRAJECTORYPLANNERNODE_H_
-#define SEABEE3TRAJECTORYPLANNER_LINEARTRAJECTORYPLANNERNODE_H_
+#ifndef SEABEE3NAVIGATION_TRAJECTORYFOLLOWERNODE_H_
+#define SEABEE3NAVIGATION_TRAJECTORYFOLLOWERNODE_H_
 
 #include <quickdev/node.h>
 
-// Declare a node called LinearTrajectoryPlannerNode.
+// Declare a node called TrajectoryFollowerNode.
 // A quickdev::RunablePolicy is automatically prepended to the list of policies our node will use.
 // To use more policies, simply list them here:
 //
-// QUICKDEV_DECLARE_NODE( LinearTrajectoryPlanner, SomePolicy1, SomePolicy2 )
+// QUICKDEV_DECLARE_NODE( TrajectoryFollower, SomePolicy1, SomePolicy2 )
 //
-QUICKDEV_DECLARE_NODE( LinearTrajectoryPlanner )
+QUICKDEV_DECLARE_NODE( TrajectoryFollower )
 
-// Declare a class called LinearTrajectoryPlannerNode
+// Declare a class called TrajectoryFollowerNode
 //
-QUICKDEV_DECLARE_NODE_CLASS( LinearTrajectoryPlanner )
+QUICKDEV_DECLARE_NODE_CLASS( TrajectoryFollower )
 {
     // Variable initializations can be appended to this constructor as a comma-separated list:
     //
-    // QUICKDEV_DECLARE_NODE_CONSTRUCTOR( LinearTrajectoryPlanner ), member1_( some_value ), member2_( some_other_value ){}
+    // QUICKDEV_DECLARE_NODE_CONSTRUCTOR( TrajectoryFollower ), member1_( some_value ), member2_( some_other_value ){}
     //
-    QUICKDEV_DECLARE_NODE_CONSTRUCTOR( LinearTrajectoryPlanner )
+    QUICKDEV_DECLARE_NODE_CONSTRUCTOR( TrajectoryFollower )
     {
         //
     }
@@ -94,4 +94,4 @@ QUICKDEV_DECLARE_NODE_CLASS( LinearTrajectoryPlanner )
     }
 };
 
-#endif // SEABEE3TRAJECTORYPLANNER_LINEARTRAJECTORYPLANNERNODE_H_
+#endif // SEABEE3NAVIGATION_TRAJECTORYFOLLOWERNODE_H_

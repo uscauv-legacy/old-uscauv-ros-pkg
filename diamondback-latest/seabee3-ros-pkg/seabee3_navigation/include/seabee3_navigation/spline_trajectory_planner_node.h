@@ -1,5 +1,5 @@
 /***************************************************************************
- *  include/seabee3_trajectory_planner/spline_trajectory_planner_node.h
+ *  include/seabee3_navigation/spline_trajectory_planner_node.h
  *  --------------------
  *
  *  Copyright (c) 2011, Edward T. Kaszubski ( ekaszubski@gmail.com )
@@ -33,8 +33,8 @@
  *
  **************************************************************************/
 
-#ifndef SEABEE3TRAJECTORYPLANNER_SPLINETRAJECTORYPLANNERNODE_H_
-#define SEABEE3TRAJECTORYPLANNER_SPLINETRAJECTORYPLANNERNODE_H_
+#ifndef SEABEE3NAVIGATION_SPLINETRAJECTORYPLANNERNODE_H_
+#define SEABEE3NAVIGATION_SPLINETRAJECTORYPLANNERNODE_H_
 
 #include <quickdev/node.h>
 
@@ -94,4 +94,4 @@ QUICKDEV_DECLARE_NODE_CLASS( SplineTrajectoryPlanner )
     }
 };
 
-#endif // SEABEE3TRAJECTORYPLANNER_SPLINETRAJECTORYPLANNERNODE_H_
+#endif // SEABEE3NAVIGATION_SPLINETRAJECTORYPLANNERNODE_H_

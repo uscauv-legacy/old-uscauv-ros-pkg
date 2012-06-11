@@ -33,9 +33,9 @@
  *
  **************************************************************************/
 
-#include <seabee3_trajectory_planner/spline_trajectory_planner_node.h>
+#include <seabee3_navigation/spline_trajectory_planner_node.h>
 
-// This file was auto-generated; the corresponding header file is ../include/seabee3_trajectory_planner/spline_trajectory_planner_node.h
+// This file was auto-generated; the corresponding header file is ../include/seabee3_navigation/spline_trajectory_planner_node.h
 
 // Instantiate our node; this macro expands to an int main( ... ) in which an instance of our node is created and started
 //

@@ -1,5 +1,5 @@
 /***************************************************************************
- *  nodes/linear_trajectory_planner_node.cpp
+ *  nodelets/spline_trajectory_planner.cpp
  *  --------------------
  *
  *  Copyright (c) 2011, Edward T. Kaszubski ( ekaszubski@gmail.com )
@@ -33,10 +33,16 @@
  *
  **************************************************************************/
 
-#include <seabee3_trajectory_planner/linear_trajectory_planner_node.h>
+#include <quickdev/nodelet.h>
+#include <seabee3_navigation/spline_trajectory_planner_node.h>
 
-// This file was auto-generated; the corresponding header file is ../include/seabee3_trajectory_planner/linear_trajectory_planner_node.h
+// This file was auto-generated; the corresponding header file is ../include/seabee3_navigation/spline_trajectory_planner_node.h
 
-// Instantiate our node; this macro expands to an int main( ... ) in which an instance of our node is created and started
+// Declare SplineTrajectoryPlanner in namespace seabee3_navigation
 //
-QUICKDEV_INST_NODE( LinearTrajectoryPlannerNode, "linear_trajectory_planner" )
+QUICKDEV_DECLARE_NODELET( seabee3_navigation, SplineTrajectoryPlanner )
+
+// Instantiate our nodelet; this macro expands to a call to PLUGINLIB_DECLARE_CLASS and
+// registers our nodelet class seabee3_navigation::SplineTrajectoryPlanner as seabee3_navigation/spline_trajectory_planner
+//
+QUICKDEV_INST_NODELET( seabee3_navigation, SplineTrajectoryPlanner, spline_trajectory_planner )

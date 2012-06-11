@@ -1,5 +1,5 @@
 /***************************************************************************
- *  include/seabee3_trajectory_planner/trajectory_planner_policy.h
+ *  include/seabee3_navigation/trajectory_follower_policy_policy.h
  *  --------------------
  *
  *  Copyright (c) 2011, Edward T. Kaszubski ( ekaszubski@gmail.com )
@@ -33,15 +33,15 @@
  *
  **************************************************************************/
 
-#ifndef SEABEE3TRAJECTORYPLANNER_TRAJECTORYPLANNERPOLICY_H_
-#define SEABEE3TRAJECTORYPLANNER_TRAJECTORYPLANNERPOLICY_H_
+#ifndef SEABEE3NAVIGATION_TRAJECTORYFOLLOWERPOLICYPOLICY_H_
+#define SEABEE3NAVIGATION_TRAJECTORYFOLLOWERPOLICYPOLICY_H_
 
 #include <quickdev/policy.h>
 
 // Declare private storage for our types, etc
-// This namespace can be retrieved later on using QUICKDEV_GET_POLICY_NS( TrajectoryPlanner )
+// This namespace can be retrieved later on using QUICKDEV_GET_POLICY_NS( TrajectoryFollowerPolicy )
 //
-QUICKDEV_DECLARE_POLICY_NS( TrajectoryPlanner )
+QUICKDEV_DECLARE_POLICY_NS( TrajectoryFollowerPolicy )
 {
     // Typedefs for parent policies should be declared here
     // Say we had:
@@ -51,49 +51,49 @@ QUICKDEV_DECLARE_POLICY_NS( TrajectoryPlanner )
     // When we declare our policy, we can simply specify _SomePolicy as one of the policies we want to use
     // When we want to get _SomePolicy anywhere else in the code:
     //
-    // QUICKDEV_GET_POLICY_NS( TrajectoryPlanner )::_SomePolicy
+    // QUICKDEV_GET_POLICY_NS( TrajectoryFollowerPolicy )::_SomePolicy
     //
     // In the event that we need to make lots of calls to _SomePolicy, we can store a reference to it using:
     //
-    // auto & some_policy = QUICKDEV_GET_POLICY_NS( TrajectoryPlanner )::_SomePolicy::getInstance();
+    // auto & some_policy = QUICKDEV_GET_POLICY_NS( TrajectoryFollowerPolicy )::_SomePolicy::getInstance();
     // some_policy.someFunction();
     // some_policy.someFunction2();
     //
     // Otherwise we'd have to do:
     //
-    // QUICKDEV_GET_POLICY_NS( TrajectoryPlanner )::_SomePolicy::someFunction();
-    // QUICKDEV_GET_POLICY_NS( TrajectoryPlanner )::_SomePolicy::someFunction2();
+    // QUICKDEV_GET_POLICY_NS( TrajectoryFollowerPolicy )::_SomePolicy::someFunction();
+    // QUICKDEV_GET_POLICY_NS( TrajectoryFollowerPolicy )::_SomePolicy::someFunction2();
     //
     typedef quickdev::Policy _Policy;
 }
 
-// Declare a policy called TrajectoryPlannerPolicy; it will inherit the functionalify of all the policies that follow in the list of arguments
+// Declare a policy called TrajectoryFollowerPolicyPolicy; it will inherit the functionalify of all the policies that follow in the list of arguments
 // For example, to make a policy called SomePolicy that uses Policy1 and Policy2:
 //
 // QUICKDEV_DECLARE_POLICY( Some, Policy1, Policy2 )
 //
 // "Policy" is automatically appended to the first argument
 //
-QUICKDEV_DECLARE_POLICY( TrajectoryPlanner, _Policy )
+QUICKDEV_DECLARE_POLICY( TrajectoryFollowerPolicy, _Policy )
 
-// Declare a class called TrajectoryPlannerPolicy
+// Declare a class called TrajectoryFollowerPolicyPolicy
 //
-QUICKDEV_DECLARE_POLICY_CLASS( TrajectoryPlanner )
+QUICKDEV_DECLARE_POLICY_CLASS( TrajectoryFollowerPolicy )
 {
     // Create utility functions for this policy
     //
-    QUICKDEV_MAKE_POLICY_FUNCS( TrajectoryPlanner )
+    QUICKDEV_MAKE_POLICY_FUNCS( TrajectoryFollowerPolicy )
 
     // Variable initializations can be appended to this constructor as a comma-separated list:
     //
-    // QUICKDEV_DECLARE_POLICY_CONSTRUCTOR( TrajectoryPlanner ), member1_( some_value ), member2_( some_other_value ){}
+    // QUICKDEV_DECLARE_POLICY_CONSTRUCTOR( TrajectoryFollowerPolicy ), member1_( some_value ), member2_( some_other_value ){}
     //
     // Most initialization will need to be done in init() ( QUICKDEV_ENABLE_INIT ) since a variadic template can't easily be passed through this
     // constructor ( yet-unimplemented feature of g++ )
     //
     // Note that if QUICKDEV_ENABLE_INIT is used, a member, "initialized_", should be set to false during construction
     //
-    QUICKDEV_DECLARE_POLICY_CONSTRUCTOR( TrajectoryPlanner )
+    QUICKDEV_DECLARE_POLICY_CONSTRUCTOR( TrajectoryFollowerPolicy )
     {
         //
     }
@@ -136,4 +136,4 @@ QUICKDEV_DECLARE_POLICY_CLASS( TrajectoryPlanner )
     }*/
 };
 
-#endif // SEABEE3TRAJECTORYPLANNER_TRAJECTORYPLANNERPOLICY_H_
+#endif // SEABEE3NAVIGATION_TRAJECTORYFOLLOWERPOLICYPOLICY_H_
