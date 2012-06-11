@@ -65,7 +65,29 @@ QUICKDEV_DECLARE_NODE_CLASS( LinearTrajectoryPlanner )
 
     QUICKDEV_DECLARE_ACTION_EXECUTE_CALLBACK( planTrajectory, _TrajectoryPlannerPolicy::_MakeTrajectoryAction )
     {
-        //
+        // if there are not at least two waypoints, abort the action; we need to at least know where we are and where we want to go
+        if( goal->waypoints.size() <= 2 ) return _TrajectoryPlannerPolicy::setAborted();
+
+        // get a ref to the waypoints
+        auto const & waypoints = goal->waypoints;
+
+        // allocate a new result message
+        _TrajectoryPlannerPolicy::_MakeTrajectoryActionServerPolicy::_ResultMsg result;
+
+        // get a reference to the vector of intervals in the new trajectory
+        auto & intervals = result.trajectory.intervals;
+
+        // get an iterator to the first waypoint
+        auto waypoints_it = waypoints.cbegin();
+
+        // for each waypoint
+        for( ; waypoints_it != waypoints.cend(); ++waypoints_it )
+        {
+            auto const & waypoint = *waypoints_it;
+        }
+
+        // return the new trajectory
+        return _TrajectoryPlannerPolicy::setSuccessful( result );
     }
 };
 

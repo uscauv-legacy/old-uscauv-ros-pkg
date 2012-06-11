@@ -90,9 +90,10 @@ public:
         QUICKDEV_SET_INITIALIZED();
     }
 
-    void registerPlanTrajectoryCB( _MakeTrajectoryActionServerPolicy::_ExecuteCallback const & callback )
+    template<class... __Args>
+    void registerPlanTrajectoryCB( __Args... args )
     {
-        _MakeTrajectoryActionServerPolicy::registerExecuteCB( callback );
+        _MakeTrajectoryActionServerPolicy::registerExecuteCB( args... );
     }
 
     QUICKDEV_DECLARE_ACTION_PREEMPT_CALLBACK( makeTrajectoryActionPreemptCB, _MakeTrajectoryAction )
