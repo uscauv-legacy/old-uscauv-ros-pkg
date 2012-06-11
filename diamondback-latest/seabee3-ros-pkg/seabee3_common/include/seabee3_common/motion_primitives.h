@@ -37,6 +37,8 @@
 #define SEABEE3COMMON_MOTIONPRIMITIVES_H_
 
 #include <quickdev/action_token.h>
+#include <quickdev/geometry_message_conversions.h>
+#include <geometry_msgs/Pose.h>
 
 namespace seabee
 {
@@ -114,6 +116,11 @@ class Pose
 public:
     Position position_;
     Orientation orientation_;
+
+    Pose()
+    {
+        //
+    }
 
     template
     <
@@ -268,5 +275,40 @@ public:
 };
 
 } // seabee
+
+// seabee::Position <-> geometry_msgs::Point
+DECLARE_UNIT_CONVERSION_LAMBDA( seabee::Position, geometry_msgs::Point, pos, geometry_msgs::Point point; point.x = pos.x_; point.y = pos.y_; point.z = pos.z_; return point; )
+DECLARE_UNIT_CONVERSION_LAMBDA( geometry_msgs::Point, seabee::Position, point, return seabee::Position( point.x, point.y, point.z ); )
+// seabee::Position <-> geometry_msgs::Vector3
+DECLARE_UNIT_CONVERSION_LAMBDA( seabee::Position, geometry_msgs::Vector3, pos, geometry_msgs::Vector3 vec; vec.x = pos.x_; vec.y = pos.y_; vec.z = pos.z_; return vec; )
+DECLARE_UNIT_CONVERSION_LAMBDA( geometry_msgs::Vector3, seabee::Position, vec, return seabee::Position( vec.x, vec.y, vec.z ); )
+// seabee::Position <-> btVector3
+DECLARE_UNIT_CONVERSION_LAMBDA( seabee::Position, btVector3, pos, return btVector3( pos.x_, pos.y_, pos.z_ ); )
+DECLARE_UNIT_CONVERSION_LAMBDA( btVector3, seabee::Position, vec, return seabee::Position( vec.getX(), vec.getY(), vec.getZ() ); )
+
+
+// seabee::Orientation <-> geometry_msgs::Vector3
+DECLARE_UNIT_CONVERSION_LAMBDA( seabee::Orientation, geometry_msgs::Vector3, ori, geometry_msgs::Vector3 vec; vec.z = ori.yaw_; return vec; )
+DECLARE_UNIT_CONVERSION_LAMBDA( geometry_msgs::Vector3, seabee::Orientation, vec, return seabee::Orientation( vec.z ); )
+// seabee::Orientation <-> btVector3
+DECLARE_UNIT_CONVERSION_LAMBDA( seabee::Orientation, btVector3, ori, btVector3 vec; vec.z = ori.yaw_; return unit::convert<btVector3>( vec ); )
+DECLARE_UNIT_CONVERSION_LAMBDA( btVector3, seabee::Orientation, vec, return seabee::Orientation( vec.getZ() ); )
+// seabee::Orientation <-> geometry_msgs::Quaternion
+DECLARE_UNIT_CONVERSION_LAMBDA( seabee::Orientation, geometry_msgs::Quaternion, ori, return unit::convert<geometry_msgs::Quaternion>( unit::convert<geometry_msgs::Vector3>( ori ) ); )
+DECLARE_UNIT_CONVERSION_LAMBDA( geometry_msgs::Quaternion, seabee::Orientation, quat, return unit::convert<seabee::Orientation>( unit::convert<geometry_msgs::Vector3>( quat ) ); )
+// seabee::Orientation <-> btQuaternion
+DECLARE_UNIT_CONVERSION_LAMBDA( seabee::Orientation, btQuaternion, ori, return unit::convert<btQuaternion>( unit::convert<geometry_msgs::Vector3>( ori ) ); )
+DECLARE_UNIT_CONVERSION_LAMBDA( btQuaternion, seabee::Orientation, quat, return unit::convert<seabee::Orientation>( unit::convert<geometry_msgs::Vector3>( quat ) ); )
+
+
+// seabee::Pose <-> geometry_msgs::Twist
+DECLARE_UNIT_CONVERSION_LAMBDA( seabee::Pose, geometry_msgs::Twist, pose, geometry_msgs::Twist twist; twist.linear = unit::make_unit( pose.position_ ); twist.angular = unit::make_unit( pose.orientation_ ); return twist; )
+DECLARE_UNIT_CONVERSION_LAMBDA( geometry_msgs::Twist, seabee::Pose, twist, return seabee::Pose( unit::convert<seabee::Position>( twist.linear ), unit::convert<seabee::Orientation>( twist.angular ) ); )
+// seabee::Pose <-> btTransform
+DECLARE_UNIT_CONVERSION_LAMBDA( seabee::Pose, btTransform, pose, return btTransform( unit::make_unit( pose.orientation_ ), unit::make_unit( pose.position_ ) ); )
+DECLARE_UNIT_CONVERSION_LAMBDA( btTransform, seabee::Pose, tf, return seabee::Pose( unit::convert<seabee::Position>( tf.getOrigin() ), unit::convert<seabee::Orientation>( tf.getRotation() ) ); )
+// seabee::Pose <-> geometry_msgs::Pose
+DECLARE_UNIT_CONVERSION_LAMBDA( seabee::Pose, geometry_msgs::Pose, pose, geometry_msgs::Pose pose_msg; pose_msg.position = unit::make_unit( pose.position_ ); pose_msg.orientation = unit::make_unit( pose.orientation_ ); return pose_msg; )
+DECLARE_UNIT_CONVERSION_LAMBDA( geometry_msgs::Pose, seabee::Pose, pose_msg, return seabee::Pose( unit::convert<seabee::Position>( pose_msg.position ), unit::convert<seabee::Orientation>( pose_msg.orientation ) ); )
 
 #endif // SEABEE3COMMON_MOTIONPRIMITIVES_H_
