@@ -38,57 +38,46 @@
 
 #include <quickdev/node.h>
 
-// Declare a node called TrajectoryFollowerNode.
-// A quickdev::RunablePolicy is automatically prepended to the list of policies our node will use.
-// To use more policies, simply list them here:
-//
-// QUICKDEV_DECLARE_NODE( TrajectoryFollower, SomePolicy1, SomePolicy2 )
-//
-QUICKDEV_DECLARE_NODE( TrajectoryFollower )
+// policies
+#include <quickdev/action_server_policy.h>
 
-// Declare a class called TrajectoryFollowerNode
-//
+// actions
+#include <seabee3_actions/FollowTrajectoryAction.h>
+
+typedef seabee3_actions::FollowTrajectoryAction _FollowTrajectoryAction;
+
+typedef quickdev::ActionServerPolicy<_FollowTrajectoryAction> _FollowTrajectoryActionServerPolicy;
+
+QUICKDEV_DECLARE_NODE( TrajectoryFollower, _FollowTrajectoryActionServerPolicy )
+
 QUICKDEV_DECLARE_NODE_CLASS( TrajectoryFollower )
 {
-    // Variable initializations can be appended to this constructor as a comma-separated list:
-    //
-    // QUICKDEV_DECLARE_NODE_CONSTRUCTOR( TrajectoryFollower ), member1_( some_value ), member2_( some_other_value ){}
-    //
     QUICKDEV_DECLARE_NODE_CONSTRUCTOR( TrajectoryFollower )
     {
-        //
+        initPolicies<QUICKDEV_GET_RUNABLE_POLICY()>();
     }
 
-    // This function is called by quickdev::RunablePolicy after all policies are constructed but just before the main loop is started.
-    // All policy initialization should be done here.
-    //
     QUICKDEV_SPIN_FIRST()
     {
-        // Say we had a policy called _SomePolicy that looked for the meta-parameter "some_value1_param" of type SomeType and
-        // "some_value2_param" of type SomeOtherType in its init function
-        // We can create those meta-params here and then pass them to all policies using initPolicies<...>():
-        //
-        // initPolicies<quickdev::policy::ALL>( "some_value1_param", SomeType(), "some_value2_param", SomeOtherType() );
-        //
-        // Or we can pass those meta-params only to _SomePolicy by specifying its type:
-        //
-        // initPolicies<_SomePolicy>( "some_value1_param", SomeType(), "some_value2_param", SomeOtherType() );
-        //
-        // If we want to initialize all policies and use their default values, we can simply call initPolicies<quickdev::policy::ALL>()
-        // with no arguments.
-        // Note that most initable policies won't function properly unless their init() functions are called directly or via initPolicies<...>().
-        // Furthermore, since each policy is required to track its initialization state, initPolicies<...>() is guaranteed to only call init()
-        // on policies that have yet to be initialized; therefore, calling initPolicies<quickdev::policy::ALL>() at the end of QUICKDEV_SPIN_FIRST()
-        // is always a safe operation.
-        // To instead force re-initialization, call forceInitPolicies<...>().
-        //
+        _FollowTrajectoryActionServerPolicy::registerExecuteCB( quickdev::auto_bind( &TrajectoryFollowerNode::followTrajectoryActionExecuteCB, this ) );
+        _FollowTrajectoryActionServerPolicy::registerPreemptCB( quickdev::auto_bind( &TrajectoryFollowerNode::followTrajectoryActionPreemptCB, this ) );
+
+        initPolicies<_FollowTrajectoryActionServerPolicy>( "action_name_param", std::string( "follow_trajectory" ) );
+
         initPolicies<quickdev::policy::ALL>();
     }
 
-    // This optional function is called by quickdev::RunablePolicy at a fixed rate (defined by the ROS param _loop_rate).
-    // Most updateable policies should have their update( ... ) functions called within this context.
-    //
     QUICKDEV_SPIN_ONCE()
+    {
+        //
+    }
+
+    QUICKDEV_DECLARE_ACTION_EXECUTE_CALLBACK( followTrajectoryActionExecuteCB, _FollowTrajectoryAction )
+    {
+        //
+    }
+
+    QUICKDEV_DECLARE_ACTION_PREEMPT_CALLBACK( followTrajectoryActionPreemptCB, _FollowTrajectoryAction )
     {
         //
     }

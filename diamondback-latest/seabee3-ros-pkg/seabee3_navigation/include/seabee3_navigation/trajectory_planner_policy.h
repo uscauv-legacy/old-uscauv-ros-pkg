@@ -1,5 +1,5 @@
 /***************************************************************************
- *  include/seabee3_navigation/trajectory_planner_policy_policy.h
+ *  include/seabee3_navigation/trajectory_planner_policy.h
  *  --------------------
  *
  *  Copyright (c) 2011, Edward T. Kaszubski ( ekaszubski@gmail.com )
@@ -33,75 +33,47 @@
  *
  **************************************************************************/
 
-#ifndef SEABEE3NAVIGATION_TRAJECTORYPLANNERPOLICYPOLICY_H_
-#define SEABEE3NAVIGATION_TRAJECTORYPLANNERPOLICYPOLICY_H_
+#ifndef SEABEE3NAVIGATION_TRAJECTORYPLANNERPOLICY_H_
+#define SEABEE3NAVIGATION_TRAJECTORYPLANNERPOLICY_H_
 
-#include <quickdev/policy.h>
+// policies
+#include <quickdev/action_server_policy.h>
 
-// Declare private storage for our types, etc
-// This namespace can be retrieved later on using QUICKDEV_GET_POLICY_NS( TrajectoryPlannerPolicy )
-//
-QUICKDEV_DECLARE_POLICY_NS( TrajectoryPlannerPolicy )
+// actions
+#include <seabee3_actions/MakeTrajectoryAction.h>
+
+QUICKDEV_DECLARE_POLICY_NS( TrajectoryPlanner )
 {
-    // Typedefs for parent policies should be declared here
-    // Say we had:
-    //
-    // typedef SomePolicy<SomeType> _SomePolicy;
-    //
-    // When we declare our policy, we can simply specify _SomePolicy as one of the policies we want to use
-    // When we want to get _SomePolicy anywhere else in the code:
-    //
-    // QUICKDEV_GET_POLICY_NS( TrajectoryPlannerPolicy )::_SomePolicy
-    //
-    // In the event that we need to make lots of calls to _SomePolicy, we can store a reference to it using:
-    //
-    // auto & some_policy = QUICKDEV_GET_POLICY_NS( TrajectoryPlannerPolicy )::_SomePolicy::getInstance();
-    // some_policy.someFunction();
-    // some_policy.someFunction2();
-    //
-    // Otherwise we'd have to do:
-    //
-    // QUICKDEV_GET_POLICY_NS( TrajectoryPlannerPolicy )::_SomePolicy::someFunction();
-    // QUICKDEV_GET_POLICY_NS( TrajectoryPlannerPolicy )::_SomePolicy::someFunction2();
-    //
-    typedef quickdev::Policy _Policy;
+    typedef seabee3_actions::MakeTrajectoryAction _MakeTrajectoryAction;
+
+    typedef quickdev::ActionServerPolicy<_MakeTrajectoryAction> _MakeTrajectoryActionServerPolicy;
 }
 
-// Declare a policy called TrajectoryPlannerPolicyPolicy; it will inherit the functionalify of all the policies that follow in the list of arguments
-// For example, to make a policy called SomePolicy that uses Policy1 and Policy2:
-//
-// QUICKDEV_DECLARE_POLICY( Some, Policy1, Policy2 )
-//
-// "Policy" is automatically appended to the first argument
-//
-QUICKDEV_DECLARE_POLICY( TrajectoryPlannerPolicy, _Policy )
+QUICKDEV_DECLARE_POLICY( TrajectoryPlanner, _MakeTrajectoryActionServerPolicy )
 
-// Declare a class called TrajectoryPlannerPolicyPolicy
-//
-QUICKDEV_DECLARE_POLICY_CLASS( TrajectoryPlannerPolicy )
+QUICKDEV_DECLARE_POLICY_CLASS( TrajectoryPlanner )
 {
-    // Create utility functions for this policy
-    //
-    QUICKDEV_MAKE_POLICY_FUNCS( TrajectoryPlannerPolicy )
+public:
+    typedef QUICKDEV_GET_POLICY_NS( TrajectoryPlanner )::_MakeTrajectoryAction _MakeTrajectoryAction;
+    typedef QUICKDEV_GET_POLICY_NS( TrajectoryPlanner )::_MakeTrajectoryActionServerPolicy _MakeTrajectoryActionServerPolicy;
 
-    // Variable initializations can be appended to this constructor as a comma-separated list:
-    //
-    // QUICKDEV_DECLARE_POLICY_CONSTRUCTOR( TrajectoryPlannerPolicy ), member1_( some_value ), member2_( some_other_value ){}
-    //
-    // Most initialization will need to be done in init() ( QUICKDEV_ENABLE_INIT ) since a variadic template can't easily be passed through this
-    // constructor ( yet-unimplemented feature of g++ )
-    //
-    // Note that if QUICKDEV_ENABLE_INIT is used, a member, "initialized_", should be set to false during construction
-    //
-    QUICKDEV_DECLARE_POLICY_CONSTRUCTOR( TrajectoryPlannerPolicy )
+    QUICKDEV_MAKE_POLICY_FUNCS( TrajectoryPlanner )
+
+    QUICKDEV_DECLARE_POLICY_CONSTRUCTOR( TrajectoryPlanner )
     {
         //
     }
 
-    /* Un-comment to enable initialization of this policy; this is the client's main means of passing compile-time args to a policy
-
     QUICKDEV_ENABLE_INIT()
     {
+        QUICKDEV_GET_NODEHANDLE( nh_rel );
+
+        _MakeTrajectoryActionServerPolicy::registerPreemptCB( quickdev::auto_bind( &TrajectoryPlannerPolicy::makeTrajectoryActionPreemptCB, this ) );
+
+        auto action_name = quickdev::policy::readPolicyParam( nh_rel, "action_name_param", "action_name", std::string( "make_trajectory" ), args... );
+
+        initPolicies<_MakeTrajectoryActionServerPolicy>( "action_name_param", action_name );
+
         // A variadic template called "args" is available in this function
         // Use getFirstOfType<Type>( args... ) to parse unnamed args
         // Use getMetaParam<Type>( "param_name", args... ) or getMetaParamDef<Type>( "param_name", default, args... ) to parse named args
@@ -116,7 +88,17 @@ QUICKDEV_DECLARE_POLICY_CLASS( TrajectoryPlannerPolicy )
         // accordingly if the user fails to call init() for our policy
         //
         QUICKDEV_SET_INITIALIZED();
-    }*/
+    }
+
+    void registerPlanTrajectoryCB( _MakeTrajectoryActionServerPolicy::_ExecuteCallback const & callback )
+    {
+        _MakeTrajectoryActionServerPolicy::registerExecuteCB( callback );
+    }
+
+    QUICKDEV_DECLARE_ACTION_PREEMPT_CALLBACK( makeTrajectoryActionPreemptCB, _MakeTrajectoryAction )
+    {
+        //
+    }
 
     /* This is the client's main means of accessing and updating a policy; un-comment and change args as appropriate
 
@@ -136,4 +118,4 @@ QUICKDEV_DECLARE_POLICY_CLASS( TrajectoryPlannerPolicy )
     }*/
 };
 
-#endif // SEABEE3NAVIGATION_TRAJECTORYPLANNERPOLICYPOLICY_H_
+#endif // SEABEE3NAVIGATION_TRAJECTORYPLANNERPOLICY_H_

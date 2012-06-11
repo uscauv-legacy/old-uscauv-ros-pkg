@@ -38,57 +38,32 @@
 
 #include <quickdev/node.h>
 
-// Declare a node called LinearTrajectoryPlannerNode.
-// A quickdev::RunablePolicy is automatically prepended to the list of policies our node will use.
-// To use more policies, simply list them here:
-//
-// QUICKDEV_DECLARE_NODE( LinearTrajectoryPlanner, SomePolicy1, SomePolicy2 )
-//
-QUICKDEV_DECLARE_NODE( LinearTrajectoryPlanner )
+// policies
+#include <seabee3_navigation/trajectory_planner_policy.h>
 
-// Declare a class called LinearTrajectoryPlannerNode
-//
+typedef TrajectoryPlannerPolicy _TrajectoryPlannerPolicy;
+
+QUICKDEV_DECLARE_NODE( LinearTrajectoryPlanner, _TrajectoryPlannerPolicy )
+
 QUICKDEV_DECLARE_NODE_CLASS( LinearTrajectoryPlanner )
 {
-    // Variable initializations can be appended to this constructor as a comma-separated list:
-    //
-    // QUICKDEV_DECLARE_NODE_CONSTRUCTOR( LinearTrajectoryPlanner ), member1_( some_value ), member2_( some_other_value ){}
-    //
     QUICKDEV_DECLARE_NODE_CONSTRUCTOR( LinearTrajectoryPlanner )
     {
-        //
+        initPolicies<QUICKDEV_GET_RUNABLE_POLICY()>();
     }
 
-    // This function is called by quickdev::RunablePolicy after all policies are constructed but just before the main loop is started.
-    // All policy initialization should be done here.
-    //
     QUICKDEV_SPIN_FIRST()
     {
-        // Say we had a policy called _SomePolicy that looked for the meta-parameter "some_value1_param" of type SomeType and
-        // "some_value2_param" of type SomeOtherType in its init function
-        // We can create those meta-params here and then pass them to all policies using initPolicies<...>():
-        //
-        // initPolicies<quickdev::policy::ALL>( "some_value1_param", SomeType(), "some_value2_param", SomeOtherType() );
-        //
-        // Or we can pass those meta-params only to _SomePolicy by specifying its type:
-        //
-        // initPolicies<_SomePolicy>( "some_value1_param", SomeType(), "some_value2_param", SomeOtherType() );
-        //
-        // If we want to initialize all policies and use their default values, we can simply call initPolicies<quickdev::policy::ALL>()
-        // with no arguments.
-        // Note that most initable policies won't function properly unless their init() functions are called directly or via initPolicies<...>().
-        // Furthermore, since each policy is required to track its initialization state, initPolicies<...>() is guaranteed to only call init()
-        // on policies that have yet to be initialized; therefore, calling initPolicies<quickdev::policy::ALL>() at the end of QUICKDEV_SPIN_FIRST()
-        // is always a safe operation.
-        // To instead force re-initialization, call forceInitPolicies<...>().
-        //
+        _TrajectoryPlannerPolicy::registerPlanTrajectoryCB( quickdev::auto_bind( &LinearTrajectoryPlannerNode::planTrajectory, this ) );
         initPolicies<quickdev::policy::ALL>();
     }
 
-    // This optional function is called by quickdev::RunablePolicy at a fixed rate (defined by the ROS param _loop_rate).
-    // Most updateable policies should have their update( ... ) functions called within this context.
-    //
     QUICKDEV_SPIN_ONCE()
+    {
+        //
+    }
+
+    QUICKDEV_DECLARE_ACTION_EXECUTE_CALLBACK( planTrajectory, _TrajectoryPlannerPolicy::_MakeTrajectoryAction )
     {
         //
     }

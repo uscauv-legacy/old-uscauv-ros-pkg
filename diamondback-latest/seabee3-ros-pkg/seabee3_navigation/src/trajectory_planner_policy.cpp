@@ -1,5 +1,5 @@
 /***************************************************************************
- *  src/trajectory_follower_policy_policy.cpp
+ *  src/trajectory_planner_policy.cpp
  *  --------------------
  *
  *  Copyright (c) 2011, Edward T. Kaszubski ( ekaszubski@gmail.com )
@@ -33,4 +33,4 @@
  *
  **************************************************************************/
 
-#include <seabee3_navigation/trajectory_follower_policy_policy.h>
+#include <seabee3_navigation/trajectory_planner_policy.h>
