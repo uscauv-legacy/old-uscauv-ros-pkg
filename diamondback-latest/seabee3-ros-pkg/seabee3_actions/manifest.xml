@@ -9,4 +9,5 @@
   <review status="unreviewed" notes=""/>
   <url>http://ros.org/wiki/seabee3_actions</url>
   <depend package="actionlib"/>
+  <depend package="seabee3_msgs"/>
 </package>
