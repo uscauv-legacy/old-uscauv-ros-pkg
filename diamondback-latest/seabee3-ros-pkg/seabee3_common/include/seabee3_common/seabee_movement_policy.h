@@ -97,7 +97,7 @@ private:
 
     QUICKDEV_ENABLE_INIT()
     {
-        QUICKDEV_GET_NODEHANDLE( nh_rel );
+        auto & nh_rel = _MakeTrajectoryActionClientPolicy::getNodeHandle();
 
         multi_sub_.addSubscriber( nh_rel, "physics_state", &SeabeeMovementPolicy::physicsStateCB, this );
 
