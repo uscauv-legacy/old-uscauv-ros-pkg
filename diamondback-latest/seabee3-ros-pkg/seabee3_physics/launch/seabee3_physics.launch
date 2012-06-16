@@ -7,10 +7,10 @@
     <arg name="manager" default="manager" />
     <arg name="nodelet" default="false" />
 
-    <include file="$(find seabee3_common)/launch/robot_model_transforms.launch" />
+    <rosparam param="/$(arg name)/structures" command="load" file="$(find seabee3_common)/params/structures.yaml" />
+    <rosparam param="/$(arg name)/structure_dynamics" command="load" file="$(find seabee3_common)/params/structure_types.yaml" />
 
-    <param name="/$(arg name)/reconfigure/thrust_to_force" type="double" value="0.11" />
-    <param name="/$(arg name)/reconfigure/drag_constant" type="double" value="50" />
+    <include file="$(find seabee3_common)/launch/robot_model_transforms.launch" />
 
     <node
         if="$(arg nodelet)"

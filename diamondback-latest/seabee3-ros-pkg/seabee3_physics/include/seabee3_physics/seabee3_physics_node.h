@@ -147,12 +147,14 @@ QUICKDEV_DECLARE_NODE_CLASS( Seabee3Physics )
         auto structure_dynamics_param = quickdev::ParamReader::readParam<XmlRpc::XmlRpcValue>( nh_rel, "structure_dynamics" );
 
         // build map of collision shapes from structure dynamics parameter
+        PRINT_INFO( "Building map of collision shapes" );
         for( auto structure_dynamics_it = structure_dynamics_param.begin(); structure_dynamics_it != structure_dynamics_param.end(); ++structure_dynamics_it )
         {
             structure_dynamics_map_[structure_dynamics_it->first] = makeBtCollisionShape( structure_dynamics_it->second );
         }
 
         // build map of named collision shapes and corresponding transforms from structures parameter
+        PRINT_INFO( "Building map of named shapes" );
         for( auto structures_it = structures_param.begin(); structures_it != structures_param.end(); ++structures_it )
         {
             // look up the dynamics entry for this structure
@@ -233,7 +235,7 @@ QUICKDEV_DECLARE_NODE_CLASS( Seabee3Physics )
             if( !movement::MotorControllerIDs::isThruster( i ) ) continue;
 
             std::ostringstream stream;
-            stream << "/seabee3/thruster" << i;
+            stream << "/seabee3/thruster" << ( i + 1 );
 
             thruster_transforms_[i] = lookupTransform( "/seabee3/base_link", stream.str() );
         }
