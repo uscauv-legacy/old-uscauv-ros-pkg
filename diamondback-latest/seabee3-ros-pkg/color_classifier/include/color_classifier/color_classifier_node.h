@@ -40,18 +40,28 @@
 
 // policies
 #include <neuromorphic_image_proc/adaptation_image_proc_policy.h>
+#include <quickdev/action_server_policy.h>
 
 // objects
 #include <quickdev/pixel.h>
 #include <quickdev/param_reader.h>
+#include <set>
 
 // utils
 #include <limits>
+
+// actions
+#include <seabee3_actions/ConfigureAction.h>
 
 // msgs
 #include <seabee3_msgs/NamedImageArray.h>
 
 typedef seabee3_msgs::NamedImageArray _NamedImageArrayMsg;
+
+typedef seabee3_actions::ConfigureAction _ConfigureAction;
+
+typedef quickdev::ActionServerPolicy<_ConfigureAction> _ConfigureActionServerPolicy;
+typedef AdaptationImageProcPolicy _AdaptationImageProcPolicy;
 
 struct ClassifiedColor
 {
@@ -72,7 +82,7 @@ struct ClassifiedColor
     }
 };
 
-QUICKDEV_DECLARE_NODE( ColorClassifier, AdaptationImageProcPolicy )
+QUICKDEV_DECLARE_NODE( ColorClassifier, _AdaptationImageProcPolicy, _ConfigureActionServerPolicy )
 
 QUICKDEV_DECLARE_NODE_CLASS( ColorClassifier )
 {
@@ -82,11 +92,15 @@ protected:
     typedef _ClassifiedColor::_Mean _ColorMean;
     typedef _ClassifiedColor::_Covariance _ColorCovariance;
 
-    std::map<std::string, bool> enabled_colors_;
+    std::set<std::string> color_filter_;
+    std::mutex color_filter_mutex_;
+
     std::map<std::string, cv::Mat> classified_images_;
     ros::MultiPublisher<> multi_pub_;
 
     std::map<std::string, _ClassifiedColor> target_colors_;
+
+    XmlRpc::XmlRpcValue model_;
 
     QUICKDEV_DECLARE_NODE_CONSTRUCTOR( ColorClassifier )
     {
@@ -95,28 +109,27 @@ protected:
 
     QUICKDEV_SPIN_FIRST()
     {
-        initPolicies<quickdev::policy::ALL>();
-
         QUICKDEV_GET_RUNABLE_NODEHANDLE( nh_rel );
 
-        AdaptationImageProcPolicy::registerCombinedImageCallback( quickdev::auto_bind( &ColorClassifierNode::imagesCB, this ) );
+        _ConfigureActionServerPolicy::registerExecuteCB( quickdev::auto_bind( &ColorClassifierNode::configureActionExecuteCB, this ) );
+
+        initPolicies<_ConfigureActionServerPolicy>( "action_name_param", std::string( "set_color_filter" ) );
+
+        _AdaptationImageProcPolicy::registerCombinedImageCallback( quickdev::auto_bind( &ColorClassifierNode::imagesCB, this ) );
 
 //        _ImageProcPolicy::addImagePublisher( "classified_images" );
 
         multi_pub_.addPublishers<_NamedImageArrayMsg>( nh_rel, {"classified_images"} );
 
-        auto const known_color_names = ros::ParamReader<std::string, 0>::readParams( nh_rel, "model/color", "_name", 0 );
+        model_ = quickdev::ParamReader::readParam<decltype( model_ ) >( nh_rel, "model" );
 
-        for( auto color_it = known_color_names.cbegin(); color_it != known_color_names.cend(); ++color_it )
+        for( auto color_it = model_.begin(); color_it != model_.end(); ++color_it )
         {
-            enabled_colors_[*color_it] = true;
-        }
+            auto const & color_name = color_it->first;
+            color_filter_.insert( color_name );
 
-        for( auto color_name_it = known_color_names.cbegin(); color_name_it != known_color_names.cend(); ++color_name_it )
-        {
-            auto const & color_name = *color_name_it;
-            auto const color_mean = ros::ParamReader<double, 0>::readParams( nh_rel, "model/" + color_name + "/mean/elem", "", 0 );
-            auto const color_cov = ros::ParamReader<double, 0>::readParams( nh_rel, "model/" + color_name + "/cov/elem", "", 0 );
+            auto const color_mean = quickdev::ParamReader::getXmlRpcValue<std::vector<double> >( model_, "mean" );
+            auto const color_cov = quickdev::ParamReader::getXmlRpcValue<std::vector<double> >( model_, "cov" );
 
             _ClassifiedColor const classified_color( color_mean, color_cov );
 
@@ -126,6 +139,33 @@ protected:
 
             target_colors_[color_name] = classified_color;
             classified_images_[color_name] = cv::Mat();
+        }
+
+        initPolicies<quickdev::policy::ALL>();
+    }
+
+    QUICKDEV_DECLARE_ACTION_EXECUTE_CALLBACK( configureActionExecuteCB, _ConfigureAction )
+    {
+        // lock color_filter mutex
+        auto lock = quickdev::make_unique_lock( color_filter_mutex_ );
+
+        auto const & settings = goal->settings;
+
+        // update the color_filter
+        for( auto setting_it = settings.cbegin(); setting_it != settings.cend(); ++setting_it )
+        {
+            auto const & setting = *setting_it;
+
+            if( setting.empty() ) continue;
+
+            // reset the color_filter
+            if( setting == "-all" ) color_filter_.clear();
+            // remove the given item; -<item>
+            else if( setting.substr( 0, 1 ) == "-" ) color_filter_.erase( setting.substr( 1 ) );
+            // add the given item; +<item>
+            else if( setting.substr( 0, 1 ) == "+" ) color_filter_.insert( setting.substr( 1 ) );
+            // default; add the given item <item>
+            else color_filter_.insert( setting );
         }
     }
 
@@ -142,10 +182,14 @@ protected:
 //        std::map<std::string, size_t> num_pixels_processed_map;
 
 //        for( size_t x = 610; x < 616; ++x )
-        for( size_t x = 0; x < (size_t)image.size().width; ++x )
+        quickdev::make_unique_lock( color_filter_mutex_ );
+
+        size_t const img_width = image.size().width;;
+        size_t const img_height = image.size().height;
+        for( size_t x = 0; x < img_width; ++x )
         {
 //            for( size_t y = 209; y < 215; ++y )
-            for( size_t y = 0; y < (size_t)image.size().height; ++y )
+            for( size_t y = 0; y < img_height; ++y )
             {
 //                PRINT_INFO( "Checking mask %zu %zu", x, y );
                 auto const & mask_pixel = mask.at<uchar>( y, x );
@@ -160,8 +204,7 @@ protected:
                 for( auto target_color_it = target_colors_.cbegin(); target_color_it != target_colors_.cend(); ++target_color_it, ++classified_image_it )
                 {
                     auto const & target_color_name = target_color_it->first;
-                    auto const & color_is_enabled_it = enabled_colors_.find( target_color_name );
-                    if( color_is_enabled_it == enabled_colors_.end() || !color_is_enabled_it->second ) continue;
+                    if( color_filter_.count( target_color_name ) == 0 ) continue;
 
                     auto const & target_color = target_color_it->second;
                     auto & classified_image = classified_image_it->second;
@@ -210,7 +253,7 @@ protected:
 
         multi_pub_.publish( "classified_images", named_image_array_message );
 
-        publishImages( "output_adaptation_mask", quickdev::opencv_conversion::fromMat( mask, "", "mono8" ) );
+        //publishImages( "output_adaptation_mask", quickdev::opencv_conversion::fromMat( mask, "", "mono8" ) );
 
     }
 

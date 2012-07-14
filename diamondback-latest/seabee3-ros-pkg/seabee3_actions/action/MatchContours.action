@@ -1,0 +1,9 @@
+# goal
+seabee3_msgs/Contour[] template_contours
+seabee3_msgs/Contour[] candidate_contours
+---
+# result
+# there will be MatchQualityArray for each candidate contour containing a MatchQuality against each template contour
+seabee3_msgs/MatchQualityArray[] matches
+---
+# feedback
