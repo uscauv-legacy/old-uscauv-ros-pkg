@@ -7,8 +7,7 @@
     <arg name="manager" default="manager" />
     <arg name="nodelet" default="false" />
 
-    <node pkg="tf" type="static_transform_publisher" name="physics_pose_to_base_link" args="0 0 0 0 0 0 /seabee3/physics/pose /seabee3/base_link 100" />
-    <node pkg="tf" type="static_transform_publisher" name="physics_pose_to_current_pose" args="0 0 0 0 0 0 /seabee3/physics/pose /seabee3/current_pose 100" />
+    <include file="$(find seabee3_demo)/launch/bind_odometry_to_physics.launch" />
 
     <node
         if="$(arg nodelet)"

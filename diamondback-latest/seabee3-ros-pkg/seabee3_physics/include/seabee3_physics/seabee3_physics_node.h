@@ -313,10 +313,10 @@ QUICKDEV_DECLARE_NODE_CLASS( Seabee3Physics )
 //      geometry_msgs::Twist givens;
 //      givens_tf >> givens;
 
-        auto center_of_mass = seabee_body_->getCenterOfMassTransform();
-        center_of_mass.setRotation( imu_transform.getRotation() );
-        center_of_mass.getOrigin().setZ( depth_transform.getOrigin().getZ() );
-        seabee_body_->setCenterOfMassTransform( center_of_mass );
+        seabee_body_->getMotionState()->getWorldTransform( world_transform );
+        world_transform.setRotation( imu_transform.getRotation() );
+        world_transform.getOrigin().setZ( depth_transform.getOrigin().getZ() );
+        seabee_body_->getMotionState()->setWorldTransform( world_transform );
 
 /*        seabee_body_->getMotionState()->getWorldTransform( world_transform );
         world_transform.setRotation( givens_tf.getRotation() );
@@ -329,8 +329,6 @@ QUICKDEV_DECLARE_NODE_CLASS( Seabee3Physics )
         btVector3 linVel = seabee_body_->getLinearVelocity();
     linVel[2] = 0;
     seabee_body_->setLinearVelocity(linVel);*/
-
-        seabee_body_->getMotionState()->getWorldTransform( world_transform );
 
         printf( "Body Pos: %f %f %f\n",
                 world_transform.getOrigin().getX(),

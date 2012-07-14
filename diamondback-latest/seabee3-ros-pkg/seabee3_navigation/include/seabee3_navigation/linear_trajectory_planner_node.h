@@ -41,6 +41,9 @@
 // policies
 #include <seabee3_navigation/trajectory_planner_policy.h>
 
+// utils
+#include <quickdev/math.h>
+
 typedef TrajectoryPlannerPolicy _TrajectoryPlannerPolicy;
 
 QUICKDEV_DECLARE_NODE( LinearTrajectoryPlanner, _TrajectoryPlannerPolicy )
@@ -80,10 +83,29 @@ QUICKDEV_DECLARE_NODE_CLASS( LinearTrajectoryPlanner )
         // get an iterator to the first waypoint
         auto waypoints_it = waypoints.cbegin();
 
+        _TrajectoryPlannerPolicy::current_pose_ = unit::make_unit( waypoints_it->pose );
+        _TrajectoryPlannerPolicy::current_velocity_ = unit::make_unit( waypoints_it->velocity );
+
+        waypoints_it ++;
+
         // for each waypoint
         for( ; waypoints_it != waypoints.cend(); ++waypoints_it )
         {
             auto const & waypoint = *waypoints_it;
+
+            // slow down
+            _TrajectoryPlannerPolicy::accelerateTo( btTransform( btQuaternion( 0, 0, 0 ), btVector3( 0, 0, 0 ) ), intervals );
+
+            auto const waypoint_tf = unit::convert<btTransform>( waypoint.pose );
+
+            // turn to face the current waypoint
+            alignTo( waypoint_tf, intervals );
+
+            // drive up to the waypoint
+            moveTo( waypoint_tf, intervals );
+
+            // if this is the last waypoint, turn to face the waypoint's orientation
+            if( waypoints_it == waypoints.cend() - 1 ) faceTo( waypoint_tf, intervals );
         }
 
         // return the new trajectory

@@ -39,6 +39,9 @@
 // policies
 #include <quickdev/action_server_policy.h>
 
+// utils
+#include <seabee3_navigation/trajectory_message_conversions.h>
+
 // actions
 #include <seabee3_actions/MakeTrajectoryAction.h>
 
@@ -57,6 +60,24 @@ public:
     typedef QUICKDEV_GET_POLICY_NS( TrajectoryPlanner )::_MakeTrajectoryAction _MakeTrajectoryAction;
     typedef QUICKDEV_GET_POLICY_NS( TrajectoryPlanner )::_MakeTrajectoryActionServerPolicy _MakeTrajectoryActionServerPolicy;
 
+    typedef seabee3_msgs::Trajectory _TrajectoryMsg;
+    typedef seabee3_msgs::TrajectoryInterval _TrajectoryIntervalMsg;
+    typedef seabee3_msgs::TrajectoryWaypoint _TrajectoryWaypointMsg;
+
+protected:
+    btVector3 max_linear_velocity_;
+    btVector3 max_angular_velocity_;
+    btTransform max_velocity_;
+    btVector3 max_linear_acceleration_;
+    btVector3 max_angular_acceleration_;
+    btTransform max_acceleration_;
+    double time_resolution_;
+
+    btTransform current_pose_;
+    btVector3 current_linear_velocity_;
+    btVector3 current_angular_velocity_;
+    _TrajectoryWaypointMsg last_output_waypoint_;
+
     QUICKDEV_MAKE_POLICY_FUNCS( TrajectoryPlanner )
 
     QUICKDEV_DECLARE_POLICY_CONSTRUCTOR( TrajectoryPlanner )
@@ -71,6 +92,40 @@ public:
         _MakeTrajectoryActionServerPolicy::registerPreemptCB( quickdev::auto_bind( &TrajectoryPlannerPolicy::makeTrajectoryActionPreemptCB, this ) );
 
         auto action_name = quickdev::policy::readPolicyParam( nh_rel, "action_name_param", "action_name", std::string( "make_trajectory" ), args... );
+
+        auto params = quickdev::ParamReader::readParam<XmlRpc::XmlRpcValue>( nh_rel, "params" );
+
+        auto constraints = quickdev::ParamReader::getXmlRpcValue<XmlRpc::XmlRpcValue>( params, "constraints" );
+
+        time_resolution_ = quickdev::ParamReader::getXmlRpcValue<double>( constraints, "time_resolution" );
+
+        auto velocity = quickdev::ParamReader::getXmlRpcValue<XmlRpc::XmlRpcValue>( constraints, "velocity" );
+
+        auto linear_velocity = quickdev::ParamReader::getXmlRpcValue<XmlRpc::XmlRpcValue>( velocity, "linear" );
+        max_linear_velocity_.setX( quickdev::ParamReader::getXmlRpcValue<double>( linear_velocity, "x", 0.3 ) );
+        max_linear_velocity_.setY( quickdev::ParamReader::getXmlRpcValue<double>( linear_velocity, "y", 0.2 ) );
+        max_linear_velocity_.setZ( quickdev::ParamReader::getXmlRpcValue<double>( linear_velocity, "z", 0.05 ) );
+
+        auto angular_velocity = quickdev::ParamReader::getXmlRpcValue<XmlRpc::XmlRpcValue>( velocity, "angular" );
+        max_angular_velocity_.setX( quickdev::ParamReader::getXmlRpcValue<double>( angular_velocity, "x", 0.9 ) );
+        max_angular_velocity_.setY( quickdev::ParamReader::getXmlRpcValue<double>( angular_velocity, "y", 0.0 ) );
+        max_angular_velocity_.setZ( quickdev::ParamReader::getXmlRpcValue<double>( angular_velocity, "z", 0.0 ) );
+
+        max_velocity_ = btTransform( unit::convert<btQuaternion>( max_angular_velocity_ ), max_linear_velocity_ );
+
+        auto acceleration = quickdev::ParamReader::getXmlRpcValue<XmlRpc::XmlRpcValue>( constraints, "acceleration" );
+
+        auto linear_acceleration = quickdev::ParamReader::getXmlRpcValue<XmlRpc::XmlRpcValue>( acceleration, "linear" );
+        max_linear_acceleration_.setX( quickdev::ParamReader::getXmlRpcValue<double>( linear_acceleration, "x", 0.3 ) );
+        max_linear_acceleration_.setY( quickdev::ParamReader::getXmlRpcValue<double>( linear_acceleration, "y", 0.2 ) );
+        max_linear_acceleration_.setZ( quickdev::ParamReader::getXmlRpcValue<double>( linear_acceleration, "z", 0.05 ) );
+
+        auto angular_acceleration = quickdev::ParamReader::getXmlRpcValue<XmlRpc::XmlRpcValue>( acceleration, "angular" );
+        max_angular_acceleration_.setX( quickdev::ParamReader::getXmlRpcValue<double>( angular_acceleration, "x", 0.9 ) );
+        max_angular_acceleration_.setY( quickdev::ParamReader::getXmlRpcValue<double>( angular_acceleration, "y", 0.0 ) );
+        max_angular_acceleration_.setZ( quickdev::ParamReader::getXmlRpcValue<double>( angular_acceleration, "z", 0.0 ) );
+
+        max_acceleration_ = btTransform( unit::convert<btQuaternion>( max_angular_acceleration_ ), max_linear_acceleration_ );
 
         initPolicies<_MakeTrajectoryActionServerPolicy>( "action_name_param", action_name );
 
@@ -99,6 +154,94 @@ public:
     QUICKDEV_DECLARE_ACTION_PREEMPT_CALLBACK( makeTrajectoryActionPreemptCB, _MakeTrajectoryAction )
     {
         //
+    }
+
+    // update the simulated velocity, respecting any user-specified dynamics constraints
+    void changeVelocity( btTransform const & desired_velocity )
+    {
+        auto const desired_linear_velocity = desired_velocity.getOrigin();
+        auto const desired_angular_velocity = unit::convert<btVector3>( desired_velocity.getRotation() );
+
+        if( fabs( current_linear_velocity_.getX() ) > max_linear_velocity.getX() ) current_linear_velocity_.setX( quickdev::sign( current_linear_velocity_.getX() ) * max_linear_velocity.getX() );
+        if( fabs( current_linear_velocity_.getY() ) > max_linear_velocity.getY() ) current_linear_velocity_.setY( quickdev::sign( current_linear_velocity_.getY() ) * max_linear_velocity.getY() );
+        if( fabs( current_linear_velocity_.getZ() ) > max_linear_velocity.getZ() ) current_linear_velocity_.setZ( quickdev::sign( current_linear_velocity_.getZ() ) * max_linear_velocity.getZ() );
+
+        if( fabs( current_angular_velocity_.getX() ) > max_angular_velocity.getX() ) current_angular_velocity_.setX( quickdev::sign( current_angular_velocity_.getX() ) * max_angular_velocity.getX() );
+        if( fabs( current_angular_velocity_.getY() ) > max_angular_velocity.getY() ) current_angular_velocity_.setY( quickdev::sign( current_angular_velocity_.getY() ) * max_angular_velocity.getY() );
+        if( fabs( current_angular_velocity_.getZ() ) > max_angular_velocity.getZ() ) current_angular_velocity_.setZ( quickdev::sign( current_angular_velocity_.getZ() ) * max_angular_velocity.getZ() );
+    }
+
+    // add the given interval to the list of intervals
+    void addInterval( _TrajectoryIntervalMsg const & interval, std::vector<_TrajectoryIntervalMsg> & intervals )
+    {
+        intervals.push_back( interval );
+    }
+
+    // create an interval from the given components, then add it to the list of intervals
+    void addInterval( double const & duration, btTransform const & acceleration, btTransform const & initial_pose, btTransform const & initial_velocity, std::vector<_TrajectoryIntervalMsg> & intervals )
+    {
+        _TrajectoryIntervalMsg interval;
+        interval.duration = duration;
+        interval.initial_state.pose.pose = unit::make_unit( initial_pose );
+        interval.initial_state.velocity.twist = unit::make_unit( initial_velocity );
+        interval.acceleration = acceleration;
+        addInterval( interval, intervals );
+    }
+
+    // create an interval from the given components (assuming that we started at the most recent waypoint), then add it to the list of intervals
+    // and update our copy of the most recent waypoint
+    void addInterval( double const & duration, btTransform const & acceleration, std::vector<_TrajectoryIntervalMsg> & intervals )
+    {
+        _TrajectoryIntervalMsg interval;
+        interval.duration = duration;
+        interval.initial_state = last_output_waypoint_;
+        interval.acceleration = acceleration;
+
+        addInterval( interval, intervals );
+
+        last_output_waypoint_.pose.pose = unit::make_unit( current_pose_ );
+        last_output_waypoint_.velocity.twist.linear = unit::make_unit( current_linear_velocity_ );
+        last_output_waypoint_.velocity.twist.angular = unit::make_unit( current_angular_velocity_ );
+    }
+
+    // accelerate to a given linear/angular velocity respecting any user-specified constraints by generating and adding intervals to the list of intervals
+    void accelerateTo( btTransform const & desired_velocity, std::vector<_TrajectoryIntervalMsg> & intervals )
+    {
+        auto const desired_linear_velocity = desired_velocity.getOrigin();
+        auto const desired_angular_velocity = unit::convert<btVector3>( desired_velocity.getRotation() );
+
+        while
+        (
+            current_linear_velocity_.getX() < desired_linear_velocity.getX() ||
+            current_linear_velocity_.getY() < desired_linear_velocity.getY() ||
+            current_linear_velocity_.getZ() < desired_linear_velocity.getZ() ||
+            current_angular_velocity_.getX() < desired_angular_velocity.getX() ||
+            current_angular_velocity_.getY() < desired_angular_velocity.getY() ||
+            current_angular_velocity_.getZ() < desired_angular_velocity.getZ()
+        )
+        {
+            // we change velocity on a per-axis basis at the maximum acceleration allowed as long as we're not already moving at the desired velocity along each axis
+            // v = at + v0
+            auto velocity = max_acceleration_ * time_resolution_ + current_velocity_;
+            auto linear_velocity = velocity.getOrigin();
+            auto angular_velocity = unit::convert<btVector3>( velocity.getRotation() );
+
+            if( current_linear_velocity_.getX() >= desired_linear_velocity.getX() ) linear_velocity.setX( 0 );
+            if( current_linear_velocity_.getY() >= desired_linear_velocity.getY() ) linear_velocity.setY( 0 );
+            if( current_linear_velocity_.getZ() >= desired_linear_velocity.getZ() ) linear_velocity.setZ( 0 );
+
+            if( current_angular_velocity_.getX() >= desired_angular_velocity.getX() ) angular_velocity.setX( 0 );
+            if( current_angular_velocity_.getY() >= desired_angular_velocity.getY() ) angular_velocity.setY( 0 );
+            if( current_angular_velocity_.getZ() >= desired_angular_velocity.getZ() ) angular_velocity.setZ( 0 );
+
+            // s = at^2/2 + v0t + s0
+            current_pose_ = max_acceleration_ * time_resolution_ * time_resolution_ / 2 + current_velocity_ * time_resolution_ + current_pose_;
+
+            // note that we update the velocity after updating the pose
+            changeVelocity( btTransform( unit::convert<btQuaternion>( angular_velocity ), linear_velocity ) );
+
+            addInterval( time_resolution,  );
+        }
     }
 
     /* This is the client's main means of accessing and updating a policy; un-comment and change args as appropriate
