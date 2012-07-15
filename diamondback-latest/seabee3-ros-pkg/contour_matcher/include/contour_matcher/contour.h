@@ -39,9 +39,14 @@
 #include <opencv/cv.hpp>
 #include <vector>
 #include <seabee3_msgs/Contour.h>
+#include <quickdev/unit.h>
 
-typedef std::vector<cv::Point> _Contour;
-typedef seabee3_msgs::Contour _ContourMsg;
+typedef cv::Point _Point;
 typedef seabee3_msgs::Point2D _ContourPointMsg;
+typedef std::vector<_Point> _Contour;
+typedef seabee3_msgs::Contour _ContourMsg;
+
+DECLARE_UNIT_CONVERSION_LAMBDA( _Contour, _ContourMsg, contour, _ContourMsg contour_msg; for( auto point_it = contour.cbegin(); point_it != contour.cend(); ++point_it ){ _ContourPointMsg point_msg; point_msg.x = point_it->x; point_msg.y = point_it->y; contour_msg.points.push_back( point_msg ); } return contour_msg; )
+DECLARE_UNIT_CONVERSION_LAMBDA( _ContourMsg, _Contour, contour_msg, _Contour contour; for( auto point_it = contour_msg.points.cbegin(); point_it != contour_msg.points.cend(); ++point_it ){ contour.push_back( _Point( point_it->x, point_it->y ) ); } return contour; )
 
 #endif // CONTOURMATCHER_CONTOUR_H_

@@ -220,19 +220,9 @@ protected:
                 {
                     auto const & contour = *contour_it;
 
-                    _ContourMsg contour_msg;
+                    _ContourMsg contour_msg = unit::make_unit( contour );
                     contour_msg.name = image_name;
 
-                    for( auto point_it = contour.cbegin(); point_it != contour.cend(); ++point_it )
-                    {
-                        auto const & point = *point_it;
-
-                        _ContourPointMsg point_msg;
-                        point_msg.x = point.x;
-                        point_msg.y = point.y;
-
-                        contour_msg.points.push_back( point_msg );
-                    }
                     contour_array_msg.contours.push_back( contour_msg );
                 }
 

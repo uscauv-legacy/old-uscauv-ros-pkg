@@ -82,6 +82,9 @@ public:
     }
 };
 
+typedef Position Size;
+typedef Position Vector3;
+
 // =============================================================================================================================================
 //! An orientation
 class Orientation

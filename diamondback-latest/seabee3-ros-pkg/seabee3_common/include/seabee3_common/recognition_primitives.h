@@ -36,19 +36,31 @@
 #ifndef SEABEE3COMMON_RECOGNITIONPRIMITIVES_H_
 #define SEABEE3COMMON_RECOGNITIONPRIMITIVES_H_
 
+// objects
 #include <map>
 #include <quickdev/action_token.h>
 #include <seabee3_common/colors.h>
 #include <seabee3_common/motion_primitives.h>
 
+// msgs
+#include <seabee3_msgs/LandmarkArray.h>
+#include <visualization_msgs/MarkerArray.h>
+
 namespace seabee
 {
+
+    typedef seabee3_msgs::Landmark _LandmarkMsg;
+    typedef seabee3_msgs::LandmarkArray _LandmarkArrayMsg;
+
+    typedef visualization_msgs::Marker _MarkerMsg;
+    typedef visualization_msgs::MarkerArray _MarkerArrayMsg;
 
 // =============================================================================================================================================
 class Landmark
 {
 public:
     Pose pose_;
+    Size size_;
 
     enum LandmarkType
     {
@@ -64,6 +76,17 @@ public:
     LandmarkType type_;
     Color color_;
     std::string name_;
+
+    Landmark( Landmark const & other )
+    :
+        pose_( other.pose_ ),
+        size_( other.size_ ),
+        type_( other.type_ ),
+        color_( other.color_ ),
+        name_( other.name_ )
+    {
+        //
+    }
 
     template
     <
@@ -98,6 +121,20 @@ public:
     }
 
     template<class... __Args>
+    void init( Pose const & pose, __Args&&... args )
+    {
+        pose_ = pose;
+        init( args... );
+    }
+
+    template<class... __Args>
+    void init( Size const & size, __Args&&... args )
+    {
+        size_ = size;
+        init( args... );
+    }
+
+    template<class... __Args>
     void init( Color const & color, __Args&&... args )
     {
         color_ = color;
@@ -105,6 +142,56 @@ public:
     }
 
     void init() const {}
+
+    bool operator<( Landmark const & other ) const
+    {
+        return std::min( size_.x_, size_.y_ ) < std::min( other.size_.x_, other.size_.y_ );
+    }
+
+    operator _LandmarkMsg() const
+    {
+        _LandmarkMsg landmark_msg;
+        landmark_msg.type = type_;
+        landmark_msg.color = color_;
+        landmark_msg.pose = unit::make_unit( pose_ );
+        landmark_msg.size = unit::make_unit( size_ );
+
+        return landmark_msg;
+    }
+
+    operator _MarkerMsg() const
+    {
+        _MarkerMsg marker_msg;
+        marker_msg.header.stamp = ros::Time::now();
+
+        marker_msg.color = color_;
+
+        marker_msg.ns = "landmarks";
+        marker_msg.action = visualization_msgs::Marker::ADD;
+        marker_msg.lifetime = ros::Duration( 0.1 );
+
+        marker_msg.pose = unit::make_unit( pose_ );
+
+        if( type_ == PIPE || type_ == BIN ) marker_msg.header.frame_id = "camera2";
+        else marker_msg.header.frame_id = "camera1";
+
+        switch( type_ )
+        {
+        case BUOY:
+            marker_msg.type = visualization_msgs::Marker::SPHERE;
+            marker_msg.scale.x =
+            marker_msg.scale.y = size_.x_ + size_.y_ / 2;
+            break;
+        case PIPE:
+            marker_msg.type = visualization_msgs::Marker::CUBE;
+            marker_msg.scale.x = size_.x_;
+            marker_msg.scale.y = size_.y_;
+            marker_msg.scale.z = 0.005;
+            break;
+        }
+
+        return marker_msg;
+    }
 };
 
 // =============================================================================================================================================
@@ -118,6 +205,8 @@ public:
     {
         //
     }
+
+
 };
 
 // =============================================================================================================================================

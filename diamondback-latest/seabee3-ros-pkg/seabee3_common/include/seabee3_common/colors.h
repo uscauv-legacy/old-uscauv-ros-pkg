@@ -36,8 +36,13 @@
 #ifndef SEABEE3COMMON_COLORS_H_
 #define SEABEE3COMMON_COLORS_H_
 
+#include <string>
+#include <std_msgs/ColorRGBA.h>
+
 namespace seabee
 {
+
+    typedef std_msgs::ColorRGBA _ColorRGBAMsg;
 
 class Color
 {
@@ -62,6 +67,76 @@ public:
         color_( color )
     {
         //
+    }
+
+    Color( std::string const & color )
+    {
+        if( color == "red" ) color_ = RED;
+        else if( color == "orange" ) color_ = ORANGE;
+        else if( color == "yellow" ) color_ = YELLOW;
+        else if( color == "green" ) color_ = GREEN;
+        else if( color == "blue" ) color_ = BLUE;
+        else if( color == "white" ) color_ = WHITE;
+        else color_ = BLACK;
+    }
+
+    operator std::string() const
+    {
+        switch( color_ )
+        {
+        case BLACK:
+            return "black";
+        case RED:
+            return "red";
+        case ORANGE:
+            return "orange";
+        case YELLOW:
+            return "yellow";
+        case GREEN:
+            return "green";
+        case BLUE:
+            return "blue";
+        case WHITE:
+            return "white";
+        }
+
+        return "";
+    }
+
+    operator _ColorRGBAMsg() const
+    {
+        _ColorRGBAMsg color_msg;
+        color_msg.a = 1.0;
+
+        switch( color_ )
+        {
+        case BLACK:
+            break;
+        case RED:
+            color_msg.r = 1.0;
+            break;
+        case ORANGE:
+            color_msg.r = 1.0;
+            color_msg.g = 0.5;
+            break;
+        case YELLOW:
+            color_msg.r = 1.0;
+            color_msg.g = 1.0;
+            break;
+        case GREEN:
+            color_msg.g = 1.0;
+            break;
+        case BLUE:
+            color_msg.b = 1.0;
+            break;
+        case WHITE:
+            color_msg.r = 1.0;
+            color_msg.g = 1.0;
+            color_msg.b = 1.0;
+            break;
+        }
+
+        return color_msg;
     }
 };
 

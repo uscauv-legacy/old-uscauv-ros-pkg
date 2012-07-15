@@ -126,14 +126,16 @@ protected:
         for( auto color_it = model_.begin(); color_it != model_.end(); ++color_it )
         {
             auto const & color_name = color_it->first;
+            std::cout << "Loading settings for color " << color_name << std::endl;
             color_filter_.insert( color_name );
 
-            auto const color_mean = quickdev::ParamReader::getXmlRpcValue<std::vector<double> >( model_, "mean" );
-            auto const color_cov = quickdev::ParamReader::getXmlRpcValue<std::vector<double> >( model_, "cov" );
+            auto & color = color_it->second;
+
+            auto const color_mean = quickdev::ParamReader::getXmlRpcValue<std::vector<double> >( color, "mean" );
+            auto const color_cov = quickdev::ParamReader::getXmlRpcValue<std::vector<double> >( color, "cov" );
 
             _ClassifiedColor const classified_color( color_mean, color_cov );
 
-            std::cout << "Loaded settings for color " << color_name << std::endl;
             std::cout << " - mean: " << classified_color.mean_ << std::endl;
             std::cout << " - cov: " << classified_color.covariance_ << std::endl;
 
@@ -172,8 +174,18 @@ protected:
     void imagesCB( cv_bridge::CvImageConstPtr const & image_msg, cv_bridge::CvImageConstPtr const & mask_msg )
     {
 //        std::cout << "Getting image from message" << std::endl;
+        if( !image_msg )
+        {
+            PRINT_ERROR( "image message is null" );
+            return;
+        }
         cv::Mat const & image = image_msg->image;
 //        std::cout << "Getting mask from message" << std::endl;
+        if( !mask_msg )
+        {
+            PRINT_ERROR( "mask message is null" );
+            return;
+        }
         cv::Mat const & mask = mask_msg->image;
 
 //        cv::Mat_<cv::Vec3b>::const_iterator current_image_pixel = image.begin<cv::Vec3b>();
@@ -184,8 +196,8 @@ protected:
 //        for( size_t x = 610; x < 616; ++x )
         quickdev::make_unique_lock( color_filter_mutex_ );
 
-        size_t const img_width = image.size().width;;
-        size_t const img_height = image.size().height;
+        size_t const & img_width = image.size().width;
+        size_t const & img_height = image.size().height;
         for( size_t x = 0; x < img_width; ++x )
         {
 //            for( size_t y = 209; y < 215; ++y )

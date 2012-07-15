@@ -107,7 +107,7 @@ QUICKDEV_DECLARE_NODE_CLASS( AdaptationMask )
 
         auto const now = ros::Time::now();
 
-        auto output_image_msg = quickdev::opencv_conversion::fromMat( hsl_image, "", "passthrough" );
+        auto output_image_msg = quickdev::opencv_conversion::fromMat( hsl_image, "", "bgr8" );
         output_image_msg->header.stamp = now;
 
         auto output_adaptation_mask_msg = quickdev::opencv_conversion::fromMat( high_values_mask_, "", "mono8" );

@@ -115,16 +115,19 @@ QUICKDEV_DECLARE_NODE_CLASS( ColorClassifierTrainer )
         std::cout << covariance << std::endl;
 
         // Output mean and variance (not full covariance)
+        XmlRpc::XmlRpcValue mean_param;
+        XmlRpc::XmlRpcValue cov_param;
+
         for( size_t i = 0; i < mean.size(); ++i )
         {
-            std::stringstream index_ss;
-            index_ss << i;
-            auto const index_str = index_ss.str();
-
-            nh_rel.setParam( "model/" + color_name + "/mean/elem" + index_str, mean[i] );
-
-            nh_rel.setParam( "model/" + color_name + "/cov/elem" + index_str, covariance( i, i ) );
+            mean_param[i] = mean[i];
+            cov_param[i] = covariance( i, i );
         }
+
+        nh_rel.setParam( "model/" + color_name + "/mean", mean_param );
+
+        nh_rel.setParam( "model/" + color_name + "/cov", cov_param );
+
 /* Output full covariance
         for( size_t i = 0; i < covariance.size(); ++i )
         {

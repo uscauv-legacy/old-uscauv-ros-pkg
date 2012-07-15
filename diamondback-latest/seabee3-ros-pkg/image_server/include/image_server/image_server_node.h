@@ -98,7 +98,7 @@ public:
             {
                 ROS_INFO( "Publishing image %d [%dx%d]", current_frame_, image_loader_.image_cache_[current_frame_]->width, image_loader_.image_cache_[current_frame_]->height );
 
-                publishImages( "output_image", quickdev::opencv_conversion::fromIplImage( image_loader_.image_cache_[current_frame_] ) );
+                publishImages( "output_image", quickdev::opencv_conversion::fromIplImage( image_loader_.image_cache_[current_frame_], "image_server", "bgr8" ) );
 
                 //publishCvImage( image_loader_.image_cache_[current_frame_] );
                 if ( config_.auto_advance )
