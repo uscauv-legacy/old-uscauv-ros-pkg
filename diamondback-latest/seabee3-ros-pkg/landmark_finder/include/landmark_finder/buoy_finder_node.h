@@ -42,8 +42,10 @@
 #include <quickdev/reconfigure_policy.h>
 
 // objects
+#include <condition_variable>
 #include <quickdev/multi_subscriber.h>
 #include <quickdev/multi_publisher.h>
+#include <image_geometry/pinhole_camera_model.h>
 
 // utils
 #include <contour_matcher/contour.h>
@@ -51,15 +53,19 @@
 
 // msgs
 #include <seabee3_msgs/ContourArray.h>
+#include <sensor_msgs/CameraInfo.h>
 
 // config
 #include <landmark_finder/BuoyFinderConfig.h>
 
 typedef seabee3_msgs::ContourArray _ContourArrayMsg;
+typedef sensor_msgs::CameraInfo _CameraInfoMsg;
 
 typedef landmark_finder::BuoyFinderConfig _BuoyFinderCfg;
 
 typedef quickdev::ReconfigurePolicy<_BuoyFinderCfg> _BuoyFinderReconfigurePolicy;
+
+typedef image_geometry::PinholeCameraModel _PinholeCameraModel;
 
 using namespace seabee;
 
@@ -71,7 +77,13 @@ protected:
     ros::MultiSubscriber<> multi_sub_;
     ros::MultiPublisher<> multi_pub_;
 
+    _PinholeCameraModel camera_model_;
+
+    std::condition_variable process_contours_condition_;
     std::mutex process_contours_mutex_;
+
+    _CameraInfoMsg::ConstPtr camera_info_msg_ptr_;
+    std::mutex camera_info_mutex_;
 
     _ContourArrayMsg::ConstPtr contours_msg_ptr_;
     std::mutex contours_mutex_;
@@ -90,6 +102,7 @@ protected:
         QUICKDEV_GET_RUNABLE_NODEHANDLE( nh_rel );
 
         multi_sub_.addSubscriber( nh_rel, "contours", &BuoyFinderNode::contoursCB, this );
+        multi_sub_.addSubscriber( nh_rel, "camera_info", &BuoyFinderNode::cameraInfoCB, this );
         multi_pub_.addPublishers<_LandmarkArrayMsg, _MarkerArrayMsg>( nh_rel, { "landmarks", "markers" } );
 
         initPolicies<quickdev::policy::ALL>();
@@ -101,10 +114,14 @@ protected:
     {
         while( QUICKDEV_GET_RUNABLE_POLICY()::running() )
         {
-            // make sure we're locked once
-            process_contours_mutex_.try_lock();
-            // wait for external unlock
             auto process_contours_lock = quickdev::make_unique_lock( process_contours_mutex_ );
+            process_contours_condition_.wait( process_contours_lock );
+
+            if( !camera_info_msg_ptr_ )
+            {
+                PRINT_WARN( "Camera model not initialized." );
+                continue;
+            }
 
             // get a copy of the contours so we block other processes for the minimum amount of time
             _ContourArrayMsg contours_msg;
@@ -158,10 +175,14 @@ protected:
                 _MarkerMsg marker_msg = buoy;
                 marker_msg.id = marker_id ++;
 
+                //camera_model_.projectPixelTo3dRay(  );
+
                 markers_msg.markers.push_back( marker_msg );
             }
 
-            if( !buoys_msg.landmarks.empty() ) multi_pub_.publish( "landmarks", buoys_msg, "markers", markers_msg );
+            multi_pub_.publish( "landmarks", buoys_msg );
+
+            if( !buoys_msg.landmarks.empty() ) multi_pub_.publish( "markers", markers_msg );
         }
     }
 
@@ -174,7 +195,18 @@ protected:
         contours_msg_ptr_ = msg;
 
         // wake up processContours() for one cycle
-        process_contours_mutex_.unlock();
+        process_contours_condition_.notify_all();
+    }
+
+    QUICKDEV_DECLARE_MESSAGE_CALLBACK( cameraInfoCB, _CameraInfoMsg )
+    {
+        auto lock = quickdev::make_unique_lock( camera_info_mutex_, std::try_to_lock );
+
+        if( !lock ) return;
+
+        camera_info_msg_ptr_ = msg;
+
+        camera_model_.fromCameraInfo( msg );
     }
 
     QUICKDEV_SPIN_ONCE()

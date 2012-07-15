@@ -238,7 +238,7 @@ private:
             ros::Rate( 110 ).sleep();
         }
 
-        ori_comp_ /= (double) ( -n );
+        ori_comp_ /= (double) ( n );
     }
 
     void runRPYDriftCalibration()
@@ -315,17 +315,22 @@ private:
 
         tf::Vector3 temp;
         temp = unit::make_unit( imu_driver_ptr_->ori_ );
-        temp += ori_comp_;
+        temp -= ori_comp_;
 
         seabee_imu_msg.ori = unit::make_unit( temp );
 
-        seabee_imu_msg.ori.x = Radian( Degree( seabee_imu_msg.ori.x ) );
-        seabee_imu_msg.ori.y = Radian( Degree( seabee_imu_msg.ori.y ) );
-        seabee_imu_msg.ori.z = Radian( Degree( seabee_imu_msg.ori.z ) );
+        seabee_imu_msg.ori.x = seabee_imu_msg.ori.x;
+        seabee_imu_msg.ori.y = seabee_imu_msg.ori.y;
+        seabee_imu_msg.ori.z = seabee_imu_msg.ori.z;
 
-        tf::Quaternion ori( temp.z(), temp.y(), temp.x() );
+        tf::Quaternion ori
+        (
+            Radian( Degree( seabee_imu_msg.ori.z ) ),
+            Radian( Degree( seabee_imu_msg.ori.y ) ),
+            Radian( Degree( seabee_imu_msg.ori.x ) )
+        );
 
-        _TfTranceiverPolicy::publishTransform( btTransform( ori, btVector3( 0, 0, 0 ) ), "/world", "/seabee3/sensors/yaw" );
+        _TfTranceiverPolicy::publishTransform( btTransform( ori, btVector3( 0, 0, 0 ) ), "/world", "/seabee3/sensors/imu" );
 
         imu_msg.orientation.w = ori.w();
         imu_msg.orientation.x = ori.x();

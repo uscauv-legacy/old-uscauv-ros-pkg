@@ -12,6 +12,8 @@
   <depend package="nodelet"/>
   <depend package="seabee3_common"/>
   <depend package="contour_matcher"/>
+  <depend package="sensor_msgs"/>
+  <depend package="image_geometry"/>
   <export>
     <nodelet plugin="${prefix}/nodelets/nodelet_plugins.xml"/>
   </export>
