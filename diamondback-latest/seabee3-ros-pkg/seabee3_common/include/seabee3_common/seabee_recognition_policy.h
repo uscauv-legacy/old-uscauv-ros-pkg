@@ -38,21 +38,43 @@
 
 // policies
 #include <quickdev/tf_tranceiver_policy.h>
+#include <quickdev/node_handle_policy.h>
 
 // objects
 #include <seabee3_common/recognition_primitives.h>
+#include <quickdev/multi_subscriber.h>
 
 using namespace seabee;
 
 QUICKDEV_DECLARE_POLICY_NS( SeabeeRecognition )
 {
     typedef quickdev::TfTranceiverPolicy _TfTranceiverPolicy;
+    typedef quickdev::NodeHandlePolicy _NodeHandlePolicy;
 }
 
-QUICKDEV_DECLARE_POLICY( SeabeeRecognition, _TfTranceiverPolicy )
+QUICKDEV_DECLARE_POLICY( SeabeeRecognition, _TfTranceiverPolicy, _NodeHandlePolicy )
 
 QUICKDEV_DECLARE_POLICY_CLASS( SeabeeRecognition )
 {
+public:
+    typedef QUICKDEV_GET_POLICY_NS( SeabeeRecognition )::_TfTranceiverPolicy _TfTranceiverPolicy;
+    typedef QUICKDEV_GET_POLICY_NS( SeabeeRecognition )::_NodeHandlePolicy _NodeHandlePolicy;
+
+    typedef quickdev::SimpleActionToken SimpleActionToken;
+
+private:
+    ros::MultiSubscriber<> multi_sub_;
+
+protected:
+    std::mutex find_landmark_mutex_;
+    std::condition_variable find_landmark_condition_;
+
+    _LandmarkArrayMsg::ConstPtr landmarks_msg_ptr_;
+    std::mutex landmarks_mutex_;
+
+    std::map<std::string, Landmark> landmarks_map_;
+    std::mutex landmarks_map_mutex_;
+
     QUICKDEV_MAKE_POLICY_FUNCS( SeabeeRecognition )
 
     QUICKDEV_DECLARE_POLICY_CONSTRUCTOR( SeabeeRecognition )
@@ -62,9 +84,73 @@ QUICKDEV_DECLARE_POLICY_CLASS( SeabeeRecognition )
 
     QUICKDEV_ENABLE_INIT()
     {
+        auto & nh_rel = _NodeHandlePolicy::getNodeHandle();
+
+        multi_sub_.addSubscriber( nh_rel, "landmarks", &SeabeeRecognitionPolicy::landmarksCB, this );
+
         initPolicies<quickdev::policy::ALL>();
 
         QUICKDEV_SET_INITIALIZED();
+    }
+
+    QUICKDEV_DECLARE_MESSAGE_CALLBACK( landmarksCB, _LandmarkArrayMsg )
+    {
+        auto lock = quickdev::make_unique_lock( landmarks_mutex_, std::try_to_lock );
+
+        if( !lock ) return;
+
+        landmarks_msg_ptr_ = msg;
+
+        find_landmark_condition_.notify_all();
+    }
+
+    SimpleActionToken findLandmark( Landmark const & target )
+    {
+        // save any conditions that may block the action, so we can unblock these conditions if the user cancels the action
+        SimpleActionToken result( std::vector<std::condition_variable *>( { &find_landmark_condition_ } ) );
+        result.start( quickdev::auto_bind( quickdev::auto_bind( &SeabeeRecognitionPolicy::findLandmarkImpl, this ), target, result ) );
+        return result;
+    }
+
+    void findLandmarkImpl( Landmark const & target, SimpleActionToken token )
+    {
+        while( token.ok() && ros::ok() )
+        {
+            if( !landmarks_msg_ptr_ )
+            {
+                auto find_landmark_lock = quickdev::make_unique_lock( find_landmark_mutex_ );
+                find_landmark_condition_.wait( find_landmark_lock );
+            }
+
+            if( !( token.ok() && ros::ok() ) )
+            {
+                token.cancel();
+                return;
+            }
+
+            _LandmarkArrayMsg landmark_array_msg;
+            {
+                auto landmarks_lock = quickdev::make_unique_lock( landmarks_mutex_ );
+                landmark_array_msg = *landmarks_msg_ptr_;
+            }
+
+            auto const & landmarks = landmark_array_msg.landmarks;
+
+            auto landmarks_map_lock = quickdev::make_unique_lock( landmarks_map_mutex_);
+            for( auto landmarks_it = landmarks.cbegin(); landmarks_it != landmarks.cend(); ++landmarks_it )
+            {
+                auto const & landmark_msg = *landmarks_it;
+
+                Landmark landmark( landmark_msg );
+
+                if( landmark == target )
+                {
+                    landmarks_map_[landmark_msg.name] = landmark;
+                    token.complete( true );
+                    return;
+                }
+            }
+        }
     }
 
     // #########################################################################################################################################

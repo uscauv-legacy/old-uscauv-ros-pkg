@@ -10,9 +10,10 @@
   <url>http://ros.org/wiki/image_server</url>
   <depend package="quickdev_cpp"/>
   <depend package="nodelet"/>
+  <depend package="camera_info_manager"/>
 
   <export>
-	<rosdoc config="rosdoc.yaml"/>
+    <rosdoc config="rosdoc.yaml"/>
     <nodelet plugin="${prefix}/nodelets/nodelet_plugins.xml" />
     <cpp cflags="-I${prefix}/include" lflags="-Wl,-rpath,${prefix}/lib -L${prefix}/lib"/>
   </export>

@@ -107,6 +107,7 @@ protected:
 
         color_filter_.insert( "green" );
         color_filter_.insert( "orange" );
+        color_filter_.insert( "yellow" );
     }
 
     QUICKDEV_SPIN_FIRST()

@@ -1,9 +1,9 @@
 <launch>
     <arg name="pkg" value="contour_matcher" />
-    <arg name="type" value="contour_finder" />
-    <arg name="name" default="$(arg type)" />
+    <arg name="name" default="contour_finder" />
+    <arg name="type" value="contour_finder_node" />
     <arg name="rate" default="30" />
-    <arg name="args" value="_loop_rate:=$(arg rate)" />
+    <arg name="args" value="_loop_rate:=$(arg rate) ~classified_images:=/color_classifier/classified_images" />
     <arg name="manager" default="manager" />
     <arg name="nodelet" default="false" />
     <node

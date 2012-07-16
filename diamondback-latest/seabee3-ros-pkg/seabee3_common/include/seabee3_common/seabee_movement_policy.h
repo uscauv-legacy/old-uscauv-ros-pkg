@@ -44,6 +44,9 @@
 #include <seabee3_common/motion_primitives.h>
 #include <quickdev/multi_subscriber.h>
 
+// utils
+#include <quickdev/numeric_unit_conversions.h>
+
 // actions
 #include <seabee3_actions/MakeTrajectoryAction.h>
 #include <seabee3_actions/FollowTrajectoryAction.h>
@@ -81,6 +84,10 @@ public:
 
     typedef _TrajectoryWaypointMsg _PhysicsStateMsg;
     typedef __QUICKDEV_FUNCTION_TYPE<void( _TrajectoryWaypointMsg::ConstPtr const & )> _PhysicsStateCallback;
+
+    typedef geometry_msgs::Twist _TwistMsg;
+
+    typedef quickdev::SimpleActionToken SimpleActionToken;
 
 protected:
     _PhysicsStateMsg::ConstPtr physics_state_msg_;
@@ -130,11 +137,26 @@ private:
     }
 
     // #########################################################################################################################################
-    //! Return the Pose of the landmark with the given name
-    Pose getPose( std::string const & to_frame, std::string const & from_frame = "seabee" )
+    btTransform getTransform( std::string const & to_frame, std::string const & from_frame = "seabee/current_pose" )
     {
-        auto transform = _TfTranceiverPolicy::tryLookupTransform( from_frame, to_frame );
-        return unit::convert<Pose>( btTransform( transform ) );
+        return btTransform( _TfTranceiverPolicy::tryLookupTransform( from_frame, to_frame ) );
+    }
+
+    btTransform getCurrentTransform()
+    {
+        return getTransform( "seabee/current_pose", "world" );
+    }
+
+    btTransform getDesiredTransform()
+    {
+        return getTransform( "seabee/desired_pose", "world" );
+    }
+
+    // #########################################################################################################################################
+    //! Return the Pose of the landmark with the given name
+    Pose getPose( std::string const & to_frame, std::string const & from_frame = "seabee/current_pose" )
+    {
+        return unit::convert<Pose>( getTransform( to_frame, from_frame ) );
     }
 
     //! Return the Pose of the sub
@@ -143,7 +165,12 @@ private:
      */
     Pose getCurrentPose()
     {
-        return getPose( "seabee", "world" );
+        return getPose( "seabee/current_pose", "world" );
+    }
+
+    Pose getDesiredPose()
+    {
+        return getPose( "seabee/desired_pose", "world" );
     }
 
     // #########################################################################################################################################
@@ -193,6 +220,91 @@ private:
             return _FollowTrajectoryActionClientPolicy::sendGoal( follow_trajectory_goal );
         }
         return _FollowTrajectoryActionClientPolicy::_ActionToken();
+    }
+
+    void moveAtVelocity( btTransform const & velocity )
+    {
+        _TfTranceiverPolicy::publishTransform( velocity, "/seabee3/current_pose", "/seabee3/desired_pose" );
+    }
+
+    void moveAtVelocity( Pose const & velocity )
+    {
+        return moveAtVelocity( unit::convert<btTransform>( velocity ) );
+    }
+
+    void moveAtVelocity( _TwistMsg const & velocity )
+    {
+        return moveAtVelocity( unit::convert<btTransform>( velocity ) );
+    }
+
+    void setDesiredPose( btTransform const & pose )
+    {
+        _TfTranceiverPolicy::publishTransform( pose, "/world", "/seabee3/desired_pose" );
+    }
+
+    void setDesiredPose( Pose const & pose )
+    {
+        setDesiredPose( unit::convert<btTransform>( pose ) );
+    }
+
+    // move within a certain pose error of the given target; there must exist a transform from /seabee/base_link to <target>
+    SimpleActionToken moveRelativeTo( std::string const & target, btTransform const & desired_distance_to_target )
+    {
+        SimpleActionToken result;
+        result.start( quickdev::auto_bind( quickdev::auto_bind( &SeabeeMovementPolicy::moveRelativeToImpl, this ), target, desired_distance_to_target, result ) );
+
+        return result;
+    }
+
+    void moveRelativeToImpl( std::string const & target, btTransform const & desired_distance_to_target, SimpleActionToken token )
+    {
+        while( token.ok() && ros::ok() )
+        {
+            btTransform const & distance_to_target = getTransform( target );
+
+            btTransform error_tf = btTransform( distance_to_target.getRotation() - desired_distance_to_target.getRotation(), distance_to_target.getOrigin() - desired_distance_to_target.getOrigin() );
+
+            btVector3 position_error = unit::convert<btVector3>( error_tf.getRotation() );
+            btVector3 orientation_error = unit::convert<btVector3>( error_tf.getOrigin() );
+
+            _TfTranceiverPolicy::publishTransform( unit::convert<btTransform>( error_tf ), "/seabee3/current_pose", "/seabee3/desired_pose" );
+
+            if( fabs( position_error.getX() ) < 0.05 && fabs( position_error.getY() ) < 0.05 && fabs( position_error.getZ() ) < 0.1 && fabs( orientation_error.getX() ) < Radian( Degree( 5 ) ) && fabs( orientation_error.getY() ) < Radian( Degree( 5 ) ) && fabs( orientation_error.getZ() ) < Radian( Degree( 5 ) ) )
+            {
+                token.complete( true );
+                return;
+            }
+        }
+        token.cancel();
+    }
+
+    SimpleActionToken rotateSearch( std::string const & target, SimpleActionToken term_criteria, Radian const & min, Radian const & max, Radian const & velocity )
+    {
+        SimpleActionToken result;
+        result.start( quickdev::auto_bind( quickdev::auto_bind( &SeabeeMovementPolicy::rotateSearchImpl, this ), target, term_criteria, min, max, velocity, result ) );
+
+        return result;
+    }
+
+    void rotateSearchImpl( std::string const & target, SimpleActionToken term_criteria, Radian const & min, Radian const & max, Radian const & velocity, SimpleActionToken token )
+    {
+        double const start_angle = getCurrentPose().orientation_.yaw_;
+        ros::Rate update_rate( 20 );
+        double const range = max - min;
+        ros::Time const start_time = ros::Time::now();
+
+        while( term_criteria.ok() && token.ok() && ros::ok() )
+        {
+            Pose desired_pose = getDesiredPose();
+
+            desired_pose.orientation_.yaw_ = ( range / 2 ) * sin( ( ros::Time::now() - start_time ).toSec() * M_PI * ( velocity / range ) ) + min;
+
+            setDesiredPose( desired_pose );
+
+            update_rate.sleep();
+        }
+
+        token.complete( term_criteria.success() );
     }
 
     //! Move to some relative position

@@ -16,4 +16,6 @@
         <param name="bayer_pattern" value="rggb" />
         <node name="image_proc" pkg="image_proc" type="image_proc" output="screen" />
     </group>
+
+    <rosparam param="/$(arg camera_name)" command="load" file="$(find seabee3_common)/params/$(arg camera_name)_driver.yaml" />
 </launch>

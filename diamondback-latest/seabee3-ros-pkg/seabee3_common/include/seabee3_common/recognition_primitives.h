@@ -41,6 +41,10 @@
 #include <quickdev/action_token.h>
 #include <seabee3_common/colors.h>
 #include <seabee3_common/motion_primitives.h>
+#include <image_geometry/pinhole_camera_model.h>
+
+// utils
+#include <quickdev/math.h>
 
 // msgs
 #include <seabee3_msgs/LandmarkArray.h>
@@ -55,6 +59,8 @@ namespace seabee
     typedef visualization_msgs::Marker _MarkerMsg;
     typedef visualization_msgs::MarkerArray _MarkerArrayMsg;
 
+    typedef image_geometry::PinholeCameraModel _PinholeCameraModel;
+
 // =============================================================================================================================================
 class Landmark
 {
@@ -64,7 +70,7 @@ public:
 
     enum LandmarkType
     {
-        GATE,
+        GATE = 0,
         BUOY,
         PIPE,
         HEDGE,
@@ -77,6 +83,11 @@ public:
     Color color_;
     std::string name_;
 
+    Landmark()
+    {
+        //
+    }
+
     Landmark( Landmark const & other )
     :
         pose_( other.pose_ ),
@@ -88,31 +99,36 @@ public:
         //
     }
 
+    Landmark( _LandmarkMsg const & landmark_msg )
+    :
+        pose_( unit::convert<Pose>( landmark_msg.pose ) ),
+        size_( unit::convert<Size>( landmark_msg.size ) ),
+        type_( LandmarkType( landmark_msg.type ) ),
+        color_( landmark_msg.color ),
+        name_( getUniqueName() )
+    {
+        //
+    }
+
     template
     <
         class... __Args,
-        typename std::enable_if<(!sizeof...(__Args) == 1 || !std::is_same<
+        typename std::enable_if<(!sizeof...(__Args) == 1 || !boost::is_base_of<
+            Landmark,
             typename std::remove_reference<
                 typename std::remove_const<
                     typename variadic::element<0, __Args...>::type
                 >::type
-            >::type,
-            Landmark
+            >::type
         >::value), int>::type = 0
     >
     Landmark( __Args&&... args )
     {
         init( args... );
+        name_ = getUniqueName();
     }
 
     // ##[ Initialization ]#####################################################################################################################
-    template<class... __Args>
-    void init( std::string const & name, __Args&&... args )
-    {
-        name_ = name;
-        init( args... );
-    }
-
     template<class... __Args>
     void init( LandmarkType const & type, __Args&&... args )
     {
@@ -148,6 +164,11 @@ public:
         return std::min( size_.x_, size_.y_ ) < std::min( other.size_.x_, other.size_.y_ );
     }
 
+    bool operator==( Landmark const & other ) const
+    {
+        return name_ == other.name_;
+    }
+
     operator _LandmarkMsg() const
     {
         _LandmarkMsg landmark_msg;
@@ -155,6 +176,7 @@ public:
         landmark_msg.color = color_;
         landmark_msg.pose = unit::make_unit( pose_ );
         landmark_msg.size = unit::make_unit( size_ );
+        landmark_msg.name = name_.empty() ? getUniqueName() : name_;
 
         return landmark_msg;
     }
@@ -172,15 +194,16 @@ public:
 
         marker_msg.pose = unit::make_unit( pose_ );
 
-        if( type_ == PIPE || type_ == BIN ) marker_msg.header.frame_id = "camera2";
-        else marker_msg.header.frame_id = "camera1";
+        if( type_ == PIPE || type_ == BIN ) marker_msg.header.frame_id = "/seabee/camera2";
+        else marker_msg.header.frame_id = "/seabee/camera1";
 
         switch( type_ )
         {
         case BUOY:
             marker_msg.type = visualization_msgs::Marker::SPHERE;
             marker_msg.scale.x =
-            marker_msg.scale.y = size_.x_ + size_.y_ / 2;
+            marker_msg.scale.y =
+            marker_msg.scale.z = size_.x_ + size_.y_ / 2;
             break;
         case PIPE:
             marker_msg.type = visualization_msgs::Marker::CUBE;
@@ -191,6 +214,85 @@ public:
         }
 
         return marker_msg;
+    }
+
+    operator std::string() const
+    {
+        return name_;
+    }
+
+    std::string getUniqueName() const
+    {
+        return getTypeName() + "_" + std::string( color_ );
+    }
+
+    //! Get real object diameter in meters
+    Size getIdealSize() const
+    {
+        switch( type_ )
+        {
+        case BUOY:
+            return Size( 0.2032, 0.2032, 0.2032 );
+        case PIPE:
+            return Size( 1.2192, 0.1, 0.001 );
+        }
+        return 0;
+    }
+
+    std::string getTypeName() const
+    {
+        switch( type_ )
+        {
+        case BUOY:
+            return "buoy";
+        case PIPE:
+            return "pipe";
+        }
+        return "";
+    }
+
+    void projectTo3d( _PinholeCameraModel const & camera_model )
+    {
+        cv::Point2d const center_point( pose_.position_.x_, pose_.position_.y_ );
+        // ray to center of landmark
+        cv::Point3d const center_ray = camera_model.projectPixelTo3dRay( center_point );
+        btVector3 const center_unit_vec( center_ray.x, center_ray.y, center_ray.z );
+
+        PRINT_INFO( "center pixel: %f %f", center_point.x, center_point.y );
+        PRINT_INFO( "center ray: %f %f %f", center_unit_vec.getX(), center_unit_vec.getY(), center_unit_vec.getZ() );
+
+        // get radius (center to widest edge) of object
+        auto const size_meters = getIdealSize();
+        // we always use the max length as a diameter
+        auto const size_pixels = size_;
+
+        double const radius_meters = quickdev::max( size_meters.x_, size_meters.y_, size_meters.z_ ) / 2.0;
+        double const radius_pixels = quickdev::max( size_pixels.x_, size_pixels.y_, size_pixels.z_ ) / 2.0;
+
+        cv::Point2d const radius_point( pose_.position_.x_ + radius_pixels, pose_.position_.y_ );
+
+        // get the ray to a point on the radius of the object
+        cv::Point3d const radius_ray = camera_model.projectPixelTo3dRay( radius_point );
+        btVector3 const radius_unit_vec( radius_ray.x, radius_ray.y, radius_ray.z );
+
+        PRINT_INFO( "radius pixel: %f %f", radius_point.x, radius_point.y );
+        PRINT_INFO( "radius ray: %f %f %f", radius_unit_vec.getX(), radius_unit_vec.getY(), radius_unit_vec.getZ() );
+
+        // get the angle between the center and radius rays
+        double angle = center_unit_vec.angle( radius_unit_vec );
+
+        // get the distance to the object
+        double distance = radius_meters / tan( angle );
+
+        // project the center ray out to the distance calculated
+        btVector3 center_vec = center_unit_vec * distance;
+
+        // update the position of the landmark given the newly projected center location
+        pose_.position_.x_ = center_vec.getZ();
+        pose_.position_.y_ = -center_vec.getX();
+        pose_.position_.z_ = -center_vec.getY();
+
+        size_ = size_meters;
     }
 };
 

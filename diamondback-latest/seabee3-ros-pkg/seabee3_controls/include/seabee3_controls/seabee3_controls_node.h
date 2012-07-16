@@ -134,13 +134,13 @@ QUICKDEV_DECLARE_NODE_CLASS( Seabee3Controls )
     void updateMotorValsMsgComponent( _MotorValsMsg & msg, int const & motor1_id, int const & motor2_id, btVector3 const & linear_vec, btVector3 const & angular_vec )
     {
         msg.motors[motor1_id] += angular_vec.z();
-        msg.motors[motor2_id] += angular_vec.z();
+        msg.motors[motor2_id] += -angular_vec.z();
     }
 
     template<int __Axis__, typename std::enable_if<(__Axis__ == movement::Axes::DEPTH), int>::type = 0>
     void updateMotorValsMsgComponent( _MotorValsMsg & msg, int const & motor1_id, int const & motor2_id, btVector3 const & linear_vec, btVector3 const & angular_vec )
     {
-        msg.motors[motor1_id] += -linear_vec.z();
+        msg.motors[motor1_id] += linear_vec.z();
         msg.motors[motor2_id] += -linear_vec.z();
     }
 

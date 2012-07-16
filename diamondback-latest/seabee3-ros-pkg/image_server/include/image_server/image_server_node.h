@@ -40,18 +40,25 @@
 
 // objects
 #include <quickdev/image_loader.h>
+#include <camera_info_manager/camera_info_manager.h>
 
 // policies
 #include <quickdev/image_proc_policy.h>
 #include <quickdev/reconfigure_policy.h>
 
+// msgs
+#include <sensor_msgs/CameraInfo.h>
+
 // cfgs
 #include <image_server/ImageServerConfig.h>
 
 typedef image_server::ImageServerConfig _ImageServerConfig;
+typedef sensor_msgs::CameraInfo _CameraInfoMsg;
 
 typedef quickdev::ImageProcPolicy _ImageProcPolicy;
 typedef quickdev::ReconfigurePolicy< _ImageServerConfig > _ImageServerConfigPolicy;
+
+typedef camera_info_manager::CameraInfoManager _CameraInfoManager;
 
 QUICKDEV_DECLARE_NODE( ImageServer, _ImageProcPolicy, _ImageServerConfigPolicy )
 
@@ -59,6 +66,8 @@ QUICKDEV_DECLARE_NODE_CLASS( ImageServer )
 {
 private:
     ImageLoader image_loader_;
+    _CameraInfoManager camera_info_manager_;
+    ros::MultiPublisher<> multi_pub_;
 
 public:
     bool last_next_image_state_;
@@ -66,8 +75,11 @@ public:
     unsigned int current_frame_;
     unsigned int direction_;
 
+    _CameraInfoMsg::ConstPtr camera_info_msg_ptr_;
+
     QUICKDEV_DECLARE_NODE_CONSTRUCTOR( ImageServer ),
         image_loader_( quickdev::getFirstOfType<ros::NodeHandle>( args... ) ),
+        camera_info_manager_( quickdev::getFirstOfType<ros::NodeHandle>( args... ) ),
         last_next_image_state_( false ),
         last_prev_image_state_( false ),
         current_frame_( 0 ),
@@ -78,6 +90,24 @@ public:
 
     void spinFirst()
     {
+        QUICKDEV_GET_RUNABLE_NODEHANDLE( nh_rel );
+
+        multi_pub_.addPublishers<_CameraInfoMsg>( nh_rel, { "camera_info" } );
+
+        std::string node_name = nh_rel.getNamespace();
+        if( node_name.substr( 0, 1 ) == "/" ) node_name = node_name.substr( 1 );
+        camera_info_manager_.setCameraName( node_name );
+
+        auto const camera_info_url = quickdev::ParamReader::readParam<std::string>( nh_rel, "camera_info_url" );
+
+        if( camera_info_manager_.validateURL( camera_info_url ) ) camera_info_manager_.loadCameraInfo( camera_info_url );
+        else PRINT_WARN( "Camera info URL %s not valid.", camera_info_url.c_str() );
+
+        _CameraInfoMsg camera_info_msg = camera_info_manager_.getCameraInfo();
+        camera_info_msg.header.frame_id = node_name;
+
+        camera_info_msg_ptr_ = quickdev::make_const_shared( camera_info_msg );
+
         _ImageServerConfigPolicy::registerCallback( quickdev::auto_bind( &ImageServerNode::reconfigureCB, this ) );
 
         initPolicies<_ImageProcPolicy>
@@ -99,6 +129,8 @@ public:
                 ROS_INFO( "Publishing image %d [%dx%d]", current_frame_, image_loader_.image_cache_[current_frame_]->width, image_loader_.image_cache_[current_frame_]->height );
 
                 publishImages( "output_image", quickdev::opencv_conversion::fromIplImage( image_loader_.image_cache_[current_frame_], "image_server", "bgr8" ) );
+
+                multi_pub_.publish( "camera_info", camera_info_msg_ptr_ );
 
                 //publishCvImage( image_loader_.image_cache_[current_frame_] );
                 if ( config_.auto_advance )

@@ -40,6 +40,7 @@
 
 // policies
 #include <quickdev/reconfigure_policy.h>
+#include <quickdev/tf_tranceiver_policy.h>
 
 // objects
 #include <condition_variable>
@@ -64,12 +65,12 @@ typedef sensor_msgs::CameraInfo _CameraInfoMsg;
 typedef landmark_finder::BuoyFinderConfig _BuoyFinderCfg;
 
 typedef quickdev::ReconfigurePolicy<_BuoyFinderCfg> _BuoyFinderReconfigurePolicy;
+typedef quickdev::TfTranceiverPolicy _TfTranceiverPolicy;
 
-typedef image_geometry::PinholeCameraModel _PinholeCameraModel;
-
+// gives us various typedefs including _PinholeCameraModel
 using namespace seabee;
 
-QUICKDEV_DECLARE_NODE( BuoyFinder, _BuoyFinderReconfigurePolicy )
+QUICKDEV_DECLARE_NODE( BuoyFinder, _BuoyFinderReconfigurePolicy, _TfTranceiverPolicy )
 
 QUICKDEV_DECLARE_NODE_CLASS( BuoyFinder )
 {
@@ -103,7 +104,7 @@ protected:
 
         multi_sub_.addSubscriber( nh_rel, "contours", &BuoyFinderNode::contoursCB, this );
         multi_sub_.addSubscriber( nh_rel, "camera_info", &BuoyFinderNode::cameraInfoCB, this );
-        multi_pub_.addPublishers<_LandmarkArrayMsg, _MarkerArrayMsg>( nh_rel, { "landmarks", "markers" } );
+        multi_pub_.addPublishers<_LandmarkArrayMsg, _MarkerArrayMsg>( nh_rel, { "landmarks", "/visualization_marker_array" } );
 
         initPolicies<quickdev::policy::ALL>();
 
@@ -148,12 +149,16 @@ protected:
 
                 cv::RotatedRect rect = cv::fitEllipse( cv::Mat( contour ) );
 
-                double const diameter = std::min( rect.size.width, rect.size.height );
+                double const diameter = std::max( rect.size.width, rect.size.height );
                 double const aspect_ratio = (double)rect.size.height / (double)rect.size.width;
 
+                // if( ( object is not too small ) and ( object has appropriate aspect ratio ) )
                 if( diameter > config_.diameter_min && fabs( config_.aspect_ratio_mean - aspect_ratio ) < config_.aspect_ratio_variance )
                 {
-                    buoys_.insert( Buoy( Pose( Position( rect.center.x, rect.center.y ) ), Color( contour_msg.name ), Size( rect.size.width, rect.size.height ) ) );
+                    Buoy buoy( Pose( Position( rect.center.x, rect.center.y ) ), Color( contour_msg.name ), Size( rect.size.width, rect.size.height ) );
+                    buoy.projectTo3d( camera_model_ );
+                    _TfTranceiverPolicy::publishTransform( unit::convert<btTransform>( buoy.pose_ ), "/seabee/camera1", buoy.getUniqueName() );
+                    buoys_.insert( buoy );
                 }
                 else
                 {
@@ -175,14 +180,12 @@ protected:
                 _MarkerMsg marker_msg = buoy;
                 marker_msg.id = marker_id ++;
 
-                //camera_model_.projectPixelTo3dRay(  );
-
                 markers_msg.markers.push_back( marker_msg );
             }
 
             multi_pub_.publish( "landmarks", buoys_msg );
 
-            if( !buoys_msg.landmarks.empty() ) multi_pub_.publish( "markers", markers_msg );
+            if( !buoys_msg.landmarks.empty() ) multi_pub_.publish( "/visualization_marker_array", markers_msg );
         }
     }
 
