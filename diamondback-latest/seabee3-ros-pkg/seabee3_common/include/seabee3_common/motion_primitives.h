@@ -38,6 +38,7 @@
 
 #include <quickdev/action_token.h>
 #include <quickdev/geometry_message_conversions.h>
+#include <quickdev/numeric_unit_conversions.h>
 #include <geometry_msgs/Pose.h>
 
 namespace seabee
@@ -291,11 +292,11 @@ DECLARE_UNIT_CONVERSION_LAMBDA( btVector3, seabee::Position, vec, return seabee:
 
 
 // seabee::Orientation <-> geometry_msgs::Vector3
-DECLARE_UNIT_CONVERSION_LAMBDA( seabee::Orientation, geometry_msgs::Vector3, ori, geometry_msgs::Vector3 vec; vec.z = ori.yaw_; return vec; )
-DECLARE_UNIT_CONVERSION_LAMBDA( geometry_msgs::Vector3, seabee::Orientation, vec, return seabee::Orientation( vec.z ); )
+DECLARE_UNIT_CONVERSION_LAMBDA( seabee::Orientation, geometry_msgs::Vector3, ori, geometry_msgs::Vector3 vec; vec.x = ori.yaw_; return vec; )
+DECLARE_UNIT_CONVERSION_LAMBDA( geometry_msgs::Vector3, seabee::Orientation, vec, return seabee::Orientation( vec.x ); )
 // seabee::Orientation <-> btVector3
-DECLARE_UNIT_CONVERSION_LAMBDA( seabee::Orientation, btVector3, ori, btVector3 vec; vec.z = ori.yaw_; return unit::convert<btVector3>( vec ); )
-DECLARE_UNIT_CONVERSION_LAMBDA( btVector3, seabee::Orientation, vec, return seabee::Orientation( vec.getZ() ); )
+DECLARE_UNIT_CONVERSION_LAMBDA( seabee::Orientation, btVector3, ori, btVector3 vec; vec.x = ori.yaw_; return unit::convert<btVector3>( vec ); )
+DECLARE_UNIT_CONVERSION_LAMBDA( btVector3, seabee::Orientation, vec, return seabee::Orientation( vec.getX() ); )
 // seabee::Orientation <-> geometry_msgs::Quaternion
 DECLARE_UNIT_CONVERSION_LAMBDA( seabee::Orientation, geometry_msgs::Quaternion, ori, return unit::convert<geometry_msgs::Quaternion>( unit::convert<geometry_msgs::Vector3>( ori ) ); )
 DECLARE_UNIT_CONVERSION_LAMBDA( geometry_msgs::Quaternion, seabee::Orientation, quat, return unit::convert<seabee::Orientation>( unit::convert<geometry_msgs::Vector3>( quat ) ); )

@@ -3,7 +3,7 @@
     <arg name="name" default="pipe_finder" />
     <arg name="type" default="$(arg name)_node" />
     <arg name="rate" default="30" />
-    <arg name="args" value="_loop_rate:=$(arg rate)" />
+    <arg name="args" value="_loop_rate:=$(arg rate) ~contours:=/contour_finder/contours ~landmarks:=/seabee/landmarks ~camera_info:=/image_server/camera_info" />
     <arg name="manager" default="manager" />
     <arg name="nodelet" default="false" />
     <node

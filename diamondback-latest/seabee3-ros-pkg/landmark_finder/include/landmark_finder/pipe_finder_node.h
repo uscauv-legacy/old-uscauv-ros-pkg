@@ -38,15 +38,60 @@
 
 #include <quickdev/node.h>
 
-#include <quickdev/multi_subscriber.h>
+// policies
+#include <quickdev/reconfigure_policy.h>
+#include <quickdev/tf_tranceiver_policy.h>
 
-QUICKDEV_DECLARE_NODE( PipeFinder )
+// objects
+#include <condition_variable>
+#include <quickdev/multi_subscriber.h>
+#include <quickdev/multi_publisher.h>
+#include <image_geometry/pinhole_camera_model.h>
+
+// utils
+#include <contour_matcher/contour.h>
+#include <seabee3_common/recognition_primitives.h>
+
+// msgs
+#include <seabee3_msgs/ContourArray.h>
+#include <sensor_msgs/CameraInfo.h>
+
+// config
+#include <landmark_finder/PipeFinderConfig.h>
+
+typedef seabee3_msgs::ContourArray _ContourArrayMsg;
+typedef sensor_msgs::CameraInfo _CameraInfoMsg;
+
+typedef landmark_finder::PipeFinderConfig _PipeFinderCfg;
+
+typedef quickdev::ReconfigurePolicy<_PipeFinderCfg> _PipeFinderReconfigurePolicy;
+typedef quickdev::TfTranceiverPolicy _TfTranceiverPolicy;
+
+// gives us various typedefs including _PinholeCameraModel
+using namespace seabee;
+
+QUICKDEV_DECLARE_NODE( PipeFinder, _PipeFinderReconfigurePolicy, _TfTranceiverPolicy )
 
 QUICKDEV_DECLARE_NODE_CLASS( PipeFinder )
 {
+protected:
     ros::MultiSubscriber<> multi_sub_;
+    ros::MultiPublisher<> multi_pub_;
 
-    XmlRpc::XmlRpcValue params_;
+    _PinholeCameraModel camera_model_;
+
+    std::condition_variable process_contours_condition_;
+    std::mutex process_contours_mutex_;
+
+    _CameraInfoMsg::ConstPtr camera_info_msg_ptr_;
+    std::mutex camera_info_mutex_;
+
+    _ContourArrayMsg::ConstPtr contours_msg_ptr_;
+    std::mutex contours_mutex_;
+
+    boost::shared_ptr<boost::thread> process_contours_thread_ptr_;
+
+    std::multiset<Pipe> pipes_;
 
     QUICKDEV_DECLARE_NODE_CONSTRUCTOR( PipeFinder )
     {
@@ -55,63 +100,123 @@ QUICKDEV_DECLARE_NODE_CLASS( PipeFinder )
 
     QUICKDEV_SPIN_FIRST()
     {
-        initPolicies<quickdev::policy::ALL>();
-
         QUICKDEV_GET_RUNABLE_NODEHANDLE( nh_rel );
 
-        params_ = quickdev::ParamReader::readParam<decltype( params_ )>( nh_rel, "params" );
+        multi_sub_.addSubscriber( nh_rel, "contours", &PipeFinderNode::contoursCB, this );
+        multi_sub_.addSubscriber( nh_rel, "camera_info", &PipeFinderNode::cameraInfoCB, this );
+        multi_pub_.addPublishers<_LandmarkArrayMsg, _MarkerArrayMsg>( nh_rel, { "landmarks", "/visualization_marker_array" } );
+
+        initPolicies<quickdev::policy::ALL>();
+
+        process_contours_thread_ptr_ = boost::make_shared<boost::thread>( &PipeFinderNode::processContours, this );
     }
 
-/*
-    QUICKDEV_DECLARE_MESSAGE_CALLBACK( imagesCB, _NamedImageArrayMsg )
+    void processContours()
     {
-
-        for( auto named_image_msg = msg->images.cbegin(); named_image_msg != msg->images.cend(); ++named_image_msg )
+        while( QUICKDEV_GET_RUNABLE_POLICY()::running() )
         {
-            if( named_image_msg->name != "orange" ) continue;
+            auto process_contours_lock = quickdev::make_unique_lock( process_contours_mutex_ );
+            process_contours_condition_.wait( process_contours_lock );
 
-            auto const & aspect_ratio_mean = double( params_["aspect_ratio"]["mean"] );
-            auto const & aspect_ratio_variance = double( params_["aspect_ratio"]["variance"] );
+            if( !camera_info_msg_ptr_ )
+            {
+                PRINT_WARN( "Camera model not initialized." );
+                continue;
+            }
 
-            auto const cv_image_ptr = quickdev::opencv_conversion::fromImageMsg( named_image_msg->image );
-            cv::Mat const & image = cv_image_ptr->image;
+            // get a copy of the contours so we block other processes for the minimum amount of time
+            _ContourArrayMsg contours_msg;
+            {
+                auto contours_lock = quickdev::make_unique_lock( contours_mutex_ );
+                contours_msg = *contours_msg_ptr_;
+            }
 
-            cv::Mat debug_image( image.size(), CV_8UC3 );
+            auto const contours = contours_msg.contours;
 
+            // fit dem ellipses
 
-            const float ASPECT_RATIO_BOUNDARY = 1.5;
-            const float perimScale = 10;
-            //cv::Mat input = image_ptr->image;
-            cv::Mat gray_input;
-            std::vector<CvBox2D> usable_boxes;
-            CvMemStorage* storage;
-            CvSeq* contours;
-            CvBox2D box_to_check;
-            storage = cvCreateMemStorage(0);
-            contours = cvCreateSeq(
-                                    CV_SEQ_ELTYPE_POINT,
-                                    sizeof( CvSeq ),
-                                    sizeof( CvPoint ),
-                                    storage
-                                  );
-            //make 8uc1 Mat
-            //cvtColor(input, gray_input, CV_RGB2GRAY);
-            threshold(input, gray_input, 127, 255, CV_THRESH_BINARY);
+            PRINT_INFO( "Evaluating %zu contours", contours.size() );
 
+            pipes_.clear();
 
-            cv::Mat elem = cv::getStructuringElement(cv::MORPH_RECT, cv::Size(5,5));
-            cv::morphologyEx(gray_input, gray_input, cv::MORPH_OPEN, elem, cv::Point(-1,-1), 3);
+            for( auto contour_it = contours.cbegin(); contour_it != contours.cend(); ++contour_it )
+            {
+                auto const & contour_msg = *contour_it;
 
-            IplImage gray_input_ipl( gray_input );
+                if( contour_msg.points.size() < 6 ) continue;
 
-            _ImageProcPolicy::publishImages( "output_image", quickdev::opencv_conversion::fromMat( image ) );
+                _Contour contour = unit::make_unit( contour_msg );
+
+                cv::RotatedRect rect = cv::minAreaRect( cv::Mat( contour ) );
+
+                // we consider the larger dimension of the object to be its diameter
+                double const max_diameter = std::max( rect.size.width, rect.size.height );
+                double const min_diameter = std::min( rect.size.width, rect.size.height );
+                double const aspect_ratio = max_diameter / min_diameter;
+
+                // if( ( object is not too small ) and ( object has appropriate aspect ratio ) )
+                if( max_diameter > config_.diameter_min && fabs( config_.aspect_ratio_mean - aspect_ratio ) < config_.aspect_ratio_variance )
+                {
+                    Pipe pipe( Pose( Position( rect.center.x, rect.center.y ), Orientation( -rect.angle ) ), Size( rect.size.width, rect.size.height ) );
+                    pipe.projectTo3d( camera_model_ );
+                    _TfTranceiverPolicy::publishTransform( btTransform( btQuaternion( 0, -M_PI_2, 0 ) * btQuaternion( pipe.pose_.orientation_.yaw_, 0, 0 ), unit::convert<btVector3>( pipe.pose_.position_ ) ) , "/seabee/camera2", pipe.getUniqueName() );
+                    pipes_.insert( pipe );
+                }
+                else
+                {
+                    PRINT_WARN( "Aspect ratio (%f) or diameter (%f) outside of constraints", aspect_ratio, max_diameter );
+                }
+            }
+
+            PRINT_INFO( "Found %zu pipes", pipes_.size() );
+
+            _LandmarkArrayMsg pipes_msg;
+            _MarkerArrayMsg markers_msg;
+
+            size_t marker_id = 0;
+            for( auto pipe_it = pipes_.cbegin(); pipe_it != pipes_.cend(); ++pipe_it )
+            {
+                auto const & pipe = *pipe_it;
+
+                pipes_msg.landmarks.push_back( pipe );
+                _MarkerMsg marker_msg = pipe;
+                marker_msg.id = marker_id ++;
+
+                markers_msg.markers.push_back( marker_msg );
+            }
+
+            multi_pub_.publish( "landmarks", pipes_msg );
+
+            if( !pipes_msg.landmarks.empty() ) multi_pub_.publish( "/visualization_marker_array", markers_msg );
         }
     }
-*/
+
+    QUICKDEV_DECLARE_MESSAGE_CALLBACK( contoursCB, _ContourArrayMsg )
+    {
+        auto lock = quickdev::make_unique_lock( contours_mutex_, std::try_to_lock );
+
+        if( !lock ) return;
+
+        contours_msg_ptr_ = msg;
+
+        // wake up processContours() for one cycle
+        process_contours_condition_.notify_all();
+    }
+
+    QUICKDEV_DECLARE_MESSAGE_CALLBACK( cameraInfoCB, _CameraInfoMsg )
+    {
+        auto lock = quickdev::make_unique_lock( camera_info_mutex_, std::try_to_lock );
+
+        if( !lock ) return;
+
+        camera_info_msg_ptr_ = msg;
+
+        camera_model_.fromCameraInfo( msg );
+    }
 
     QUICKDEV_SPIN_ONCE()
     {
-        //
+        // just update ROS
     }
 };
 

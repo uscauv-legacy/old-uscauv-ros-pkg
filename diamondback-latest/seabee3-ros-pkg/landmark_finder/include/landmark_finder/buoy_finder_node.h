@@ -149,11 +149,13 @@ protected:
 
                 cv::RotatedRect rect = cv::fitEllipse( cv::Mat( contour ) );
 
-                double const diameter = std::max( rect.size.width, rect.size.height );
-                double const aspect_ratio = (double)rect.size.height / (double)rect.size.width;
+                // we consider the larger dimension of the object to be its diameter
+                double const max_diameter = std::max( rect.size.width, rect.size.height );
+                double const min_diameter = std::min( rect.size.width, rect.size.height );
+                double const aspect_ratio = max_diameter / min_diameter;
 
                 // if( ( object is not too small ) and ( object has appropriate aspect ratio ) )
-                if( diameter > config_.diameter_min && fabs( config_.aspect_ratio_mean - aspect_ratio ) < config_.aspect_ratio_variance )
+                if( max_diameter > config_.diameter_min && fabs( config_.aspect_ratio_mean - aspect_ratio ) < config_.aspect_ratio_variance )
                 {
                     Buoy buoy( Pose( Position( rect.center.x, rect.center.y ) ), Color( contour_msg.name ), Size( rect.size.width, rect.size.height ) );
                     buoy.projectTo3d( camera_model_ );
@@ -162,7 +164,7 @@ protected:
                 }
                 else
                 {
-                    PRINT_WARN( "Aspect ratio (%f) or diameter (%f) outside of constraints", aspect_ratio, diameter );
+                    PRINT_WARN( "Aspect ratio (%f) or diameter (%f) outside of constraints", aspect_ratio, max_diameter );
                 }
             }
 

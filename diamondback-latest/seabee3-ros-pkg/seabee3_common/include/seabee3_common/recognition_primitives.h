@@ -192,7 +192,7 @@ public:
         marker_msg.action = visualization_msgs::Marker::ADD;
         marker_msg.lifetime = ros::Duration( 0.1 );
 
-        marker_msg.pose = unit::make_unit( pose_ );
+        marker_msg.pose.position = unit::make_unit( pose_.position_ );
 
         if( type_ == PIPE || type_ == BIN ) marker_msg.header.frame_id = "/seabee/camera2";
         else marker_msg.header.frame_id = "/seabee/camera1";
@@ -209,7 +209,8 @@ public:
             marker_msg.type = visualization_msgs::Marker::CUBE;
             marker_msg.scale.x = size_.x_;
             marker_msg.scale.y = size_.y_;
-            marker_msg.scale.z = 0.005;
+            marker_msg.scale.z = size_.z_;
+            marker_msg.pose.orientation = unit::make_unit( btQuaternion( 0, -M_PI_2, 0 ) * btQuaternion( pose_.orientation_.yaw_, 0, 0 ) );
             break;
         }
 
@@ -318,7 +319,7 @@ public:
     template<class... __Args>
     Pipe( __Args&&... args )
     :
-        Landmark( Landmark::PIPE, Color::ORANGE, args... )
+        Landmark( Landmark::PIPE, Color( Color::ORANGE ), args... )
     {
         //
     }
