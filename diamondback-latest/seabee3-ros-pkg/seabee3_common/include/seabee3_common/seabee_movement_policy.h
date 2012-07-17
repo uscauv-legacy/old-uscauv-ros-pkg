@@ -43,6 +43,7 @@
 // objects
 #include <seabee3_common/motion_primitives.h>
 #include <quickdev/multi_subscriber.h>
+#include <quickdev/multi_publisher.h>
 
 // utils
 #include <quickdev/numeric_unit_conversions.h>
@@ -94,6 +95,7 @@ protected:
 
 private:
     ros::MultiSubscriber<> multi_sub_;
+    ros::MultiPublisher<> multi_pub_;
 
     QUICKDEV_MAKE_POLICY_FUNCS( SeabeeMovement )
 
@@ -102,11 +104,17 @@ private:
         //
     }
 
+    void init_add_publishers( ros::NodeHandle & nh_rel )
+    {
+        multi_pub_.addPublishers<_TwistMsg>    ( nh_rel, { "/seabee3/cmd_vel" } );
+    }
+
     QUICKDEV_ENABLE_INIT()
     {
         auto & nh_rel = _MakeTrajectoryActionClientPolicy::getNodeHandle();
 
         multi_sub_.addSubscriber( nh_rel, "physics_state", &SeabeeMovementPolicy::physicsStateCB, this );
+        init_add_publishers( nh_rel );
 
 //        _MakeTrajectoryActionClientPolicy::registerDoneCB( quickdev::auto_bind( &SeabeeMovementPolicy::makeTrajectoryActionDoneCB, this ) );
 //        _FollowTrajectoryActionClientPolicy::registerDoneCB( quickdev::auto_bind( &SeabeeMovementPolicy::followTrajectoryActionDoneCB, this ) );
@@ -222,17 +230,34 @@ private:
         return _FollowTrajectoryActionClientPolicy::_ActionToken();
     }
 
-    void moveAtVelocity( btTransform const & velocity )
+    SimpleActionToken moveAtVelocity( btTransform const & velocity )
     {
-        _TfTranceiverPolicy::publishTransform( velocity, "/seabee3/current_pose", "/seabee3/desired_pose" );
+        SimpleActionToken result;
+        result.start( quickdev::auto_bind( quickdev::auto_bind( &SeabeeMovementPolicy::moveAtVelocityImpl, this ), velocity, result ) );
+
+        return result;
     }
 
-    void moveAtVelocity( Pose const & velocity )
+    void moveAtVelocityImpl( btTransform const & velocity, SimpleActionToken token )
+    {
+        _TwistMsg twist_msg = unit::make_unit( velocity );
+        ros::Rate publish_rate( 10 );
+
+        while( token.ok() && ros::ok() )
+        {
+            multi_pub_.publish( "/seabee3/cmd_vel", twist_msg );
+            publish_rate.sleep();
+        }
+
+        token.cancel();
+    }
+
+    SimpleActionToken moveAtVelocity( Pose const & velocity )
     {
         return moveAtVelocity( unit::convert<btTransform>( velocity ) );
     }
 
-    void moveAtVelocity( _TwistMsg const & velocity )
+    SimpleActionToken moveAtVelocity( _TwistMsg const & velocity )
     {
         return moveAtVelocity( unit::convert<btTransform>( velocity ) );
     }

@@ -65,6 +65,7 @@
 
 typedef seabee3_msgs::MotorVals _MotorValsMsg;
 typedef geometry_msgs::Twist _TwistMsg;
+typedef geometry_msgs::Vector3 _Vector3Msg;
 
 typedef std_srvs::Empty _ResetPoseService;
 
@@ -89,15 +90,21 @@ protected:
     ros::MultiPublisher<> multi_pub_;
     ros::MultiSubscriber<> multi_sub_;
 
-    btTransform transform_to_target_;
+    _TwistMsg::ConstPtr last_velocity_msg_;
+    std::mutex last_velocity_mutex_;
+
+    tf::StampedTransform transform_to_target_;
     std::mutex transform_to_target_mutex_;
+
+    tf::StampedTransform transform_to_self_;
+    std::mutex transform_to_self_mutex_;
 
     ros::Time last_velocity_update_time_;
 
     QUICKDEV_DECLARE_NODE_CONSTRUCTOR( Seabee3Controls ),
         last_velocity_update_time_( ros::Time( 0 ) )
     {
-        //
+        transform_to_target_.setData( btTransform( btQuaternion( 0, 0, 0, 1 ), btVector3( 0, 0, 0 ) ) );
     }
 
     QUICKDEV_SPIN_FIRST()
@@ -161,15 +168,15 @@ protected:
     template<int __Axis__, typename std::enable_if<(__Axis__ == movement::Axes::PITCH), int>::type = 0>
     void updateMotorValsMsgComponent( _MotorValsMsg & msg, int const & motor1_id, int const & motor2_id, btVector3 const & linear_vec, btVector3 const & angular_vec )
     {
-        msg.motors[motor1_id] += -angular_vec.z();
-        msg.motors[motor2_id] += angular_vec.z();
+        msg.motors[motor1_id] += angular_vec.y();
+        msg.motors[motor2_id] += -angular_vec.y();
     }
 
     template<int __Axis__, typename std::enable_if<(__Axis__ == movement::Axes::ROLL), int>::type = 0>
     void updateMotorValsMsgComponent( _MotorValsMsg & msg, int const & motor1_id, int const & motor2_id, btVector3 const & linear_vec, btVector3 const & angular_vec )
     {
-        msg.motors[motor1_id] += angular_vec.z();
-        msg.motors[motor2_id] += angular_vec.z();
+        msg.motors[motor1_id] += angular_vec.x();
+        msg.motors[motor2_id] += angular_vec.x();
     }
 
     // how to set motor values for any axis
@@ -228,18 +235,39 @@ protected:
 
     QUICKDEV_SPIN_ONCE()
     {
+        auto const now = ros::Time::now();
+
         _MotorValsMsg motor_vals_msg;
+
+        transform_to_self_ = _TfTranceiverPolicy::tryLookupTransform( "/world", "/seabee3/current_pose" );
         try
         {
+            auto const world_to_imu_tf = _TfTranceiverPolicy::tryLookupTransform( "/world", "/seabee3/sensors/imu" );
+            auto const world_to_depth_tf = _TfTranceiverPolicy::tryLookupTransform( "/world", "/seabee3/sensors/depth" );
+
+            _TfTranceiverPolicy::publishTransform( btTransform( world_to_imu_tf.getRotation(), world_to_depth_tf.getOrigin() ), "/world", "/seabee3/givens" );
+
             btVector3 linear_error_vec;
             btVector3 angular_error_vec;
             {
                 auto transform_to_target_lock = quickdev::make_unique_lock( transform_to_target_mutex_ );
-                transform_to_target_ = _TfTranceiverPolicy::tryLookupTransform( "/seabee3/current_pose", "/seabee3/desired_pose" );
+                auto const transform_to_target = _TfTranceiverPolicy::lookupTransform( "/seabee3/current_pose", "/seabee3/desired_pose" );
+
+                // if the desired frame is too old, reset the sub's velocity-based components
+/*
+                if( ( now - last_velocity_update_time_ ).toSec() > 2 )
+                {
+                    last_velocity_msg_ = decltype( last_velocity_msg_ )();
+                }
+*/
+                if( ( now - transform_to_target.stamp_ ).toSec() > 0.5 )
+                {
+                    _TfTranceiverPolicy::publishTransform( transform_to_self_, "/world", "/seabee3/desired_pose" );
+                }
 
                 // calculate pose error
-                linear_error_vec = unit::make_unit( transform_to_target_.getOrigin() );
-                angular_error_vec = unit::make_unit( transform_to_target_.getRotation() );
+                linear_error_vec = unit::make_unit( transform_to_target.getOrigin() );
+                angular_error_vec = unit::make_unit( transform_to_target.getRotation() );
             }
 /*
             printf( "error [%f %f %f] [%f %f %f]\n",
@@ -255,21 +283,29 @@ protected:
             btVector3 angular_output_vec;
 
             // update PIDs
-            linear_output_vec.setX( pid_.linear_.x_.update( 0, linear_error_vec.x() ) );
-            linear_output_vec.setY( pid_.linear_.y_.update( 0, linear_error_vec.y() ) );
-            linear_output_vec.setZ( pid_.linear_.z_.update( 0, linear_error_vec.z() ) );
+            {
+                auto last_velocity_lock_ = quickdev::make_unique_lock( last_velocity_mutex_ );
 
-            angular_output_vec.setX( pid_.angular_.x_.update( 0, angular_error_vec.x() ) );
+                if( last_velocity_msg_ && fabs( linear_error_vec.getX() ) < 0.075 ) linear_output_vec.setX( last_velocity_msg_->linear.x );
+                else linear_output_vec.setX( -pid_.linear_.x_.update( 0, linear_error_vec.x() ) );
+
+                if( last_velocity_msg_ && fabs( linear_error_vec.getY() ) < 0.075 ) linear_output_vec.setY( last_velocity_msg_->linear.y );
+                else linear_output_vec.setY( -pid_.linear_.y_.update( 0, linear_error_vec.y() ) );
+            }
+
+            linear_output_vec.setZ( -pid_.linear_.z_.update( 0, linear_error_vec.z() ) );
+
+            //angular_output_vec.setX( pid_.angular_.x_.update( 0, angular_error_vec.x() ) );
             angular_output_vec.setY( pid_.angular_.y_.update( 0, angular_error_vec.y() ) );
             angular_output_vec.setZ( pid_.angular_.z_.update( 0, angular_error_vec.z() ) );
 /*
             printf( "pid [%f %f %f] [%f %f %f]\n",
-                linear_output_vec.x(),
-                linear_output_vec.y(),
-                linear_output_vec.z(),
-                angular_output_vec.x(),
-                angular_output_vec.y(),
-                angular_output_vec.z()
+                linear_output_vec.getX(),
+                linear_output_vec.getY(),
+                linear_output_vec.getZ(),
+                angular_output_vec.getX(),
+                angular_output_vec.getY(),
+                angular_output_vec.getZ()
             );
 */
             // convert axis output values into motor values
@@ -278,7 +314,7 @@ protected:
             updateMotorValsMsg<movement::Axes::DEPTH>( motor_vals_msg, linear_output_vec, angular_output_vec );
             updateMotorValsMsg<movement::Axes::YAW>( motor_vals_msg, linear_output_vec, angular_output_vec );
             updateMotorValsMsg<movement::Axes::PITCH>( motor_vals_msg, linear_output_vec, angular_output_vec );
-            updateMotorValsMsg<movement::Axes::ROLL>( motor_vals_msg, linear_output_vec, angular_output_vec );
+            //updateMotorValsMsg<movement::Axes::ROLL>( motor_vals_msg, linear_output_vec, angular_output_vec );
 
             // ensure all motor values are properly normalized
             normalizeMotorValsMsg( motor_vals_msg );
@@ -286,7 +322,9 @@ protected:
         }
         catch( std::exception const & ex )
         {
-            PRINT_ERROR( "%s", ex.what() );
+            PRINT_WARN( "%s", ex.what() );
+            PRINT_WARN( "initializing..." );
+            _TfTranceiverPolicy::publishTransform( transform_to_self_, "/world", "/seabee3/desired_pose" );
         }
 
         multi_pub_.publish( "motor_vals", motor_vals_msg );
@@ -296,25 +334,17 @@ protected:
     {
         auto const now = ros::Time::now();
 
-        auto lock = quickdev::make_unique_lock( transform_to_target_mutex_ );
+        auto lock = quickdev::make_unique_lock( last_velocity_mutex_ );
 
-        _TwistMsg old_transform_to_target_twist = unit::make_unit( transform_to_target_ );
-        _TwistMsg new_transform_to_target_twist = old_transform_to_target_twist;
+        last_velocity_msg_ = msg;
 
-        if( msg->linear.x ) new_transform_to_target_twist.linear.x = msg->linear.x;
-        if( msg->linear.y ) new_transform_to_target_twist.linear.y = msg->linear.y;
-
-        if( msg->angular.x ) new_transform_to_target_twist.angular.x = msg->angular.x;
-        if( msg->angular.y ) new_transform_to_target_twist.angular.y = msg->angular.y;
-
-        if( last_velocity_update_time_ != ros::Time( 0 ) && ( now - last_velocity_update_time_ ).toSec() <= 2.0 )
+        if( ( now - last_velocity_update_time_ ).toSec() <= 2 )
         {
-            if( msg->linear.z ) new_transform_to_target_twist.linear.z = msg->linear.z * ( now - last_velocity_update_time_ ).toSec();
-            if( msg->angular.z ) new_transform_to_target_twist.angular.z = msg->angular.z  * ( now - last_velocity_update_time_ ).toSec();
+            auto world_to_desired_pose_tf = _TfTranceiverPolicy::tryLookupTransform( "/world", "/seabee3/desired_pose" );
+            world_to_desired_pose_tf.getOrigin().setZ( world_to_desired_pose_tf.getOrigin().getZ() + msg->linear.z * ( now - last_velocity_update_time_ ).toSec() );
+            world_to_desired_pose_tf.setRotation( world_to_desired_pose_tf.getRotation() * btQuaternion( msg->angular.z * ( now - last_velocity_update_time_ ).toSec(), 0, 0 ) );
+            _TfTranceiverPolicy::publishTransform( btTransform( world_to_desired_pose_tf ), "/world", "/seabee3/desired_pose" );
         }
-
-        transform_to_target_ = unit::make_unit( new_transform_to_target_twist );
-        _TfTranceiverPolicy::publishTransform( transform_to_target_, "/seabee/current_pose", "/seabee/desired_pose" );
 
         last_velocity_update_time_ = now;
     }
@@ -322,8 +352,7 @@ protected:
     QUICKDEV_DECLARE_SERVICE_CALLBACK( resetPoseCB, _ResetPoseService )
     {
         auto lock = quickdev::make_unique_lock( transform_to_target_mutex_ );
-        transform_to_target_ = btTransform( btQuaternion( 0, 0, 0, 1 ), btVector3( 0, 0, 0 ) );
-        _TfTranceiverPolicy::publishTransform( transform_to_target_, "/seabee/current_pose", "/seabee/desired_pose" );
+        _TfTranceiverPolicy::publishTransform( transform_to_self_, "/world", "/seabee3/desired_pose" );
         return true;
     }
 /*

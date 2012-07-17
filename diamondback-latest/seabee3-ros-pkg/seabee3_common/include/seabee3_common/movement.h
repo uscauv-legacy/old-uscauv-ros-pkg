@@ -109,8 +109,8 @@ namespace ThrusterPairs
         }},
         // depth
         {{
-            MotorControllerIDs::DEPTH_BACK_THRUSTER,
-            MotorControllerIDs::DEPTH_FRONT_THRUSTER
+            MotorControllerIDs::DEPTH_FRONT_THRUSTER,
+            MotorControllerIDs::DEPTH_BACK_THRUSTER
         }},
         // roll
         {{
@@ -119,8 +119,8 @@ namespace ThrusterPairs
         }},
         // pitch
         {{
-            MotorControllerIDs::DEPTH_BACK_THRUSTER,
-            MotorControllerIDs::DEPTH_FRONT_THRUSTER
+            MotorControllerIDs::DEPTH_FRONT_THRUSTER,
+            MotorControllerIDs::DEPTH_BACK_THRUSTER
         }},
         // yaw
         {{

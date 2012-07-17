@@ -41,6 +41,7 @@
 
 // utils
 #include <seabee3_navigation/trajectory_message_conversions.h>
+#include <quickdev/math.h>
 
 // actions
 #include <seabee3_actions/MakeTrajectoryAction.h>
@@ -162,13 +163,13 @@ protected:
         auto const desired_linear_velocity = desired_velocity.getOrigin();
         auto const desired_angular_velocity = unit::convert<btVector3>( desired_velocity.getRotation() );
 
-        if( fabs( current_linear_velocity_.getX() ) > max_linear_velocity.getX() ) current_linear_velocity_.setX( quickdev::sign( current_linear_velocity_.getX() ) * max_linear_velocity.getX() );
-        if( fabs( current_linear_velocity_.getY() ) > max_linear_velocity.getY() ) current_linear_velocity_.setY( quickdev::sign( current_linear_velocity_.getY() ) * max_linear_velocity.getY() );
-        if( fabs( current_linear_velocity_.getZ() ) > max_linear_velocity.getZ() ) current_linear_velocity_.setZ( quickdev::sign( current_linear_velocity_.getZ() ) * max_linear_velocity.getZ() );
+        if( fabs( current_linear_velocity_.getX() ) > max_linear_velocity_.getX() ) current_linear_velocity_.setX( quickdev::sign( current_linear_velocity_.getX() ) * max_linear_velocity_.getX() );
+        if( fabs( current_linear_velocity_.getY() ) > max_linear_velocity_.getY() ) current_linear_velocity_.setY( quickdev::sign( current_linear_velocity_.getY() ) * max_linear_velocity_.getY() );
+        if( fabs( current_linear_velocity_.getZ() ) > max_linear_velocity_.getZ() ) current_linear_velocity_.setZ( quickdev::sign( current_linear_velocity_.getZ() ) * max_linear_velocity_.getZ() );
 
-        if( fabs( current_angular_velocity_.getX() ) > max_angular_velocity.getX() ) current_angular_velocity_.setX( quickdev::sign( current_angular_velocity_.getX() ) * max_angular_velocity.getX() );
-        if( fabs( current_angular_velocity_.getY() ) > max_angular_velocity.getY() ) current_angular_velocity_.setY( quickdev::sign( current_angular_velocity_.getY() ) * max_angular_velocity.getY() );
-        if( fabs( current_angular_velocity_.getZ() ) > max_angular_velocity.getZ() ) current_angular_velocity_.setZ( quickdev::sign( current_angular_velocity_.getZ() ) * max_angular_velocity.getZ() );
+        if( fabs( current_angular_velocity_.getX() ) > max_angular_velocity_.getX() ) current_angular_velocity_.setX( quickdev::sign( current_angular_velocity_.getX() ) * max_angular_velocity_.getX() );
+        if( fabs( current_angular_velocity_.getY() ) > max_angular_velocity_.getY() ) current_angular_velocity_.setY( quickdev::sign( current_angular_velocity_.getY() ) * max_angular_velocity_.getY() );
+        if( fabs( current_angular_velocity_.getZ() ) > max_angular_velocity_.getZ() ) current_angular_velocity_.setZ( quickdev::sign( current_angular_velocity_.getZ() ) * max_angular_velocity_.getZ() );
     }
 
     // add the given interval to the list of intervals
@@ -181,7 +182,7 @@ protected:
     void addInterval( double const & duration, btTransform const & acceleration, btTransform const & initial_pose, btTransform const & initial_velocity, std::vector<_TrajectoryIntervalMsg> & intervals )
     {
         _TrajectoryIntervalMsg interval;
-        interval.duration = duration;
+//        interval.length = duration;
         interval.initial_state.pose.pose = unit::make_unit( initial_pose );
         interval.initial_state.velocity.twist = unit::make_unit( initial_velocity );
         interval.acceleration = acceleration;

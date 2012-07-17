@@ -13,7 +13,8 @@
   <depend package="seabee3_msgs"/>
   <depend package="seabee3_actions"/>
   <export>
-    <cpp cflags="-I${prefix}/include" lflags="-Wl,-rpath,${prefix}/lib -L${prefix}/lib -lseabee3_navigation"/>
+    <!--cpp cflags="-I${prefix}/include" lflags="-Wl,-rpath,${prefix}/lib -L${prefix}/lib -lseabee3_navigation"/-->
+    <cpp cflags="-I${prefix}/include"/>
     <nodelet plugin="${prefix}/nodelets/nodelet_plugins.xml"/>
   </export>
 </package>
