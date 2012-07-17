@@ -39,19 +39,23 @@
 #include <quickdev/node.h>
 
 // policies
-#include <quickdev/robot_controller_policy.h>
 #include <quickdev/service_server_policy.h>
 #include <quickdev/reconfigure_policy.h>
+#include <quickdev/tf_tranceiver_policy.h>
 
 // objects
 #include <quickdev/controllers/reconfigurable_pid.h>
+#include <quickdev/multi_publisher.h>
+#include <quickdev/multi_subscriber.h>
 
 // utils
 #include <quickdev/math.h>
 #include <seabee3_common/movement.h>
+#include <quickdev/geometry_message_conversions.h>
 
 // msgs
 #include <seabee3_msgs/MotorVals.h>
+#include <geometry_msgs/Twist.h>
 
 // srvs
 #include <std_srvs/Empty.h>
@@ -60,44 +64,54 @@
 #include <seabee3_controls/Seabee3ControlsConfig.h>
 
 typedef seabee3_msgs::MotorVals _MotorValsMsg;
+typedef geometry_msgs::Twist _TwistMsg;
 
 typedef std_srvs::Empty _ResetPoseService;
 
 typedef seabee3_controls::Seabee3ControlsConfig _Seabee3ControlsCfg;
 
-typedef quickdev::RobotControllerPolicy<_MotorValsMsg> _RobotController;
+typedef quickdev::TfTranceiverPolicy _TfTranceiverPolicy;
 typedef quickdev::ServiceServerPolicy<_ResetPoseService> _ResetPoseServiceServer;
 typedef quickdev::ReconfigurePolicy<_Seabee3ControlsCfg> _Seabee3ControlsLiveParams;
 
 using namespace seabee3_common;
 
-QUICKDEV_DECLARE_NODE( Seabee3Controls, _RobotController, _ResetPoseServiceServer, _Seabee3ControlsLiveParams )
+QUICKDEV_DECLARE_NODE( Seabee3Controls, _ResetPoseServiceServer, _Seabee3ControlsLiveParams, _TfTranceiverPolicy )
 
 QUICKDEV_DECLARE_NODE_CLASS( Seabee3Controls )
 {
+public:
     typedef quickdev::ReconfigurablePID<6> _Pid6D;
 
+protected:
     _Pid6D pid_;
 
-    QUICKDEV_DECLARE_NODE_CONSTRUCTOR( Seabee3Controls )
+    ros::MultiPublisher<> multi_pub_;
+    ros::MultiSubscriber<> multi_sub_;
+
+    btTransform transform_to_target_;
+    std::mutex transform_to_target_mutex_;
+
+    ros::Time last_velocity_update_time_;
+
+    QUICKDEV_DECLARE_NODE_CONSTRUCTOR( Seabee3Controls ),
+        last_velocity_update_time_( ros::Time( 0 ) )
     {
         //
     }
 
     QUICKDEV_SPIN_FIRST()
     {
+        QUICKDEV_GET_RUNABLE_NODEHANDLE( nh_rel );
+
         _ResetPoseServiceServer::registerCallback( quickdev::auto_bind( &Seabee3ControlsNode::resetPoseCB, this ) );
 //        _Seabee3ControlsLiveParams::registerCallback( quickdev::auto_bind( &Seabee3ControlsNode::reconfigureCB, this ) );
 
-        initPolicies
-        <
-            _RobotController,
-            _ResetPoseServiceServer
-        >
-        (
-            "robot_name_param", std::string( "seabee3" ),
-            "service_name_param", std::string( "/seabee3/reset_pose" )
-        );
+        multi_sub_.addSubscriber( nh_rel, "cmd_vel", &Seabee3ControlsNode::cmdVelCB, this );
+
+        multi_pub_.addPublishers<_MotorValsMsg>( nh_rel, { "motor_vals" } );
+
+        initPolicies<_ResetPoseServiceServer>( "service_name_param", std::string( "/seabee3/reset_pose" ) );
 
         initPolicies<quickdev::policy::ALL>();
 
@@ -119,15 +133,22 @@ QUICKDEV_DECLARE_NODE_CLASS( Seabee3Controls )
     template<int __Axis__, typename std::enable_if<(__Axis__ == movement::Axes::SPEED), int>::type = 0>
     void updateMotorValsMsgComponent( _MotorValsMsg & msg, int const & motor1_id, int const & motor2_id, btVector3 const & linear_vec, btVector3 const & angular_vec )
     {
-        msg.motors[motor1_id] += -linear_vec.x();
-        msg.motors[motor2_id] += -linear_vec.x();
+        msg.motors[motor1_id] += linear_vec.x();
+        msg.motors[motor2_id] += linear_vec.x();
     }
 
     template<int __Axis__, typename std::enable_if<(__Axis__ == movement::Axes::STRAFE), int>::type = 0>
     void updateMotorValsMsgComponent( _MotorValsMsg & msg, int const & motor1_id, int const & motor2_id, btVector3 const & linear_vec, btVector3 const & angular_vec )
     {
-        msg.motors[motor1_id] += linear_vec.y();
-        msg.motors[motor2_id] += -linear_vec.y();
+        msg.motors[motor1_id] += -linear_vec.y();
+        msg.motors[motor2_id] += linear_vec.y();
+    }
+
+    template<int __Axis__, typename std::enable_if<(__Axis__ == movement::Axes::DEPTH), int>::type = 0>
+    void updateMotorValsMsgComponent( _MotorValsMsg & msg, int const & motor1_id, int const & motor2_id, btVector3 const & linear_vec, btVector3 const & angular_vec )
+    {
+        msg.motors[motor1_id] += linear_vec.z();
+        msg.motors[motor2_id] += linear_vec.z();
     }
 
     template<int __Axis__, typename std::enable_if<(__Axis__ == movement::Axes::YAW), int>::type = 0>
@@ -137,11 +158,18 @@ QUICKDEV_DECLARE_NODE_CLASS( Seabee3Controls )
         msg.motors[motor2_id] += -angular_vec.z();
     }
 
-    template<int __Axis__, typename std::enable_if<(__Axis__ == movement::Axes::DEPTH), int>::type = 0>
+    template<int __Axis__, typename std::enable_if<(__Axis__ == movement::Axes::PITCH), int>::type = 0>
     void updateMotorValsMsgComponent( _MotorValsMsg & msg, int const & motor1_id, int const & motor2_id, btVector3 const & linear_vec, btVector3 const & angular_vec )
     {
-        msg.motors[motor1_id] += linear_vec.z();
-        msg.motors[motor2_id] += -linear_vec.z();
+        msg.motors[motor1_id] += -angular_vec.z();
+        msg.motors[motor2_id] += angular_vec.z();
+    }
+
+    template<int __Axis__, typename std::enable_if<(__Axis__ == movement::Axes::ROLL), int>::type = 0>
+    void updateMotorValsMsgComponent( _MotorValsMsg & msg, int const & motor1_id, int const & motor2_id, btVector3 const & linear_vec, btVector3 const & angular_vec )
+    {
+        msg.motors[motor1_id] += angular_vec.z();
+        msg.motors[motor2_id] += angular_vec.z();
     }
 
     // how to set motor values for any axis
@@ -203,11 +231,16 @@ QUICKDEV_DECLARE_NODE_CLASS( Seabee3Controls )
         _MotorValsMsg motor_vals_msg;
         try
         {
-            auto const transform_to_target = _RobotController::getTransformToTarget();
+            btVector3 linear_error_vec;
+            btVector3 angular_error_vec;
+            {
+                auto transform_to_target_lock = quickdev::make_unique_lock( transform_to_target_mutex_ );
+                transform_to_target_ = _TfTranceiverPolicy::tryLookupTransform( "/seabee3/current_pose", "/seabee3/desired_pose" );
 
-            // calculate pose error
-            btVector3 const linear_error_vec = unit::make_unit( transform_to_target.getOrigin() );
-            btVector3 const angular_error_vec = unit::make_unit( transform_to_target.getRotation() );
+                // calculate pose error
+                linear_error_vec = unit::make_unit( transform_to_target_.getOrigin() );
+                angular_error_vec = unit::make_unit( transform_to_target_.getRotation() );
+            }
 /*
             printf( "error [%f %f %f] [%f %f %f]\n",
                 linear_error_vec.x(),
@@ -226,8 +259,8 @@ QUICKDEV_DECLARE_NODE_CLASS( Seabee3Controls )
             linear_output_vec.setY( pid_.linear_.y_.update( 0, linear_error_vec.y() ) );
             linear_output_vec.setZ( pid_.linear_.z_.update( 0, linear_error_vec.z() ) );
 
-//            angular_output_vec.setX( pid_.angular_.x_.update( 0, angular_error_vec.x() ) );
-//            angular_output_vec.setY( pid_.angular_.y_.update( 0, angular_error_vec.y() ) );
+            angular_output_vec.setX( pid_.angular_.x_.update( 0, angular_error_vec.x() ) );
+            angular_output_vec.setY( pid_.angular_.y_.update( 0, angular_error_vec.y() ) );
             angular_output_vec.setZ( pid_.angular_.z_.update( 0, angular_error_vec.z() ) );
 /*
             printf( "pid [%f %f %f] [%f %f %f]\n",
@@ -244,6 +277,8 @@ QUICKDEV_DECLARE_NODE_CLASS( Seabee3Controls )
             updateMotorValsMsg<movement::Axes::STRAFE>( motor_vals_msg, linear_output_vec, angular_output_vec );
             updateMotorValsMsg<movement::Axes::DEPTH>( motor_vals_msg, linear_output_vec, angular_output_vec );
             updateMotorValsMsg<movement::Axes::YAW>( motor_vals_msg, linear_output_vec, angular_output_vec );
+            updateMotorValsMsg<movement::Axes::PITCH>( motor_vals_msg, linear_output_vec, angular_output_vec );
+            updateMotorValsMsg<movement::Axes::ROLL>( motor_vals_msg, linear_output_vec, angular_output_vec );
 
             // ensure all motor values are properly normalized
             normalizeMotorValsMsg( motor_vals_msg );
@@ -253,12 +288,42 @@ QUICKDEV_DECLARE_NODE_CLASS( Seabee3Controls )
         {
             PRINT_ERROR( "%s", ex.what() );
         }
-        _RobotController::update( motor_vals_msg );
+
+        multi_pub_.publish( "motor_vals", motor_vals_msg );
+    }
+
+    QUICKDEV_DECLARE_MESSAGE_CALLBACK( cmdVelCB, _TwistMsg )
+    {
+        auto const now = ros::Time::now();
+
+        auto lock = quickdev::make_unique_lock( transform_to_target_mutex_ );
+
+        _TwistMsg old_transform_to_target_twist = unit::make_unit( transform_to_target_ );
+        _TwistMsg new_transform_to_target_twist = old_transform_to_target_twist;
+
+        if( msg->linear.x ) new_transform_to_target_twist.linear.x = msg->linear.x;
+        if( msg->linear.y ) new_transform_to_target_twist.linear.y = msg->linear.y;
+
+        if( msg->angular.x ) new_transform_to_target_twist.angular.x = msg->angular.x;
+        if( msg->angular.y ) new_transform_to_target_twist.angular.y = msg->angular.y;
+
+        if( last_velocity_update_time_ != ros::Time( 0 ) && ( now - last_velocity_update_time_ ).toSec() <= 2.0 )
+        {
+            if( msg->linear.z ) new_transform_to_target_twist.linear.z = msg->linear.z * ( now - last_velocity_update_time_ ).toSec();
+            if( msg->angular.z ) new_transform_to_target_twist.angular.z = msg->angular.z  * ( now - last_velocity_update_time_ ).toSec();
+        }
+
+        transform_to_target_ = unit::make_unit( new_transform_to_target_twist );
+        _TfTranceiverPolicy::publishTransform( transform_to_target_, "/seabee/current_pose", "/seabee/desired_pose" );
+
+        last_velocity_update_time_ = now;
     }
 
     QUICKDEV_DECLARE_SERVICE_CALLBACK( resetPoseCB, _ResetPoseService )
     {
-        _RobotController::resetPose();
+        auto lock = quickdev::make_unique_lock( transform_to_target_mutex_ );
+        transform_to_target_ = btTransform( btQuaternion( 0, 0, 0, 1 ), btVector3( 0, 0, 0 ) );
+        _TfTranceiverPolicy::publishTransform( transform_to_target_, "/seabee/current_pose", "/seabee/desired_pose" );
         return true;
     }
 /*

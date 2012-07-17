@@ -51,10 +51,10 @@ namespace MotorControllerIDs
 {
     static int const FWD_RIGHT_THRUSTER = 3;
     static int const FWD_LEFT_THRUSTER = 1;
-    static int const DEPTH_RIGHT_THRUSTER = 0; // front
-    static int const DEPTH_LEFT_THRUSTER = 5; // back
-    static int const STRAFE_FRONT_THRUSTER = 4; // top
-    static int const STRAFE_BACK_THRUSTER = 2; // bottom
+    static int const DEPTH_FRONT_THRUSTER = 0; // front
+    static int const DEPTH_BACK_THRUSTER = 5; // back
+    static int const STRAFE_TOP_THRUSTER = 4; // top
+    static int const STRAFE_BOTTOM_THRUSTER = 2; // bottom
     static int const SHOOTER = 6;
     static int const DROPPER_STAGE1 = 7;
     static int const DROPPER_STAGE2 = 8;
@@ -104,23 +104,23 @@ namespace ThrusterPairs
         }},
         // strafe
         {{
-            MotorControllerIDs::STRAFE_FRONT_THRUSTER,
-            MotorControllerIDs::STRAFE_BACK_THRUSTER
+            MotorControllerIDs::STRAFE_TOP_THRUSTER,
+            MotorControllerIDs::STRAFE_BOTTOM_THRUSTER
         }},
         // depth
         {{
-            MotorControllerIDs::DEPTH_LEFT_THRUSTER,
-            MotorControllerIDs::DEPTH_RIGHT_THRUSTER
+            MotorControllerIDs::DEPTH_BACK_THRUSTER,
+            MotorControllerIDs::DEPTH_FRONT_THRUSTER
         }},
         // roll
         {{
-            -1, // MotorControllerIDs::DEPTH_LEFT_THRUSTER,
-            -1 // MotorControllerIDs::DEPTH_RIGHT_THRUSTER
+            MotorControllerIDs::STRAFE_TOP_THRUSTER,
+            MotorControllerIDs::STRAFE_BOTTOM_THRUSTER
         }},
         // pitch
         {{
-            -1,
-            -1
+            MotorControllerIDs::DEPTH_BACK_THRUSTER,
+            MotorControllerIDs::DEPTH_FRONT_THRUSTER
         }},
         // yaw
         {{

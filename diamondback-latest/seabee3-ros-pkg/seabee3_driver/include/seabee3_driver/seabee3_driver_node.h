@@ -303,12 +303,12 @@ QUICKDEV_DECLARE_NODE_CLASS( Seabee3Driver )
             bee_stem3_driver_.dropper2_params_.trigger_value_ = config.dropper2_trigger_value;
         }
 
-        motor_dirs_[movement::MotorControllerIDs::FWD_RIGHT_THRUSTER] =    config.fwd_right_thruster_dir;
-        motor_dirs_[movement::MotorControllerIDs::FWD_LEFT_THRUSTER] =     config.fwd_left_thruster_dir;
-        motor_dirs_[movement::MotorControllerIDs::DEPTH_RIGHT_THRUSTER] =  config.depth_right_thruster_dir;
-        motor_dirs_[movement::MotorControllerIDs::DEPTH_LEFT_THRUSTER] =   config.depth_left_thruster_dir;
-        motor_dirs_[movement::MotorControllerIDs::STRAFE_FRONT_THRUSTER] = config.strafe_front_thruster_dir;
-        motor_dirs_[movement::MotorControllerIDs::STRAFE_BACK_THRUSTER] =  config.strafe_back_thruster_dir;
+        motor_dirs_[movement::MotorControllerIDs::FWD_RIGHT_THRUSTER] =     config.fwd_right_thruster_dir;
+        motor_dirs_[movement::MotorControllerIDs::FWD_LEFT_THRUSTER] =      config.fwd_left_thruster_dir;
+        motor_dirs_[movement::MotorControllerIDs::DEPTH_FRONT_THRUSTER] =   config.depth_front_thruster_dir;
+        motor_dirs_[movement::MotorControllerIDs::DEPTH_BACK_THRUSTER] =    config.depth_back_thruster_dir;
+        motor_dirs_[movement::MotorControllerIDs::STRAFE_TOP_THRUSTER] =    config.strafe_top_thruster_dir;
+        motor_dirs_[movement::MotorControllerIDs::STRAFE_BOTTOM_THRUSTER] = config.strafe_bottom_thruster_dir;
     }
 };
 
