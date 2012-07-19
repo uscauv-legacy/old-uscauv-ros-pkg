@@ -31,7 +31,7 @@ roi_height: 0
 roi_width: 0
 saturation: 1.0
 sharpness: 1.0
-shutter: 41.0
+shutter: 80.0
 use_ros_time: false
 video_mode: 640x480_mono8
 white_balance_BU: 512.0

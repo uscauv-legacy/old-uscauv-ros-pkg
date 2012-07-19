@@ -47,6 +47,7 @@
 
 // utils
 #include <quickdev/numeric_unit_conversions.h>
+#include <quickdev/math.h>
 
 // actions
 #include <seabee3_actions/MakeTrajectoryAction.h>
@@ -99,14 +100,16 @@ private:
 
     QUICKDEV_MAKE_POLICY_FUNCS( SeabeeMovement )
 
-    QUICKDEV_DECLARE_POLICY_CONSTRUCTOR( SeabeeMovement )
+    QUICKDEV_DECLARE_POLICY_CONSTRUCTOR( SeabeeMovement ),
+        initialized_( false )
     {
-        //
+        printPolicyActionStart( "create", this );
+        printPolicyActionDone( "create", this );
     }
 
     void init_add_publishers( ros::NodeHandle & nh_rel )
     {
-        multi_pub_.addPublishers<_TwistMsg>    ( nh_rel, { "/seabee3/cmd_vel" } );
+        multi_pub_.addPublishers<_TwistMsg>( nh_rel, { "/seabee3/cmd_vel" } );
     }
 
     QUICKDEV_ENABLE_INIT()
@@ -119,8 +122,8 @@ private:
 //        _MakeTrajectoryActionClientPolicy::registerDoneCB( quickdev::auto_bind( &SeabeeMovementPolicy::makeTrajectoryActionDoneCB, this ) );
 //        _FollowTrajectoryActionClientPolicy::registerDoneCB( quickdev::auto_bind( &SeabeeMovementPolicy::followTrajectoryActionDoneCB, this ) );
 
-        initPolicies<_MakeTrajectoryActionClientPolicy>( "action_name", std::string( "make_trajectory" ) );
-        initPolicies<_FollowTrajectoryActionClientPolicy>( "action_name", std::string( "follow_trajectory" ) );
+        initPolicies<_MakeTrajectoryActionClientPolicy>( "action_name_param", std::string( "make_trajectory" ) );
+        initPolicies<_FollowTrajectoryActionClientPolicy>( "action_name_param", std::string( "follow_trajectory" ) );
 
         initPolicies<quickdev::policy::ALL>();
 
@@ -204,6 +207,7 @@ private:
      * - moveTo( getCurrentPose() + Orientation( 90 ) ) will rotate 90 degrees CCW (see faceTo( Orientation ) )
      * - moveTo( getCurrentPose() + Position( 0, 0, -1 ) will dive one meter
      */
+    /*
     _FollowTrajectoryActionClientPolicy::_ActionToken moveTo( Pose const & pose )
     {
         if( !physics_state_msg_ ) return _FollowTrajectoryActionClientPolicy::_ActionToken();
@@ -228,6 +232,79 @@ private:
             return _FollowTrajectoryActionClientPolicy::sendGoal( follow_trajectory_goal );
         }
         return _FollowTrajectoryActionClientPolicy::_ActionToken();
+    }*/
+
+    SimpleActionToken diveTo( double const & depth )
+    {
+        SimpleActionToken result;
+        result.start( quickdev::auto_bind( quickdev::auto_bind( &SeabeeMovementPolicy::diveToImpl, this ), depth, result ) );
+
+        return result;
+    }
+
+    void diveToImpl( double const & depth, SimpleActionToken token )
+    {
+        ros::Rate publish_rate( 10 );
+
+        while( token.ok() && ros::ok() )
+        {
+            auto world_to_desired_pose = _TfTranceiverPolicy::tryLookupTransform( "/world", "/seabee3/desired_pose" );
+
+            world_to_desired_pose.getOrigin().setZ( depth );
+            _TfTranceiverPolicy::publishTransform( world_to_desired_pose, "/world", "/seabee3/desired_pose" );
+
+            if( _TfTranceiverPolicy::transformExists( "/world", "/seabee3/current_pose" ) )
+            {
+                auto world_to_current_pose = _TfTranceiverPolicy::tryLookupTransform( "/world", "/seabee3/current_pose" );
+
+                if( fabs( world_to_current_pose.getOrigin().getZ() - world_to_desired_pose.getOrigin().getZ() ) < 0.05 )
+                {
+                    token.complete( true );
+                    return;
+                }
+            }
+
+            publish_rate.sleep();
+        }
+
+        token.cancel();
+    }
+
+    SimpleActionToken faceTo( double const & heading )
+    {
+        SimpleActionToken result;
+        result.start( quickdev::auto_bind( quickdev::auto_bind( &SeabeeMovementPolicy::faceToImpl, this ), heading, result ) );
+
+        return result;
+    }
+
+    void faceToImpl( double const & heading, SimpleActionToken token )
+    {
+        ros::Rate publish_rate( 10 );
+
+        while( token.ok() && ros::ok() )
+        {
+            auto world_to_desired_pose = _TfTranceiverPolicy::tryLookupTransform( "/world", "/seabee3/desired_pose" );
+
+            world_to_desired_pose.setRotation( btQuaternion( heading, 0, 0 ) );
+            _TfTranceiverPolicy::publishTransform( world_to_desired_pose, "/world", "/seabee3/desired_pose" );
+
+            if( _TfTranceiverPolicy::transformExists( "/world", "/seabee3/current_pose" ) )
+            {
+                auto world_to_current_pose = _TfTranceiverPolicy::tryLookupTransform( "/world", "/seabee3/current_pose" );
+
+                // constraints met
+                if( fabs( quickdev::angleBetween( unit::convert<btVector3>( world_to_current_pose.getRotation() ).getZ(), unit::convert<btVector3>( world_to_desired_pose.getRotation() ).getZ() ) ) < 0.05 * M_PI )
+                {
+                    token.complete( true );
+                    return;
+                }
+            }
+
+            publish_rate.sleep();
+        }
+
+        token.cancel();
     }
 
     SimpleActionToken moveAtVelocity( btTransform const & velocity )
@@ -249,7 +326,7 @@ private:
             publish_rate.sleep();
         }
 
-        token.cancel();
+        if( token.ok() ) token.complete( true );
     }
 
     SimpleActionToken moveAtVelocity( Pose const & velocity )
@@ -273,34 +350,40 @@ private:
     }
 
     // move within a certain pose error of the given target; there must exist a transform from /seabee/base_link to <target>
-    SimpleActionToken moveRelativeTo( std::string const & target, btTransform const & desired_distance_to_target )
+    SimpleActionToken moveRelativeTo( std::string const & target, btTransform const & desired_distance_from_target )
     {
         SimpleActionToken result;
-        result.start( quickdev::auto_bind( quickdev::auto_bind( &SeabeeMovementPolicy::moveRelativeToImpl, this ), target, desired_distance_to_target, result ) );
+        result.start( quickdev::auto_bind( quickdev::auto_bind( &SeabeeMovementPolicy::moveRelativeToImpl, this ), target, desired_distance_from_target, result ) );
 
         return result;
     }
 
-    void moveRelativeToImpl( std::string const & target, btTransform const & desired_distance_to_target, SimpleActionToken token )
+    void moveRelativeToImpl( std::string const & target, btTransform const & desired_distance_from_target, SimpleActionToken token )
     {
+        ros::Rate publish_rate( 10 );
+
         while( token.ok() && ros::ok() )
         {
-            btTransform const & distance_to_target = getTransform( target );
+            btTransform const world_to_self = _TfTranceiverPolicy::tryLookupTransform( "/world", "/seabee3/current_pose" );
+            btTransform const world_to_target = _TfTranceiverPolicy::tryLookupTransform( "/world", target ) * desired_distance_from_target;
 
-            btTransform error_tf = btTransform( distance_to_target.getRotation() - desired_distance_to_target.getRotation(), distance_to_target.getOrigin() - desired_distance_to_target.getOrigin() );
+            btTransform error_tf = btTransform( world_to_target.getRotation() - world_to_self.getRotation(), world_to_target.getOrigin() - world_to_self.getOrigin() );
 
-            btVector3 position_error = unit::convert<btVector3>( error_tf.getRotation() );
-            btVector3 orientation_error = unit::convert<btVector3>( error_tf.getOrigin() );
+            btVector3 position_error = world_to_target.getOrigin() - world_to_self.getOrigin();
+            double heading_error = unit::convert<btVector3>( world_to_target.getRotation() - world_to_self.getRotation() ).getZ();
 
-            _TfTranceiverPolicy::publishTransform( unit::convert<btTransform>( error_tf ), "/seabee3/current_pose", "/seabee3/desired_pose" );
+            _TfTranceiverPolicy::publishTransform( world_to_target, "/world", "/seabee3/desired_pose" );
 
-            if( fabs( position_error.getX() ) < 0.05 && fabs( position_error.getY() ) < 0.05 && fabs( position_error.getZ() ) < 0.1 && fabs( orientation_error.getX() ) < Radian( Degree( 5 ) ) && fabs( orientation_error.getY() ) < Radian( Degree( 5 ) ) && fabs( orientation_error.getZ() ) < Radian( Degree( 5 ) ) )
+            if( fabs( position_error.getX() ) < 0.05 && fabs( position_error.getY() ) < 0.05 && fabs( position_error.getZ() ) < 0.1 && fabs( heading_error ) < 0.05 * M_PI )
             {
                 token.complete( true );
                 return;
             }
+
+            publish_rate.sleep();
         }
-        token.cancel();
+
+        if( token.ok() ) token.cancel();
     }
 
     SimpleActionToken rotateSearch( std::string const & target, SimpleActionToken term_criteria, Radian const & min, Radian const & max, Radian const & velocity )
@@ -336,20 +419,22 @@ private:
     /*!
      * - Same as moveTo( getCurrentPose() + position )
      */
+/*
     _FollowTrajectoryActionClientPolicy::_ActionToken moveTo( Position const & position )
     {
         return moveTo( getCurrentPose() + position );
     }
-
+*/
     //! Move to some relative orientation
     /*!
      * - Same as moveTo( getCurrentPose() + orientation )
      */
+/*
     _FollowTrajectoryActionClientPolicy::_ActionToken moveTo( Orientation const & orientation )
     {
         return moveTo( getCurrentPose() + orientation );
     }
-
+*/
     // #########################################################################################################################################
     //! Face the given position
     _FollowTrajectoryActionClientPolicy::_ActionToken faceTo( Position const & position );

@@ -85,8 +85,8 @@ QUICKDEV_DECLARE_NODE_CLASS( ColorClassifierTrainer )
         }
 
         // convert to target color space
-        cv::Mat input_image_lab;
-        cv::cvtColor( input_image, input_image_lab, CV_BGR2HLS );
+        cv::Mat input_image_hls;
+        cv::cvtColor( input_image, input_image_hls, CV_BGR2HLS );
 
         // build up our color model
         _ColorModel color_model_;
@@ -100,8 +100,8 @@ QUICKDEV_DECLARE_NODE_CLASS( ColorClassifierTrainer )
                 // ignore "black" mask pixels
                 if( mask_pixel <= 255 / 2 ) continue;
 
-                auto const & lab_pixel = input_image_lab.at<cv::Vec3b>( y, x );
-                color_model_.push_back( _DataPoint( (double)lab_pixel[0], (double)lab_pixel[1], (double)lab_pixel[2] ) );
+                auto const & hls_pixel = input_image_hls.at<cv::Vec3b>( y, x );
+                color_model_.push_back( _DataPoint( (double)hls_pixel[0], (double)hls_pixel[1], (double)hls_pixel[2] ) );
             }
         }
 

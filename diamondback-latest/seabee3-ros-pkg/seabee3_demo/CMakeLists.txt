@@ -26,4 +26,4 @@ set(LIBRARY_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/lib)
 #quickdev_gencfg()
 
 add_subdirectory( nodes )
-add_subdirectory( nodelets )
+#add_subdirectory( nodelets )

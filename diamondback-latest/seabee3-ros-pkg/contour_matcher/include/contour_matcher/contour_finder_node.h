@@ -210,8 +210,11 @@ protected:
                 cv::Mat thresholded_image;
                 cv::Mat contour_image;
 
-                cv::normalize( image, normalized_image, 0, 255, CV_MINMAX );
-                cv::threshold( normalized_image, thresholded_image, threshold_min, threshold_max, threshold_type );
+                image.copyTo( normalized_image );
+                //cv::GaussianBlur( image, normalized_image, cv::Size( 11, 11 ), 5 );
+                //cv::normalize( image, normalized_image, 0, 255, CV_MINMAX );
+                //cv::adaptiveThreshold( normalized_image, thresholded_image, 255, cv::ADAPTIVE_THRESH_GAUSSIAN_C, cv::THRESH_BINARY, 7, 0 );
+                cv::threshold( image, thresholded_image, threshold_min, threshold_max, threshold_type );
                 thresholded_image.copyTo( contour_image );
 
                 std::vector<_Contour> contours;

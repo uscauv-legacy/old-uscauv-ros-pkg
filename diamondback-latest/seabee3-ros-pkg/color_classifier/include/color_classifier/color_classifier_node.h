@@ -180,6 +180,8 @@ protected:
             return;
         }
         cv::Mat const & image = image_msg->image;
+        cv::Mat normalized_image;
+        cv::GaussianBlur( image, normalized_image, cv::Size( 15, 15 ), 1 );
 //        std::cout << "Getting mask from message" << std::endl;
         if( !mask_msg )
         {
@@ -207,7 +209,7 @@ protected:
                 auto const & mask_pixel = mask.at<uchar>( y, x );
                 if( !mask_pixel ) continue;
 
-                auto const & raw_pixel = image.at<cv::Vec3b>( y, x );
+                auto const & raw_pixel = normalized_image.at<cv::Vec3b>( y, x );
                 auto const & pixel = quickdev::pixel::make_pixel<float>( raw_pixel );
 
 //                STREAM_INFO( pixel );

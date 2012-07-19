@@ -240,92 +240,84 @@ protected:
         _MotorValsMsg motor_vals_msg;
 
         transform_to_self_ = _TfTranceiverPolicy::tryLookupTransform( "/world", "/seabee3/current_pose" );
-        try
+
+        auto const world_to_imu_tf = _TfTranceiverPolicy::tryLookupTransform( "/world", "/seabee3/sensors/imu" );
+        auto const world_to_depth_tf = _TfTranceiverPolicy::tryLookupTransform( "/world", "/seabee3/sensors/depth" );
+
+        _TfTranceiverPolicy::publishTransform( btTransform( world_to_imu_tf.getRotation(), world_to_depth_tf.getOrigin() ), "/world", "/seabee3/givens" );
+
+        btVector3 linear_error_vec;
+        btVector3 angular_error_vec;
         {
-            auto const world_to_imu_tf = _TfTranceiverPolicy::tryLookupTransform( "/world", "/seabee3/sensors/imu" );
-            auto const world_to_depth_tf = _TfTranceiverPolicy::tryLookupTransform( "/world", "/seabee3/sensors/depth" );
+            auto transform_to_target_lock = quickdev::make_unique_lock( transform_to_target_mutex_ );
+            transform_to_target_ = _TfTranceiverPolicy::tryLookupTransform( "/seabee3/current_pose", "/seabee3/desired_pose" );
 
-            _TfTranceiverPolicy::publishTransform( btTransform( world_to_imu_tf.getRotation(), world_to_depth_tf.getOrigin() ), "/world", "/seabee3/givens" );
-
-            btVector3 linear_error_vec;
-            btVector3 angular_error_vec;
+            // if the desired frame is too old, reset the sub's velocity-based components
+/*
+            if( ( now - last_velocity_update_time_ ).toSec() > 2 )
             {
-                auto transform_to_target_lock = quickdev::make_unique_lock( transform_to_target_mutex_ );
-                auto const transform_to_target = _TfTranceiverPolicy::lookupTransform( "/seabee3/current_pose", "/seabee3/desired_pose" );
-
-                // if the desired frame is too old, reset the sub's velocity-based components
-/*
-                if( ( now - last_velocity_update_time_ ).toSec() > 2 )
-                {
-                    last_velocity_msg_ = decltype( last_velocity_msg_ )();
-                }
-*/
-                if( ( now - transform_to_target.stamp_ ).toSec() > 0.5 )
-                {
-                    _TfTranceiverPolicy::publishTransform( transform_to_self_, "/world", "/seabee3/desired_pose" );
-                }
-
-                // calculate pose error
-                linear_error_vec = unit::make_unit( transform_to_target.getOrigin() );
-                angular_error_vec = unit::make_unit( transform_to_target.getRotation() );
+                last_velocity_msg_ = decltype( last_velocity_msg_ )();
             }
-/*
-            printf( "error [%f %f %f] [%f %f %f]\n",
-                linear_error_vec.x(),
-                linear_error_vec.y(),
-                linear_error_vec.z(),
-                angular_error_vec.x(),
-                angular_error_vec.y(),
-                angular_error_vec.z()
-            );
 */
-            btVector3 linear_output_vec;
-            btVector3 angular_output_vec;
-
-            // update PIDs
+/*
+            if( ( now - transform_to_target.stamp_ ).toSec() > 0.5 )
             {
-                auto last_velocity_lock_ = quickdev::make_unique_lock( last_velocity_mutex_ );
-
-                if( last_velocity_msg_ && fabs( linear_error_vec.getX() ) < 0.075 ) linear_output_vec.setX( last_velocity_msg_->linear.x );
-                else linear_output_vec.setX( -pid_.linear_.x_.update( 0, linear_error_vec.x() ) );
-
-                if( last_velocity_msg_ && fabs( linear_error_vec.getY() ) < 0.075 ) linear_output_vec.setY( last_velocity_msg_->linear.y );
-                else linear_output_vec.setY( -pid_.linear_.y_.update( 0, linear_error_vec.y() ) );
+                _TfTranceiverPolicy::publishTransform( btTransform( btQuaternion( 0, 0, 0, 1 ), transform_to_self_.getOrigin() ), "/world", "/seabee3/desired_pose" );
             }
-
-            linear_output_vec.setZ( -pid_.linear_.z_.update( 0, linear_error_vec.z() ) );
-
-            //angular_output_vec.setX( pid_.angular_.x_.update( 0, angular_error_vec.x() ) );
-            angular_output_vec.setY( pid_.angular_.y_.update( 0, angular_error_vec.y() ) );
-            angular_output_vec.setZ( pid_.angular_.z_.update( 0, angular_error_vec.z() ) );
-/*
-            printf( "pid [%f %f %f] [%f %f %f]\n",
-                linear_output_vec.getX(),
-                linear_output_vec.getY(),
-                linear_output_vec.getZ(),
-                angular_output_vec.getX(),
-                angular_output_vec.getY(),
-                angular_output_vec.getZ()
-            );
 */
-            // convert axis output values into motor values
-            updateMotorValsMsg<movement::Axes::SPEED>( motor_vals_msg, linear_output_vec, angular_output_vec );
-            updateMotorValsMsg<movement::Axes::STRAFE>( motor_vals_msg, linear_output_vec, angular_output_vec );
-            updateMotorValsMsg<movement::Axes::DEPTH>( motor_vals_msg, linear_output_vec, angular_output_vec );
-            updateMotorValsMsg<movement::Axes::YAW>( motor_vals_msg, linear_output_vec, angular_output_vec );
-            updateMotorValsMsg<movement::Axes::PITCH>( motor_vals_msg, linear_output_vec, angular_output_vec );
-            //updateMotorValsMsg<movement::Axes::ROLL>( motor_vals_msg, linear_output_vec, angular_output_vec );
-
-            // ensure all motor values are properly normalized
-            normalizeMotorValsMsg( motor_vals_msg );
-
+            // calculate pose error
+            linear_error_vec = unit::make_unit( transform_to_target_.getOrigin() );
+            angular_error_vec = unit::make_unit( transform_to_target_.getRotation() );
         }
-        catch( std::exception const & ex )
+/*
+        printf( "error [%f %f %f] [%f %f %f]\n",
+            linear_error_vec.x(),
+            linear_error_vec.y(),
+            linear_error_vec.z(),
+            angular_error_vec.x(),
+            angular_error_vec.y(),
+            angular_error_vec.z()
+        );
+*/
+        btVector3 linear_output_vec;
+        btVector3 angular_output_vec;
+
+        // update PIDs
         {
-            PRINT_WARN( "%s", ex.what() );
-            PRINT_WARN( "initializing..." );
-            _TfTranceiverPolicy::publishTransform( transform_to_self_, "/world", "/seabee3/desired_pose" );
+            auto last_velocity_lock_ = quickdev::make_unique_lock( last_velocity_mutex_ );
+
+            if( last_velocity_msg_ && fabs( linear_error_vec.getX() ) < 0.075 ) linear_output_vec.setX( last_velocity_msg_->linear.x );
+            else linear_output_vec.setX( -pid_.linear_.x_.update( 0, linear_error_vec.x() ) );
+
+            if( last_velocity_msg_ && fabs( linear_error_vec.getY() ) < 0.075 ) linear_output_vec.setY( last_velocity_msg_->linear.y );
+            else linear_output_vec.setY( -pid_.linear_.y_.update( 0, linear_error_vec.y() ) );
         }
+
+        linear_output_vec.setZ( -pid_.linear_.z_.update( 0, linear_error_vec.z() ) );
+
+        //angular_output_vec.setX( pid_.angular_.x_.update( 0, angular_error_vec.x() ) );
+        angular_output_vec.setY( pid_.angular_.y_.update( 0, angular_error_vec.y() ) );
+        angular_output_vec.setZ( pid_.angular_.z_.update( 0, angular_error_vec.z() ) );
+/*
+        printf( "pid [%f %f %f] [%f %f %f]\n",
+            linear_output_vec.getX(),
+            linear_output_vec.getY(),
+            linear_output_vec.getZ(),
+            angular_output_vec.getX(),
+            angular_output_vec.getY(),
+            angular_output_vec.getZ()
+        );
+*/
+        // convert axis output values into motor values
+        updateMotorValsMsg<movement::Axes::SPEED>( motor_vals_msg, linear_output_vec, angular_output_vec );
+        updateMotorValsMsg<movement::Axes::STRAFE>( motor_vals_msg, linear_output_vec, angular_output_vec );
+        updateMotorValsMsg<movement::Axes::DEPTH>( motor_vals_msg, linear_output_vec, angular_output_vec );
+        updateMotorValsMsg<movement::Axes::YAW>( motor_vals_msg, linear_output_vec, angular_output_vec );
+        updateMotorValsMsg<movement::Axes::PITCH>( motor_vals_msg, linear_output_vec, angular_output_vec );
+        //updateMotorValsMsg<movement::Axes::ROLL>( motor_vals_msg, linear_output_vec, angular_output_vec );
+
+        // ensure all motor values are properly normalized
+        normalizeMotorValsMsg( motor_vals_msg );
 
         multi_pub_.publish( "motor_vals", motor_vals_msg );
     }

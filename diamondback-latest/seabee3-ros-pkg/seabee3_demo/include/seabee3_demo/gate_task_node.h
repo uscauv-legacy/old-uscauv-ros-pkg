@@ -67,17 +67,36 @@ QUICKDEV_DECLARE_NODE_CLASS( GateTask )
 {
 protected:
     ros::MultiSubscriber<> multi_sub_;
-    ros::MultiPublisher<> multi_pub_;
 
     boost::shared_ptr<boost::thread> main_loop_thread_ptr_;
+    boost::shared_ptr<boost::thread> detect_killed_thread_ptr_;
 
-    std::mutex kill_switch_mutex_;
-    std::condition_variable kill_switch_condition_;
+    _KillSwitchMsg::ConstPtr last_kill_switch_msg_;
+    std::mutex last_kill_switch_msg_mutex_;
+
+    std::mutex detect_killed_mutex_;
+
+    std::mutex kill_switch_enabled_mutex_;
+    std::condition_variable kill_switch_enabled_condition_;
+
+    std::mutex kill_switch_disabled_mutex_;
+    std::condition_variable kill_switch_disabled_condition_;
+
+    SimpleActionToken depth_token_;
+    SimpleActionToken heading_token_;
+    SimpleActionToken move_relative_token_;
+    SimpleActionToken move_at_velocity_token_;
 
     XmlRpc::XmlRpcValue params_;
     QUICKDEV_DECLARE_NODE_CONSTRUCTOR( GateTask )
     {
         //
+    }
+
+    ~GateTaskNode()
+    {
+        kill_switch_enabled_condition_.notify_all();
+        kill_switch_disabled_condition_.notify_all();
     }
 
     QUICKDEV_SPIN_FIRST()
@@ -87,67 +106,94 @@ protected:
         initPolicies<quickdev::policy::ALL>();
 
         multi_sub_.addSubscriber( nh_rel, "/seabee3/kill_switch", &GateTaskNode::killSwitchCB, this );
-        multi_pub_.addPublishers<_TwistMsg>( nh_rel, { "/seabee3/cmd_vel" } );
 
         params_ = quickdev::ParamReader::readParam<decltype( params_ )>( nh_rel, "params" );
 
         main_loop_thread_ptr_ = boost::make_shared<boost::thread>( &GateTaskNode::mainLoop, this );
+        detect_killed_thread_ptr_ = boost::make_shared<boost::thread>( &GateTaskNode::detectKilled, this );
     }
 
     QUICKDEV_DECLARE_MESSAGE_CALLBACK( killSwitchCB, _KillSwitchMsg )
     {
-        PRINT_INFO( "Got killswitch message." );
-        auto lock = quickdev::make_unique_lock( kill_switch_mutex_, std::try_to_lock );
+        auto lock = quickdev::make_unique_lock( last_kill_switch_msg_mutex_, std::try_to_lock );
 
         if( !lock ) return;
 
-        if( !msg->is_killed ) kill_switch_condition_.notify_all();
+        // detect change from killed to not killed
+        if( ( !last_kill_switch_msg_ || last_kill_switch_msg_->is_killed ) && !msg->is_killed ) kill_switch_enabled_condition_.notify_all();
+        // detect change from not killed to killed
+        if( last_kill_switch_msg_ && !last_kill_switch_msg_->is_killed && msg->is_killed ) kill_switch_disabled_condition_.notify_all();
+
+        last_kill_switch_msg_ = msg;
+    }
+
+    void detectKilled()
+    {
+        while( QUICKDEV_GET_RUNABLE_POLICY()::running() )
+        {
+            auto detect_killed_lock = quickdev::make_unique_lock( detect_killed_mutex_ );
+            kill_switch_disabled_condition_.wait( detect_killed_lock );
+
+            PRINT_INFO( "Detected kill signal; resetting all tokens." );
+
+            if( move_relative_token_.ok() )
+            {
+                PRINT_INFO( "Cancelled move_relative token" );
+                move_relative_token_.cancel();
+            }
+
+            if( move_at_velocity_token_.ok() )
+            {
+                PRINT_INFO( "Cancelled move_at_velocity token" );
+                move_at_velocity_token_.cancel();
+            }
+
+            if( depth_token_.ok() )
+            {
+                PRINT_INFO( "Cancelled depth token" );
+                depth_token_.cancel();
+            }
+
+            if( heading_token_.ok() )
+            {
+                PRINT_INFO( "Cancelled heading token" );
+                heading_token_.cancel();
+            }
+        }
     }
 
     void mainLoop()
     {
         btTransform heading_transform;
 
-        PRINT_INFO( "Waiting for kill switch..." );
-        // wait for kill switch to be un-killed
+        while( QUICKDEV_GET_RUNABLE_POLICY()::running() )
         {
-            auto kill_switch_lock = quickdev::make_unique_lock( kill_switch_mutex_);
-            kill_switch_condition_.wait( kill_switch_lock );
-
-            _TfTranceiverPolicy::tryLookupTransform( "/world", "/seabee3/sensors/imu" );
-        }
-
-        PRINT_INFO( "Diving" );
-        // dive to 0.65 m
-        {
-            /*
-            auto token = _SeabeeMovementPolicy::moveRelativeTo( "current_pose", btTransform( btQuaternion( 0, 0, 0, 1 ), btVector3( 0, 0, -0.75 ) ) );
-            token.wait();
-            */
-
-            auto start = ros::Time::now();
-
-            while( ros::ok() && ( ros::Time::now() - start ).toSec() < 5 )
+            PRINT_INFO( "Waiting for kill switch..." );
+            // wait for kill switch to be un-killed
             {
-                _TfTranceiverPolicy::publishTransform( btTransform( heading_transform.getRotation(), btVector3( 0, 0, -1 ) ), "/world", "/seabee3/desired_pose" );
+                auto kill_switch_enabled_lock = quickdev::make_unique_lock( kill_switch_enabled_mutex_ );
+                kill_switch_enabled_condition_.wait( kill_switch_enabled_lock );
+
+                _TfTranceiverPolicy::tryLookupTransform( "/world", "/seabee3/sensors/imu" );
             }
-        }
 
-        PRINT_INFO( "Moving forward" );
-        // drive forward at 0.2 m/s for 60 seconds
-        {
-            auto start = ros::Time::now();
-
-            _TwistMsg velocity;
-            velocity.linear.x = 0.2;
-
-            while( ros::ok() && ( ros::Time::now() - start ).toSec() < 60 )
+            PRINT_INFO( "Diving" );
+            // dive
             {
-                multi_pub_.publish( "/seabee3/cmd_vel", velocity );
+                depth_token_ = _SeabeeMovementPolicy::diveTo( -1.0 );
+                heading_token_ = _SeabeeMovementPolicy::faceTo( unit::convert<btVector3>( heading_transform.getRotation() ).getZ() );
+
+                if( depth_token_.wait( 5.0 ) ) PRINT_INFO( "At depth" );
+                if( heading_token_.wait( 5.0 ) ) PRINT_INFO( "At heading" );
             }
-            //auto token = _SeabeeMovementPolicy::moveAtVelocity( btTransform( btQuaternion( 0, 0, 0, 1 ), btVector3( 0.2, 0, 0 ) ) );
-            //ros::Duration( 60 ).sleep();
-            //token.cancel();
+
+            PRINT_INFO( "Moving forward" );
+            // drive forward at 0.2 m/s for 60 seconds
+            {
+                move_at_velocity_token_ = _SeabeeMovementPolicy::moveAtVelocity( btTransform( btQuaternion( 0, 0, 0 ), btVector3( 0.2, 0, 0 ) ) );
+                move_at_velocity_token_.wait( 60 );
+                move_at_velocity_token_.cancel();
+            }
         }
     }
 
