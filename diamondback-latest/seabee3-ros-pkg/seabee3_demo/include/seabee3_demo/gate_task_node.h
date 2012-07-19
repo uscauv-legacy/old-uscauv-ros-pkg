@@ -61,6 +61,8 @@ typedef geometry_msgs::Twist _TwistMsg;
 typedef SeabeeMovementPolicy _SeabeeMovementPolicy;
 typedef quickdev::TfTranceiverPolicy _TfTranceiverPolicy;
 
+typedef quickdev::SimpleActionToken SimpleActionToken;
+
 QUICKDEV_DECLARE_NODE( GateTask, _SeabeeMovementPolicy )
 
 QUICKDEV_DECLARE_NODE_CLASS( GateTask )
@@ -174,13 +176,13 @@ protected:
                 auto kill_switch_enabled_lock = quickdev::make_unique_lock( kill_switch_enabled_mutex_ );
                 kill_switch_enabled_condition_.wait( kill_switch_enabled_lock );
 
-                _TfTranceiverPolicy::tryLookupTransform( "/world", "/seabee3/sensors/imu" );
+                heading_transform = _TfTranceiverPolicy::tryLookupTransform( "/world", "/seabee3/sensors/imu" );
             }
 
             PRINT_INFO( "Diving" );
             // dive
             {
-                depth_token_ = _SeabeeMovementPolicy::diveTo( -1.0 );
+                depth_token_ = _SeabeeMovementPolicy::diveTo( -0.2 );
                 heading_token_ = _SeabeeMovementPolicy::faceTo( unit::convert<btVector3>( heading_transform.getRotation() ).getZ() );
 
                 if( depth_token_.wait( 5.0 ) ) PRINT_INFO( "At depth" );
@@ -191,7 +193,7 @@ protected:
             // drive forward at 0.2 m/s for 60 seconds
             {
                 move_at_velocity_token_ = _SeabeeMovementPolicy::moveAtVelocity( btTransform( btQuaternion( 0, 0, 0 ), btVector3( 0.2, 0, 0 ) ) );
-                move_at_velocity_token_.wait( 60 );
+                move_at_velocity_token_.wait( 5 );
                 move_at_velocity_token_.cancel();
             }
         }

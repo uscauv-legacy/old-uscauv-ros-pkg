@@ -45,18 +45,48 @@
 // utils
 #include <seabee3_common/recognition_primitives.h>
 
+// msgs
+#include <seabee3_msgs/KillSwitch.h>
+#include <geometry_msgs/Twist.h>
+
 using namespace seabee;
 
-typedef SeabeeMovementPolicy _SeabeeMovementPolicy;
+typedef seabee3_msgs::KillSwitch _KillSwitchMsg;
+typedef geometry_msgs::Twist _TwistMsg;
 
+typedef SeabeeMovementPolicy _SeabeeMovementPolicy;
+typedef quickdev::TfTranceiverPolicy _TfTranceiverPolicy;
 typedef SeabeeRecognitionPolicy _SeabeeRecognitionPolicy;
+
+typedef quickdev::SimpleActionToken SimpleActionToken;
 
 QUICKDEV_DECLARE_NODE( BuoyTask, _SeabeeMovementPolicy, _SeabeeRecognitionPolicy )
 
 QUICKDEV_DECLARE_NODE_CLASS( BuoyTask )
 {
 protected:
+    ros::MultiSubscriber<> multi_sub_;
+
     boost::shared_ptr<boost::thread> main_loop_thread_ptr_;
+    boost::shared_ptr<boost::thread> detect_killed_thread_ptr_;
+
+    _KillSwitchMsg::ConstPtr last_kill_switch_msg_;
+    std::mutex last_kill_switch_msg_mutex_;
+
+    std::mutex detect_killed_mutex_;
+
+    std::mutex kill_switch_enabled_mutex_;
+    std::condition_variable kill_switch_enabled_condition_;
+
+    std::mutex kill_switch_disabled_mutex_;
+    std::condition_variable kill_switch_disabled_condition_;
+
+    SimpleActionToken depth_token_;
+    SimpleActionToken heading_token_;
+    SimpleActionToken move_relative_token_;
+    SimpleActionToken move_at_velocity_token_;
+    SimpleActionToken find_buoy_token_;
+    SimpleActionToken rotate_search_token_;
 
     XmlRpc::XmlRpcValue params_;
 
@@ -65,15 +95,56 @@ protected:
         //
     }
 
+    ~BuoyTaskNode()
+    {
+        kill_switch_enabled_condition_.notify_all();
+        kill_switch_disabled_condition_.notify_all();
+    }
+
     QUICKDEV_SPIN_FIRST()
     {
         QUICKDEV_GET_RUNABLE_NODEHANDLE( nh_rel );
 
         initPolicies<quickdev::policy::ALL>();
 
+        multi_sub_.addSubscriber( nh_rel, "/seabee3/kill_switch", &BuoyTaskNode::killSwitchCB, this );
+
         params_ = quickdev::ParamReader::readParam<decltype( params_ )>( nh_rel, "params" );
 
         main_loop_thread_ptr_ = boost::make_shared<boost::thread>( &BuoyTaskNode::mainLoop, this );
+        detect_killed_thread_ptr_ = boost::make_shared<boost::thread>( &BuoyTaskNode::detectKilled, this );
+    }
+
+    QUICKDEV_DECLARE_MESSAGE_CALLBACK( killSwitchCB, _KillSwitchMsg )
+    {
+        auto lock = quickdev::make_unique_lock( last_kill_switch_msg_mutex_, std::try_to_lock );
+
+        if( !lock ) return;
+
+        // detect change from killed to not killed
+        if( last_kill_switch_msg_ && last_kill_switch_msg_->is_killed && !msg->is_killed ) kill_switch_enabled_condition_.notify_all();
+        // detect change from not killed to killed
+        if( last_kill_switch_msg_ && !last_kill_switch_msg_->is_killed && msg->is_killed ) kill_switch_disabled_condition_.notify_all();
+
+        last_kill_switch_msg_ = msg;
+    }
+
+    void detectKilled()
+    {
+        while( QUICKDEV_GET_RUNABLE_POLICY()::running() )
+        {
+            auto detect_killed_lock = quickdev::make_unique_lock( detect_killed_mutex_ );
+            kill_switch_disabled_condition_.wait( detect_killed_lock );
+
+            PRINT_INFO( "Detected kill signal; resetting all tokens." );
+
+            move_relative_token_.cancel();
+            move_at_velocity_token_.cancel();
+            depth_token_.cancel();
+            heading_token_.cancel();
+            find_buoy_token_.cancel();
+            rotate_search_token_.cancel();
+        }
     }
 
 /*
@@ -117,54 +188,96 @@ protected:
         }
     }
 */
-
-    void alignToBuoy( Landmark const & target )
+    void boopBuoy()
     {
-        auto token = _SeabeeMovementPolicy::moveRelativeTo( target, btTransform( btQuaternion( 0, 0, 0, 1 ), btVector3( 1, 0, 0 ) ) );
-        token.wait( 5.0 );
-    }
+        move_at_velocity_token_ = _SeabeeMovementPolicy::moveAtVelocity( btTransform( btQuaternion( 0, 0, 0, 1 ), btVector3( 0.2, 0, 0 ) ) );
+        move_at_velocity_token_.wait( 5 );
+        move_at_velocity_token_.cancel();
 
-    void boopBuoy( Landmark const & target )
-    {
-        _SeabeeMovementPolicy::moveAtVelocity( btTransform( btQuaternion( 0, 0, 0, 1 ), btVector3( 0.2, 0, 0 ) ) );
-        ros::Duration( 5.0 ).sleep();
 
-        _SeabeeMovementPolicy::moveAtVelocity( btTransform( btQuaternion( 0, 0, 0, 1 ), btVector3( -0.4, 0, 0 ) ) );
-        ros::Duration( 5.0 ).sleep();
+        move_at_velocity_token_ = _SeabeeMovementPolicy::moveAtVelocity( btTransform( btQuaternion( 0, 0, 0, 1 ), btVector3( -0.4, 0, 0 ) ) );
+        move_at_velocity_token_.wait( 5 );
+        move_at_velocity_token_.cancel();
     }
 
     void mainLoop()
     {
-        // search for and hit first buoy
-        while( true )
+        btTransform heading_transform;
+
+        while( QUICKDEV_GET_RUNABLE_POLICY()::running() )
         {
-            Landmark target( Buoy( Color( "orange" ) ) );
+            PRINT_INFO( "Waiting for kill switch..." );
+            // wait for kill switch to be un-killed
+            {
+                auto kill_switch_enabled_lock = quickdev::make_unique_lock( kill_switch_enabled_mutex_ );
+                kill_switch_enabled_condition_.wait( kill_switch_enabled_lock );
 
-            auto find_buoy_token = _SeabeeRecognitionPolicy::findLandmark( target );
-            auto rotate_search_token = _SeabeeMovementPolicy::rotateSearch( target, find_buoy_token, Degree( -45 ), Degree( 45.0 ), Degree( 5 ) );
+                heading_transform = _TfTranceiverPolicy::tryLookupTransform( "/world", "/seabee3/sensors/imu" );
+            }
 
-            if( !rotate_search_token.wait( 20 ) ) break;
+            PRINT_INFO( "Diving" );
+            // dive
+            {
+                depth_token_ = _SeabeeMovementPolicy::diveTo( -0.2 );
+                heading_token_ = _SeabeeMovementPolicy::faceTo( unit::convert<btVector3>( heading_transform.getRotation() ).getZ() );
 
-            alignToBuoy( target );
-            boopBuoy( target );
+                if( depth_token_.wait( 5.0 ) ) PRINT_INFO( "At depth" );
+                if( heading_token_.wait( 5.0 ) ) PRINT_INFO( "At heading" );
+            }
 
-            break;
-        }
+            PRINT_INFO( "Moving forward" );
+            // drive forward at 0.2 m/s for 60 seconds
+            {
+                move_at_velocity_token_ = _SeabeeMovementPolicy::moveAtVelocity( btTransform( btQuaternion( 0, 0, 0 ), btVector3( 0.2, 0, 0 ) ) );
+                move_at_velocity_token_.wait( 4 );
+                move_at_velocity_token_.cancel();
+            }
 
-        // search for and hit second buoy
-        while( true )
-        {
-            Landmark target( Buoy( Color( "green" ) ) );
+            PRINT_INFO( "Searching for buoy" );
+            // rotate left and right while looking for buoys
+            {
+                heading_transform = _TfTranceiverPolicy::tryLookupTransform( "/world", "/seabee3/sensors/imu" );
 
-            auto find_buoy_token = _SeabeeRecognitionPolicy::findLandmark( target );
-            auto rotate_search_token = _SeabeeMovementPolicy::rotateSearch( target, find_buoy_token, Radian( Degree( -45 ) ), Radian( Degree( 45.0 ) ), Radian( Degree( 5 ) ) );
+                size_t attempts = 0;
 
-            if( !rotate_search_token.wait( 20 ) ) break;
+                landmarks_map_.clear();
 
-            alignToBuoy( target );
-            boopBuoy( target );
+                Landmark target( Buoy( Color( "orange" ) ) );
+                find_buoy_token_ = _SeabeeRecognitionPolicy::findLandmark( target );
 
-            break;
+                while( attempts < 3 && !find_buoy_token_.success() )
+                {
+                    rotate_search_token_ = _SeabeeMovementPolicy::rotateSearch( find_buoy_token_, Degree( -45 ), Degree( 45.0 ), Degree( 5 ) );
+                    if( rotate_search_token_.wait( 20 ) ) break;
+                    else rotate_search_token_.cancel();
+
+                    heading_token_ = _SeabeeMovementPolicy::faceTo( unit::convert<btVector3>( heading_transform.getRotation() ).getZ() );
+                    heading_token_.wait( 5 );
+
+                    move_at_velocity_token_ = _SeabeeMovementPolicy::moveAtVelocity( btTransform( btQuaternion( 0, 0, 0 ), btVector3( 0.2, 0, 0 ) ) );
+                    move_at_velocity_token_.wait( 5 );
+                    move_at_velocity_token_.cancel();
+
+                    attempts ++;
+                }
+
+                find_buoy_token_.cancel();
+
+                auto buoy_it = landmarks_map_.find( "buoy_orange" );
+                if( buoy_it != landmarks_map_.cend() )
+                {
+                    PRINT_INFO( "Buoy found; aligning to buoy" );
+
+                    auto const & buoy = buoy_it->second;
+
+                    move_relative_token_ = _SeabeeMovementPolicy::moveRelativeTo( buoy_it->first, btTransform( btQuaternion( 0, 0, 0, 1 ), btVector3( -0.5, 0, 0 ) ) );
+                    if( move_relative_token_.wait( 10 ) )
+                    {
+                        PRINT_INFO( "Hitting buoy" );
+                        boopBuoy();
+                    }
+                }
+            }
         }
     }
 

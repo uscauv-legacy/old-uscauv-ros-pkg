@@ -37,7 +37,7 @@
 #define SEABEE3COMMON_SEABEERECOGNITIONPOLICY_H_
 
 // policies
-#include <quickdev/tf_tranceiver_policy.h>
+//#include <quickdev/tf_tranceiver_policy.h>
 #include <quickdev/node_handle_policy.h>
 
 // objects
@@ -48,19 +48,17 @@ using namespace seabee;
 
 QUICKDEV_DECLARE_POLICY_NS( SeabeeRecognition )
 {
-    typedef quickdev::TfTranceiverPolicy _TfTranceiverPolicy;
+//    typedef quickdev::TfTranceiverPolicy _TfTranceiverPolicy;
     typedef quickdev::NodeHandlePolicy _NodeHandlePolicy;
 }
 
-QUICKDEV_DECLARE_POLICY( SeabeeRecognition, _TfTranceiverPolicy, _NodeHandlePolicy )
+QUICKDEV_DECLARE_POLICY( SeabeeRecognition, _NodeHandlePolicy )
 
 QUICKDEV_DECLARE_POLICY_CLASS( SeabeeRecognition )
 {
 public:
-    typedef QUICKDEV_GET_POLICY_NS( SeabeeRecognition )::_TfTranceiverPolicy _TfTranceiverPolicy;
+//    typedef QUICKDEV_GET_POLICY_NS( SeabeeRecognition )::_TfTranceiverPolicy _TfTranceiverPolicy;
     typedef QUICKDEV_GET_POLICY_NS( SeabeeRecognition )::_NodeHandlePolicy _NodeHandlePolicy;
-
-    typedef quickdev::SimpleActionToken SimpleActionToken;
 
 private:
     ros::MultiSubscriber<> multi_sub_;
@@ -104,15 +102,15 @@ protected:
         find_landmark_condition_.notify_all();
     }
 
-    SimpleActionToken findLandmark( Landmark const & target )
+    quickdev::SimpleActionToken findLandmark( Landmark const & target )
     {
         // save any conditions that may block the action, so we can unblock these conditions if the user cancels the action
-        SimpleActionToken result( std::vector<std::condition_variable *>( { &find_landmark_condition_ } ) );
+        quickdev::SimpleActionToken result( std::vector<std::condition_variable *>( { &find_landmark_condition_ } ) );
         result.start( quickdev::auto_bind( quickdev::auto_bind( &SeabeeRecognitionPolicy::findLandmarkImpl, this ), target, result ) );
         return result;
     }
 
-    void findLandmarkImpl( Landmark const & target, SimpleActionToken token )
+    void findLandmarkImpl( Landmark const & target, quickdev::SimpleActionToken token )
     {
         while( token.ok() && ros::ok() )
         {
@@ -151,6 +149,8 @@ protected:
                 }
             }
         }
+
+        if( token.ok() ) token.cancel();
     }
 
     // #########################################################################################################################################

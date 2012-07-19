@@ -89,8 +89,6 @@ public:
 
     typedef geometry_msgs::Twist _TwistMsg;
 
-    typedef quickdev::SimpleActionToken SimpleActionToken;
-
 protected:
     _PhysicsStateMsg::ConstPtr physics_state_msg_;
 
@@ -234,15 +232,15 @@ private:
         return _FollowTrajectoryActionClientPolicy::_ActionToken();
     }*/
 
-    SimpleActionToken diveTo( double const & depth )
+    quickdev::SimpleActionToken diveTo( double const & depth )
     {
-        SimpleActionToken result;
+        quickdev::SimpleActionToken result;
         result.start( quickdev::auto_bind( quickdev::auto_bind( &SeabeeMovementPolicy::diveToImpl, this ), depth, result ) );
 
         return result;
     }
 
-    void diveToImpl( double const & depth, SimpleActionToken token )
+    void diveToImpl( double const & depth, quickdev::SimpleActionToken token )
     {
         ros::Rate publish_rate( 10 );
 
@@ -270,15 +268,15 @@ private:
         token.cancel();
     }
 
-    SimpleActionToken faceTo( double const & heading )
+    quickdev::SimpleActionToken faceTo( double const & heading )
     {
-        SimpleActionToken result;
+        quickdev::SimpleActionToken result;
         result.start( quickdev::auto_bind( quickdev::auto_bind( &SeabeeMovementPolicy::faceToImpl, this ), heading, result ) );
 
         return result;
     }
 
-    void faceToImpl( double const & heading, SimpleActionToken token )
+    void faceToImpl( double const & heading, quickdev::SimpleActionToken token )
     {
         ros::Rate publish_rate( 10 );
 
@@ -307,15 +305,15 @@ private:
         token.cancel();
     }
 
-    SimpleActionToken moveAtVelocity( btTransform const & velocity )
+    quickdev::SimpleActionToken moveAtVelocity( btTransform const & velocity )
     {
-        SimpleActionToken result;
+        quickdev::SimpleActionToken result;
         result.start( quickdev::auto_bind( quickdev::auto_bind( &SeabeeMovementPolicy::moveAtVelocityImpl, this ), velocity, result ) );
 
         return result;
     }
 
-    void moveAtVelocityImpl( btTransform const & velocity, SimpleActionToken token )
+    void moveAtVelocityImpl( btTransform const & velocity, quickdev::SimpleActionToken token )
     {
         _TwistMsg twist_msg = unit::make_unit( velocity );
         ros::Rate publish_rate( 10 );
@@ -329,12 +327,12 @@ private:
         if( token.ok() ) token.complete( true );
     }
 
-    SimpleActionToken moveAtVelocity( Pose const & velocity )
+    quickdev::SimpleActionToken moveAtVelocity( Pose const & velocity )
     {
         return moveAtVelocity( unit::convert<btTransform>( velocity ) );
     }
 
-    SimpleActionToken moveAtVelocity( _TwistMsg const & velocity )
+    quickdev::SimpleActionToken moveAtVelocity( _TwistMsg const & velocity )
     {
         return moveAtVelocity( unit::convert<btTransform>( velocity ) );
     }
@@ -350,24 +348,25 @@ private:
     }
 
     // move within a certain pose error of the given target; there must exist a transform from /seabee/base_link to <target>
-    SimpleActionToken moveRelativeTo( std::string const & target, btTransform const & desired_distance_from_target )
+    quickdev::SimpleActionToken moveRelativeTo( std::string const & target, btTransform const & desired_distance_from_target )
     {
-        SimpleActionToken result;
+        quickdev::SimpleActionToken result;
         result.start( quickdev::auto_bind( quickdev::auto_bind( &SeabeeMovementPolicy::moveRelativeToImpl, this ), target, desired_distance_from_target, result ) );
 
         return result;
     }
 
-    void moveRelativeToImpl( std::string const & target, btTransform const & desired_distance_from_target, SimpleActionToken token )
+    void moveRelativeToImpl( std::string const & target, btTransform const & desired_distance_from_target, quickdev::SimpleActionToken token )
     {
         ros::Rate publish_rate( 10 );
 
+        btTransform world_to_self = _TfTranceiverPolicy::tryLookupTransform( "/world", "/seabee3/current_pose" );
+        btTransform world_to_target = _TfTranceiverPolicy::tryLookupTransform( "/world", target ) * desired_distance_from_target;
+
         while( token.ok() && ros::ok() )
         {
-            btTransform const world_to_self = _TfTranceiverPolicy::tryLookupTransform( "/world", "/seabee3/current_pose" );
-            btTransform const world_to_target = _TfTranceiverPolicy::tryLookupTransform( "/world", target ) * desired_distance_from_target;
-
-            btTransform error_tf = btTransform( world_to_target.getRotation() - world_to_self.getRotation(), world_to_target.getOrigin() - world_to_self.getOrigin() );
+            world_to_self = _TfTranceiverPolicy::tryLookupTransform( "/world", "/seabee3/current_pose" );
+            world_to_target = _TfTranceiverPolicy::tryLookupTransform( "/world", target ) * desired_distance_from_target;
 
             btVector3 position_error = world_to_target.getOrigin() - world_to_self.getOrigin();
             double heading_error = unit::convert<btVector3>( world_to_target.getRotation() - world_to_self.getRotation() ).getZ();
@@ -377,42 +376,49 @@ private:
             if( fabs( position_error.getX() ) < 0.05 && fabs( position_error.getY() ) < 0.05 && fabs( position_error.getZ() ) < 0.1 && fabs( heading_error ) < 0.05 * M_PI )
             {
                 token.complete( true );
+
+                // publish transform with curren pose's rpy xy and the target frame's z
+                _TfTranceiverPolicy::publishTransform( btTransform( world_to_self.getRotation(), btVector3( world_to_self.getOrigin().getX(), world_to_self.getOrigin().getY(), world_to_target.getOrigin().getZ() ) ), "/world", "/seabee3/desired_pose" );
+
                 return;
             }
 
             publish_rate.sleep();
         }
 
+        _TfTranceiverPolicy::publishTransform( btTransform( world_to_self.getRotation(), btVector3( world_to_self.getOrigin().getX(), world_to_self.getOrigin().getY(), world_to_target.getOrigin().getZ() ) ), "/world", "/seabee3/desired_pose" );
+
         if( token.ok() ) token.cancel();
     }
 
-    SimpleActionToken rotateSearch( std::string const & target, SimpleActionToken term_criteria, Radian const & min, Radian const & max, Radian const & velocity )
+    quickdev::SimpleActionToken rotateSearch( quickdev::SimpleActionToken term_criteria, Radian const & min, Radian const & max, Radian const & velocity )
     {
-        SimpleActionToken result;
-        result.start( quickdev::auto_bind( quickdev::auto_bind( &SeabeeMovementPolicy::rotateSearchImpl, this ), target, term_criteria, min, max, velocity, result ) );
+        quickdev::SimpleActionToken result;
+        result.start( quickdev::auto_bind( quickdev::auto_bind( &SeabeeMovementPolicy::rotateSearchImpl, this ), term_criteria, min, max, velocity, result ) );
 
         return result;
     }
 
-    void rotateSearchImpl( std::string const & target, SimpleActionToken term_criteria, Radian const & min, Radian const & max, Radian const & velocity, SimpleActionToken token )
+    void rotateSearchImpl( quickdev::SimpleActionToken term_criteria, Radian const & min, Radian const & max, Radian const & velocity, quickdev::SimpleActionToken token )
     {
-        double const start_angle = getCurrentPose().orientation_.yaw_;
+        btTransform const world_to_self = _TfTranceiverPolicy::tryLookupTransform( "/world", "/seabee3/current_pose" );
+
         ros::Rate update_rate( 20 );
         double const range = max - min;
         ros::Time const start_time = ros::Time::now();
 
         while( term_criteria.ok() && token.ok() && ros::ok() )
         {
-            Pose desired_pose = getDesiredPose();
+            btTransform world_to_desired = _TfTranceiverPolicy::tryLookupTransform( "/world", "/seabee3/desired_pose" );
 
-            desired_pose.orientation_.yaw_ = ( range / 2 ) * sin( ( ros::Time::now() - start_time ).toSec() * M_PI * ( velocity / range ) ) + min;
+            world_to_desired.setRotation( world_to_desired.getRotation() * btQuaternion( ( range / 2 ) * sin( ( ros::Time::now() - start_time ).toSec() * M_PI * ( velocity / range ) ), 0, 0 ) );
 
-            setDesiredPose( desired_pose );
+            _TfTranceiverPolicy::publishTransform( world_to_desired, "/world", "/seabee3/desired_pose" );
 
             update_rate.sleep();
         }
 
-        token.complete( term_criteria.success() );
+        if( token.ok() ) token.complete( term_criteria.success() );
     }
 
     //! Move to some relative position
