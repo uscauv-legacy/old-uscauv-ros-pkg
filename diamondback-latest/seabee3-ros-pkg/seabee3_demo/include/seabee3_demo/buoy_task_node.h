@@ -81,16 +81,21 @@ protected:
     std::mutex kill_switch_disabled_mutex_;
     std::condition_variable kill_switch_disabled_condition_;
 
+    std::vector<Landmark> desired_landmarks_;
+    std::vector<Landmark>::const_iterator current_landmark_it_;
+
     SimpleActionToken depth_token_;
     SimpleActionToken heading_token_;
     SimpleActionToken move_relative_token_;
     SimpleActionToken move_at_velocity_token_;
-    SimpleActionToken find_buoy_token_;
+    SimpleActionToken find_landmark_token_;
     SimpleActionToken rotate_search_token_;
 
     XmlRpc::XmlRpcValue params_;
 
-    QUICKDEV_DECLARE_NODE_CONSTRUCTOR( BuoyTask )
+    QUICKDEV_DECLARE_NODE_CONSTRUCTOR( BuoyTask ),
+        desired_landmarks_( { Landmark( Buoy( Color( "orange" ) ) ), Landmark( Buoy( Color( "yellow" ) ) ) } ),
+        current_landmark_it_( desired_landmarks_.cbegin() )
     {
         //
     }
@@ -142,7 +147,7 @@ protected:
             move_at_velocity_token_.cancel();
             depth_token_.cancel();
             heading_token_.cancel();
-            find_buoy_token_.cancel();
+            find_landmark_token_.cancel();
             rotate_search_token_.cancel();
         }
     }
@@ -194,7 +199,6 @@ protected:
         move_at_velocity_token_.wait( 5 );
         move_at_velocity_token_.cancel();
 
-
         move_at_velocity_token_ = _SeabeeMovementPolicy::moveAtVelocity( btTransform( btQuaternion( 0, 0, 0, 1 ), btVector3( -0.4, 0, 0 ) ) );
         move_at_velocity_token_.wait( 5 );
         move_at_velocity_token_.cancel();
@@ -228,49 +232,58 @@ protected:
             PRINT_INFO( "Moving forward" );
             // drive forward at 0.2 m/s for 60 seconds
             {
+                landmarks_map_.clear();
+
                 move_at_velocity_token_ = _SeabeeMovementPolicy::moveAtVelocity( btTransform( btQuaternion( 0, 0, 0 ), btVector3( 0.2, 0, 0 ) ) );
-                move_at_velocity_token_.wait( 4 );
+                move_at_velocity_token_.wait( 60 );
                 move_at_velocity_token_.cancel();
             }
 
+            auto const heading_transform_ = _TfTranceiverPolicy::tryLookupTransform( "/world", "/seabee3/sensors/imu" );
+
             PRINT_INFO( "Searching for buoy" );
             // rotate left and right while looking for buoys
+            for( auto landmark_it = desired_landmarks_.cbegin(); landmark_it != desired_landmarks_.cend(); ++landmark_it )
             {
-                heading_transform = _TfTranceiverPolicy::tryLookupTransform( "/world", "/seabee3/sensors/imu" );
+                auto const & current_landmark = *landmark_it;
+
+                find_landmark_token_ = _SeabeeRecognitionPolicy::findLandmark( current_landmark );
 
                 size_t attempts = 0;
 
-                landmarks_map_.clear();
-
-                Landmark target( Buoy( Color( "orange" ) ) );
-                find_buoy_token_ = _SeabeeRecognitionPolicy::findLandmark( target );
-
-                while( attempts < 3 && !find_buoy_token_.success() )
+                while( attempts < 3 && !find_landmark_token_.success() )
                 {
-                    rotate_search_token_ = _SeabeeMovementPolicy::rotateSearch( find_buoy_token_, Degree( -45 ), Degree( 45.0 ), Degree( 5 ) );
+                    // start a search
+                    rotate_search_token_ = _SeabeeMovementPolicy::rotateSearch( find_landmark_token_, Degree( -45 ), Degree( 45.0 ), Degree( 5 ) );
+
+                    // if the search successfully completes, we can move on to trying to hit the buoy
                     if( rotate_search_token_.wait( 20 ) ) break;
+                    // otherwise if the search timed out, cancel it and prepare to move forward to start another search
                     else rotate_search_token_.cancel();
 
+                    // face our initial heading
                     heading_token_ = _SeabeeMovementPolicy::faceTo( unit::convert<btVector3>( heading_transform.getRotation() ).getZ() );
                     heading_token_.wait( 5 );
 
+                    // move forward a bit
                     move_at_velocity_token_ = _SeabeeMovementPolicy::moveAtVelocity( btTransform( btQuaternion( 0, 0, 0 ), btVector3( 0.2, 0, 0 ) ) );
-                    move_at_velocity_token_.wait( 5 );
+                    move_at_velocity_token_.wait( 10 );
                     move_at_velocity_token_.cancel();
 
                     attempts ++;
                 }
 
-                find_buoy_token_.cancel();
+                // we either found the buoy or timed out at this point, so we can cancel the buoy finding code
+                find_landmark_token_.cancel();
 
-                auto buoy_it = landmarks_map_.find( "buoy_orange" );
-                if( buoy_it != landmarks_map_.cend() )
+                auto landmark_it = landmarks_map_.find( current_landmark.getUniqueName() );
+                if( landmark_it != landmarks_map_.cend() )
                 {
-                    PRINT_INFO( "Buoy found; aligning to buoy" );
+                    PRINT_INFO( "Landmark %s found; aligning to buoy", landmark_it->first.c_str() );
 
-                    auto const & buoy = buoy_it->second;
+                    auto const & buoy = landmark_it->second;
 
-                    move_relative_token_ = _SeabeeMovementPolicy::moveRelativeTo( buoy_it->first, btTransform( btQuaternion( 0, 0, 0, 1 ), btVector3( -0.5, 0, 0 ) ) );
+                    move_relative_token_ = _SeabeeMovementPolicy::moveRelativeTo( landmark_it->first, btTransform( btQuaternion( 0, 0, 0, 1 ), btVector3( -0.5, 0, 0 ) ) );
                     if( move_relative_token_.wait( 10 ) )
                     {
                         PRINT_INFO( "Hitting buoy" );
