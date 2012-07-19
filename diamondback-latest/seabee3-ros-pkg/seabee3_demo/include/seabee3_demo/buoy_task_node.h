@@ -222,7 +222,7 @@ protected:
             PRINT_INFO( "Diving" );
             // dive
             {
-                depth_token_ = _SeabeeMovementPolicy::diveTo( -0.2 );
+                depth_token_ = _SeabeeMovementPolicy::diveTo( -2.0 );
                 heading_token_ = _SeabeeMovementPolicy::faceTo( unit::convert<btVector3>( heading_transform.getRotation() ).getZ() );
 
                 if( depth_token_.wait( 5.0 ) ) PRINT_INFO( "At depth" );
