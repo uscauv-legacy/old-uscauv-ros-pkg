@@ -93,6 +93,13 @@ QUICKDEV_DECLARE_NODE_CLASS( Seabee3Driver )
     {
         QUICKDEV_GET_RUNABLE_NODEHANDLE( nh_rel );
 
+        motor_dirs_[movement::MotorControllerIDs::FWD_RIGHT_THRUSTER] =     -1;
+        motor_dirs_[movement::MotorControllerIDs::FWD_LEFT_THRUSTER] =      -1;
+        motor_dirs_[movement::MotorControllerIDs::DEPTH_FRONT_THRUSTER] =   -1;
+        motor_dirs_[movement::MotorControllerIDs::DEPTH_BACK_THRUSTER] =     1;
+        motor_dirs_[movement::MotorControllerIDs::STRAFE_TOP_THRUSTER] =    -1
+        motor_dirs_[movement::MotorControllerIDs::STRAFE_BOTTOM_THRUSTER] = -1;
+
         _RobotDriver::registerCallback( quickdev::auto_bind( &Seabee3DriverNode::motorValsCB, this ) );
         _Shooter1ServiceServer::registerCallback( quickdev::auto_bind( &Seabee3DriverNode::shooter1CB, this ) );
         _Shooter2ServiceServer::registerCallback( quickdev::auto_bind( &Seabee3DriverNode::shooter2CB, this ) );
