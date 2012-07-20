@@ -14,6 +14,9 @@
   <!-- runtime dependencies -->
   <depend package="seabee3_driver"/>
   <depend package="seabee3_controls"/>
+  <depend package="image_transforms"/>
+  <depend package="landmark_finder"/>
+  <depend package="contour_matcher"/>
   <!--depend package="seabee3_navigation"/-->
   <!--depend package="seabee3_physics"/-->
   <!--depend package="seabee3_sensor_aggregator"/-->

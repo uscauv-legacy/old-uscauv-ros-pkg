@@ -94,7 +94,7 @@ protected:
     XmlRpc::XmlRpcValue params_;
 
     QUICKDEV_DECLARE_NODE_CONSTRUCTOR( BuoyTask ),
-        desired_landmarks_( { Landmark( Buoy( Color( "orange" ) ) ), Landmark( Buoy( Color( "yellow" ) ) ) } ),
+        desired_landmarks_( { Landmark( Buoy( Color( "orange" ) ) ) /*, Landmark( Buoy( Color( "yellow" ) ) )*/ } ),
         current_landmark_it_( desired_landmarks_.cbegin() )
     {
         //
@@ -227,10 +227,10 @@ protected:
             PRINT_INFO( "Diving" );
             // dive
             {
-                depth_token_ = _SeabeeMovementPolicy::diveTo( -0.3 );
+                depth_token_ = _SeabeeMovementPolicy::diveTo( -2.5 );
                 heading_token_ = _SeabeeMovementPolicy::faceTo( unit::convert<btVector3>( heading_transform.getRotation() ).getZ() );
 
-                if( !isKilled() && depth_token_.wait( 5.0 ) ) PRINT_INFO( "At depth" );
+                if( !isKilled() && depth_token_.wait( 8.0 ) ) PRINT_INFO( "At depth" );
                 if( !isKilled() && heading_token_.wait( 5.0 ) ) PRINT_INFO( "At heading" );
             }
 
@@ -238,11 +238,20 @@ protected:
             // drive forward at 0.2 m/s for 60 seconds
             {
                 move_at_velocity_token_ = _SeabeeMovementPolicy::moveAtVelocity( btTransform( btQuaternion( 0, 0, 0 ), btVector3( 0.2, 0, 0 ) ) );
-                move_at_velocity_token_.wait( 3 );
+                move_at_velocity_token_.wait( 70 );
                 move_at_velocity_token_.cancel();
             }
 
             auto const heading_transform_ = _TfTranceiverPolicy::tryLookupTransform( "/world", "/seabee3/sensors/imu" );
+/*
+            move_relative_token_ = _SeabeeMovementPolicy::moveRelativeTo( Landmark( Buoy( Color( "orange" ) ) ), btTransform( btQuaternion( 0, 0, 0, 1 ), btVector3( -0.5, 0, 0 ) ) );
+            if( move_relative_token_.wait( 60 ) )
+            {
+                PRINT_INFO( "Hitting buoy" );
+                boopBuoy();
+            }
+            else move_relative_token_.cancel();
+*/
 
             PRINT_INFO( "Searching for landmarks" );
             // rotate left and right while looking for buoys
@@ -310,7 +319,7 @@ protected:
                     auto const & buoy = landmark_it->second;
 
                     move_relative_token_ = _SeabeeMovementPolicy::moveRelativeTo( landmark_it->first, btTransform( btQuaternion( 0, 0, 0, 1 ), btVector3( -0.5, 0, 0 ) ) );
-                    if( move_relative_token_.wait( 10 ) )
+                    if( move_relative_token_.wait( 20 ) )
                     {
                         PRINT_INFO( "Hitting buoy" );
                         boopBuoy();

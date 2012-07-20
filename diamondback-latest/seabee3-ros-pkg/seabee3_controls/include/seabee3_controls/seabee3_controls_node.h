@@ -269,7 +269,7 @@ protected:
             linear_error_vec = unit::make_unit( transform_to_target_.getOrigin() );
             angular_error_vec = unit::make_unit( transform_to_target_.getRotation() );
         }
-/*
+
         printf( "error [%f %f %f] [%f %f %f]\n",
             linear_error_vec.x(),
             linear_error_vec.y(),
@@ -278,7 +278,7 @@ protected:
             angular_error_vec.y(),
             angular_error_vec.z()
         );
-*/
+
         btVector3 linear_output_vec;
         btVector3 angular_output_vec;
 
