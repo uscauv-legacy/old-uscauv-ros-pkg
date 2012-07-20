@@ -143,7 +143,7 @@ QUICKDEV_DECLARE_NODE_CLASS( Seabee3Driver )
                 "/seabee3/external_pressure"
             }
         );
-
+/*
         // assign a default value to the slot for all thrusters
         std::map<std::string, int> motor_dirs_map;
         for( size_t i = 0; i < movement::NUM_MOTOR_CONTROLLERS; ++i )
@@ -171,6 +171,7 @@ QUICKDEV_DECLARE_NODE_CLASS( Seabee3Driver )
 
             if( motor_dirs_it != motor_dirs_map.end() ) motor_dirs_[i] = motor_dirs_it->second;
         }
+*/
     }
 
     inline double getDepthFromPressure( int const & observed_pressure ) const
