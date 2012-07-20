@@ -183,9 +183,9 @@ protected:
         cv::Mat normalized_image;
         //image.copyTo( normalized_image );
 
-        cv::GaussianBlur( normalized_image, normalized_image, cv::Size( 15, 15 ), 3 );
+        cv::GaussianBlur( image, normalized_image, cv::Size( 15, 15 ), 3 );
 
-        cv::cvtColor( image, normalized_image, CV_BGR2HLS );
+        cv::cvtColor( normalized_image, normalized_image, CV_BGR2HLS );
 
 
 //        std::cout << "Getting mask from message" << std::endl;
