@@ -30,10 +30,10 @@
     <include unless="$(arg calibrate)" file="$(find image_transforms)/launch/image_scaler.launch" >
         <arg name="image_in" value="$(arg camera_name)/image_raw"/>
         <arg name="image_out" value="$(arg camera_name)/image_color_scaled"/>
-        <arg name="info_in" value="/disable"/>
+        <arg name="info_in" value="$(arg camera_name)/camera_info_raw"/>
         <arg name="info_out" value="$(arg camera_name)/camera_info"/>
         <arg name="publish_static_camera_info" value="true"/>
-        <arg name="camera_info_url" value="package://seabee3_common/params/$(arg camera_name).yaml"/>
+        <arg name="camera_info_url" value="package://seabee3_common/params/$(arg camera_name)_small.yaml"/>
         <arg name="camera_name" value="$(arg camera_name)"/>
         <arg name="debayer" value="true" />
         <arg name="scale_camera_info" value="false"/>

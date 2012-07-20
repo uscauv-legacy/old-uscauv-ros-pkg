@@ -38,7 +38,8 @@
 
 // policies
 #include <quickdev/tf_tranceiver_policy.h>
-#include <quickdev/action_client_policy.h>
+#include <quickdev/node_handle_policy.h>
+//#include <quickdev/action_client_policy.h>
 
 // objects
 #include <seabee3_common/motion_primitives.h>
@@ -50,48 +51,50 @@
 #include <quickdev/math.h>
 
 // actions
-#include <seabee3_actions/MakeTrajectoryAction.h>
-#include <seabee3_actions/FollowTrajectoryAction.h>
+//#include <seabee3_actions/MakeTrajectoryAction.h>
+//#include <seabee3_actions/FollowTrajectoryAction.h>
 
 // msgs
-#include <seabee3_msgs/TrajectoryWaypoint.h>
+//#include <seabee3_msgs/TrajectoryWaypoint.h>
 
 using namespace seabee;
 
 QUICKDEV_DECLARE_POLICY_NS( SeabeeMovement )
 {
-    typedef seabee3_msgs::TrajectoryWaypoint _TrajectoryWaypointMsg;
+//    typedef seabee3_msgs::TrajectoryWaypoint _TrajectoryWaypointMsg;
 
-    typedef seabee3_actions::MakeTrajectoryAction _MakeTrajectoryAction;
-    typedef seabee3_actions::FollowTrajectoryAction _FollowTrajectoryAction;
+//    typedef seabee3_actions::MakeTrajectoryAction _MakeTrajectoryAction;
+//    typedef seabee3_actions::FollowTrajectoryAction _FollowTrajectoryAction;
 
     typedef quickdev::TfTranceiverPolicy _TfTranceiverPolicy;
-    typedef quickdev::ActionClientPolicy<_MakeTrajectoryAction> _MakeTrajectoryActionClientPolicy;
-    typedef quickdev::ActionClientPolicy<_FollowTrajectoryAction> _FollowTrajectoryActionClientPolicy;
+    typedef quickdev::NodeHandlePolicy _NodeHandlePolicy;
+//    typedef quickdev::ActionClientPolicy<_MakeTrajectoryAction> _MakeTrajectoryActionClientPolicy;
+//    typedef quickdev::ActionClientPolicy<_FollowTrajectoryAction> _FollowTrajectoryActionClientPolicy;
 }
 
-QUICKDEV_DECLARE_POLICY( SeabeeMovement, _TfTranceiverPolicy, _MakeTrajectoryActionClientPolicy, _FollowTrajectoryActionClientPolicy )
+QUICKDEV_DECLARE_POLICY( SeabeeMovement, _TfTranceiverPolicy, _NodeHandlePolicy )
 
 QUICKDEV_DECLARE_POLICY_CLASS( SeabeeMovement )
 {
 public:
-    typedef QUICKDEV_GET_POLICY_NS( SeabeeMovement )::_TrajectoryWaypointMsg _TrajectoryWaypointMsg;
+//    typedef QUICKDEV_GET_POLICY_NS( SeabeeMovement )::_TrajectoryWaypointMsg _TrajectoryWaypointMsg;
 
-    typedef QUICKDEV_GET_POLICY_NS( SeabeeMovement )::_MakeTrajectoryAction _MakeTrajectoryAction;
-    typedef QUICKDEV_GET_POLICY_NS( SeabeeMovement )::_FollowTrajectoryAction _FollowTrajectoryAction;
+//    typedef QUICKDEV_GET_POLICY_NS( SeabeeMovement )::_MakeTrajectoryAction _MakeTrajectoryAction;
+//    typedef QUICKDEV_GET_POLICY_NS( SeabeeMovement )::_FollowTrajectoryAction _FollowTrajectoryAction;
 
     typedef QUICKDEV_GET_POLICY_NS( SeabeeMovement )::_TfTranceiverPolicy _TfTranceiverPolicy;
-    typedef QUICKDEV_GET_POLICY_NS( SeabeeMovement )::_MakeTrajectoryActionClientPolicy _MakeTrajectoryActionClientPolicy;
-    typedef QUICKDEV_GET_POLICY_NS( SeabeeMovement )::_FollowTrajectoryActionClientPolicy _FollowTrajectoryActionClientPolicy;
+    typedef QUICKDEV_GET_POLICY_NS( SeabeeMovement )::_NodeHandlePolicy _NodeHandlePolicy;
+//    typedef QUICKDEV_GET_POLICY_NS( SeabeeMovement )::_MakeTrajectoryActionClientPolicy _MakeTrajectoryActionClientPolicy;
+//    typedef QUICKDEV_GET_POLICY_NS( SeabeeMovement )::_FollowTrajectoryActionClientPolicy _FollowTrajectoryActionClientPolicy;
 
-    typedef _TrajectoryWaypointMsg _PhysicsStateMsg;
-    typedef __QUICKDEV_FUNCTION_TYPE<void( _TrajectoryWaypointMsg::ConstPtr const & )> _PhysicsStateCallback;
+//    typedef _TrajectoryWaypointMsg _PhysicsStateMsg;
+//    typedef __QUICKDEV_FUNCTION_TYPE<void( _TrajectoryWaypointMsg::ConstPtr const & )> _PhysicsStateCallback;
 
     typedef geometry_msgs::Twist _TwistMsg;
-
+/*
 protected:
     _PhysicsStateMsg::ConstPtr physics_state_msg_;
-
+*/
 private:
     ros::MultiSubscriber<> multi_sub_;
     ros::MultiPublisher<> multi_pub_;
@@ -112,16 +115,16 @@ private:
 
     QUICKDEV_ENABLE_INIT()
     {
-        auto & nh_rel = _MakeTrajectoryActionClientPolicy::getNodeHandle();
+        auto & nh_rel = _NodeHandlePolicy::getNodeHandle();
 
-        multi_sub_.addSubscriber( nh_rel, "physics_state", &SeabeeMovementPolicy::physicsStateCB, this );
+//        multi_sub_.addSubscriber( nh_rel, "physics_state", &SeabeeMovementPolicy::physicsStateCB, this );
         init_add_publishers( nh_rel );
 
 //        _MakeTrajectoryActionClientPolicy::registerDoneCB( quickdev::auto_bind( &SeabeeMovementPolicy::makeTrajectoryActionDoneCB, this ) );
 //        _FollowTrajectoryActionClientPolicy::registerDoneCB( quickdev::auto_bind( &SeabeeMovementPolicy::followTrajectoryActionDoneCB, this ) );
 
-        initPolicies<_MakeTrajectoryActionClientPolicy>( "action_name_param", std::string( "make_trajectory" ) );
-        initPolicies<_FollowTrajectoryActionClientPolicy>( "action_name_param", std::string( "follow_trajectory" ) );
+//        initPolicies<_MakeTrajectoryActionClientPolicy>( "action_name_param", std::string( "make_trajectory" ) );
+//        initPolicies<_FollowTrajectoryActionClientPolicy>( "action_name_param", std::string( "follow_trajectory" ) );
 
         initPolicies<quickdev::policy::ALL>();
 
@@ -139,12 +142,12 @@ private:
         //
     }
 */
-
+/*
     QUICKDEV_DECLARE_MESSAGE_CALLBACK( physicsStateCB, _PhysicsStateMsg )
     {
         physics_state_msg_ = msg;
     }
-
+*/
     // #########################################################################################################################################
     btTransform getTransform( std::string const & to_frame, std::string const & from_frame = "seabee/current_pose" )
     {
@@ -184,20 +187,20 @@ private:
 
     // #########################################################################################################################################
     //! Fire the given device
-    quickdev::ActionToken<boost::thread> fireDevice( FiringDevice const & device );
+    quickdev::SimpleActionToken fireDevice( FiringDevice const & device );
 
     // #########################################################################################################################################
     //! Fire the given shooter
     /*!
      * - Calls fireDevice( Shooter( shooter_id ) )
      */
-    quickdev::ActionToken<boost::thread> fireShooter( Shooter::Id const & shooter_id );
+    quickdev::SimpleActionToken fireShooter( Shooter::Id const & shooter_id );
 
     //! Fire the given dropper
     /*!
      * - Calls fireDevice( Dropper( dropper_id ) )
      */
-    quickdev::ActionToken<boost::thread> fireDropper( Dropper::Id const & dropper_id );
+    quickdev::SimpleActionToken fireDropper( Dropper::Id const & dropper_id );
 
     // #########################################################################################################################################
     //! Move to the given pose
@@ -441,6 +444,7 @@ private:
         return moveTo( getCurrentPose() + orientation );
     }
 */
+/*
     // #########################################################################################################################################
     //! Face the given position
     _FollowTrajectoryActionClientPolicy::_ActionToken faceTo( Position const & position );
@@ -457,7 +461,7 @@ private:
 
     //! Strafe around pose.position at distance until ... (see above)
     _FollowTrajectoryActionClientPolicy::_ActionToken strafeAround( Pose const & pose, double distance, ... );
-
+*/
     /* This is the client's main means of accessing and updating a policy; un-comment and change args as appropriate
 
     void update( args... )
