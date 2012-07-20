@@ -207,8 +207,8 @@ protected:
 //        for( size_t x = 610; x < 616; ++x )
         quickdev::make_unique_lock( color_filter_mutex_ );
 
-        size_t const & img_width = image.size().width;
-        size_t const & img_height = image.size().height;
+        size_t const & img_width = normalized_image.size().width;
+        size_t const & img_height = normalized_image.size().height;
         for( size_t x = 0; x < img_width; ++x )
         {
 //            for( size_t y = 209; y < 215; ++y )
@@ -235,7 +235,7 @@ protected:
                     auto const & target_color = target_color_it->second;
                     auto & classified_image = classified_image_it->second;
 
-                    if( classified_image.size() != image.size() ) classified_image.create( image.size(), CV_8UC1 );
+                    if( classified_image.size() != normalized_image.size() ) classified_image.create( normalized_image.size(), CV_8UC1 );
 
                     //auto const match_quality = 1.0 - 50 * pixel.distanceTo<quickdev::feature::mode::distance::GAUSSIAN>( target_color.mean_, target_color.covariance_, 50.0 );
                     auto const match_quality = 1.0 - pixel.distanceTo<quickdev::feature::mode::distance::GAUSSIAN_FAST>( target_color.mean_, target_color.covariance_, 0.5 );
