@@ -182,9 +182,10 @@ protected:
         cv::Mat const & image = image_msg->image;
         cv::Mat normalized_image;
         //image.copyTo( normalized_image );
-        cv::cvtColor( image, normalized_image, CV_BGR2HLS );
 
         cv::GaussianBlur( normalized_image, normalized_image, cv::Size( 15, 15 ), 3 );
+
+        cv::cvtColor( image, normalized_image, CV_BGR2HLS );
 
 
 //        std::cout << "Getting mask from message" << std::endl;
