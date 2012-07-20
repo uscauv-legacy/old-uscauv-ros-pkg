@@ -201,11 +201,11 @@ protected:
     void boopBuoy()
     {
         move_at_velocity_token_ = _SeabeeMovementPolicy::moveAtVelocity( btTransform( btQuaternion( 0, 0, 0, 1 ), btVector3( 0.2, 0, 0 ) ) );
-        move_at_velocity_token_.wait( 10 );
+        move_at_velocity_token_.wait( 6 );
         move_at_velocity_token_.cancel();
 
         move_at_velocity_token_ = _SeabeeMovementPolicy::moveAtVelocity( btTransform( btQuaternion( 0, 0, 0, 1 ), btVector3( -0.4, 0, 0 ) ) );
-        move_at_velocity_token_.wait( 10 );
+        move_at_velocity_token_.wait( 6 );
         move_at_velocity_token_.cancel();
     }
 
