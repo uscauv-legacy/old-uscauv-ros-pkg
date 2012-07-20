@@ -75,7 +75,8 @@ protected:
 
     QUICKDEV_MAKE_POLICY_FUNCS( SeabeeRecognition )
 
-    QUICKDEV_DECLARE_POLICY_CONSTRUCTOR( SeabeeRecognition )
+    QUICKDEV_DECLARE_POLICY_CONSTRUCTOR( SeabeeRecognition ),
+        initialized_( false )
     {
         //
     }
@@ -112,16 +113,20 @@ protected:
 
     void findLandmarkImpl( Landmark const & target, quickdev::SimpleActionToken token )
     {
+        PRINT_INFO( "Looking for landmark: %s", target.name_.c_str() );
         while( token.ok() && ros::ok() )
         {
             if( !landmarks_msg_ptr_ )
             {
+                PRINT_INFO( "Waiting for first landmark message." );
                 auto find_landmark_lock = quickdev::make_unique_lock( find_landmark_mutex_ );
                 find_landmark_condition_.wait( find_landmark_lock );
+                PRINT_INFO( "Got first landmark message." );
             }
 
-            if( !( token.ok() && ros::ok() ) )
+            if( !token.ok() || !ros::ok() )
             {
+                PRINT_INFO( "findLandmark() cancelled." );
                 token.cancel();
                 return;
             }
@@ -139,10 +144,14 @@ protected:
             {
                 auto const & landmark_msg = *landmarks_it;
 
+//                PRINT_INFO( "Checking landmark: %s", landmark_msg.name.c_str() );
+
                 Landmark landmark( landmark_msg );
 
                 if( landmark == target )
                 {
+                    PRINT_INFO( "Landmark matches; completing action." );
+
                     landmarks_map_[landmark_msg.name] = landmark;
                     token.complete( true );
                     return;

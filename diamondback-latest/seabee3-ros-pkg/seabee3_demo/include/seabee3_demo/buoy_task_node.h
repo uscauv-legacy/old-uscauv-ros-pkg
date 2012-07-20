@@ -134,6 +134,11 @@ protected:
         last_kill_switch_msg_ = msg;
     }
 
+    bool isKilled()
+    {
+        return !last_kill_switch_msg_ || last_kill_switch_msg_->is_killed;
+    }
+
     void detectKilled()
     {
         while( QUICKDEV_GET_RUNABLE_POLICY()::running() )
@@ -196,11 +201,11 @@ protected:
     void boopBuoy()
     {
         move_at_velocity_token_ = _SeabeeMovementPolicy::moveAtVelocity( btTransform( btQuaternion( 0, 0, 0, 1 ), btVector3( 0.2, 0, 0 ) ) );
-        move_at_velocity_token_.wait( 5 );
+        move_at_velocity_token_.wait( 10 );
         move_at_velocity_token_.cancel();
 
         move_at_velocity_token_ = _SeabeeMovementPolicy::moveAtVelocity( btTransform( btQuaternion( 0, 0, 0, 1 ), btVector3( -0.4, 0, 0 ) ) );
-        move_at_velocity_token_.wait( 5 );
+        move_at_velocity_token_.wait( 10 );
         move_at_velocity_token_.cancel();
     }
 
@@ -222,50 +227,66 @@ protected:
             PRINT_INFO( "Diving" );
             // dive
             {
-                depth_token_ = _SeabeeMovementPolicy::diveTo( -2.0 );
+                depth_token_ = _SeabeeMovementPolicy::diveTo( -0.3 );
                 heading_token_ = _SeabeeMovementPolicy::faceTo( unit::convert<btVector3>( heading_transform.getRotation() ).getZ() );
 
-                if( depth_token_.wait( 5.0 ) ) PRINT_INFO( "At depth" );
-                if( heading_token_.wait( 5.0 ) ) PRINT_INFO( "At heading" );
+                if( !isKilled() && depth_token_.wait( 5.0 ) ) PRINT_INFO( "At depth" );
+                if( !isKilled() && heading_token_.wait( 5.0 ) ) PRINT_INFO( "At heading" );
             }
 
             PRINT_INFO( "Moving forward" );
             // drive forward at 0.2 m/s for 60 seconds
             {
-                landmarks_map_.clear();
-
                 move_at_velocity_token_ = _SeabeeMovementPolicy::moveAtVelocity( btTransform( btQuaternion( 0, 0, 0 ), btVector3( 0.2, 0, 0 ) ) );
-                move_at_velocity_token_.wait( 60 );
+                move_at_velocity_token_.wait( 3 );
                 move_at_velocity_token_.cancel();
             }
 
             auto const heading_transform_ = _TfTranceiverPolicy::tryLookupTransform( "/world", "/seabee3/sensors/imu" );
 
-            PRINT_INFO( "Searching for buoy" );
+            PRINT_INFO( "Searching for landmarks" );
             // rotate left and right while looking for buoys
-            for( auto landmark_it = desired_landmarks_.cbegin(); landmark_it != desired_landmarks_.cend(); ++landmark_it )
+            for( auto landmark_it = desired_landmarks_.cbegin(); landmark_it != desired_landmarks_.cend() && !isKilled(); ++landmark_it )
             {
+                {
+                    auto lock = quickdev::make_unique_lock( landmarks_map_mutex_ );
+                    landmarks_map_.clear();
+                }
                 auto const & current_landmark = *landmark_it;
+
+                PRINT_INFO( "Looking for landmark: %s", current_landmark.name_.c_str() );
 
                 find_landmark_token_ = _SeabeeRecognitionPolicy::findLandmark( current_landmark );
 
                 size_t attempts = 0;
 
-                while( attempts < 3 && !find_landmark_token_.success() )
+                while( attempts < 3 && !find_landmark_token_.success() && find_landmark_token_.ok() )
                 {
+                    heading_token_.cancel();
                     // start a search
-                    rotate_search_token_ = _SeabeeMovementPolicy::rotateSearch( find_landmark_token_, Degree( -45 ), Degree( 45.0 ), Degree( 5 ) );
+                    PRINT_INFO( "Searching for landmark (attempt %zu)", attempts );
+                    rotate_search_token_ = _SeabeeMovementPolicy::rotateSearch( find_landmark_token_, Radian( Degree( -45 ) ), Radian( Degree( 45.0 ) ), Radian( Degree( 5 ) ) );
 
                     // if the search successfully completes, we can move on to trying to hit the buoy
-                    if( rotate_search_token_.wait( 20 ) ) break;
+                    if( rotate_search_token_.wait( 90 / 5 ) )
+                    {
+                        PRINT_INFO( "Landmark found." );
+                        break;
+                    }
                     // otherwise if the search timed out, cancel it and prepare to move forward to start another search
-                    else rotate_search_token_.cancel();
+                    else
+                    {
+                        PRINT_INFO( "Landmark not found; retrying." );
+                        rotate_search_token_.cancel();
+                    }
 
                     // face our initial heading
+                    PRINT_INFO( "Resetting heading" );
                     heading_token_ = _SeabeeMovementPolicy::faceTo( unit::convert<btVector3>( heading_transform.getRotation() ).getZ() );
                     heading_token_.wait( 5 );
 
                     // move forward a bit
+                    PRINT_INFO( "Moving forward." );
                     move_at_velocity_token_ = _SeabeeMovementPolicy::moveAtVelocity( btTransform( btQuaternion( 0, 0, 0 ), btVector3( 0.2, 0, 0 ) ) );
                     move_at_velocity_token_.wait( 10 );
                     move_at_velocity_token_.cancel();
@@ -273,13 +294,18 @@ protected:
                     attempts ++;
                 }
 
+                PRINT_INFO( "Halting landmark search." );
                 // we either found the buoy or timed out at this point, so we can cancel the buoy finding code
                 find_landmark_token_.cancel();
 
+                PRINT_INFO( "Checking for landmark in list of %zu landmarks.", landmarks_map_.size() );
+
                 auto landmark_it = landmarks_map_.find( current_landmark.getUniqueName() );
-                if( landmark_it != landmarks_map_.cend() )
+                if( landmark_it != landmarks_map_.end() )
                 {
                     PRINT_INFO( "Landmark %s found; aligning to buoy", landmark_it->first.c_str() );
+
+                    depth_token_.cancel();
 
                     auto const & buoy = landmark_it->second;
 
@@ -289,6 +315,10 @@ protected:
                         PRINT_INFO( "Hitting buoy" );
                         boopBuoy();
                     }
+                }
+                else
+                {
+                    PRINT_INFO( "Landmark not found; moving to next" );
                 }
             }
         }

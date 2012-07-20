@@ -73,6 +73,7 @@ protected:
     bool debayer_;
     bool scale_camera_info_;
     bool publish_static_camera_info_;
+    double scale_;
 
     QUICKDEV_DECLARE_NODE_CONSTRUCTOR( ImageScaler ),
         camera_info_manager_( quickdev::getFirstOfType<ros::NodeHandle>( args... ) )
@@ -89,6 +90,7 @@ protected:
         debayer_ = quickdev::ParamReader::readParam<decltype( debayer_ )>( nh_rel, "debayer", true );
         scale_camera_info_ = quickdev::ParamReader::readParam<decltype( scale_camera_info_ )>( nh_rel, "scale_camera_info", true );
         publish_static_camera_info_ = quickdev::ParamReader::readParam<decltype( publish_static_camera_info_ )>( nh_rel, "publish_static_camera_info", false );
+        scale_ = quickdev::ParamReader::readParam<decltype( scale_ )>( nh_rel, "scale", 0.5 );
 
         auto const camera_name = quickdev::ParamReader::readParam<std::string>( nh_rel, "camera_name", "camera" );
 
@@ -121,7 +123,7 @@ protected:
 
         if( debayer_ ) cv::cvtColor( image, output_image, CV_BayerBG2BGR );
         else image.copyTo( output_image );
-        cv::resize( output_image, scaled_image, cv::Size(), 0.5, 0.5 );
+        cv::resize( output_image, scaled_image, cv::Size(), scale_, scale_ );
 
         auto output_image_msg = quickdev::opencv_conversion::fromMat( scaled_image, "", "bgr8" );
         output_image_msg->header = image_msg->header;
@@ -132,8 +134,8 @@ protected:
             output_camera_info.header = image_msg->header;
             if( scale_camera_info_ )
             {
-                output_camera_info.width /= 2.0;
-                output_camera_info.height /= 2.0;
+                output_camera_info.width *= scale_;
+                output_camera_info.height *= scale_;
             }
             multi_pub_.publish( "camera_info_out", output_camera_info );
         }

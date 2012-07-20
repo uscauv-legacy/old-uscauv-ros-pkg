@@ -14,9 +14,9 @@
   <!-- runtime dependencies -->
   <depend package="seabee3_driver"/>
   <depend package="seabee3_controls"/>
-  <depend package="seabee3_navigation"/>
-  <depend package="seabee3_physics"/>
-  <depend package="seabee3_sensor_aggregator"/>
+  <!--depend package="seabee3_navigation"/-->
+  <!--depend package="seabee3_physics"/-->
+  <!--depend package="seabee3_sensor_aggregator"/-->
   <depend package="xsens_driver"/>
   <depend package="color_classifier"/>
   <depend package="neuromorphic_image_proc"/>

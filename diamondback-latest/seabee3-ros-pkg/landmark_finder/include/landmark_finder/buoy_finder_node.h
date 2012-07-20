@@ -159,7 +159,7 @@ protected:
                 {
                     Buoy buoy( Pose( Position( rect.center.x, rect.center.y ) ), Color( contour_msg.name ), Size( rect.size.width, rect.size.height ) );
                     buoy.projectTo3d( camera_model_ );
-                    _TfTranceiverPolicy::publishTransform( unit::convert<btTransform>( buoy.pose_ ), "/seabee/camera1", buoy.getUniqueName() );
+                    _TfTranceiverPolicy::publishTransform( unit::convert<btTransform>( buoy.pose_ ), "/seabee3/camera1", buoy.getUniqueName() );
                     buoys_.insert( buoy );
                 }
                 else

@@ -328,6 +328,7 @@ private:
         }
 
         if( token.ok() ) token.complete( true );
+        multi_pub_.publish( "/seabee3/cmd_vel", _TwistMsg() );
     }
 
     quickdev::SimpleActionToken moveAtVelocity( Pose const & velocity )
@@ -402,7 +403,7 @@ private:
         return result;
     }
 
-    void rotateSearchImpl( quickdev::SimpleActionToken term_criteria, Radian const & min, Radian const & max, Radian const & velocity, quickdev::SimpleActionToken token )
+    void rotateSearchImpl( quickdev::SimpleActionToken term_criteria, double const & min, double const & max, double const & velocity, quickdev::SimpleActionToken token )
     {
         btTransform const world_to_self = _TfTranceiverPolicy::tryLookupTransform( "/world", "/seabee3/current_pose" );
 
@@ -414,7 +415,7 @@ private:
         {
             btTransform world_to_desired = _TfTranceiverPolicy::tryLookupTransform( "/world", "/seabee3/desired_pose" );
 
-            world_to_desired.setRotation( world_to_desired.getRotation() * btQuaternion( ( range / 2 ) * sin( ( ros::Time::now() - start_time ).toSec() * M_PI * ( velocity / range ) ), 0, 0 ) );
+            world_to_desired.setRotation( world_to_desired.getRotation() + btQuaternion( ( range / 2 ) * cos( ( ros::Time::now() - start_time ).toSec() * M_PI * ( velocity / range ) ), 0, 0 ) );
 
             _TfTranceiverPolicy::publishTransform( world_to_desired, "/world", "/seabee3/desired_pose" );
 

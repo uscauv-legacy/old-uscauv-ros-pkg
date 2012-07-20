@@ -1,12 +1,12 @@
 <launch>
-    <arg name="source" default="adaptation_mask" />
-    <arg name="mask" default="$(arg source)/output_adaptation_mask" />
+    <arg name="source" default="/camera1/image_rect_color" />
+    <!--arg name="mask" default="$(arg source)/output_adaptation_mask" /-->
 
     <arg name="pkg" value="color_classifier" />
     <arg name="name" value="color_classifier" />
     <arg name="type" default="$(arg name)_node" />
     <arg name="rate" default="25" />
-    <arg name="args" value="_loop_rate:=$(arg rate) ~adaptation_mask:=/$(arg mask) ~image:=/$(arg source)/output_image" />
+    <arg name="args" value="_loop_rate:=$(arg rate) ~image:=$(arg source) _disable_mask:=true" />
     <arg name="manager" default="manager" />
     <arg name="nodelet" default="false" />
 

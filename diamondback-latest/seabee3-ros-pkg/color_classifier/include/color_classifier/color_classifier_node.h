@@ -181,15 +181,18 @@ protected:
         }
         cv::Mat const & image = image_msg->image;
         cv::Mat normalized_image;
-        cv::GaussianBlur( image, normalized_image, cv::Size( 15, 15 ), 1 );
+        //image.copyTo( normalized_image );
+        cv::GaussianBlur( image, normalized_image, cv::Size( 15, 15 ), 3 );
 //        std::cout << "Getting mask from message" << std::endl;
-        if( !mask_msg )
+/*        if( !mask_msg )
         {
-            PRINT_ERROR( "mask message is null" );
-            return;
+            PRINT_WARN( "mask message is null" );
+//            return;
         }
-        cv::Mat const & mask = mask_msg->image;
 
+        cv::Mat mask;
+        if( mask_msg ) mask = mask_msg->image;
+*/
 //        cv::Mat_<cv::Vec3b>::const_iterator current_image_pixel = image.begin<cv::Vec3b>();
 //        cv::Mat_<uchar>::const_iterator current_mask_pixel = mask.begin<uchar>();
 
@@ -206,9 +209,12 @@ protected:
             for( size_t y = 0; y < img_height; ++y )
             {
 //                PRINT_INFO( "Checking mask %zu %zu", x, y );
-                auto const & mask_pixel = mask.at<uchar>( y, x );
-                if( !mask_pixel ) continue;
-
+/*                if( mask_msg )
+                {
+                    auto const & mask_pixel = mask.at<uchar>( y, x );
+                    if( !mask_pixel ) continue;
+                }
+*/
                 auto const & raw_pixel = normalized_image.at<cv::Vec3b>( y, x );
                 auto const & pixel = quickdev::pixel::make_pixel<float>( raw_pixel );
 

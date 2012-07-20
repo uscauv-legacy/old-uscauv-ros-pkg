@@ -7,7 +7,7 @@
     <arg name="pi" value="3.14159265"/>
     <arg name="pi_2" value="1.57079633"/>
 
-    <node pkg="tf" type="static_transform_publisher" name="hull_tf" args="0 0 0 0 0 0 /seabee3/base_link /seabee3/hull $(arg sleep)" />
+    <node pkg="tf" type="static_transform_publisher" name="hull_tf" args="0 0 0 0 0 0 /seabee3/current_pose /seabee3/hull $(arg sleep)" />
 
     <node pkg="tf" type="static_transform_publisher" name="battery1_tf" args="-0.15  0.025 0 0 0 0 /seabee3/hull /seabee3/battery1 $(arg sleep)" />
     <node pkg="tf" type="static_transform_publisher" name="battery2_tf" args="-0.15 -0.025 0 0 0 0 /seabee3/hull /seabee3/battery2 $(arg sleep)" />

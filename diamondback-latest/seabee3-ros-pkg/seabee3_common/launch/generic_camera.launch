@@ -1,6 +1,7 @@
 <launch>
     <arg name="camera_name" />
     <arg name="calibrate" default="false" />
+    <arg name="scale" default="0.5" />
     <arg name="guid" />
 
     <node name="$(arg camera_name)" pkg="camera1394" type="camera1394_node" output="screen" >
@@ -24,6 +25,7 @@
         <arg name="info_in" value="$(arg camera_name)/camera_info_raw"/>
         <arg name="info_out" value="$(arg camera_name)/camera_info"/>
         <arg name="debayer" value="true" />
+        <arg name="scale" value="$(arg scale)" />
         <arg name="scale_camera_info" value="true"/>
     </include>
 
@@ -36,6 +38,7 @@
         <arg name="camera_info_url" value="package://seabee3_common/params/$(arg camera_name)_small.yaml"/>
         <arg name="camera_name" value="$(arg camera_name)"/>
         <arg name="debayer" value="true" />
+        <arg name="scale" value="$(arg scale)" />
         <arg name="scale_camera_info" value="false"/>
     </include>
 

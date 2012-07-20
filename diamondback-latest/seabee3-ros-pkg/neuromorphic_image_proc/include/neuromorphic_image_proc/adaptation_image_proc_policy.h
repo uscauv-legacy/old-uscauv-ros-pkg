@@ -54,6 +54,7 @@ QUICKDEV_DECLARE_POLICY( AdaptationImageProc, _ImageProcPolicy, _CombinedImageCa
 
 QUICKDEV_DECLARE_POLICY_CLASS( AdaptationImageProc )
 {
+public:
     // create utility functions for this policy
     //
     QUICKDEV_MAKE_POLICY_FUNCS( AdaptationImageProc )
@@ -62,6 +63,7 @@ QUICKDEV_DECLARE_POLICY_CLASS( AdaptationImageProc )
     typedef QUICKDEV_GET_POLICY_NS( AdaptationImageProc )::_CombinedImageCallbackPolicy _CombinedImageCallbackPolicy;
     typedef cv_bridge::CvImageConstPtr _CvImageMsgPtr;
 
+protected:
     _CvImageMsgPtr image_ptr_;
     _CvImageMsgPtr adaptation_mask_ptr_;
 
@@ -73,6 +75,8 @@ QUICKDEV_DECLARE_POLICY_CLASS( AdaptationImageProc )
 
     std::mutex synced_callback_mutex_;
 
+    bool disable_mask_;
+
     QUICKDEV_DECLARE_POLICY_CONSTRUCTOR( AdaptationImageProc ),
         initialized_( false )
     {
@@ -82,16 +86,23 @@ QUICKDEV_DECLARE_POLICY_CLASS( AdaptationImageProc )
 
     QUICKDEV_ENABLE_INIT()
     {
+        auto & nh_rel = _ImageProcPolicy::getNodeHandle();
+
         initPolicies<_ImageProcPolicy>
         (
             "image_callback_param", quickdev::auto_bind( &AdaptationImageProcPolicy::imageCB, this )
         );
 
-        // subscription to mask with pixel updates
-        _ImageProcPolicy::addImageSubscriber( "adaptation_mask", quickdev::auto_bind( &AdaptationImageProcPolicy::adaptationImageCB, this ) );
+        disable_mask_ = quickdev::policy::readPolicyParam<decltype( disable_mask_ )>( nh_rel, "disable_mask_param", "disable_mask", false, args... );
 
-        // publisher for modified mask
-        _ImageProcPolicy::addImagePublisher( "output_adaptation_mask" );
+        if( !disable_mask_ )
+        {
+            // subscription to mask with pixel updates
+            _ImageProcPolicy::addImageSubscriber( "adaptation_mask", quickdev::auto_bind( &AdaptationImageProcPolicy::adaptationImageCB, this ) );
+
+            // publisher for modified mask
+            _ImageProcPolicy::addImagePublisher( "output_adaptation_mask" );
+        }
 
         QUICKDEV_SET_INITIALIZED();
     }
@@ -169,6 +180,15 @@ QUICKDEV_DECLARE_POLICY_CLASS( AdaptationImageProc )
         _CvImageMsgPtr matched_mask;
         //! flag to indicate whether we've found the pair of images
         bool match_found = false;
+
+        if( disable_mask_ && !image_queue_.empty() )
+        {
+            _CombinedImageCallbackPolicy::invokeCallback( image_queue_.front(), _CvImageMsgPtr() );
+            image_queue_.pop_front();
+            synced_callback_mutex_.unlock();
+            return;
+        }
+
 
         // while no match has been found and there's at least one new image or mask to process
         while( !match_found && !( image_queue_.empty() && mask_queue_.empty() ) )

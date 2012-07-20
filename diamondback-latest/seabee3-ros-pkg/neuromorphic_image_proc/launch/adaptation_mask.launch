@@ -1,5 +1,5 @@
 <launch>
-    <arg name="source" default="/image_server/output_image" />
+    <arg name="source" default="/camera2/image_rect_color" />
 
     <arg name="pkg" value="neuromorphic_image_proc" />
     <arg name="name" value="adaptation_mask" />

@@ -1,7 +1,12 @@
 <launch>
+    <arg name="calibrate" default="false"/>
+    <arg name="scale" default="0.5"/>
+
     <include file="$(find seabee3_common)/launch/robot_model_transforms.launch" />
     <include file="$(find seabee3_common)/launch/generic_camera.launch" >
         <arg name="camera_name" value="camera1" />
         <arg name="guid" value="00b09d010090f9d5" />
+        <arg name="calibrate" value="$(arg calibrate)" />
+        <arg name="scale" value="$(arg scale)" />
     </include>
 </launch>
