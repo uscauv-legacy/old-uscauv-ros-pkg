@@ -25,10 +25,10 @@
     <node pkg="tf" type="static_transform_publisher" name="thruster4_tf" args=" 0  -0.1 0  0           $(arg pi_2) 0 /seabee3/hull /seabee3/thruster5 $(arg sleep)" /><!-- depth right -->
     <node pkg="tf" type="static_transform_publisher" name="thruster5_tf" args="-0.3 0   0 -$(arg pi_2) 0           0 /seabee3/hull /seabee3/thruster6 $(arg sleep)" /><!-- back strafe -->
 
-    <node pkg="tf" type="static_transform_publisher" name="camera1_tf" args="0 0 0 0 0 0 /seabee3/sensor_pod1 /camera1 $(arg sleep)" />
-    <node pkg="tf" type="static_transform_publisher" name="camera2_tf" args="0 0 0 0 0 0 /seabee3/sensor_pod2 /camera2 $(arg sleep)" />
-    <node pkg="tf" type="static_transform_publisher" name="camera3_tf" args="0 0 0 0 0 0 /seabee3/sensor_pod3 /camera3 $(arg sleep)" />
-    <node pkg="tf" type="static_transform_publisher" name="camera4_tf" args="0 0 0 0 0 0 /seabee3/sensor_pod4 /camera4 $(arg sleep)" />
+    <node pkg="tf" type="static_transform_publisher" name="camera1_tf" args="0 0 0 0 0 0 /seabee3/sensor_pod1 /seabee3/camera1 $(arg sleep)" />
+    <node pkg="tf" type="static_transform_publisher" name="camera2_tf" args="0 0 0 0 0 0 /seabee3/sensor_pod2 /seabee3/camera2 $(arg sleep)" />
+    <node pkg="tf" type="static_transform_publisher" name="camera3_tf" args="0 0 0 0 0 0 /seabee3/sensor_pod3 /seabee3/camera3 $(arg sleep)" />
+    <node pkg="tf" type="static_transform_publisher" name="camera4_tf" args="0 0 0 0 0 0 /seabee3/sensor_pod4 /seabee3/camera4 $(arg sleep)" />
 
     <!-- node if="$(arg snap_to_physics_link)" pkg="tf" type="static_transform_publisher" name="physics_link_to_base_link" output="screen" args="0 0 0 0 0 0 /seabee3/physics_link /seabee3/base_link $(arg sleep)" /-->
 </launch>

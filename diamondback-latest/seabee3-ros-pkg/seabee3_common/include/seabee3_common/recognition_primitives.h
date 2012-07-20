@@ -194,8 +194,8 @@ public:
 
         marker_msg.pose.position = unit::make_unit( pose_.position_ );
 
-        if( type_ == PIPE || type_ == BIN ) marker_msg.header.frame_id = "/seabee/camera2";
-        else marker_msg.header.frame_id = "/seabee/camera1";
+        if( type_ == PIPE || type_ == BIN ) marker_msg.header.frame_id = "/seabee3/camera2";
+        else marker_msg.header.frame_id = "/seabee3/camera1";
 
         switch( type_ )
         {

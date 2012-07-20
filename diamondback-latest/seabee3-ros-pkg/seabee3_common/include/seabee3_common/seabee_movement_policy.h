@@ -149,24 +149,24 @@ private:
     }
 */
     // #########################################################################################################################################
-    btTransform getTransform( std::string const & to_frame, std::string const & from_frame = "seabee/current_pose" )
+    btTransform getTransform( std::string const & to_frame, std::string const & from_frame = "seabee3/current_pose" )
     {
         return btTransform( _TfTranceiverPolicy::tryLookupTransform( from_frame, to_frame ) );
     }
 
     btTransform getCurrentTransform()
     {
-        return getTransform( "seabee/current_pose", "world" );
+        return getTransform( "seabee3/current_pose", "world" );
     }
 
     btTransform getDesiredTransform()
     {
-        return getTransform( "seabee/desired_pose", "world" );
+        return getTransform( "seabee3/desired_pose", "world" );
     }
 
     // #########################################################################################################################################
     //! Return the Pose of the landmark with the given name
-    Pose getPose( std::string const & to_frame, std::string const & from_frame = "seabee/current_pose" )
+    Pose getPose( std::string const & to_frame, std::string const & from_frame = "seabee3/current_pose" )
     {
         return unit::convert<Pose>( getTransform( to_frame, from_frame ) );
     }
@@ -177,12 +177,12 @@ private:
      */
     Pose getCurrentPose()
     {
-        return getPose( "seabee/current_pose", "world" );
+        return getPose( "seabee3/current_pose", "world" );
     }
 
     Pose getDesiredPose()
     {
-        return getPose( "seabee/desired_pose", "world" );
+        return getPose( "seabee3/desired_pose", "world" );
     }
 
     // #########################################################################################################################################
