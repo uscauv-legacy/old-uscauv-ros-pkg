@@ -181,9 +181,10 @@ protected:
         }
         cv::Mat const & image = image_msg->image;
         cv::Mat normalized_image;
+        cv::resize( image, normalized_image, cv::Size(), 0.5, 0.5 );
         //image.copyTo( normalized_image );
 
-        cv::GaussianBlur( image, normalized_image, cv::Size( 15, 15 ), 3 );
+        cv::GaussianBlur( normalized_image, normalized_image, cv::Size( 15, 15 ), 3 );
 
         cv::cvtColor( normalized_image, normalized_image, CV_BGR2HLS );
 
@@ -267,13 +268,16 @@ protected:
         named_image_array_message.images.resize( classified_images_.size() );
 
         size_t i = 0;
-        for( auto classified_image_it = classified_images_.cbegin(); classified_image_it != classified_images_.cend(); ++classified_image_it, ++i )
+        for( auto classified_image_it = classified_images_.begin(); classified_image_it != classified_images_.end(); ++classified_image_it, ++i )
         {
             auto const & color_name = classified_image_it->first;
-            auto const & classified_image = classified_image_it->second;
+            auto & classified_image = classified_image_it->second;
+            cv::Mat resized_classified_image;
+
+            cv::resize( classified_image, resized_classified_image, cv::Size(), 2.0, 2.0 );
 
             named_image_array_message.images[i].name = color_name;
-            named_image_array_message.images[i].image = *quickdev::opencv_conversion::fromMat( classified_image, "", "mono8" );
+            named_image_array_message.images[i].image = *quickdev::opencv_conversion::fromMat( resized_classified_image, "", "mono8" );
         }
 
         multi_pub_.publish( "classified_images", named_image_array_message );
