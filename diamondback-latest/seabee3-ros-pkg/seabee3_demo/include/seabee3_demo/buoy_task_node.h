@@ -228,10 +228,12 @@ protected:
             // dive
             {
                 heading_token_ = _SeabeeMovementPolicy::faceTo( unit::convert<btVector3>( heading_transform.getRotation() ).getZ(), quickdev::auto_bind( &BuoyTaskNode::isKilled, this ) );
-                depth_token_ = _SeabeeMovementPolicy::diveTo( -2.5, quickdev::auto_bind( &BuoyTaskNode::isKilled, this ) );
+                depth_token_ = _SeabeeMovementPolicy::diveTo( -0.35, quickdev::auto_bind( &BuoyTaskNode::isKilled, this ) );
 
-                if( depth_token_.wait( 8.0 ) ) PRINT_INFO( "At depth" );
+                if( depth_token_.wait( 4.0 ) ) PRINT_INFO( "At depth" );
                 if( heading_token_.wait( 5.0 ) ) PRINT_INFO( "At heading" );
+
+                PRINT_INFO( "Done diving" );
             }
 
             find_landmark_token_ = _SeabeeRecognitionPolicy::findLandmark( *current_landmark_it_, quickdev::auto_bind( &BuoyTaskNode::isKilled, this ) );
@@ -240,12 +242,12 @@ protected:
             // drive forward
             {
                 move_at_velocity_token_ = _SeabeeMovementPolicy::moveAtVelocity( btTransform( btQuaternion( 0, 0, 0 ), btVector3( 0.3, 0, 0 ) ), quickdev::action_token::make_term_criteria( find_landmark_token_ ) );
-                move_at_velocity_token_.wait( 70 );
+                move_at_velocity_token_.wait( 10 );
                 move_at_velocity_token_.cancel();
                 find_landmark_token_.cancel();
             }
 
-            auto const heading_transform_ = _TfTranceiverPolicy::tryLookupTransform( "/world", "/seabee3/sensors/imu" );
+            heading_transform = _TfTranceiverPolicy::tryLookupTransform( "/world", "/seabee3/sensors/imu" );
 /*
             move_relative_token_ = _SeabeeMovementPolicy::moveRelativeTo( Landmark( Buoy( Color( "orange" ) ) ), btTransform( btQuaternion( 0, 0, 0, 1 ), btVector3( -0.5, 0, 0 ) ) );
             if( move_relative_token_.wait( 60 ) )

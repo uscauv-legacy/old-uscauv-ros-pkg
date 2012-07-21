@@ -235,8 +235,8 @@ public:
         case BUOY:
             return Size( 0.2032, 0.2032, 0.2032 );
         case PIPE:
-            //return Size( 1.2192, 0.1, 0.001 );
-            return Size( 0.4064, 0.3, 0.3 );
+            return Size( 1.2192, 0.1, 0.001 );
+            //return Size( 0.4064, 0.3, 0.3 );
         }
         return 0;
     }
