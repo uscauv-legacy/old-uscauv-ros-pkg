@@ -4,6 +4,9 @@
     <arg name="type" default="gate_task_node" />
     <arg name="rate" default="30" />
     <arg name="args" value="_loop_rate:=$(arg rate)" />
+
+    <rosparam param="/$(arg name)/params" command="load" file="$(find seabee3_demo)/params/gate_task.yaml" />
+
     <node
         pkg="$(arg pkg)"
         type="$(arg type)"

@@ -236,105 +236,63 @@ protected:
                 PRINT_INFO( "Done diving" );
             }
 
-            find_landmark_token_ = _SeabeeRecognitionPolicy::findLandmark( *current_landmark_it_, quickdev::auto_bind( &BuoyTaskNode::isKilled, this ) );
+            bool buoy_found = false;
 
-            PRINT_INFO( "Moving forward" );
-            // drive forward
-            {
-                move_at_velocity_token_ = _SeabeeMovementPolicy::moveAtVelocity( btTransform( btQuaternion( 0, 0, 0 ), btVector3( 0.3, 0, 0 ) ), quickdev::action_token::make_term_criteria( find_landmark_token_ ) );
-                move_at_velocity_token_.wait( 10 );
-                move_at_velocity_token_.cancel();
-                find_landmark_token_.cancel();
-            }
+            ros::Rate find_buoy_rate( 20 );
 
-            heading_transform = _TfTranceiverPolicy::tryLookupTransform( "/world", "/seabee3/sensors/imu" );
-/*
-            move_relative_token_ = _SeabeeMovementPolicy::moveRelativeTo( Landmark( Buoy( Color( "orange" ) ) ), btTransform( btQuaternion( 0, 0, 0, 1 ), btVector3( -0.5, 0, 0 ) ) );
-            if( move_relative_token_.wait( 60 ) )
+            while( ros::ok() && !isKilled() && !buoy_found )
             {
-                PRINT_INFO( "Hitting buoy" );
-                boopBuoy();
-            }
-            else move_relative_token_.cancel();
-*/
-
-            PRINT_INFO( "Searching for landmarks" );
-            // rotate left and right while looking for buoys
-            for( ; current_landmark_it_ != desired_landmarks_.cend() && !isKilled(); ++current_landmark_it_ )
-            {
+                try
                 {
-                    auto lock = quickdev::make_unique_lock( landmarks_map_mutex_ );
-                    landmarks_map_.clear();
+                    auto world_to_buoy = _TfTranceiverPolicy::lookupTransform( "/world", "/buoy_orange" );
+                    buoy_found = true;
                 }
-                auto const & current_landmark = *current_landmark_it_;
-
-                PRINT_INFO( "Looking for landmark: %s", current_landmark.name_.c_str() );
-
-                find_landmark_token_ = _SeabeeRecognitionPolicy::findLandmark( current_landmark, quickdev::auto_bind( &BuoyTaskNode::isKilled, this ) );
-
-                size_t attempts = 0;
-
-                while( attempts < 3 && !find_landmark_token_.success() && find_landmark_token_.ok() )
+                catch( std::exception e )
                 {
-                    heading_token_.cancel();
-                    // start a search
-                    PRINT_INFO( "Searching for landmark (attempt %zu)", attempts );
-                    rotate_search_token_ = _SeabeeMovementPolicy::rotateSearch( find_landmark_token_, Radian( Degree( -45 ) ), Radian( Degree( 45.0 ) ), Radian( Degree( 5 ) ), quickdev::auto_bind( &BuoyTaskNode::isKilled, this ) );
+                    PRINT_INFO( "Waiting for buoy" );
+                }
 
-                    // if the search successfully completes, we can move on to trying to hit the buoy
-                    if( rotate_search_token_.wait( 90 / 5 ) )
+                find_buoy_rate.sleep();
+            }
+
+            bool aligned = false;
+            ros::Rate align_to_buoy_rate( 20.0 );
+
+            depth_token_.cancel();
+
+            do
+            {
+                try
+                {
+                    auto world_to_buoy = _TfTranceiverPolicy::lookupTransform( "/world", "/buoy_orange" );
+                    auto world_to_self = _TfTranceiverPolicy::lookupTransform( "/world", "/seabee3/current_pose" );
+
+                    _TfTranceiverPolicy::publishTransform( btTransform( world_to_self.getRotation(), btVector3( world_to_buoy.getOrigin().getX() - 1.0, world_to_buoy.getOrigin().getY(), world_to_buoy.getOrigin().getZ() ) ), "/world", "/seabee3/desired_pose" );
+
+                    auto world_to_desired = _TfTranceiverPolicy::lookupTransform( "/world", "/seabee3/desired_pose" );
+
+                    if( world_to_self.getOrigin().distance( world_to_desired.getOrigin() ) < 0.2 )
                     {
-                        PRINT_INFO( "Landmark found." );
-                        break;
+                        depth_token_ = _SeabeeMovementPolicy::diveTo( world_to_buoy.getOrigin().getZ(), quickdev::auto_bind( &BuoyTaskNode::isKilled, this ) );
+                        aligned = true;
                     }
-                    // otherwise if the search timed out, cancel it and prepare to move forward to start another search
                     else
                     {
-                        PRINT_INFO( "Landmark not found; retrying." );
-                        rotate_search_token_.cancel();
-                    }
-
-                    // face our initial heading
-                    PRINT_INFO( "Resetting heading" );
-                    heading_token_ = _SeabeeMovementPolicy::faceTo( unit::convert<btVector3>( heading_transform.getRotation() ).getZ(), quickdev::auto_bind( &BuoyTaskNode::isKilled, this ) );
-                    heading_token_.wait( 5 );
-
-                    // move forward a bit
-                    PRINT_INFO( "Moving forward." );
-                    move_at_velocity_token_ = _SeabeeMovementPolicy::moveAtVelocity( btTransform( btQuaternion( 0, 0, 0 ), btVector3( 0.2, 0, 0 ) ), quickdev::auto_bind( &BuoyTaskNode::isKilled, this ) );
-                    move_at_velocity_token_.wait( 10 );
-                    move_at_velocity_token_.cancel();
-
-                    attempts ++;
-                }
-
-                PRINT_INFO( "Halting landmark search." );
-                // we either found the buoy or timed out at this point, so we can cancel the buoy finding code
-                find_landmark_token_.cancel();
-
-                PRINT_INFO( "Checking for landmark in list of %zu landmarks.", landmarks_map_.size() );
-
-                auto landmark_it = landmarks_map_.find( current_landmark.getUniqueName() );
-                if( landmark_it != landmarks_map_.end() )
-                {
-                    PRINT_INFO( "Landmark %s found; aligning to buoy", landmark_it->first.c_str() );
-
-                    depth_token_.cancel();
-
-                    auto const & buoy = landmark_it->second;
-
-                    move_relative_token_ = _SeabeeMovementPolicy::moveRelativeTo( landmark_it->first, btTransform( btQuaternion( 0, 0, 0, 1 ), btVector3( -0.5, 0, 0 ) ), quickdev::auto_bind( &BuoyTaskNode::isKilled, this ) );
-                    if( move_relative_token_.wait( 20 ) )
-                    {
-                        PRINT_INFO( "Hitting buoy" );
-                        boopBuoy();
+                        PRINT_INFO( "Aligning to buoy" );
                     }
                 }
-                else
+                catch( std::exception e )
                 {
-                    PRINT_INFO( "Landmark not found; moving to next" );
+                    PRINT_INFO( "%s", e.what() );
                 }
+
+                align_to_buoy_rate.sleep();
             }
+            while( ros::ok() && !isKilled() && !aligned );
+
+            if( ros::ok() && !isKilled() ) boopBuoy();
+
+            PRINT_INFO( "Done" );
         }
     }
 
