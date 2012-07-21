@@ -377,7 +377,7 @@ private:
             btVector3 position_error = world_to_target.getOrigin() - world_to_self.getOrigin();
             double heading_error = unit::convert<btVector3>( world_to_target.getRotation() - world_to_self.getRotation() ).getZ();
 
-            _TfTranceiverPolicy::publishTransform( world_to_target, "/world", "/seabee3/desired_pose" );
+            _TfTranceiverPolicy::publishTransform( btTransform( btQuaternion( unit::convert<btVector3>( world_to_target.getRotation() ).getZ(), 0, 0 ), world_to_target.getOrigin() ), "/world", "/seabee3/desired_pose" );
 
             if( fabs( position_error.getX() ) < 0.05 && fabs( position_error.getY() ) < 0.05 && fabs( position_error.getZ() ) < 0.1 && fabs( heading_error ) < 0.05 * M_PI )
             {

@@ -12,8 +12,8 @@
     <node pkg="tf" type="static_transform_publisher" name="battery1_tf" args="-0.15  0.025 0 0 0 0 /seabee3/hull /seabee3/battery1 $(arg sleep)" />
     <node pkg="tf" type="static_transform_publisher" name="battery2_tf" args="-0.15 -0.025 0 0 0 0 /seabee3/hull /seabee3/battery2 $(arg sleep)" />
 
-    <node pkg="tf" type="static_transform_publisher" name="sensor_pod1_tf" args="0.3      -0.155575  0.0       0 0           0 /seabee3/hull /seabee3/sensor_pod1 $(arg sleep)" />
-    <node pkg="tf" type="static_transform_publisher" name="sensor_pod2_tf" args="0.157353 -0.155575 -0.0523748 0 $(arg pi_2) 0 /seabee3/hull /seabee3/sensor_pod2 $(arg sleep)" />
+    <node pkg="tf" type="static_transform_publisher" name="sensor_pod1_tf" args="0.3       0.155575  0.0       0 0           0 /seabee3/hull /seabee3/sensor_pod1 $(arg sleep)" />
+    <node pkg="tf" type="static_transform_publisher" name="sensor_pod2_tf" args="0.157353  0.155575 -0.0523748 0 $(arg pi_2) 0 /seabee3/hull /seabee3/sensor_pod2 $(arg sleep)" />
     <node pkg="tf" type="static_transform_publisher" name="sensor_pod3_tf" args="0         0         0         0 0           0 /seabee3/hull /seabee3/sensor_pod3 $(arg sleep)" />
     <node pkg="tf" type="static_transform_publisher" name="sensor_pod4_tf" args="0         0         0         0 0           0 /seabee3/hull /seabee3/sensor_pod4 $(arg sleep)" />
 

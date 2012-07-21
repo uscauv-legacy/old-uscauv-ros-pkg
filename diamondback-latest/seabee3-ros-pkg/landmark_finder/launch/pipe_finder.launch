@@ -1,9 +1,10 @@
 <launch>
+    <arg name="camera_info" default="/camera1/camera_info"/>
     <arg name="pkg" value="landmark_finder" />
     <arg name="name" default="pipe_finder" />
-    <arg name="type" default="$(arg name)_node" />
+    <arg name="type" default="pipe_finder_node" />
     <arg name="rate" default="30" />
-    <arg name="args" value="_loop_rate:=$(arg rate) ~contours:=/contour_finder/contours ~landmarks:=/seabee/landmarks ~camera_info:=/image_server/camera_info" />
+    <arg name="args" value="_loop_rate:=$(arg rate) ~contours:=/contour_finder/contours ~landmarks:=/seabee3/landmarks ~camera_info:=$(arg camera_info)" />
     <arg name="manager" default="manager" />
     <arg name="nodelet" default="false" />
     <node

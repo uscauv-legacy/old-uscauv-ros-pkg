@@ -206,11 +206,11 @@ public:
             marker_msg.scale.z = size_.x_ + size_.y_ / 2;
             break;
         case PIPE:
-            marker_msg.type = visualization_msgs::Marker::CUBE;
+            marker_msg.type = visualization_msgs::Marker::ARROW;
             marker_msg.scale.x = size_.x_;
             marker_msg.scale.y = size_.y_;
             marker_msg.scale.z = size_.z_;
-            marker_msg.pose.orientation = unit::make_unit( btQuaternion( 0, -M_PI_2, 0 ) * btQuaternion( pose_.orientation_.yaw_, 0, 0 ) );
+            marker_msg.pose.orientation = unit::make_unit( btQuaternion( 0, -M_PI_2, 0 ) * btQuaternion( pose_.orientation_.yaw_ + M_PI, 0, 0 ) );
             break;
         }
 
@@ -235,7 +235,8 @@ public:
         case BUOY:
             return Size( 0.2032, 0.2032, 0.2032 );
         case PIPE:
-            return Size( 1.2192, 0.1, 0.001 );
+            //return Size( 1.2192, 0.1, 0.001 );
+            return Size( 0.4064, 0.3, 0.3 );
         }
         return 0;
     }

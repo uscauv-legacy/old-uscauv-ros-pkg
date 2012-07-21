@@ -126,7 +126,7 @@ protected:
                 PRINT_INFO( "Got first landmark message." );
             }
 
-            if( ( !term_criteria || !term_criteria() ) && !token.ok() || !ros::ok() )
+            if( ( term_criteria && term_criteria() ) || !token.ok() || !ros::ok() )
             {
                 PRINT_INFO( "findLandmark() cancelled." );
                 token.cancel();
@@ -142,11 +142,12 @@ protected:
             auto const & landmarks = landmark_array_msg.landmarks;
 
             auto landmarks_map_lock = quickdev::make_unique_lock( landmarks_map_mutex_);
+            PRINT_INFO( "Checking %zu landmarks", landmarks.size() );
             for( auto landmarks_it = landmarks.cbegin(); landmarks_it != landmarks.cend(); ++landmarks_it )
             {
                 auto const & landmark_msg = *landmarks_it;
 
-//                PRINT_INFO( "Checking landmark: %s", landmark_msg.name.c_str() );
+                PRINT_INFO( "Checking landmark: %s", landmark_msg.name.c_str() );
 
                 Landmark landmark( landmark_msg );
 

@@ -147,7 +147,7 @@ protected:
 
                 _Contour contour = unit::make_unit( contour_msg );
 
-                cv::RotatedRect rect = cv::minAreaRect( cv::Mat( contour ) );
+                cv::RotatedRect rect = cv::fitEllipse( cv::Mat( contour ) );
 
                 // we consider the larger dimension of the object to be its diameter
                 double const max_diameter = std::max( rect.size.width, rect.size.height );
@@ -157,9 +157,9 @@ protected:
                 // if( ( object is not too small ) and ( object has appropriate aspect ratio ) )
                 if( max_diameter > config_.diameter_min && fabs( config_.aspect_ratio_mean - aspect_ratio ) < config_.aspect_ratio_variance )
                 {
-                    Pipe pipe( Pose( Position( rect.center.x, rect.center.y ), Orientation( -rect.angle ) ), Size( rect.size.width, rect.size.height ) );
+                    Pipe pipe( Pose( Position( rect.center.x, rect.center.y ), Orientation( Radian( Degree( -rect.angle ) ) ) ), Size( rect.size.width, rect.size.height ) );
                     pipe.projectTo3d( camera_model_ );
-                    _TfTranceiverPolicy::publishTransform( btTransform( btQuaternion( 0, -M_PI_2, 0 ) * btQuaternion( pipe.pose_.orientation_.yaw_, 0, 0 ), unit::convert<btVector3>( pipe.pose_.position_ ) ) , "/seabee/camera2", pipe.getUniqueName() );
+                    _TfTranceiverPolicy::publishTransform( btTransform( btQuaternion( 0, -M_PI_2, 0 ) * btQuaternion( pipe.pose_.orientation_.yaw_ + M_PI, 0, 0 ), unit::convert<btVector3>( pipe.pose_.position_ ) ) , "/seabee3/camera2", pipe.getUniqueName() );
                     pipes_.insert( pipe );
                 }
                 else
