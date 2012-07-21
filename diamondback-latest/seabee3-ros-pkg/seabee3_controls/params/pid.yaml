@@ -8,5 +8,5 @@ linear:
     p: 100.0}
   y: {d: 2.0, i: 0.01, output_dir: 1.0, output_max: 20.0, output_min: -20.0,
     p: 100.0}
-  z: {d: 0.20000000000000001, i: 0.001, output_dir: 1.0, output_max: 100.0, output_min: -100.0,
+  z: {d: 0.20000000000000001, i: 0.001, output_dir: 1.0, output_max: 50.0, output_min: -50.0,
     p: 50.0}

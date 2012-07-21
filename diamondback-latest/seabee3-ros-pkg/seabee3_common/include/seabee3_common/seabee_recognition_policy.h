@@ -60,6 +60,8 @@ public:
 //    typedef QUICKDEV_GET_POLICY_NS( SeabeeRecognition )::_TfTranceiverPolicy _TfTranceiverPolicy;
     typedef QUICKDEV_GET_POLICY_NS( SeabeeRecognition )::_NodeHandlePolicy _NodeHandlePolicy;
 
+    typedef std::function<bool()> _TermCriteria;
+
 private:
     ros::MultiSubscriber<> multi_sub_;
 
@@ -103,18 +105,18 @@ protected:
         find_landmark_condition_.notify_all();
     }
 
-    quickdev::SimpleActionToken findLandmark( Landmark const & target )
+    quickdev::SimpleActionToken findLandmark( Landmark const & target, _TermCriteria term_criteria = _TermCriteria() )
     {
         // save any conditions that may block the action, so we can unblock these conditions if the user cancels the action
         quickdev::SimpleActionToken result( std::vector<std::condition_variable *>( { &find_landmark_condition_ } ) );
-        result.start( quickdev::auto_bind( quickdev::auto_bind( &SeabeeRecognitionPolicy::findLandmarkImpl, this ), target, result ) );
+        result.start( quickdev::auto_bind( quickdev::auto_bind( &SeabeeRecognitionPolicy::findLandmarkImpl, this ), target, result, term_criteria ) );
         return result;
     }
 
-    void findLandmarkImpl( Landmark const & target, quickdev::SimpleActionToken token )
+    void findLandmarkImpl( Landmark const & target, quickdev::SimpleActionToken token, _TermCriteria term_criteria )
     {
         PRINT_INFO( "Looking for landmark: %s", target.name_.c_str() );
-        while( token.ok() && ros::ok() )
+        while( ( !term_criteria || !term_criteria() ) && token.ok() && ros::ok() )
         {
             if( !landmarks_msg_ptr_ )
             {
@@ -124,7 +126,7 @@ protected:
                 PRINT_INFO( "Got first landmark message." );
             }
 
-            if( !token.ok() || !ros::ok() )
+            if( ( !term_criteria || !term_criteria() ) && !token.ok() || !ros::ok() )
             {
                 PRINT_INFO( "findLandmark() cancelled." );
                 token.cancel();
@@ -159,7 +161,7 @@ protected:
             }
         }
 
-        if( token.ok() ) token.cancel();
+        token.cancel();
     }
 
     // #########################################################################################################################################
