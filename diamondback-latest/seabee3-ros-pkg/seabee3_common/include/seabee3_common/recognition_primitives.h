@@ -210,7 +210,7 @@ public:
             marker_msg.scale.x = size_.x_;
             marker_msg.scale.y = size_.y_;
             marker_msg.scale.z = size_.z_;
-            marker_msg.pose.orientation = unit::make_unit( btQuaternion( 0, -M_PI_2, 0 ) * btQuaternion( pose_.orientation_.yaw_ + M_PI, 0, 0 ) );
+            marker_msg.pose.orientation = unit::make_unit( btQuaternion( 0, -M_PI_2, 0 ) * btQuaternion( pose_.orientation_.yaw_ + M_PI_2, 0, 0 ) );
             break;
         }
 
@@ -235,7 +235,8 @@ public:
         case BUOY:
             return Size( 0.2032, 0.2032, 0.2032 );
         case PIPE:
-            return Size( 1.2192, 0.1, 0.001 );
+            return Size( 0.6, 0.1, 0.001 );
+            //return Size( 1.2192, 0.1, 0.001 );
             //return Size( 0.4064, 0.3, 0.3 );
         }
         return 0;
@@ -268,8 +269,8 @@ public:
         // we always use the max length as a diameter
         auto const size_pixels = size_;
 
-        double const radius_meters = quickdev::max( size_meters.x_, size_meters.y_, size_meters.z_ ) / 2.0;
-        double const radius_pixels = quickdev::max( size_pixels.x_, size_pixels.y_, size_pixels.z_ ) / 2.0;
+        double const radius_meters = quickdev::min( size_meters.x_, size_meters.y_ ) / 2.0;
+        double const radius_pixels = quickdev::min( size_pixels.x_, size_pixels.y_ ) / 2.0;
 
         cv::Point2d const radius_point( pose_.position_.x_ + radius_pixels, pose_.position_.y_ );
 

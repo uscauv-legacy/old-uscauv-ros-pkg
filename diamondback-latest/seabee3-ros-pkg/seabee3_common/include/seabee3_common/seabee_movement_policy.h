@@ -375,24 +375,30 @@ private:
             world_to_target = _TfTranceiverPolicy::tryLookupTransform( "/world", target ) * desired_distance_from_target;
 
             btVector3 position_error = world_to_target.getOrigin() - world_to_self.getOrigin();
-            double heading_error = unit::convert<btVector3>( world_to_target.getRotation() - world_to_self.getRotation() ).getZ();
+            //double heading_error = 0; //unit::convert<btVector3>( world_to_target.getRotation() ).getZ() - world_to_self.getRotation() ).getZ();
+            double heading_error = unit::convert<btVector3>( world_to_self.getRotation().inverse() * world_to_target.getRotation() ).getZ();
 
-            _TfTranceiverPolicy::publishTransform( btTransform( btQuaternion( unit::convert<btVector3>( world_to_target.getRotation() ).getZ(), 0, 0 ), world_to_target.getOrigin() ), "/world", "/seabee3/desired_pose" );
+            if( world_to_target.getOrigin() != world_to_target.getOrigin() ) continue;
 
-            if( fabs( position_error.getX() ) < 0.05 && fabs( position_error.getY() ) < 0.05 && fabs( position_error.getZ() ) < 0.1 && fabs( heading_error ) < 0.05 * M_PI )
+            //_TfTranceiverPolicy::publishTransform( btTransform( btQuaternion( unit::convert<btVector3>( world_to_target.getRotation() ).getZ(), 0, 0 ), world_to_target.getOrigin() ), "/world", "/seabee3/desired_pose" );
+            _TfTranceiverPolicy::publishTransform( btTransform( btQuaternion( unit::convert<btVector3>( world_to_self.getRotation() ).getZ(), 0, 0 ), world_to_target.getOrigin() ), "/world", "/seabee3/desired_pose" );
+
+/*
+            if( position_error.length() < 0.2 && fabs( heading_error ) < M_PI_2 / 9 )
             {
                 token.complete( true );
 
-                // publish transform with curren pose's rpy xy and the target frame's z
-                _TfTranceiverPolicy::publishTransform( btTransform( world_to_self.getRotation(), btVector3( world_to_self.getOrigin().getX(), world_to_self.getOrigin().getY(), world_to_target.getOrigin().getZ() ) ), "/world", "/seabee3/desired_pose" );
+                // publish transform with current pose's rpy xy and the target frame's z
+                //_TfTranceiverPolicy::publishTransform( btTransform( world_to_self.getRotation(), btVector3( world_to_self.getOrigin().getX(), world_to_self.getOrigin().getY(), world_to_target.getOrigin().getZ() ) ), "/world", "/seabee3/desired_pose" );
 
                 return;
             }
-
+*/
             publish_rate.sleep();
+
         }
 
-        _TfTranceiverPolicy::publishTransform( btTransform( world_to_self.getRotation(), btVector3( world_to_self.getOrigin().getX(), world_to_self.getOrigin().getY(), world_to_target.getOrigin().getZ() ) ), "/world", "/seabee3/desired_pose" );
+        //_TfTranceiverPolicy::publishTransform( btTransform( world_to_self.getRotation(), btVector3( world_to_self.getOrigin().getX(), world_to_self.getOrigin().getY(), world_to_target.getOrigin().getZ() ) ), "/world", "/seabee3/desired_pose" );
 
         token.cancel();
     }
@@ -417,7 +423,7 @@ private:
         {
             btTransform world_to_desired = _TfTranceiverPolicy::tryLookupTransform( "/world", "/seabee3/desired_pose" );
 
-            world_to_desired.setRotation( world_to_desired.getRotation() + btQuaternion( ( range / 2 ) * cos( ( ros::Time::now() - start_time ).toSec() * M_PI * ( velocity / range ) ), 0, 0 ) );
+            world_to_desired.setRotation( world_to_self.getRotation() * btQuaternion( ( range / 2 ) * cos( ( ros::Time::now() - start_time ).toSec() * M_PI * ( velocity / range ) ), 0, 0 ) );
 
             _TfTranceiverPolicy::publishTransform( world_to_desired, "/world", "/seabee3/desired_pose" );
 

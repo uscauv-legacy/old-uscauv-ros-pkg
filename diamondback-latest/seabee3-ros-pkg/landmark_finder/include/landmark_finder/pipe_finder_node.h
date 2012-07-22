@@ -157,9 +157,20 @@ protected:
                 // if( ( object is not too small ) and ( object has appropriate aspect ratio ) )
                 if( max_diameter > config_.diameter_min && fabs( config_.aspect_ratio_mean - aspect_ratio ) < config_.aspect_ratio_variance )
                 {
-                    Pipe pipe( Pose( Position( rect.center.x, rect.center.y ), Orientation( Radian( Degree( -rect.angle ) ) ) ), Size( rect.size.width, rect.size.height ) );
+                    double rect_angle = -rect.angle + 90;
+
+                    btQuaternion output_angle_quat( Radian( Degree( rect_angle ) ), 0, 0 );
+                    btQuaternion output_angle_quat2 = output_angle_quat * btQuaternion( M_PI, 0, 0 );
+
+                    if( output_angle_quat.angle( btQuaternion( 0, 0, 0, 1 ) ) > output_angle_quat2.angle( btQuaternion( 0, 0, 0, 1 ) ) )
+                    {
+                        output_angle_quat = output_angle_quat2;
+                    }
+
+                    Pipe pipe( Pose( Position( rect.center.x, rect.center.y ), Orientation( Radian( Degree( rect_angle ) ) ) ), Size( rect.size.width, rect.size.height ) );
                     pipe.projectTo3d( camera_model_ );
-                    _TfTranceiverPolicy::publishTransform( btTransform( btQuaternion( 0, -M_PI_2, 0 ) * btQuaternion( pipe.pose_.orientation_.yaw_ + M_PI, 0, 0 ), unit::convert<btVector3>( pipe.pose_.position_ ) ) , "/seabee3/camera2", pipe.getUniqueName() );
+
+                    _TfTranceiverPolicy::publishTransform( btTransform( btQuaternion( 0, -M_PI_2, 0 ) * output_angle_quat, unit::convert<btVector3>( pipe.pose_.position_ ) ) , "/seabee3/camera2", pipe.getUniqueName() );
                     pipes_.insert( pipe );
                 }
                 else
@@ -172,7 +183,7 @@ protected:
 
             _LandmarkArrayMsg pipes_msg;
             _MarkerArrayMsg markers_msg;
-
+/*
             size_t marker_id = 0;
             for( auto pipe_it = pipes_.cbegin(); pipe_it != pipes_.cend(); ++pipe_it )
             {
@@ -184,7 +195,7 @@ protected:
 
                 markers_msg.markers.push_back( marker_msg );
             }
-
+*/
             multi_pub_.publish( "landmarks", pipes_msg );
 
             if( !pipes_msg.landmarks.empty() ) multi_pub_.publish( "/visualization_marker_array", markers_msg );

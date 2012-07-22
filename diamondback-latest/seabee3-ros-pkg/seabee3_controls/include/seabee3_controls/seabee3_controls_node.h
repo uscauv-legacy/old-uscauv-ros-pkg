@@ -245,6 +245,7 @@ protected:
         auto const world_to_depth_tf = _TfTranceiverPolicy::tryLookupTransform( "/world", "/seabee3/sensors/depth" );
 
         _TfTranceiverPolicy::publishTransform( btTransform( world_to_imu_tf.getRotation(), world_to_depth_tf.getOrigin() ), "/world", "/seabee3/givens" );
+        _TfTranceiverPolicy::publishTransform( btTransform( world_to_imu_tf.getRotation(), world_to_depth_tf.getOrigin() ), "/world", "/seabee3/current_pose" );
 
         btVector3 linear_error_vec;
         btVector3 angular_error_vec;
@@ -287,10 +288,10 @@ protected:
             auto last_velocity_lock_ = quickdev::make_unique_lock( last_velocity_mutex_ );
 
             if( last_velocity_msg_ && fabs( linear_error_vec.getX() ) < 0.075 ) linear_output_vec.setX( 100 * last_velocity_msg_->linear.x );
-            else linear_output_vec.setX( -pid_.linear_.x_.update( 0, linear_error_vec.x() ) );
+            else linear_output_vec.setX( pid_.linear_.x_.update( 0, linear_error_vec.x() ) );
 
             if( last_velocity_msg_ && fabs( linear_error_vec.getY() ) < 0.075 ) linear_output_vec.setY( 100 * last_velocity_msg_->linear.y );
-            else linear_output_vec.setY( -pid_.linear_.y_.update( 0, linear_error_vec.y() ) );
+            else linear_output_vec.setY( pid_.linear_.y_.update( 0, linear_error_vec.y() ) );
         }
 
         linear_output_vec.setZ( -pid_.linear_.z_.update( 0, linear_error_vec.z() ) );

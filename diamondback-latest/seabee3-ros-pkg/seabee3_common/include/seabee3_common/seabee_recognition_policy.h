@@ -142,7 +142,7 @@ protected:
             auto const & landmarks = landmark_array_msg.landmarks;
 
             auto landmarks_map_lock = quickdev::make_unique_lock( landmarks_map_mutex_);
-            PRINT_INFO( "Checking %zu landmarks", landmarks.size() );
+//            PRINT_INFO( "Checking %zu landmarks", landmarks.size() );
             for( auto landmarks_it = landmarks.cbegin(); landmarks_it != landmarks.cend(); ++landmarks_it )
             {
                 auto const & landmark_msg = *landmarks_it;

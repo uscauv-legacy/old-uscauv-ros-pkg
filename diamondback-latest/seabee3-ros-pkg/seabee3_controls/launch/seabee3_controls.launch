@@ -10,7 +10,7 @@
     <rosparam param="/$(arg name)/pid" command="load" file="$(find seabee3_controls)/params/pid.yaml" />
     <rosparam param="/$(arg name)/reconfigure" command="load" file="$(find seabee3_controls)/params/reconfigure.yaml" />
 
-    <node pkg="tf" type="static_transform_publisher" name="givens_to_self" args="0 0 0 0 0 0 /seabee3/givens /seabee3/current_pose 100" />
+    <!--node pkg="tf" type="static_transform_publisher" name="givens_to_self" args="0 0 0 0 0 0 /seabee3/givens /seabee3/current_pose 100" /-->
 
     <node
         if="$(arg nodelet)"
