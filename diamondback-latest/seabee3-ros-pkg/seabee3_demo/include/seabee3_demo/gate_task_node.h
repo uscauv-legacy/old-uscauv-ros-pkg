@@ -171,6 +171,7 @@ protected:
 
         PRINT_INFO( "Diving to %f for %f seconds", value, timeout );
 
+        depth_token_.cancel();
         depth_token_ = _SeabeeMovementPolicy::diveTo( value );
         depth_token_.wait( timeout );
     }
@@ -196,6 +197,7 @@ protected:
 
         PRINT_INFO( "Rotating to %f for %f seconds", angle, timeout );
 
+        heading_token_.cancel();
         heading_token_ = _SeabeeMovementPolicy::faceTo( Radian( Degree( angle ) ) );
         heading_token_.wait( timeout );
     }
@@ -208,6 +210,7 @@ protected:
 
         PRINT_INFO( "Rotating relative %f for %f seconds", angle, timeout );
 
+        heading_token_.cancel();
         heading_token_ = _SeabeeMovementPolicy::faceTo( unit::convert<btVector3>( heading_transform.getRotation() ).getZ() + Radian( Degree( angle ) ) );
         heading_token_.wait( timeout );
     }
@@ -229,6 +232,8 @@ protected:
 
                 heading_transform = _TfTranceiverPolicy::tryLookupTransform( "/world", "/seabee3/sensors/imu" );
             }
+
+            heading_token_ = _SeabeeMovementPolicy::faceTo( unit::convert<btVector3>( heading_transform.getRotation() ).getZ() );
 
             for( int i = 0; i < actions_.size() && !isKilled(); ++i )
             {
