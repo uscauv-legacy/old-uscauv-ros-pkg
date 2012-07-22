@@ -89,7 +89,7 @@ protected:
     SimpleActionToken move_relative_token_;
     SimpleActionToken move_at_velocity_token_;
 
-    XmlRpc::XmlRpcValue params_;
+    XmlRpc::XmlRpcValue actions_;
     QUICKDEV_DECLARE_NODE_CONSTRUCTOR( GateTask )
     {
         //
@@ -109,7 +109,7 @@ protected:
 
         multi_sub_.addSubscriber( nh_rel, "/seabee3/kill_switch", &GateTaskNode::killSwitchCB, this );
 
-        params_ = quickdev::ParamReader::readParam<decltype( params_ )>( nh_rel, "params" );
+        actions_ = quickdev::ParamReader::readParam<decltype( actions_ )>( nh_rel, "actions" );
 
         main_loop_thread_ptr_ = boost::make_shared<boost::thread>( &GateTaskNode::mainLoop, this );
         detect_killed_thread_ptr_ = boost::make_shared<boost::thread>( &GateTaskNode::detectKilled, this );
@@ -122,7 +122,7 @@ protected:
         if( !lock ) return;
 
         // detect change from killed to not killed
-        if( ( !last_kill_switch_msg_ || last_kill_switch_msg_->is_killed ) && !msg->is_killed ) kill_switch_enabled_condition_.notify_all();
+        if( last_kill_switch_msg_ && last_kill_switch_msg_->is_killed && !msg->is_killed ) kill_switch_enabled_condition_.notify_all();
         // detect change from not killed to killed
         if( last_kill_switch_msg_ && !last_kill_switch_msg_->is_killed && msg->is_killed ) kill_switch_disabled_condition_.notify_all();
 
@@ -164,6 +164,54 @@ protected:
         }
     }
 
+    void diveAction( XmlRpc::XmlRpcValue & action )
+    {
+        double const timeout = quickdev::ParamReader::getXmlRpcValue<double>( action, "timeout" );
+        double const value = quickdev::ParamReader::getXmlRpcValue<double>( action, "value" );
+
+        PRINT_INFO( "Diving to %f for %f seconds", value, timeout );
+
+        depth_token_ = _SeabeeMovementPolicy::diveTo( value );
+        depth_token_.wait( timeout );
+    }
+
+    void velocityAction( XmlRpc::XmlRpcValue & action )
+    {
+        double const timeout = quickdev::ParamReader::getXmlRpcValue<double>( action, "timeout" );
+        XmlRpc::XmlRpcValue velocity = quickdev::ParamReader::getXmlRpcValue<XmlRpc::XmlRpcValue>( action, "value" );
+        btVector3 linear_velocity( velocity[0], velocity[1], velocity[2] );
+        btQuaternion angular_velocity( (double)Radian( Degree( velocity[5] ) ), (double)Radian( Degree( velocity[4] ) ), (double)Radian( Degree( velocity[3] ) ) );
+
+        PRINT_INFO( "Moving at velocity [ %f %f %f ] [ %f %f %f ] for %f seconds", linear_velocity.getX(), linear_velocity.getY(), linear_velocity.getZ(), (double)velocity[3], (double)velocity[4], (double)velocity[5], timeout );
+
+        move_at_velocity_token_ = _SeabeeMovementPolicy::moveAtVelocity( btTransform( angular_velocity, linear_velocity ) );
+        move_at_velocity_token_.wait( timeout );
+        move_at_velocity_token_.cancel();
+    }
+
+    void headingAction( XmlRpc::XmlRpcValue & action )
+    {
+        double const timeout = quickdev::ParamReader::getXmlRpcValue<double>( action, "timeout" );
+        double const angle = quickdev::ParamReader::getXmlRpcValue<double>( action, "angle" );
+
+        PRINT_INFO( "Rotating to %f for %f seconds", angle, timeout );
+
+        heading_token_ = _SeabeeMovementPolicy::faceTo( Radian( Degree( angle ) ) );
+        heading_token_.wait( timeout );
+    }
+
+    void headingRelativeAction( XmlRpc::XmlRpcValue & action )
+    {
+        auto heading_transform = _TfTranceiverPolicy::tryLookupTransform( "/world", "/seabee3/sensors/imu" );
+        double const timeout = quickdev::ParamReader::getXmlRpcValue<double>( action, "timeout" );
+        double const angle = quickdev::ParamReader::getXmlRpcValue<double>( action, "angle");
+
+        PRINT_INFO( "Rotating relative %f for %f seconds", angle, timeout );
+
+        heading_token_ = _SeabeeMovementPolicy::faceTo( unit::convert<btVector3>( heading_transform.getRotation() ).getZ() + Radian( Degree( angle ) ) );
+        heading_token_.wait( timeout );
+    }
+
     void mainLoop()
     {
         btTransform heading_transform;
@@ -176,27 +224,52 @@ protected:
                 auto kill_switch_enabled_lock = quickdev::make_unique_lock( kill_switch_enabled_mutex_ );
                 kill_switch_enabled_condition_.wait( kill_switch_enabled_lock );
 
+                QUICKDEV_GET_RUNABLE_NODEHANDLE( nh_rel );
+                actions_ = quickdev::ParamReader::readParam<decltype( actions_ )>( nh_rel, "actions" );
+
                 heading_transform = _TfTranceiverPolicy::tryLookupTransform( "/world", "/seabee3/sensors/imu" );
             }
 
+            for( int i = 0; i < actions_.size() && !isKilled(); ++i )
+            {
+                auto & action = actions_[i];
+                auto type = quickdev::ParamReader::getXmlRpcValue<std::string>( action, "type", "unknown" );
+
+                if( type == "depth" ) diveAction( action );
+                else if( type == "velocity" ) velocityAction( action );
+                else if( type == "heading" ) headingAction( action );
+                else if( type == "heading_relative" ) headingRelativeAction( action );
+                else
+                {
+                    PRINT_WARN( "Unknown action %s", type.c_str() );
+                    exit( -1 );
+                }
+            }
+/*
             PRINT_INFO( "Diving" );
             // dive
             {
-                depth_token_ = _SeabeeMovementPolicy::diveTo( quickdev::ParamReader::getXmlRpcValue<double>( params_, "depth", -2.5 ) );
+                depth_token_ = _SeabeeMovementPolicy::diveTo( quickdev::ParamReader::getXmlRpcValue<double>( actions_, "depth", -3.0 ) );
                 heading_token_ = _SeabeeMovementPolicy::faceTo( unit::convert<btVector3>( heading_transform.getRotation() ).getZ() );
 
                 if( depth_token_.wait( 8.0 ) ) PRINT_INFO( "At depth" );
                 if( heading_token_.wait( 5.0 ) ) PRINT_INFO( "At heading" );
             }
 
-            PRINT_INFO( "Moving forward" );
-            // drive forward at 0.2 m/s for 60 seconds
             {
-                move_at_velocity_token_ = _SeabeeMovementPolicy::moveAtVelocity( btTransform( btQuaternion( 0, 0, 0 ), btVector3( 0.2, 0, 0 ) ) );
+                double const velocity = quickdev::ParamReader::getXmlRpcValue<double>( "
+                PRINT_INFO( "Moving forward at %f%% thrust" );
+                move_at_velocity_token_ = _SeabeeMovementPolicy::moveAtVelocity( btTransform( btQuaternion( 0, 0, 0 ), btVector3( 0.6, 0, 0 ) ) );
                 move_at_velocity_token_.wait( quickdev::ParamReader::getXmlRpcValue<int>( params_, "time", 240 ) );
                 move_at_velocity_token_.cancel();
             }
+*/
         }
+    }
+
+    bool isKilled()
+    {
+        return last_kill_switch_msg_ && last_kill_switch_msg_->is_killed;
     }
 
     QUICKDEV_SPIN_ONCE()

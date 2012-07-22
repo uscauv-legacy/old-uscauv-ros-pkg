@@ -41,6 +41,7 @@
 // policies
 #include <seabee3_common/seabee_movement_policy.h>
 #include <seabee3_common/seabee_recognition_policy.h>
+#include <quickdev/service_client_policy.h>
 
 // utils
 #include <seabee3_common/recognition_primitives.h>
@@ -49,18 +50,23 @@
 #include <seabee3_msgs/KillSwitch.h>
 #include <geometry_msgs/Twist.h>
 
+#include <seabee3_msgs/CalibrateRPY.h> // for CalibrateRPY
+
 using namespace seabee;
 
 typedef seabee3_msgs::KillSwitch _KillSwitchMsg;
 typedef geometry_msgs::Twist _TwistMsg;
+
+typedef seabee3_msgs::CalibrateRPY _CalibrateRPYSrv;
 
 typedef SeabeeMovementPolicy _SeabeeMovementPolicy;
 typedef quickdev::TfTranceiverPolicy _TfTranceiverPolicy;
 typedef SeabeeRecognitionPolicy _SeabeeRecognitionPolicy;
 
 typedef quickdev::SimpleActionToken SimpleActionToken;
+typedef quickdev::ServiceClientPolicy<_CalibrateRPYSrv> _CalibrateRPYOriServiceClientPolicy;
 
-QUICKDEV_DECLARE_NODE( PipeTask, _SeabeeMovementPolicy, _SeabeeRecognitionPolicy )
+QUICKDEV_DECLARE_NODE( PipeTask, _SeabeeMovementPolicy, _SeabeeRecognitionPolicy, _CalibrateRPYOriServiceClientPolicy )
 
 QUICKDEV_DECLARE_NODE_CLASS( PipeTask )
 {
@@ -110,6 +116,8 @@ protected:
     {
         QUICKDEV_GET_RUNABLE_NODEHANDLE( nh_rel );
 
+        initPolicies<_CalibrateRPYOriServiceClientPolicy>( "service_name_param", std::string( "/xsens_driver/calibrate_rpy_ori" ) );
+
         initPolicies<quickdev::policy::ALL>();
 
         multi_sub_.addSubscriber( nh_rel, "/seabee3/kill_switch", &PipeTaskNode::killSwitchCB, this );
@@ -157,50 +165,15 @@ protected:
         }
     }
 
-/*
-    std::unique_lock<std::mutex> findPipes( std::set<std::string> const & colors )
-    {
-        auto landmarks_map_lock = quickdev::make_unique_lock( landmarks_map_mutex_, std::defer_lock );
-
-        findPipes( colors, landmarks_map_lock );
-
-        return landmarks_map_lock;
-    }
-*/
-/*
-    void findPipes( std::set<std::string> const & colors, std::unique_lock<std::mutex> landmarks_map_lock )
-    {
-        while( true )
-        {
-            auto find_pipes_lock = quickdev::make_unique_lock( find_pipes_mutex_ );
-            find_pipes_condition_.wait( find_pipes_lock );
-
-            if( !QUICKDEV_GET_RUNABLE_POLICY()::running() ) return;
-
-            landmarks_map_lock.lock();
-
-            std::set<std::string> colors_remaining = colors;
-
-            for( auto landmark_it = landmarks_map_.cbegin(); landmark_it != landmarks_map_.cend(); ++landmark_it )
-            {
-                auto const & landmark = landmark_it->second;
-
-                std::string const color = landmark.color_;
-
-                if( colors.count( color ) )
-                {
-                    colors_remaining.erase( color );
-                    if( colors_remaining.empty() ) break;
-                }
-            }
-
-            if( colors_remaining.empty() ) return;
-        }
-    }
-*/
     void mainLoop()
     {
         btTransform heading_transform;
+
+        _CalibrateRPYSrv calibrate_ori_srv;
+        calibrate_ori_srv.request.num_samples = 55;
+        _CalibrateRPYOriServiceClientPolicy::callService( calibrate_ori_srv );
+
+        move_relative_token_ = _SeabeeMovementPolicy::moveRelativeTo( "/pipe_orange", btTransform( btQuaternion( 0, 0, 0, 1 ), btVector3( 0, -0.155575, 0.6 ) ) );
 
         while( QUICKDEV_GET_RUNABLE_POLICY()::running() )
         {
@@ -268,7 +241,7 @@ protected:
                 auto const & pipe = landmark_it->second;
 
                 heading_token_ = _SeabeeMovementPolicy::faceTo( pipe.pose_.orientation_.yaw_, quickdev::auto_bind( &PipeTaskNode::isKilled, this ) );
-                move_relative_token_ = _SeabeeMovementPolicy::moveRelativeTo( landmark_it->first, btTransform( btQuaternion( 0, 0, 0, 1 ), btVector3( 0, 0, 0.962 ) ), quickdev::auto_bind( &PipeTaskNode::isKilled, this ) );
+                move_relative_token_ = _SeabeeMovementPolicy::moveRelativeTo( landmark_it->first, btTransform( btQuaternion( 0, 0, 0, 1 ), btVector3( 0, 0, 0.8 ) ), quickdev::auto_bind( &PipeTaskNode::isKilled, this ) );
                 if( move_relative_token_.wait( 20 ) )
                 {
                     PRINT_INFO( "Aligned to pipe" );

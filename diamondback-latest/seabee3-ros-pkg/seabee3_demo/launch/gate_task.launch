@@ -5,7 +5,7 @@
     <arg name="rate" default="30" />
     <arg name="args" value="_loop_rate:=$(arg rate)" />
 
-    <rosparam param="/$(arg name)/params" command="load" file="$(find seabee3_demo)/params/gate_task.yaml" />
+    <!--rosparam param="/$(arg name)/actions" command="load" file="$(find seabee3_demo)/params/script.yaml" /-->
 
     <node
         pkg="$(arg pkg)"
