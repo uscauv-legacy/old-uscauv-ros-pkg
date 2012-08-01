@@ -1,1 +1,0 @@
-rosbuild_add_executable( seabee3_stabilizer_node seabee3_stabilizer_node.cpp )

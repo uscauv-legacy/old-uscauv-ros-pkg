@@ -1,1 +1,0 @@
-rosbuild_add_executable( waypoint_controller_node waypoint_controller_node.cpp )

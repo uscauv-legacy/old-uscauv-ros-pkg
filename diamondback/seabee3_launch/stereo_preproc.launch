@@ -1,8 +1,0 @@
-<launch>
-	<group ns="/stereo/left">
-		<node pkg="image_proc" type="image_proc" name="proc_l" output="screen" />
-	</group>
-	<group ns="/stereo/right">
-		<node pkg="image_proc" type="image_proc" name="proc_r" output="screen" />
-	</group>
-</launch>

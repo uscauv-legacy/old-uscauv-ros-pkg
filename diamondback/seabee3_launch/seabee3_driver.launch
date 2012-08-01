@@ -1,5 +1,0 @@
-<launch>
-	<include file="$(find seabee3_launch)/dead_reckoning_odom.launch" />
-	
-	<include file="$(find seabee3_launch)/seabee3_driver_tuned.launch" />
-</launch>

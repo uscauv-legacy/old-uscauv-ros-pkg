@@ -1,1 +1,0 @@
-rosbuild_add_executable( contour_matcher_node contour_matcher_node.cpp )

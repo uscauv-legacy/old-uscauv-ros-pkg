@@ -1,6 +1,0 @@
-<launch>
-	<arg name="frame_id" default="/tritech_micron" />
-	
-	<node pkg="tf" type="static_transform_publisher" name="seabee3_base_link_to_tritech_micron" output="screen"
-	args="0.1016 0 0.0508 0 0 0 /seabee3/base_link $(arg frame_id) 100" />
-</launch>

@@ -1,9 +1,0 @@
-<launch>
-	<include file="$(find seabee3_launch)/transforms.launch" />
-	<node pkg="seabee3_physics" type="seabee3_physics" name="seabee3_physics" output="screen" />
-	<node pkg="tf" type="static_transform_publisher" name="seabee3_physics_link_to_seabee3_base_link" output="screen" args="0 0 0 0 0 0 /seabee3/physics_link /seabee3/base_link 100" >
-    <param name="reconfigure/thrust_to_force" type="double" value="0.11" />
-    <param name="reconfigure/drag_constant" type="double" value="50" />
-  </node>
-<!--	<node pkg="tf_frame_lock" type="tf_frame_lock" name="landmark_map_to_seabee3_base_link_lock" args="_from_frame:=/landmark_map _to_frame:=/seabee3/base_link ~transform:=/seabee3_physics/base_link" /> -->
-</launch>

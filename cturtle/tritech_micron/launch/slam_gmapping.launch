@@ -1,8 +1,0 @@
-<launch>
-	<include file="$(find tritech_micron)/launch/scan_line_converter.launch" />
-	
-	<node pkg="tf" type="static_transform_publisher" name="map_to_seabee3_base_link" output="screen"
-	args="0 0 0 0 0 0 /map /seabee3/base_link 100" />
-
-	<node pkg="gmapping" type="slam_gmapping" name="slam_gmapping" output="screen" args="scan:=/scan_line_converter/laser_scan _frame:=/tritech_micron" />
-</launch>

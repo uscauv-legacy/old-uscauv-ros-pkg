@@ -1,3 +1,0 @@
-int32 num_samples
----
-geometry_msgs/Vector3 calibration

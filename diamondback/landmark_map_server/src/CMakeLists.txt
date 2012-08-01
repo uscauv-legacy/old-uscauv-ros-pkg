@@ -1,1 +1,0 @@
-rosbuild_add_executable(landmark_map_server landmark_map_server.cpp)

@@ -1,6 +1,0 @@
-<launch>
-	<group ns="stereo">
-		<include file="$(find seabee3_launch)/down_cameras.launch" />
-		<include file="$(find seabee3_launch)/sparse_stereo.launch" />
-	</group>
-</launch>

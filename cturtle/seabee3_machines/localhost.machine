@@ -1,3 +1,0 @@
-<launch>
-	<machine name="localhost" address="localhost" ros-root="$(env ROS_ROOT)" ros-package-path="$(env ROS_PACKAGE_PATH)" />
-</launch>

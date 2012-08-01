@@ -1,6 +1,0 @@
-<launch>
-	<include file="$(find seabee3_driver_base)/launch/seabee3_driver_base.launch" >
-		<arg name="simulate" value="false" />
-		<arg name="port" value="/dev/seabee3_pwrboard" />
-	</include>
-</launch>

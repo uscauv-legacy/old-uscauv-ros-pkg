@@ -1,6 +1,0 @@
-<launch>
-	<node pkg="camera_calibration_parsers" type="convert" name="convert_cam1" args="$(find seabee3_launch)/cfg/camera1.ini $(find seabee3_launch)/cfg/camera1.yaml" />
-	<node pkg="camera_calibration_parsers" type="convert" name="convert_cam2" args="$(find seabee3_launch)/cfg/camera2.ini $(find seabee3_launch)/cfg/camera2.yaml" />
-	<node pkg="camera_calibration_parsers" type="convert" name="convert_cam3" args="$(find seabee3_launch)/cfg/camera3.ini $(find seabee3_launch)/cfg/camera3.yaml" />
-	<node pkg="camera_calibration_parsers" type="convert" name="convert_cam4" args="$(find seabee3_launch)/cfg/camera4.ini $(find seabee3_launch)/cfg/camera4.yaml" />
-</launch>

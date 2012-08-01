@@ -1,1 +1,0 @@
-rosbuild_add_library( ${PROJECT_NAME}_nodelets image_loader_nodelet.cpp )

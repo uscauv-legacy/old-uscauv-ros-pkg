@@ -1,7 +1,0 @@
-<library path="lib/libimage_server_prototype_nodelets">
-  <class name="image_server_prototype/image_server" type="image_server_prototype::ImageServerNodelet" base_class_type="nodelet::Nodelet">
-    <description> 
-      instantiates an ImageLoader base_libs/image_loader to load the specified images and publish them at the specified rate
-    </description>
-  </class>
-</library>

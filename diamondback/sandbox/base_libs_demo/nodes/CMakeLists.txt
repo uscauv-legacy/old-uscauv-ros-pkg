@@ -1,1 +1,0 @@
-rosbuild_add_executable( base_libs_demo_node base_libs_demo_node.cpp )

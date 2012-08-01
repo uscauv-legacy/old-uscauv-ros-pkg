@@ -1,9 +1,0 @@
-int8 IMAGE_ALL=0
-int8 IMAGE_AXE=1
-int8 IMAGE_CLIPPERS=2
-int8 IMAGE_HAMMER=3
-int8 IMAGE_MACHETE=4
-
-int8 desired_image
-----
-float64[] percent_match

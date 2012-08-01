@@ -1,7 +1,0 @@
-<library path="lib/libbase_libs_demo_nodelets">
-  <class name="base_libs_demo/demo" type="base_libs_demo::BaseLibsDemoNodelet" base_class_type="nodelet::Nodelet">
-    <description> 
-      shows off the features of base_libs
-    </description>
-  </class>
-</library>

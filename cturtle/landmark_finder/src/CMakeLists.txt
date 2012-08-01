@@ -1,1 +1,0 @@
-rosbuild_add_executable( landmark_finder_node landmark_finder_node.cpp )

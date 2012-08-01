@@ -1,3 +1,0 @@
-<launch>
-	<node pkg="seabee3_stabilizer" type="seabee3_stabilizer_node" name="seabee3_stabilizer" output="screen" args="~imu_data:=/xsens/custom_data ~motor_cntl_raw:=/seabee3/motor_cntl_raw ~motor_cntl:=/seabee3/motor_cntl" />
-</launch>

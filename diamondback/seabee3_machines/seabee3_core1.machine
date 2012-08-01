@@ -1,3 +1,0 @@
-<launch>
-	<machine name="seabee3_core1" address="seabee3" user="uscr" ros-root="$(env ROS_ROOT)" ros-package-path="$(env ROS_PACKAGE_PATH)" />
-</launch>

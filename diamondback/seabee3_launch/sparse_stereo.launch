@@ -1,4 +1,0 @@
-<launch>
-	<node pkg="tf" type="static_transform_publisher" name="sparse_stereo_tf" args="0 0 0 0 0 0 /world /sparse_stereo 10" />
-	<!--node pkg="sparse_stereo" type="sparse_stereo_flow" name="sparse_stereo" args="_left:=camera3 _right:=camera4 _stereo:=/stereo _image:=image_rect_color" output="screen" /-->
-</launch>

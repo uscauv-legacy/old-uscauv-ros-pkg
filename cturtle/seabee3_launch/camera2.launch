@@ -1,7 +1,0 @@
-<launch>
-	<include file="$(find seabee3_launch)/transforms.launch" />
-	<include file="$(find seabee3_launch)/generic_camera.launch" >
-		<arg name="camera_name" value="camera2" />
-		<arg name="guid" value="00b09d010090f9de" />
-	</include>
-</launch>

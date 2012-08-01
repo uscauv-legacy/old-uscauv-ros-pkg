@@ -1,1 +1,0 @@
-rosbuild_add_executable(seabee3_driver_base seabee3_driver_base.cpp)

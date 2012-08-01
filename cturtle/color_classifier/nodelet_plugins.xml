@@ -1,7 +1,0 @@
-<library path="lib/libcolor_classifier_nodelets">
-  <class name="color_classifier/color_classifier_nodelet" type="color_classifier::ColorClassifierNodelet" base_class_type="nodelet::Nodelet">
-    <description> 
-      classifies colors in an image and outputs a classified image along with one distance image per color
-    </description>
-  </class>
-</library>

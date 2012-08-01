@@ -1,8 +1,0 @@
-<launch>
-	<arg name="enable" />
-	<arg name="name" />
-
-	<group if="$(arg enable)" >
-		<node pkg="dynamic_reconfigure" type="reconfigure_gui" name="$(arg name)_config" args="$(arg name)/reconfigure" />
-	</group>
-</launch>

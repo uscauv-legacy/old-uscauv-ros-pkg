@@ -1,2 +1,0 @@
-rosbuild_add_gtest (test_camera_interpolation test_camera_interpolation.cpp)
-target_link_libraries (test_camera_interpolation ${PROJECT_NAME})

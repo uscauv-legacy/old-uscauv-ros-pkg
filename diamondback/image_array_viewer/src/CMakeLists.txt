@@ -1,1 +1,0 @@
-rosbuild_add_executable( image_array_viewer image_array_viewer.cpp )

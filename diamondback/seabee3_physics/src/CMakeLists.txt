@@ -1,1 +1,0 @@
-rosbuild_add_executable(seabee3_physics seabee3_physics.cpp)
