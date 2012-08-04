@@ -1,4 +1,5 @@
 <launch>
+    <arg name="model" default="model"/>
     <arg name="source" default="/camera1/image_rect_color" />
     <!--arg name="mask" default="$(arg source)/output_adaptation_mask" /-->
 
@@ -10,7 +11,7 @@
     <arg name="manager" default="manager" />
     <arg name="nodelet" default="false" />
 
-    <rosparam param="/$(arg name)/model" command="load" file="$(find color_classifier)/params/model.yaml" />
+    <rosparam param="/$(arg name)/model" command="load" file="$(find color_classifier)/params/$(arg model).yaml" />
 
     <node
         if="$(arg nodelet)"

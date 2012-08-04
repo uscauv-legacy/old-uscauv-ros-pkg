@@ -1,17 +1,19 @@
 <launch>
+    <arg name="folder" default="$(find seabee3_data)/frames"/>
     <arg name="frame" default="frame0006" />
     <arg name="color" default="green" />
     <arg name="ext" default="jpg" />
+    <arg name="model" default="model"/>
 
     <arg name="pkg" value="color_classifier" />
     <arg name="name" value="color_classifier_trainer" />
     <arg name="type" default="$(arg name)_node" />
     <arg name="rate" default="10" />
-    <arg name="args" value="_loop_rate:=$(arg rate) _color_name:=$(arg color) _src_image_uri:=$(find seabee3_data)/frames/$(arg frame).$(arg ext) _mask_image_uri:=$(find seabee3_data)/frames/$(arg frame)_$(arg color)_mask.$(arg ext)" />
+    <arg name="args" value="_loop_rate:=$(arg rate) _color_name:=$(arg color) _src_image_uri:=$(arg folder)/$(arg frame).$(arg ext) _mask_image_uri:=$(arg folder)/$(arg frame)_$(arg color)_mask.$(arg ext)" />
     <arg name="manager" default="manager" />
     <arg name="nodelet" default="false" />
 
-    <rosparam param="/$(arg name)/model" command="load" file="$(find color_classifier)/params/model.yaml" />
+    <rosparam param="/$(arg name)/model" command="load" file="$(find color_classifier)/params/$(arg model).yaml" />
 
     <node
         if="$(arg nodelet)"
