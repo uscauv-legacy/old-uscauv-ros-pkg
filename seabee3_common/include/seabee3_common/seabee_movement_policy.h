@@ -220,7 +220,7 @@ private:
         make_trajectory_goal.waypoints.push_back( *physics_state_msg_ );
 
         _TrajectoryWaypointMsg ending_waypoint;
-        ending_waypoint.pose.pose = unit::make_unit( pose );
+        ending_waypoint.pose.pose = unit::implicit_convert( pose );
         // velocity will default to zero
         make_trajectory_goal.waypoints.push_back( ending_waypoint );
 
@@ -320,7 +320,7 @@ private:
 
     void moveAtVelocityImpl( btTransform const & velocity, quickdev::SimpleActionToken token, _TermCriteria term_criteria )
     {
-        _TwistMsg twist_msg = unit::make_unit( velocity );
+        _TwistMsg twist_msg = unit::implicit_convert( velocity );
         ros::Rate publish_rate( 10 );
 
         while( ( !term_criteria || !term_criteria() ) && token.ok() && ros::ok() )

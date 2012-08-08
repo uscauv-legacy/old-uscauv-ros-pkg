@@ -174,8 +174,8 @@ public:
         _LandmarkMsg landmark_msg;
         landmark_msg.type = type_;
         landmark_msg.color = color_;
-        landmark_msg.pose = unit::make_unit( pose_ );
-        landmark_msg.size = unit::make_unit( size_ );
+        landmark_msg.pose = unit::implicit_convert( pose_ );
+        landmark_msg.size = unit::implicit_convert( size_ );
         landmark_msg.name = name_.empty() ? getUniqueName() : name_;
 
         return landmark_msg;
@@ -192,7 +192,7 @@ public:
         marker_msg.action = visualization_msgs::Marker::ADD;
         marker_msg.lifetime = ros::Duration( 0.1 );
 
-        marker_msg.pose.position = unit::make_unit( pose_.position_ );
+        marker_msg.pose.position = unit::implicit_convert( pose_.position_ );
 
         if( type_ == PIPE || type_ == BIN ) marker_msg.header.frame_id = "/seabee3/camera2";
         else marker_msg.header.frame_id = "/seabee3/camera1";
@@ -210,7 +210,7 @@ public:
             marker_msg.scale.x = size_.x_;
             marker_msg.scale.y = size_.y_;
             marker_msg.scale.z = size_.z_;
-            marker_msg.pose.orientation = unit::make_unit( btQuaternion( 0, -M_PI_2, 0 ) * btQuaternion( pose_.orientation_.yaw_ + M_PI_2, 0, 0 ) );
+            marker_msg.pose.orientation = unit::implicit_convert( btQuaternion( 0, -M_PI_2, 0 ) * btQuaternion( pose_.orientation_.yaw_ + M_PI_2, 0, 0 ) );
             break;
         }
 

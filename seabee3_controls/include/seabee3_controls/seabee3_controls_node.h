@@ -133,7 +133,7 @@ protected:
 
         initPolicies<quickdev::policy::ALL>();
 
-//        btVector3 const rotation = unit::make_unit( btQuaternion( 0.1, 0.2, 0.3 ) );
+//        btVector3 const rotation = unit::implicit_convert( btQuaternion( 0.1, 0.2, 0.3 ) );
 //        printf( "%f %f %f\n", rotation.x(), rotation.y(), rotation.z() );
     }
 
@@ -267,8 +267,8 @@ protected:
             }
 */
             // calculate pose error
-            linear_error_vec = unit::make_unit( transform_to_target_.getOrigin() );
-            angular_error_vec = unit::make_unit( transform_to_target_.getRotation() );
+            linear_error_vec = unit::implicit_convert( transform_to_target_.getOrigin() );
+            angular_error_vec = unit::implicit_convert( transform_to_target_.getRotation() );
         }
 
         printf( "error [%f %f %f] [%f %f %f]\n",

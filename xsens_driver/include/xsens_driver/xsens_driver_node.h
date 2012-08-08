@@ -185,7 +185,7 @@ private:
         else
         {
             tf::Vector3 temp;
-            temp = unit::make_unit( imu_driver_ptr_->ori_ );
+            temp = unit::implicit_convert( imu_driver_ptr_->ori_ );
 
             while ( ori_data_cache_.size() >= IMU_DATA_CACHE_SIZE )
             {
@@ -269,7 +269,7 @@ private:
     {
         runRPYOriCalibration( request.num_samples );
 
-        response.calibration = unit::make_unit( ori_comp_ );
+        response.calibration = unit::implicit_convert( ori_comp_ );
 
         return true;
     }
@@ -279,7 +279,7 @@ private:
     {
         runRPYDriftCalibration( request.num_samples );
 
-        response.calibration = unit::make_unit( drift_comp_ );
+        response.calibration = unit::implicit_convert( drift_comp_ );
 
         checkCalibration();
 
@@ -302,22 +302,22 @@ private:
 
         updateIMUData();
 
-        imu_msg.linear_acceleration = unit::make_unit( imu_driver_ptr_->accel_ );
-        imu_msg.angular_velocity = unit::make_unit( imu_driver_ptr_->gyro_ );
+        imu_msg.linear_acceleration = unit::implicit_convert( imu_driver_ptr_->accel_ );
+        imu_msg.angular_velocity = unit::implicit_convert( imu_driver_ptr_->gyro_ );
 
-        seabee_imu_msg.accel = unit::make_unit( imu_driver_ptr_->accel_ );
-        seabee_imu_msg.gyro = unit::make_unit( imu_driver_ptr_->gyro_ );
-        seabee_imu_msg.mag = unit::make_unit( imu_driver_ptr_->mag_ );
+        seabee_imu_msg.accel = unit::implicit_convert( imu_driver_ptr_->accel_ );
+        seabee_imu_msg.gyro = unit::implicit_convert( imu_driver_ptr_->gyro_ );
+        seabee_imu_msg.mag = unit::implicit_convert( imu_driver_ptr_->mag_ );
 
         // drift_comp_total_ += drift_comp_;
 
         imu_driver_ptr_->ori_ += drift_comp_total_;
 
         tf::Vector3 temp;
-        temp = unit::make_unit( imu_driver_ptr_->ori_ );
+        temp = unit::implicit_convert( imu_driver_ptr_->ori_ );
         temp -= ori_comp_;
 
-        seabee_imu_msg.ori = unit::make_unit( temp );
+        seabee_imu_msg.ori = unit::implicit_convert( temp );
 
         seabee_imu_msg.ori.x = seabee_imu_msg.ori.x;
         seabee_imu_msg.ori.y = seabee_imu_msg.ori.y;

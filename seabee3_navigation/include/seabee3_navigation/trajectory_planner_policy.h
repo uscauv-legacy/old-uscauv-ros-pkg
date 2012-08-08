@@ -183,8 +183,8 @@ protected:
     {
         _TrajectoryIntervalMsg interval;
 //        interval.length = duration;
-        interval.initial_state.pose.pose = unit::make_unit( initial_pose );
-        interval.initial_state.velocity.twist = unit::make_unit( initial_velocity );
+        interval.initial_state.pose.pose = unit::implicit_convert( initial_pose );
+        interval.initial_state.velocity.twist = unit::implicit_convert( initial_velocity );
         interval.acceleration = acceleration;
         addInterval( interval, intervals );
     }
@@ -200,9 +200,9 @@ protected:
 
         addInterval( interval, intervals );
 
-        last_output_waypoint_.pose.pose = unit::make_unit( current_pose_ );
-        last_output_waypoint_.velocity.twist.linear = unit::make_unit( current_linear_velocity_ );
-        last_output_waypoint_.velocity.twist.angular = unit::make_unit( current_angular_velocity_ );
+        last_output_waypoint_.pose.pose = unit::implicit_convert( current_pose_ );
+        last_output_waypoint_.velocity.twist.linear = unit::implicit_convert( current_linear_velocity_ );
+        last_output_waypoint_.velocity.twist.angular = unit::implicit_convert( current_angular_velocity_ );
     }
 
     // accelerate to a given linear/angular velocity respecting any user-specified constraints by generating and adding intervals to the list of intervals

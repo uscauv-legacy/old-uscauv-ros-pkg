@@ -224,7 +224,7 @@ protected:
                 {
                     auto const & contour = *contour_it;
 
-                    _ContourMsg contour_msg = unit::make_unit( contour );
+                    _ContourMsg contour_msg = unit::implicit_convert( contour );
                     contour_msg.name = image_name;
 
                     contour_array_msg.contours.push_back( contour_msg );

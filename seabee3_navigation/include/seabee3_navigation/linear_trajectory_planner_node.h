@@ -83,8 +83,8 @@ QUICKDEV_DECLARE_NODE_CLASS( LinearTrajectoryPlanner )
         // get an iterator to the first waypoint
         auto waypoints_it = waypoints.cbegin();
 
-        _TrajectoryPlannerPolicy::current_pose_ = unit::make_unit( waypoints_it->pose );
-        _TrajectoryPlannerPolicy::current_velocity_ = unit::make_unit( waypoints_it->velocity );
+        _TrajectoryPlannerPolicy::current_pose_ = unit::implicit_convert( waypoints_it->pose );
+        _TrajectoryPlannerPolicy::current_velocity_ = unit::implicit_convert( waypoints_it->velocity );
 
         waypoints_it ++;
 

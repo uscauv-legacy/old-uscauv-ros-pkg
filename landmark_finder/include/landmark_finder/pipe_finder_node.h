@@ -145,7 +145,7 @@ protected:
 
                 if( contour_msg.points.size() < 6 ) continue;
 
-                _Contour contour = unit::make_unit( contour_msg );
+                _Contour contour = unit::implicit_convert( contour_msg );
 
                 cv::RotatedRect rect = cv::fitEllipse( cv::Mat( contour ) );
 

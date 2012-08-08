@@ -94,7 +94,7 @@ QUICKDEV_DECLARE_NODE_CLASS( Seabee3SensorAggregator )
 
     QUICKDEV_DECLARE_MESSAGE_CALLBACK( imuCB, _ImuMsg )
     {
-        combined_frame_.setRotation( unit::make_unit( msg->ori ) );
+        combined_frame_.setRotation( unit::implicit_convert( msg->ori ) );
     }
 
     QUICKDEV_DECLARE_MESSAGE_CALLBACK( depthCB, _DepthMsg )

@@ -306,13 +306,13 @@ DECLARE_UNIT_CONVERSION_LAMBDA( btQuaternion, seabee::Orientation, quat, return 
 
 
 // seabee::Pose <-> geometry_msgs::Twist
-DECLARE_UNIT_CONVERSION_LAMBDA( seabee::Pose, geometry_msgs::Twist, pose, geometry_msgs::Twist twist; twist.linear = unit::make_unit( pose.position_ ); twist.angular = unit::make_unit( pose.orientation_ ); return twist; )
+DECLARE_UNIT_CONVERSION_LAMBDA( seabee::Pose, geometry_msgs::Twist, pose, geometry_msgs::Twist twist; twist.linear = unit::implicit_convert( pose.position_ ); twist.angular = unit::implicit_convert( pose.orientation_ ); return twist; )
 DECLARE_UNIT_CONVERSION_LAMBDA( geometry_msgs::Twist, seabee::Pose, twist, return seabee::Pose( unit::convert<seabee::Position>( twist.linear ), unit::convert<seabee::Orientation>( twist.angular ) ); )
 // seabee::Pose <-> btTransform
 DECLARE_UNIT_CONVERSION_LAMBDA( seabee::Pose, btTransform, pose, return btTransform( unit::convert<btQuaternion>( pose.orientation_ ), unit::convert<btVector3>( pose.position_ ) ); )
 DECLARE_UNIT_CONVERSION_LAMBDA( btTransform, seabee::Pose, tf, return seabee::Pose( unit::convert<seabee::Position>( tf.getOrigin() ), unit::convert<seabee::Orientation>( tf.getRotation() ) ); )
 // seabee::Pose <-> geometry_msgs::Pose
-DECLARE_UNIT_CONVERSION_LAMBDA( seabee::Pose, geometry_msgs::Pose, pose, geometry_msgs::Pose pose_msg; pose_msg.position = unit::make_unit( pose.position_ ); pose_msg.orientation = unit::make_unit( pose.orientation_ ); return pose_msg; )
+DECLARE_UNIT_CONVERSION_LAMBDA( seabee::Pose, geometry_msgs::Pose, pose, geometry_msgs::Pose pose_msg; pose_msg.position = unit::implicit_convert( pose.position_ ); pose_msg.orientation = unit::implicit_convert( pose.orientation_ ); return pose_msg; )
 DECLARE_UNIT_CONVERSION_LAMBDA( geometry_msgs::Pose, seabee::Pose, pose_msg, return seabee::Pose( unit::convert<seabee::Position>( pose_msg.position ), unit::convert<seabee::Orientation>( pose_msg.orientation ) ); )
 
 #endif // SEABEE3COMMON_MOTIONPRIMITIVES_H_
