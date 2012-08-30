@@ -1,1 +1,1 @@
-include $(shell rospack find quickdev_cpp)/cmake.mk
+include $(shell rospack find quickdev_build)/cmake.mk
