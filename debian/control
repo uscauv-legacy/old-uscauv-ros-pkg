@@ -10,7 +10,7 @@ Homepage: <insert the upstream URL, if relevant>
 
 Package: ros-electric-seabee3-ros-pkg-0
 Architecture: any
-Depends: ${shlibs:Depends}, ${misc:Depends}
+Depends: ${shlibs:Depends}, ${misc:Depends}, ros-electric-interaction-quickdev-0
 Description: Software for SeaBee3, USC's autonomous underwater robot
  Includes:
  - documentation
