@@ -7,20 +7,16 @@
 # This special exception was added by Craig Small in version 0.37 of dh-make.
 
 # Uncomment this to turn on verbose mode.
-export DH_VERBOSE=1
+#export DH_VERBOSE=1
 
 build:
 	. /opt/ros/electric/setup.sh && export ROS_PACKAGE_PATH=$$ROS_PACKAGE_PATH:/tmp/buildd && export ROS_PARALLEL_JOBS=-j$$(cat /proc/cpuinfo | grep -c processor) && dh $@
 
 binary:
-	. /opt/ros/electric/setup.sh && dh $@
+	. /opt/ros/electric/setup.sh && export ROS_PACKAGE_PATH=$$ROS_PACKAGE_PATH:/tmp/buildd && export ROS_PARALLEL_JOBS=-j$$(cat /proc/cpuinfo | grep -c processor) && dh $@
 
 override_dh_shlibdeps:
 	dh_shlibdeps -- --ignore-missing-info
-
-override_dh_auto_test:
-	#dh_auto_test --
-	make debclean
 
 %:
 	dh $@
