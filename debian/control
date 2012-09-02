@@ -1,16 +1,16 @@
-Source: ros-electric-seabee3-ros-pkg-0
+Source: ros-electric-seabee3-ros-pkg
 Section: unknown
 Priority: extra
 Maintainer: Edward T. Kaszubski <ekaszubski@gmail.com>
-Build-Depends: debhelper (>= 7.0.50~), cmake, pkg-config, ros-electric-interaction-quickdev-0
+Build-Depends: debhelper (>= 7.0.50~), cmake, pkg-config, ros-electric-interaction-quickdev
 Standards-Version: 3.8.4
-Homepage: <insert the upstream URL, if relevant>
-#Vcs-Git: git://git.debian.org/collab-maint/ros-electric-seabee3-ros-pkg-0.git
-#Vcs-Browser: http://git.debian.org/?p=collab-maint/ros-electric-seabee3-ros-pkg-0.git;a=summary
+Homepage: http://code.google.com/p/seabee3-ros-pkg
+Vcs-Git: http://code.google.com/p/seabee3-ros-pkg
+Vcs-Browser: http://code.google.com/p/seabee3-ros-pkg/source/browse
 
-Package: ros-electric-seabee3-ros-pkg-0
+Package: ros-electric-seabee3-ros-pkg
 Architecture: any
-Depends: ${shlibs:Depends}, ${misc:Depends}, ros-electric-interaction-quickdev-0
+Depends: ${shlibs:Depends}, ${misc:Depends}, ros-electric-interaction-quickdev
 Description: Software for SeaBee3, USC's autonomous underwater robot
  Includes:
  - documentation
