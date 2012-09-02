@@ -1,3 +1,10 @@
+ros-electric-seabee3-ros-pkg (0.0.1-1346585682) unstable; urgency=low
+
+  * Commit f145322b029d1fa7c1188f619b1ebefbfdd4e371
+    + Changed debian package name from ros-electric-seabee3-ros-pkg-0 to ros-electric-seabee3-ros-pkg. Initialized proper changelog.
+
+ -- Edward T. Kaszubski <ekaszubski@gmail.com>  Sun, 2 Sep 2012 04:34:42 -0700
+
 ros-electric-seabee3-ros-pkg (0.0.1-1346560490) unstable; urgency=low
 
   * Commit 93a86bb4de19fcc749b919141ee5eda4525bf734
