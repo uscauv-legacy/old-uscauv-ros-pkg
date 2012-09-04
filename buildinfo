@@ -1,1 +1,1 @@
--a i386 -a amd64 -m ros-electric --version 0.0.1 --release 0.1
+-a i386 -a amd64 -m ros-electric --version 0.0.1
