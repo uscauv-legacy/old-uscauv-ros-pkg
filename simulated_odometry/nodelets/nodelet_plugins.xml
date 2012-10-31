@@ -1,0 +1,7 @@
+<library path="lib/libsimulated_odometry_nodelets">
+  <class name="simulated_odometry/imu_odometry" type="simulated_odometry::IMUOdometryNodelet" base_class_type="nodelet::Nodelet">
+    <description>
+      todo: fill this in
+    </description>
+  </class>
+</library>
