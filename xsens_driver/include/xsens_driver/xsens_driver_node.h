@@ -297,10 +297,14 @@ private:
     {
         if ( autocalibrate_ && !drift_calibrated_ ) runRPYDriftCalibration();
 
+        updateIMUData();
+        ros::Time const now = ros::Time::now();
+
         _ImuMsg imu_msg;
         _SeabeeImuMsg seabee_imu_msg;
 
-        updateIMUData();
+        imu_msg.header.stamp = now;
+        imu_msg.header.frame_id = "/seabee3/sensors/imu";
 
         imu_msg.linear_acceleration = unit::implicit_convert( imu_driver_ptr_->accel_ );
         imu_msg.angular_velocity = unit::implicit_convert( imu_driver_ptr_->gyro_ );
@@ -309,8 +313,10 @@ private:
         seabee_imu_msg.gyro = unit::implicit_convert( imu_driver_ptr_->gyro_ );
         seabee_imu_msg.mag = unit::implicit_convert( imu_driver_ptr_->mag_ );
 
-        // drift_comp_total_ += drift_comp_;
+        seabee_imu_msg.ori = unit::implicit_convert( unit::convert<btVector3>( imu_driver_ptr_->ori_ ) - ori_comp_ );
 
+        // drift_comp_total_ += drift_comp_;
+/*
         imu_driver_ptr_->ori_ += drift_comp_total_;
 
         tf::Vector3 temp;
@@ -318,10 +324,7 @@ private:
         temp -= ori_comp_;
 
         seabee_imu_msg.ori = unit::implicit_convert( temp );
-
-        seabee_imu_msg.ori.x = seabee_imu_msg.ori.x;
-        seabee_imu_msg.ori.y = seabee_imu_msg.ori.y;
-        seabee_imu_msg.ori.z = seabee_imu_msg.ori.z;
+*/
 
         tf::Quaternion ori
         (
