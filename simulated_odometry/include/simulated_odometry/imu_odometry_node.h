@@ -96,36 +96,12 @@ protected:
             double const dt = ( msg->header.stamp - last_imu_msg->header.stamp ).toSec();
 
             btVector3 const linear_acceleration = unit::implicit_convert( msg->linear_acceleration );
-            btQuaternion const orientation = unit::implicit_convert( msg->orientation );
-            btTransform const orientation_tf( orientation );
-            btVector3 const gravity_vector( 0, 0, 9.823387 );
-
-            btVector3 const rotation_compensated_gravity_vector = orientation_tf.inverse() * gravity_vector;
-//            btVector3 const rotation_compensated_linear_acceleration = orientation_tf * linear_acceleration;
-//            net_rotation_compensated_linear_acceleration_ += rotation_compensated_linear_acceleration;
-//            num_samples_ ++;
-
-//            btVector3 const avg_rotation_compensated_linear_acceleration = net_rotation_compensated_linear_acceleration_ * ( 1.0 / double( num_samples_ ) );
-
-//            printf( "avg rot comp accel: %f %f %f (%f)\n", avg_rotation_compensated_linear_acceleration.getX(), avg_rotation_compensated_linear_acceleration.getY(), avg_rotation_compensated_linear_acceleration.getZ(), avg_rotation_compensated_linear_acceleration.length() );
-
-            btVector3 compensated_linear_acceleration = linear_acceleration - rotation_compensated_gravity_vector;
-
-            net_compensated_linear_acceleration_ += compensated_linear_acceleration;
-            num_samples_ ++;
-
-            btVector3 const avg_compensated_linear_acceleration = net_compensated_linear_acceleration_ * ( 1.0 / double( num_samples_ ) );
-
-            printf( "avg rot comp accel: %f %f %f (%f)\n", avg_compensated_linear_acceleration.getX(), avg_compensated_linear_acceleration.getY(), avg_compensated_linear_acceleration.getZ(), avg_compensated_linear_acceleration.length() );
 
             printf( "dt: %f\n", dt );
             printf( "accel: %f %f %f (%f)\n", linear_acceleration.getX(), linear_acceleration.getY(), linear_acceleration.getZ(), linear_acceleration.length() );
 //            printf( "rot comp accel: %f %f %f (%f)\n", rotation_compensated_linear_acceleration.getX(), rotation_compensated_linear_acceleration.getY(), rotation_compensated_linear_acceleration.getZ(), rotation_compensated_linear_acceleration.length() );
-            printf( "comp accel: %f %f %f (%f)\n", compensated_linear_acceleration.getX(), compensated_linear_acceleration.getY(), compensated_linear_acceleration.getZ(), compensated_linear_acceleration.length() );
 
-            compensated_linear_acceleration -= btVector3( -0.003053, 0.007345, 0.000981 );
-
-            btVector3 const change_in_linear_velocity = compensated_linear_acceleration * dt;
+            btVector3 const change_in_linear_velocity = linear_acceleration * dt;
 
             printf( "change lin vel: %f %f %f\n", change_in_linear_velocity.getX(), change_in_linear_velocity.getY(), change_in_linear_velocity.getZ() );
 
