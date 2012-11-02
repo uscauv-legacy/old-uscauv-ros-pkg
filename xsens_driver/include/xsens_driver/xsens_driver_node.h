@@ -232,7 +232,9 @@ private:
         runAmbientLinearAccelCalibration( size_t( ambient_linear_accel_calibration_steps_ ) );
     }
 
-    // assuming the imu is still, calculate the rotation-compensated ambient linear acceleration
+    //! assuming the imu is still, calculate the rotation-compensated ambient linear acceleration
+    /*! This value can be subtracted from future rotation-compensated measurments to perfectly remove any ambient acceleration, ie from gravity
+     */
     void runAmbientLinearAccelCalibration( size_t const & num_steps )
     {
         ROS_INFO( "Running ambient linear accel calibration..." );
@@ -248,17 +250,15 @@ private:
         rotation_compensated_ambient_linear_acceleration_ /= double( num_steps ); //avg acceleration per cycle
     }
 
+    //! Given the current orientation and linear acceleration, calculate a rotation-invariant linear acceleration value
+    /*! Specifically, rotate the linear acceleration vector by the current orientation. This could be pictured as placing a virtual,
+     *  non-rotatable IMU at the center of the real IMU, such that we only measure acceleration due to motion, and not due to orientation
+     */
     btVector3 calculateRotationCompensatedLinearAcceleration( btQuaternion const & orientation, btVector3 const & linear_acceleration )
     {
+        // create a transform from the current orientation
         btTransform const orientation_tf( orientation );
-/*
-        btTransform const orientation_tf_inverse( orientation_tf );
-        btVector3 const x_component( linear_acceleration.getX(), 0, 0 );
-        btVector3 const y_component( 0, linear_acceleration.getY(), 0 );
-        btVector3 const z_component( 0, 0, linear_acceleration.getZ() );
-
-        return ( orientation_tf * x_component ) + ( orientation_tf * y_component ) + ( orientation_tf * z_component );
-*/
+        // rotate the acceleration vector by that transform
         return orientation_tf * linear_acceleration;
     }
 
@@ -301,7 +301,13 @@ private:
         imu_msg.header.stamp = now;
         imu_msg.header.frame_id = "/seabee3/sensors/imu";
 
-        btVector3 const orientation_rpy_with_offset = unit::implicit_convert( toRad( unit::convert<btVector3>( imu_driver_ptr_->ori_ ) ) - relative_orientation_offset_ );
+        // our rotation vector from the IMU; convert from degrees to radians
+        btVector3 const orientation_rpy = toRad( unit::convert<btVector3>( imu_driver_ptr_->ori_ ) );
+        // our rotation vector, offset by the results of any relative orientation calibration
+        btVector3 const orientation_rpy_with_offset = unit::implicit_convert( orientation_rpy - relative_orientation_offset_ );
+        // our orientation from the IMU
+        btQuaternion const orientation = unit::implicit_convert( imu_driver_ptr_->ori_ );
+        // our orientation from the IMU, with any offset from calibration
         btQuaternion const orientation_with_offset = unit::implicit_convert( orientation_rpy_with_offset );
 
         seabee_imu_msg.accel = unit::implicit_convert( imu_driver_ptr_->accel_ );
@@ -310,8 +316,6 @@ private:
         seabee_imu_msg.ori = unit::implicit_convert( toDeg( orientation_rpy_with_offset ) );
 
         imu_msg.angular_velocity = unit::implicit_convert( imu_driver_ptr_->gyro_ );
-
-        btQuaternion const orientation = unit::implicit_convert( imu_driver_ptr_->ori_ );
 
         imu_msg.orientation = unit::implicit_convert( orientation_with_offset );
 
@@ -322,12 +326,24 @@ private:
         rot_comp_imu_msg = imu_msg;
 
         btVector3 const linear_acceleration = unit::implicit_convert( imu_driver_ptr_->accel_ );
+        /* get our linear acceleration, compensated by our current orientation; this will result in a linear acceleration as perceived by an IMU
+         * in a fixed frame, regardless of our current orientation
+        */
         btVector3 const rotation_compensated_linear_acceleration = calculateRotationCompensatedLinearAcceleration( orientation, linear_acceleration );
 
+        // remove any ambient acceleration (ie due to gravity) picked up by our calibration
         btVector3 const compensated_linear_acceleration = rotation_compensated_linear_acceleration - rotation_compensated_ambient_linear_acceleration_;
 
+        // construct a rotation-only transform from our current orientation
+        btTransform const relative_orientation_offset_tf( orientation );
+
+        /* rotate the above acceleration back into our current frame; this will result in the ideal rotation-compensated, ambient-acceleration-
+         * compensated value that we're looking for
+         */
+        btVector3 const rotated_compensated_linear_acceleration = relative_orientation_offset_tf.inverse() * compensated_linear_acceleration;
+
         imu_msg.linear_acceleration = unit::implicit_convert( imu_driver_ptr_->accel_ );
-        rot_comp_imu_msg.linear_acceleration = unit::implicit_convert( compensated_linear_acceleration );
+        rot_comp_imu_msg.linear_acceleration = unit::implicit_convert( rotated_compensated_linear_acceleration );
 
         // drift_comp_total_ += drift_comp_;
 /*
