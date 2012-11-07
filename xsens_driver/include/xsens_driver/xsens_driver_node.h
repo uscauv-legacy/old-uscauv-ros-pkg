@@ -71,7 +71,7 @@ typedef seabee3_msgs::CalibrateRPY _CalibrateRPYSrv;
 typedef std_srvs::Empty _EmptySrv;
 
 typedef quickdev::TfTranceiverPolicy _TfTranceiverPolicy;
-typedef quickdev::ServiceServerPolicy<_CalibrateRPYSrv, 0> _CalibrateRPYDriftServiceServerPolicy;
+typedef quickdev::ServiceServerPolicy<_CalibrateRPYSrv, 0> _CalibrateAmbientLinearAccelServiceServerPolicy;
 typedef quickdev::ServiceServerPolicy<_CalibrateRPYSrv, 1> _CalibrateRPYOriServiceServerPolicy;
 
 
@@ -84,8 +84,10 @@ void operator +=( XSensDriver::Vector3 & v1, tf::Vector3 & v2 )
 
 typedef XSensDriver::Vector3 _XSensVector3;
 
-DECLARE_UNIT_CONVERSION_LAMBDA( _XSensVector3, _Vector3Msg, xsens_vec, _Vector3Msg msg; msg.x = xsens_vec.x; msg.y = xsens_vec.y; msg.z = xsens_vec.z; return msg; );
 DECLARE_UNIT_CONVERSION_LAMBDA( _XSensVector3, _Vector3, xsens_vec, return _Vector3( xsens_vec.x, xsens_vec.y, xsens_vec.z ); );
+DECLARE_UNIT_CONVERSION_LAMBDA( _XSensVector3, _Vector3Msg, xsens_vec, return unit::convert<_Vector3Msg>( unit::convert<_Vector3>( xsens_vec ) ); );
+DECLARE_UNIT_CONVERSION_LAMBDA( _XSensVector3, _Quaternion, xsens_vec, return unit::convert<_Quaternion>( btVector3( Radian( Degree( xsens_vec.x ) ), Radian( Degree( xsens_vec.y ) ), Radian( Degree( xsens_vec.z ) ) ) ); );
+DECLARE_UNIT_CONVERSION_LAMBDA( _XSensVector3, _QuaternionMsg, xsens_vec, return unit::convert<_QuaternionMsg>( unit::convert<_Quaternion>( xsens_vec ) ); );
 
 // declare a node called XsensDriverNode
 // a quickdev::RunablePolicy is automatically prepended to the list of policies our node will use
@@ -93,7 +95,7 @@ DECLARE_UNIT_CONVERSION_LAMBDA( _XSensVector3, _Vector3, xsens_vec, return _Vect
 //
 // QUICKDEV_DECLARE_NODE( XsensDriver, SomePolicy1, SomePolicy2 )
 //
-QUICKDEV_DECLARE_NODE( XsensDriver, _TfTranceiverPolicy, _CalibrateRPYDriftServiceServerPolicy, _CalibrateRPYOriServiceServerPolicy )
+QUICKDEV_DECLARE_NODE( XsensDriver, _TfTranceiverPolicy, _CalibrateAmbientLinearAccelServiceServerPolicy, _CalibrateRPYOriServiceServerPolicy )
 
 // declare a class called XsensDriverNode
 //
@@ -102,22 +104,16 @@ QUICKDEV_DECLARE_NODE_CLASS( XsensDriver )
 private:
     ros::MultiPublisher<> multi_pub_;
 
-    std::queue<tf::Vector3> ori_data_cache_;
-
     // offset from imu's "north"
-    tf::Vector3 ori_comp_;
-    //
-    tf::Vector3 drift_comp_;
-    tf::Vector3 drift_comp_total_;
+    btVector3 relative_orientation_offset_;
+    btVector3 rotation_compensated_ambient_linear_acceleration_;
 
     std::string port_, frame_id_;
-    bool drift_calibrated_, autocalibrate_, assume_calibrated_;
-    double orientation_stdev_, angular_velocity_stdev_, linear_acceleration_stdev_, max_drift_rate_;
+    double orientation_stdev_, angular_velocity_stdev_, linear_acceleration_stdev_;
 
-    int drift_calibration_steps_, ori_calibration_steps_;
+    int ambient_linear_accel_calibration_steps_, ori_calibration_steps_;
 
     boost::shared_ptr<XSensDriver> imu_driver_ptr_;
-    const static unsigned int IMU_DATA_CACHE_SIZE = 2;
 
     QUICKDEV_DECLARE_NODE_CONSTRUCTOR( XsensDriver )
     {
@@ -129,40 +125,37 @@ private:
         QUICKDEV_GET_RUNABLE_NODEHANDLE( nh_rel );
         nh_rel.param( "port", port_, std::string( "/dev/seabee/imu" ) );
         nh_rel.param( "frame_id", frame_id_, std::string( "imu" ) );
-        nh_rel.param( "autocalibrate", autocalibrate_, true );
         nh_rel.param( "orientation_stdev", orientation_stdev_, 0.035 );
         nh_rel.param( "angular_velocity_stdev", angular_velocity_stdev_, 0.012 );
         nh_rel.param( "linear_acceleration_stdev", linear_acceleration_stdev_, 0.098 );
-        nh_rel.param( "max_drift_rate", max_drift_rate_, 0.001 );
-        nh_rel.param( "assume_calibrated", assume_calibrated_, false );
-        nh_rel.param( "drift_calibration_steps", drift_calibration_steps_, 550 );
+        nh_rel.param( "ambient_linear_accel_calibration_steps", ambient_linear_accel_calibration_steps_, 550 );
         nh_rel.param( "ori_calibration_steps", ori_calibration_steps_, 110 );
-
-        drift_calibrated_ = true;
 
         multi_pub_.addPublishers
         <
+            _ImuMsg,
             _ImuMsg,
             _SeabeeImuMsg,
             _BoolMsg
         >( nh_rel,
         {
             "imu",
+            "rot_comp_imu",
             "seabee_imu",
             "is_calibrated"
         } );
 
-        _CalibrateRPYDriftServiceServerPolicy::registerCallback( quickdev::auto_bind( &XsensDriverNode::calibrateRPYDriftCB, this ) );
+        _CalibrateAmbientLinearAccelServiceServerPolicy::registerCallback( quickdev::auto_bind( &XsensDriverNode::calibrateAmbientLinearAccelCB, this ) );
         _CalibrateRPYOriServiceServerPolicy::registerCallback( quickdev::auto_bind( &XsensDriverNode::calibrateRPYOriCB, this ) );
 
         initPolicies
         <
-            _CalibrateRPYDriftServiceServerPolicy,
+            _CalibrateAmbientLinearAccelServiceServerPolicy,
             _CalibrateRPYOriServiceServerPolicy
         >
         (
             "enable_key_ids", true,
-            "service_name_param0", std::string( "calibrate_rpy_drift" ),
+            "service_name_param0", std::string( "calibrate_ambient_linear_accel" ),
             "service_name_param1", std::string( "calibrate_rpy_ori" )
         );
 
@@ -176,35 +169,28 @@ private:
         initPolicies<quickdev::policy::ALL>();
     }
 
+    static btVector3 toRad( btVector3 const & vec )
+    {
+        return btVector3( Radian( Degree( vec.getX() ) ), Radian( Degree( vec.getY() ) ), Radian( Degree( vec.getZ() ) ) );
+    }
+
+    static btVector3 toDeg( btVector3 const & vec )
+    {
+        return btVector3( Degree( Radian( vec.getX() ) ), Degree( Radian( vec.getY() ) ), Degree( Radian( vec.getZ() ) ) );
+    }
+
     void updateIMUData()
     {
-        if ( !imu_driver_ptr_->updateData() )
-        {
-            ROS_WARN( "Failed to update data during this cycle..." );
-        }
-        else
-        {
-            tf::Vector3 temp;
-            temp = unit::implicit_convert( imu_driver_ptr_->ori_ );
-
-            while ( ori_data_cache_.size() >= IMU_DATA_CACHE_SIZE )
-            {
-                ori_data_cache_.pop();
-            }
-
-            ori_data_cache_.push( temp );
-        }
+        if ( !imu_driver_ptr_->updateData() ) ROS_WARN( "Failed to update data during this cycle..." );
     }
 
     void runFullCalibration()
     {
-        // compensate for drift first, then zero out the angle
-        runRPYDriftCalibration();
-        checkCalibration();
-
+        // compensate for ambient acceleration, then zero out the angle
+        runAmbientLinearAccelCalibration();
         runRPYOriCalibration();
     }
-
+/*
     void checkCalibration()
     {
         ROS_INFO( "Checking calibration..." );
@@ -218,50 +204,62 @@ private:
         is_calibrated_msg.data = drift_calibrated_;
         multi_pub_.publish( "is_calibrated", is_calibrated_msg );
     }
-
+*/
     void runRPYOriCalibration()
     {
-        runRPYOriCalibration( (uint) ori_calibration_steps_ );
+        runRPYOriCalibration( (size_t) ori_calibration_steps_ );
     }
 
     // assuming the robot is not moving, calculate the IMU's "north" and offset all future measurements by this amount
-    void runRPYOriCalibration( uint n )
+    void runRPYOriCalibration( size_t const & num_steps )
     {
         ROS_INFO( "Running ori calibration..." );
         //reset the vector to <0, 0, 0>
-        ori_comp_ *= 0.0;
-        for ( size_t i = 0; i < n && ros::ok(); ++i )
+        relative_orientation_offset_ *= 0.0;
+        for ( size_t i = 0; i < num_steps && QUICKDEV_GET_RUNABLE_POLICY()::running(); ++i )
         {
             updateIMUData();
-            ori_comp_ += ori_data_cache_.front();
+            relative_orientation_offset_ += toRad( unit::convert<btVector3>( imu_driver_ptr_->ori_ ) );
             ros::spinOnce();
-            ros::Rate( 110 ).sleep();
+            QUICKDEV_GET_RUNABLE_POLICY()::getLoopRate()->sleep();
         }
 
-        ori_comp_ /= (double) ( n );
+        relative_orientation_offset_ /= double( num_steps );
     }
 
-    void runRPYDriftCalibration()
+    void runAmbientLinearAccelCalibration()
     {
-        runRPYDriftCalibration( (uint) drift_calibration_steps_ );
+        runAmbientLinearAccelCalibration( size_t( ambient_linear_accel_calibration_steps_ ) );
     }
 
-    // see how far the IMU drifts in the given time and try to compensate
-    void runRPYDriftCalibration( uint n )
+    //! assuming the imu is still, calculate the rotation-compensated ambient linear acceleration
+    /*! This value can be subtracted from future rotation-compensated measurments to perfectly remove any ambient acceleration, ie from gravity
+     */
+    void runAmbientLinearAccelCalibration( size_t const & num_steps )
     {
-        ROS_INFO( "Running drift calibration..." );
+        ROS_INFO( "Running ambient linear accel calibration..." );
         //reset the vector to <0, 0, 0>
-        drift_comp_ *= 0.0;
-        updateIMUData();
-        drift_comp_ = ori_data_cache_.front();
-        for ( size_t i = 0; i < n && ros::ok(); ++i )
+        rotation_compensated_ambient_linear_acceleration_ *= 0.0;
+        for ( size_t i = 0; i < num_steps && QUICKDEV_GET_RUNABLE_POLICY()::running(); ++i )
         {
             updateIMUData();
+            rotation_compensated_ambient_linear_acceleration_ += calculateRotationCompensatedLinearAcceleration( unit::implicit_convert( imu_driver_ptr_->ori_ ), unit::implicit_convert( imu_driver_ptr_->accel_ ) );
             ros::spinOnce();
-            ros::Rate( 110 ).sleep();
+            QUICKDEV_GET_RUNABLE_POLICY()::getLoopRate()->sleep();
         }
-        drift_comp_ -= ori_data_cache_.front();
-        drift_comp_ /= (double) ( n ); //avg drift per cycle
+        rotation_compensated_ambient_linear_acceleration_ /= double( num_steps ); //avg acceleration per cycle
+    }
+
+    //! Given the current orientation and linear acceleration, calculate a rotation-invariant linear acceleration value
+    /*! Specifically, rotate the linear acceleration vector by the current orientation. This could be pictured as placing a virtual,
+     *  non-rotatable IMU at the center of the real IMU, such that we only measure acceleration due to motion, and not due to orientation
+     */
+    btVector3 calculateRotationCompensatedLinearAcceleration( btQuaternion const & orientation, btVector3 const & linear_acceleration )
+    {
+        // create a transform from the current orientation
+        btTransform const orientation_tf( orientation );
+        // rotate the acceleration vector by that transform
+        return orientation_tf * linear_acceleration;
     }
 
     // entry point for service
@@ -269,19 +267,17 @@ private:
     {
         runRPYOriCalibration( request.num_samples );
 
-        response.calibration = unit::implicit_convert( ori_comp_ );
+        response.calibration = unit::implicit_convert( relative_orientation_offset_ );
 
         return true;
     }
 
     // entry point for service
-    QUICKDEV_DECLARE_SERVICE_CALLBACK( calibrateRPYDriftCB, _CalibrateRPYSrv )
+    QUICKDEV_DECLARE_SERVICE_CALLBACK( calibrateAmbientLinearAccelCB, _CalibrateRPYSrv )
     {
-        runRPYDriftCalibration( request.num_samples );
+        runAmbientLinearAccelCalibration( request.num_samples );
 
-        response.calibration = unit::implicit_convert( drift_comp_ );
-
-        checkCalibration();
+        response.calibration = unit::implicit_convert( rotation_compensated_ambient_linear_acceleration_ );
 
         return true;
     }
@@ -295,53 +291,73 @@ private:
 
     QUICKDEV_SPIN_ONCE()
     {
-        if ( autocalibrate_ && !drift_calibrated_ ) runRPYDriftCalibration();
+        updateIMUData();
+        ros::Time const now = ros::Time::now();
 
         _ImuMsg imu_msg;
+        _ImuMsg rot_comp_imu_msg;
         _SeabeeImuMsg seabee_imu_msg;
 
-        updateIMUData();
+        imu_msg.header.stamp = now;
+        imu_msg.header.frame_id = "/seabee3/sensors/imu";
 
-        imu_msg.linear_acceleration = unit::implicit_convert( imu_driver_ptr_->accel_ );
-        imu_msg.angular_velocity = unit::implicit_convert( imu_driver_ptr_->gyro_ );
+        // our rotation vector from the IMU; convert from degrees to radians
+        btVector3 const orientation_rpy = toRad( unit::convert<btVector3>( imu_driver_ptr_->ori_ ) );
+        // our rotation vector, offset by the results of any relative orientation calibration
+        btVector3 const orientation_rpy_with_offset = unit::implicit_convert( orientation_rpy - relative_orientation_offset_ );
+        // our orientation from the IMU
+        btQuaternion const orientation = unit::implicit_convert( imu_driver_ptr_->ori_ );
+        // our orientation from the IMU, with any offset from calibration
+        btQuaternion const orientation_with_offset = unit::implicit_convert( orientation_rpy_with_offset );
 
         seabee_imu_msg.accel = unit::implicit_convert( imu_driver_ptr_->accel_ );
         seabee_imu_msg.gyro = unit::implicit_convert( imu_driver_ptr_->gyro_ );
         seabee_imu_msg.mag = unit::implicit_convert( imu_driver_ptr_->mag_ );
+        seabee_imu_msg.ori = unit::implicit_convert( toDeg( orientation_rpy_with_offset ) );
 
-        // drift_comp_total_ += drift_comp_;
+        imu_msg.angular_velocity = unit::implicit_convert( imu_driver_ptr_->gyro_ );
 
-        imu_driver_ptr_->ori_ += drift_comp_total_;
-
-        tf::Vector3 temp;
-        temp = unit::implicit_convert( imu_driver_ptr_->ori_ );
-        temp -= ori_comp_;
-
-        seabee_imu_msg.ori = unit::implicit_convert( temp );
-
-        seabee_imu_msg.ori.x = seabee_imu_msg.ori.x;
-        seabee_imu_msg.ori.y = seabee_imu_msg.ori.y;
-        seabee_imu_msg.ori.z = seabee_imu_msg.ori.z;
-
-        tf::Quaternion ori
-        (
-            Radian( Degree( seabee_imu_msg.ori.z ) ),
-            Radian( Degree( seabee_imu_msg.ori.y ) ),
-            Radian( Degree( seabee_imu_msg.ori.x ) )
-        );
-
-        _TfTranceiverPolicy::publishTransform( btTransform( ori, btVector3( 0, 0, 0 ) ), "/world", "/seabee3/sensors/imu" );
-
-        imu_msg.orientation.w = ori.w();
-        imu_msg.orientation.x = ori.x();
-        imu_msg.orientation.y = ori.y();
-        imu_msg.orientation.z = ori.z();
+        imu_msg.orientation = unit::implicit_convert( orientation_with_offset );
 
         imu_msg.angular_velocity_covariance[0] = imu_msg.angular_velocity_covariance[4] = imu_msg.angular_velocity_covariance[8] = angular_velocity_stdev_ * angular_velocity_stdev_;
         imu_msg.linear_acceleration_covariance[0] = imu_msg.linear_acceleration_covariance[4] = imu_msg.linear_acceleration_covariance[8] = linear_acceleration_stdev_ * linear_acceleration_stdev_;
         imu_msg.orientation_covariance[0] = imu_msg.orientation_covariance[4] = imu_msg.orientation_covariance[8] = orientation_stdev_ * orientation_stdev_;
 
-        multi_pub_.publish( "imu", imu_msg, "seabee_imu", seabee_imu_msg );
+        rot_comp_imu_msg = imu_msg;
+
+        btVector3 const linear_acceleration = unit::implicit_convert( imu_driver_ptr_->accel_ );
+        /* get our linear acceleration, compensated by our current orientation; this will result in a linear acceleration as perceived by an IMU
+         * in a fixed frame, regardless of our current orientation
+        */
+        btVector3 const rotation_compensated_linear_acceleration = calculateRotationCompensatedLinearAcceleration( orientation, linear_acceleration );
+
+        // remove any ambient acceleration (ie due to gravity) picked up by our calibration
+        btVector3 const compensated_linear_acceleration = rotation_compensated_linear_acceleration - rotation_compensated_ambient_linear_acceleration_;
+
+        // construct a rotation-only transform from our current orientation
+        btTransform const relative_orientation_offset_tf( orientation );
+
+        /* rotate the above acceleration back into our current frame; this will result in the ideal rotation-compensated, ambient-acceleration-
+         * compensated value that we're looking for
+         */
+        btVector3 const rotated_compensated_linear_acceleration = relative_orientation_offset_tf.inverse() * compensated_linear_acceleration;
+
+        imu_msg.linear_acceleration = unit::implicit_convert( imu_driver_ptr_->accel_ );
+        rot_comp_imu_msg.linear_acceleration = unit::implicit_convert( rotated_compensated_linear_acceleration );
+
+        // drift_comp_total_ += drift_comp_;
+/*
+        imu_driver_ptr_->ori_ += drift_comp_total_;
+
+        tf::Vector3 temp;
+        temp = unit::implicit_convert( imu_driver_ptr_->ori_ );
+        temp -= relative_orientation_offset_;
+
+        seabee_imu_msg.ori = unit::implicit_convert( temp );
+*/
+
+        _TfTranceiverPolicy::publishTransform( btTransform( orientation_with_offset, btVector3( 0, 0, 0 ) ), "/world", "/seabee3/sensors/imu", now );
+        multi_pub_.publish( "imu", imu_msg, "rot_comp_imu", rot_comp_imu_msg, "seabee_imu", seabee_imu_msg );
         //imu_pub_raw_.publish( msg_raw );
     }
 };

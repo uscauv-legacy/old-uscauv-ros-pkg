@@ -1,0 +1,20 @@
+<launch>
+    <arg name="pkg" value="seabee3_driver" />
+    <arg name="type" default="motor_values_gui" />
+    <arg name="name" default="$(arg type)" />
+    <arg name="rate" default="30" />
+    <arg name="args" value="_loop_rate:=$(arg rate)" />
+
+    <node
+        pkg="$(arg pkg)"
+        type="$(arg type)_node"
+        name="$(arg name)"
+        args="$(arg args)"
+        output="screen" />
+
+    <arg name="show_reconfigure" default="true" />
+    <include file="$(find quickdev_cpp)/launch/dynamic_reconfigure.launch" >
+        <arg name="enable" value="$(arg show_reconfigure)" />
+        <arg name="name" value="$(arg name)" />
+    </include>
+</launch>

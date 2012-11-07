@@ -2,8 +2,8 @@
     <arg name="simulate" default="false" />
 
     <arg name="pkg" value="seabee3_driver" />
-    <arg name="name" default="seabee3_driver" />
-    <arg name="type" value="$(arg name)_node" />
+    <arg name="type" value="seabee3_driver" />
+    <arg name="name" default="$(arg type)" />
     <arg name="rate" default="30" />
     <arg name="args" value="_loop_rate:=$(arg rate) _reconfigure/simulate:=$(arg simulate)" />
     <arg name="manager" default="manager" />
@@ -21,7 +21,7 @@
     <node
         unless="$(arg nodelet)"
         pkg="$(arg pkg)"
-        type="$(arg type)"
+        type="$(arg type)_node"
         name="$(arg name)"
         args="$(arg args)"
         output="screen" />
