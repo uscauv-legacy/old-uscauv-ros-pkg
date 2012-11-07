@@ -3,7 +3,7 @@
     <arg name="type" default="motor_values_gui" />
     <arg name="name" default="$(arg type)" />
     <arg name="rate" default="30" />
-    <arg name="args" value="_loop_rate:=$(arg rate)" />
+    <arg name="args" value="_loop_rate:=$(arg rate) ~motor_vals:=/seabee3/motor_vals" />
 
     <node
         pkg="$(arg pkg)"
