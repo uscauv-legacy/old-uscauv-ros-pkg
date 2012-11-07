@@ -284,51 +284,45 @@ QUICKDEV_DECLARE_NODE_CLASS( Seabee3Physics )
         // apply buoyant force in upward direction, this is a temporary simple model of the actually buoyancy
         if( config_.buoyancy )
         {
+
             btVector3 buoyant_force;
 
             if(world_transform.getOrigin().getZ() < 30) {
+
                 buoyant_force.setZ(10.5); // the force is just slightly more than the gravity to simulate slightly positive buoyancy
+
             }
             else{
+
                 buoyant_force.setZ(10.5 * (world_transform.getOrigin().getZ() - 1.25)/2.5); // lowering buoyancy force proportional to the amount of seabee above the water
+
             }
 
             ROS_INFO("Buoyancy force: %f", buoyant_force.getZ() );
 
             seabee_body_->applyForce( buoyant_force, seabee_body_->getCenterOfMassPosition() );
+
         }
 
-        // apply drag force on a per-axis basis
-        btVector3 drag_force( -0.1 * linear_velocity.x(), -0.1 * linear_velocity.y(), -0.1 * linear_velocity.z() );
+        if( config_.drag_enabled )
+        {
 
-        seabee_body_->applyForce( drag_force, seabee_body_->getCenterOfMassPosition() );
+            // apply drag force on a per-axis basis
+            btVector3 drag_force( -0.1 * linear_velocity.x(), -0.1 * linear_velocity.y(), -0.1 * linear_velocity.z() );
 
-        ROS_INFO( "Drag Force: %f ... Sub Speed: %f", drag_force.length(), linear_velocity.length() );
+            seabee_body_->applyForce( drag_force, seabee_body_->getCenterOfMassPosition() );
+
+            ROS_INFO( "Drag Force: %f ... Sub Speed: %f", drag_force.length(), linear_velocity.length() );
+
+        }
 
         ROS_INFO( "linear_velocity: %f, %f, %f", linear_velocity.x(), linear_velocity.y(), linear_velocity.z() );
 
         auto const & dt = timer_.update();
 
-        //seabee_body_->applyDamping( dt );
-
         // Step the physics simulation; increase the simulation's time by dt (dt is variable); interpolate by up to 2 steps when dt is not the ideal @loop_rate_seconds_ time
         dynamics_world_->stepSimulation( dt, 2, getLoopRateSeconds() );
 
-        //tf::Transform givens_tf;
-/*
-           auto const imu_transform = _TfTranceiverPolicy::tryLookupTransform( "/world", "/seabee3/sensors/imu" );
-           auto const depth_transform = _TfTranceiverPolicy::tryLookupTransform( "/world", "/seabee3/sensors/depth" );
-
-        //      geometry_msgs::Twist givens;
-        //      givens_tf >> givens;
-
-
-        world_transform.setRotation( imu_transform.getRotation() );
-        world_transform.getOrigin().setZ( depth_transform.getOrigin().getZ() );
-        seabee_body_->getMotionState()->setWorldTransform( world_transform );
-*/
-
-        seabee_body_->getMotionState()->getWorldTransform( world_transform );
         ROS_INFO( "Body Pos: %f %f %f\n",
                 world_transform.getOrigin().getX(),
                 world_transform.getOrigin().getY(),
