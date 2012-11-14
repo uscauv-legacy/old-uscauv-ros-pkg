@@ -238,6 +238,13 @@ QUICKDEV_DECLARE_NODE_CLASS( Seabee3Physics )
         auto const is_killed = is_killed_ && config_.is_killed;
 
         btVector3 const & linear_velocity = seabee_body_->getLinearVelocity();
+        btVector3 const & angular_velocity = seabee_body_->getAngularVelocity();
+
+        double const vehicle_radius = 0.1000125;
+        double const vehicle_height = 2 * vehicle_radius;
+        double const vehicle_length = 0.3302;
+        double const vehicle_width = vehicle_height;
+        double const vehicle_volume = vehicle_length * vehicle_height * vehicle_width + config_.extra_buoyant_volume;
 
         ROS_INFO( "linear_velocity: %f, %f, %f", linear_velocity.x(), linear_velocity.y(), linear_velocity.z() );
 
@@ -302,11 +309,7 @@ QUICKDEV_DECLARE_NODE_CLASS( Seabee3Physics )
         {
             btVector3 buoyant_force;
 
-            double const vehicle_radius = 0.1000125;
-            double const vehicle_height = 2 * vehicle_radius;
-            double const vehicle_length = 0.3302;
-            double const vehicle_width = vehicle_height;
-            double const vehicle_volume = vehicle_length * vehicle_height * vehicle_width + config_.extra_buoyant_volume;
+
             double const water_density = 1000;
 
             double volume_displaced = 0;
@@ -337,22 +340,47 @@ QUICKDEV_DECLARE_NODE_CLASS( Seabee3Physics )
 
         if( config_.drag_enabled )
         {
-            // apply drag force on a per-axis basis
+            // apply angular drag force on a per-axis basis
+
+            // using differential lengths along which to apply the drag
+            btScalar ang_drag_x = 0;
+            btScalar ang_drag_y = 0;
+            btScalar ang_drag_z = 0;
+
+            for( int i = 1; i < 10; i++ )
+            {
+                ang_drag_x += -1 * angular_velocity.getX() * vehicle_radius / i;
+                ang_drag_y += -1 * angular_velocity.getY() * vehicle_length / ( 2 * i );
+                ang_drag_z += -1 * angular_velocity.getZ() * vehicle_length / ( 2 * i );
+            }
+
+            btVector3 angular_drag_force( ang_drag_x * config_.angular_drag_constant * 2, ang_drag_y * config_.angular_drag_constant * 2, ang_drag_z * config_.angular_drag_constant );
+
+            ROS_INFO( "Angular drag: %f %f %f ", angular_drag_force.getX(), angular_drag_force.getY(), angular_drag_force.getZ() );
+
+            if( angular_velocity.length() != 0 )
+            {
+                seabee_body_->applyTorque( angular_drag_force );
+            }
+
+
+            // apply linear drag force on a per-axis basis
             btVector3 const linear_velocity_unit_vec = linear_velocity.normalized();
 
             btVector3 drag_force = linear_velocity;
             drag_force *= drag_force;
             drag_force *= -config_.drag_constant;
 
-            seabee_body_->applyForce( drag_force * linear_velocity_unit_vec, btVector3( 0, 0, 0 ) );
+            if( linear_velocity.length() != 0 )
+            {
+                seabee_body_->applyForce( drag_force * linear_velocity_unit_vec, btVector3( 0, 0, 0 ) );
+            }
 
             ROS_INFO( "Drag Force: %f ... Sub Speed: %f", drag_force.length(), linear_velocity.length() );
 
         }
 
         auto const & dt = timer_.update();
-
-        ROS_INFO( "dt: %f : %f", dt, getLoopRateSeconds() );
 
         // Step the physics simulation; increase the simulation's time by dt (dt is variable); interpolate by up to 2 steps when dt is not the ideal @loop_rate_seconds_ time
         dynamics_world_->stepSimulation( dt, 10, getLoopRateSeconds() );
