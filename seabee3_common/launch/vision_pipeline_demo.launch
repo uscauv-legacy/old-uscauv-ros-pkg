@@ -1,0 +1,41 @@
+<launch>
+  <arg name="simulate" default="false" />
+  <arg name="visualize" default="false" />
+  <param name="/camera1/shutter" value="500" />
+  
+  <group if="$(arg simulate)">
+    <include file="$(find image_server)/launch/image_server.launch" >
+      <arg unless="$(arg visualize)" name="show_image" value="false" />
+      <arg if="$(arg visualize)" name="show_image" value="true" />
+    </include>
+  </group>
+
+  <include unless="$(arg simulate)" file="$(find seabee3_common)/launch/camera1.launch">
+  </include>
+  
+  <include file="$(find color_classifier)/launch/color_classifier.launch">
+    <arg if="$(arg simulate)" name="source" value="/image_server/output_image" />
+    <arg unless="$(arg simulate)" name="source" value="/camera1/image_rect_color" />
+  </include>
+  
+  <include file="$(find contour_matcher)/launch/contour_finder.launch" />
+  <rosparam if="$(arg visualize)" param="/contour_finder/params" command="load" file="$(find contour_matcher)/params/debug.yaml" />
+  <!-- <param name="/contour_finder/params" value="[show_debug_images: yes]" />  -->
+
+  <include file="$(find landmark_finder)/launch/buoy_finder.launch">
+    <arg if="$(arg simulate)" name="camera_info" value="/image_server/camera_info" />
+    <arg unless="$(arg simulate)" name="camera_info" value="/camera1/camera_info" />
+  </include>
+  
+  <group if="$(arg visualize)">
+    <include file="$(find seabee3_common)/launch/image_array_viewer.launch" >
+      <arg name="source" value="/color_classifier/classified_images" />
+    </include>  
+    <node unless="$(arg simulate)" pkg="image_view" type="image_view" name="camera1_viewer">
+      <remap from="image" to="/camera1/image_rect_color" />
+    </node>
+  </group>
+  
+  <node unless="$(arg simulate)" pkg="dynamic_reconfigure" type="reconfigure_gui" name="reconfigure" />
+  
+</launch>
