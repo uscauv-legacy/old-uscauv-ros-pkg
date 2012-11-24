@@ -206,8 +206,9 @@ QUICKDEV_DECLARE_NODE_CLASS( Seabee3Physics )
         btVector3 seabee_inertia( 0, 0, 0 );
         seabee_shape_->calculateLocalInertia( seabee_mass, seabee_inertia );
 
-        btRigidBody::btRigidBodyConstructionInfo seabee_body_ci( seabee_mass, seabee_motion_state_.get(), seabee_shape_.get(), seabee_inertia );
-        seabee_body_ = quickdev::make_shared( new btRigidBody( seabee_body_ci ) );
+        btRigidBody::btRigidBodyConstructionInfo seabee_body_construction_info( seabee_mass, seabee_motion_state_.get(), seabee_shape_.get(), seabee_inertia );
+        seabee_body_ = quickdev::make_shared( new btRigidBody( seabee_body_construction_info ) );
+        // prevent deactivation of seabee at low velocities
         seabee_body_->setActivationState( DISABLE_DEACTIVATION );
         dynamics_world_->addRigidBody( seabee_body_.get() );
 
@@ -240,11 +241,10 @@ QUICKDEV_DECLARE_NODE_CLASS( Seabee3Physics )
         btVector3 const & linear_velocity = seabee_body_->getLinearVelocity();
         btVector3 const & angular_velocity = seabee_body_->getAngularVelocity();
 
+        // model the entire vehicle as a cylinder
         double const vehicle_radius = 0.1000125;
-        double const vehicle_height = 2 * vehicle_radius;
-        double const vehicle_length = 0.3302;
-        double const vehicle_width = vehicle_height;
-        double const vehicle_volume = vehicle_length * vehicle_height * vehicle_width + config_.extra_buoyant_volume;
+        btVector3 const vehicle_dims( 0.3302, 2 * vehicle_radius, 2 * vehicle_radius )
+        double const vehicle_volume = vehicle_dims.getX() * vehicle_dims.getY() * vehicle_dims.getZ() + config_.extra_buoyant_volume;
 
         ROS_INFO( "linear_velocity: %f, %f, %f", linear_velocity.x(), linear_velocity.y(), linear_velocity.z() );
 
@@ -304,11 +304,13 @@ QUICKDEV_DECLARE_NODE_CLASS( Seabee3Physics )
             dynamics_world_->setGravity( btVector3( 0, 0, 0 ) );
         }
 
-        // apply buoyant force in upward direction, this is a temporary simple model of the actually buoyancy
+        // Apply buoyant force in upward direction, this is a temporary simple model of the actual buoyancy
+        // Specifically, we assume the vehicle is cylidrical, then look at the volume of the vehicle below the water, which will be the same as
+        // the volume of water displaced by the vehicle. Eventually, to maximize the accuracy of this calculation, we want to model each
+        // component of the hull (in terms of volume and mass) and apply buoyant forces at the center of each of those components
         if( config_.buoyancy )
         {
             btVector3 buoyant_force;
-
 
             double const water_density = 1000;
 
@@ -324,32 +326,57 @@ QUICKDEV_DECLARE_NODE_CLASS( Seabee3Physics )
             {
                 volume_displaced = 0;
             }
+            // somewhere in-between
             else
             {
                 // density of water * acceleration due to gravity * volume of water displaced
-                volume_displaced = ( ( vehicle_height / 2 - world_transform.getOrigin().getZ() ) / vehicle_height ) * vehicle_volume;
+                volume_displaced = ( ( vehicle_dims.getZ() / 2 - world_transform.getOrigin().getZ() ) / vehicle_dims.getZ() ) * vehicle_volume;
             }
 
-            buoyant_force.setZ( water_density * dynamics_world_->getGravity().length() * volume_displaced ); // lowering buoyancy force proportional to the amount of seabee above the water
+            // we're assuming a calm surface, so we can make the buoyant force point straight up
+            buoyant_force.setZ( water_density * dynamics_world_->getGravity().length() * volume_displaced );
 
+            ROS_INFO( "Buoyancy force: %f; volume displaced / max volume displaced: %f / %f", buoyant_force.getZ(), volume_displaced, vehicle_volume );
 
-            ROS_INFO( "Buoyancy force: %f; volume displaced: %f / %f", buoyant_force.getZ(), volume_displaced, vehicle_volume );
-
+            // apply the buoyant force at the center of the vehicle
             seabee_body_->applyForce( buoyant_force, btVector3( 0, 0, 0 ) );
         }
 
         if( config_.drag_enabled )
         {
-            // apply angular drag force on a per-axis basis
-
             // using differential lengths along which to apply the drag
             btScalar ang_drag_x = 0;
             btScalar ang_drag_y = 0;
             btScalar ang_drag_z = 0;
 
-            for( int i = 1; i < 10; i++ )
+            // apply angular drag force on a per-axis basis
+            // here, we assume radial symmetry, so the number of samples is really the number of samples along the radius, not the length
+            for( size_t i = 1; i <= config_.angular_drag_num_samples_; i++ )
             {
-                ang_drag_x += -1 * angular_velocity.getX() * vehicle_radius / i;
+                // For an arbitrary point lying on a given axis, apply a force at that point proportional to the velocity at which that point is
+                // rotating around the center of the vehicle and the surface area of that segment, in the opposite direction of the velocity of
+                // that point
+
+                // velocity of particle = arc length of path * angular_velocity^2
+                //                      = 2 PI r * angular_velocity^2
+                //
+
+                double const radius_percent = double( i ) / double( config_.angular_drag_num_samples );
+                btVector3 force_yaw( 1, 0, 0 );
+                btVector3 force_pitch( 0, 1, 0 );
+                btVector3 force_roll( 0, 0, 1 );
+
+                // x-axis
+                // (ignore)
+                force_roll *= 0.0;
+
+                // y-axis
+                force_pitch *= 2.0 * M_PI * vehicle_dims.getX() * radius_percent;
+
+                // z-axis
+                force_yaw *= 2.0 * M_PI * vehicle_dims.getX() * radius_percent;
+
+//                ang_drag_x += -1 * angular_velocity.getX() * vehicle_radius / i;
                 ang_drag_y += -1 * angular_velocity.getY() * vehicle_length / ( 2 * i );
                 ang_drag_z += -1 * angular_velocity.getZ() * vehicle_length / ( 2 * i );
             }
