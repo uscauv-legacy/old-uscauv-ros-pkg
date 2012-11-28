@@ -13,6 +13,7 @@
   <depend package="bullet"/>
   <depend package="seabee3_msgs"/>
   <depend package="seabee3_common"/>
+  <depend package="eigen" />
 
   <!-- runtime dependencies -->
   <depend package="seabee3_driver"/>
