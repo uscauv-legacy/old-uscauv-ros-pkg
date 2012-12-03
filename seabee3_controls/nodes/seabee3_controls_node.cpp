@@ -1,5 +1,5 @@
 /***************************************************************************
- *  nodes/seabee3_controls.cpp
+ *  nodes/seabee3_controls_node.cpp
  *  --------------------
  *
  *  Copyright (c) 2011, Edward T. Kaszubski ( ekaszubski@gmail.com )

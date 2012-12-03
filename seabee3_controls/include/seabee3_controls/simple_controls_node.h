@@ -38,7 +38,13 @@
 
 #include <quickdev/node.h>
 
+// policies
+#include <quickdev/service_server_policy.h>
+#include <quickdev/reconfigure_policy.h>
+#include <quickdev/tf_tranceiver_policy.h>
+
 // objects
+#include <quickdev/controllers/reconfigurable_pid.h>
 #include <quickdev/multi_publisher.h>
 #include <quickdev/multi_subscriber.h>
 
@@ -51,12 +57,26 @@
 #include <seabee3_msgs/MotorVals.h>
 #include <geometry_msgs/Twist.h>
 
+// srvs
+#include <std_srvs/Empty.h>
+
+// cfgs
+#include <seabee3_controls/Seabee3ControlsConfig.h>
+
 typedef seabee3_msgs::MotorVals _MotorValsMsg;
 typedef geometry_msgs::Twist _TwistMsg;
 
+typedef std_srvs::Empty _ResetPoseService;
+
+typedef seabee3_controls::Seabee3ControlsConfig _Seabee3ControlsCfg;
+
+typedef quickdev::TfTranceiverPolicy _TfTranceiverPolicy;
+typedef quickdev::ServiceServerPolicy<_ResetPoseService> _ResetPoseServiceServer;
+typedef quickdev::ReconfigurePolicy<_Seabee3ControlsCfg> _Seabee3ControlsLiveParams;
+
 using namespace seabee3_common;
 
-QUICKDEV_DECLARE_NODE( SimpleControls )
+QUICKDEV_DECLARE_NODE( SimpleControls, _ResetPoseServiceServer, _Seabee3ControlsLiveParams, _TfTranceiverPolicy )
 
 QUICKDEV_DECLARE_NODE_CLASS( SimpleControls )
 {
@@ -64,10 +84,24 @@ protected:
     ros::MultiPublisher<> multi_pub_;
     ros::MultiSubscriber<> multi_sub_;
 
-    _TwistMsg::ConstPtr velocity_msg_ptr_;
-    std::mutex velocity_mutex_;
+    // pid for depth and heading
+    typedef quickdev::ReconfigurablePID<2> _Pid2D;
+    _Pid2D pid_;
 
-    QUICKDEV_DECLARE_NODE_CONSTRUCTOR( SimpleControls )
+    _TwistMsg::ConstPtr last_velocity_msg_ptr_;
+    std::mutex last_velocity_mutex_;
+
+    btTransform world_to_desired_pose_tf_;
+    std::mutex world_to_desired_pose_mutex_;
+
+    btTransform world_to_current_pose_tf_;
+    std::mutex world_to_current_pose_mutex_;
+
+    ros::Time last_velocity_update_time_;
+
+    QUICKDEV_DECLARE_NODE_CONSTRUCTOR( SimpleControls ),
+        last_velocity_update_time_( ros::Time( 0 ) ),
+        world_to_desired_pose_tf_( btTransform( btQuaternion( 0, 0, 0, 1 ), btVector3( 0, 0, 0 ) ) )
     {
         //
     }
@@ -79,14 +113,42 @@ protected:
         multi_sub_.addSubscriber( nh_rel, "cmd_vel", &SimpleControlsNode::cmdVelCB, this );
         multi_pub_.addPublishers<_MotorValsMsg>( nh_rel, { "motor_vals" } );
 
+        initPolicies<_ResetPoseServiceServer>( "service_name_param", std::string( "/seabee3/reset_pose" ) );
+
         initPolicies<quickdev::policy::ALL>();
+
+        pid_.applySettings(
+            quickdev::make_shared( new _Pid2D::_Settings( "linear/z" ) ),
+            quickdev::make_shared( new _Pid2D::_Settings( "angular/z" ) )
+        );
     }
 
     QUICKDEV_DECLARE_MESSAGE_CALLBACK( cmdVelCB, _TwistMsg )
     {
-        auto lock = quickdev::make_unique_lock( velocity_mutex_ );
+        auto const now = ros::Time::now();
 
-        velocity_msg_ptr_ = msg;
+        auto lock = quickdev::make_unique_lock( last_velocity_mutex_ );
+
+        last_velocity_msg_ptr_ = msg;
+
+        if( ( now - last_velocity_update_time_ ).toSec() <= 2 )
+        {
+            auto world_to_desired_pose_tf = _TfTranceiverPolicy::tryLookupTransform( "/world", "/seabee3/desired_pose" );
+            // update depth according to incoming linear z velocity
+            world_to_desired_pose_tf.getOrigin().setZ( world_to_desired_pose_tf.getOrigin().getZ() + msg->linear.z * ( now - last_velocity_update_time_ ).toSec() );
+            // update heading according to incoming angular z velocity
+            world_to_desired_pose_tf.setRotation( world_to_desired_pose_tf.getRotation() * btQuaternion( msg->angular.z * ( now - last_velocity_update_time_ ).toSec(), 0, 0 ) );
+            _TfTranceiverPolicy::publishTransform( btTransform( world_to_desired_pose_tf ), "/world", "/seabee3/desired_pose" );
+        }
+
+        last_velocity_update_time_ = now;
+    }
+
+    QUICKDEV_DECLARE_SERVICE_CALLBACK( resetPoseCB, _ResetPoseService )
+    {
+        auto lock = quickdev::make_unique_lock( world_to_current_pose_mutex_ );
+        _TfTranceiverPolicy::publishTransform( world_to_current_pose_tf_, "/world", "/seabee3/desired_pose" );
+        return true;
     }
 
     void normalizeMotorValsMsg( _MotorValsMsg & msg )
@@ -172,17 +234,43 @@ protected:
 
     QUICKDEV_SPIN_ONCE()
     {
-        _TwistMsg velocity_msg;
+        _TwistMsg last_velocity_msg;
         {
-            auto velocity_lock = quickdev::make_unique_lock( velocity_mutex_ );
+            auto velocity_lock = quickdev::make_unique_lock( last_velocity_mutex_ );
 
-            if( !velocity_msg_ptr_ ) return;
+            if( !last_velocity_msg_ptr_ ) return;
 
-            velocity_msg = *velocity_msg_ptr_;
+            last_velocity_msg = *last_velocity_msg_ptr_;
         }
 
-        auto const & linear_output_vec = ( 100.0 / 1.0 ) * unit::convert<btVector3>( velocity_msg.linear );
-        auto const & angular_output_vec = ( 100.0 / M_PI_2 ) * unit::convert<btVector3>( velocity_msg.angular );
+        auto const world_to_imu_tf = _TfTranceiverPolicy::tryLookupTransform( "/world", "/seabee3/sensors/imu" );
+        auto const world_to_depth_tf = _TfTranceiverPolicy::tryLookupTransform( "/world", "/seabee3/sensors/depth" );
+
+        btTransform current_to_desired_tf;
+
+        {
+            auto world_to_desired_pose_lock = quickdev::make_unique_lock( world_to_desired_pose_mutex_ );
+            world_to_desired_pose_tf_ = _TfTranceiverPolicy::tryLookupTransform( "/world", "/seabee3/desired_pose" );
+
+            auto world_to_current_pose_lock = quickdev::make_unique_lock( world_to_current_pose_mutex_ );
+            world_to_current_pose_tf_.setRotation( world_to_imu_tf.getRotation() );
+            world_to_current_pose_tf_.setOrigin( world_to_depth_tf.getOrigin() );
+
+            current_to_desired_tf = world_to_current_pose_tf_.inverse() * world_to_desired_pose_tf_;
+        }
+
+        btVector3 const linear_error_vec = unit::implicit_convert( current_to_desired_tf.getOrigin() );
+        btVector3 const angular_error_vec = unit::implicit_convert( current_to_desired_tf.getRotation() );
+
+        // motor value = linear velocity * 100; motor value : [ -100, 100 ]; linear velocity : [ -1.0, 1.0 ]
+        auto linear_output_vec = ( 100.0 / 1.0 ) * unit::convert<btVector3>( last_velocity_msg.linear );
+        // motor value = angular velocity * 100 / ( PI/2 ); motor value : [ -100, 100 ]; linear velocity : [ -PI/2, PI/2 ]
+        auto angular_output_vec = ( 100.0 / M_PI_2 ) * unit::convert<btVector3>( last_velocity_msg.angular );
+
+        // get control signal for depth
+        linear_output_vec.setZ( -pid_.pids_[0].update( 0, linear_error_vec.z() ) );
+        // get control signal for heading
+        angular_output_vec.setZ( -pid_.pids_[1].update( 0, angular_error_vec.z() ) );
 
         _MotorValsMsg motor_vals_msg;
 
