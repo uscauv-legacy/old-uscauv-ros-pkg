@@ -180,6 +180,7 @@ protected:
             }
         }
         // apply deadzones and floor values on a per-thruster basis
+        /*
         for( size_t i = 0; i < msg.motors.size(); ++i )
         {
             if( !msg.mask[i] ) continue;
@@ -189,6 +190,7 @@ protected:
             if( abs( value ) > 5 ) value = quickdev::sign( value ) * 5 + value * (double)( 100 - 5 ) / 100.0;
             else value = 0;
         }
+        */
     }
 
     template<int __Axis__, typename std::enable_if<(__Axis__ == movement::Axes::SPEED), int>::type = 0>
