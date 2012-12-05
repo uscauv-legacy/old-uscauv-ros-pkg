@@ -49,15 +49,15 @@ static unsigned int const NUM_MOTOR_CONTROLLERS = 9;
 static unsigned int const NUM_THRUSTERS = 6;
 namespace MotorControllerIDs
 {
-    static int const FWD_RIGHT_THRUSTER = 3;
-    static int const FWD_LEFT_THRUSTER = 1;
-    static int const DEPTH_FRONT_THRUSTER = 0; // front
-    static int const DEPTH_BACK_THRUSTER = 5; // back
-    static int const STRAFE_TOP_THRUSTER = 4; // top
-    static int const STRAFE_BOTTOM_THRUSTER = 2; // bottom
+    static int const FWD_RIGHT_THRUSTER = 3; // RR
+    static int const FWD_LEFT_THRUSTER = 1; // LL
+    static int const DEPTH_FRONT_THRUSTER = 0; // LT
+    static int const DEPTH_BACK_THRUSTER = 5; // RT
+    static int const STRAFE_TOP_THRUSTER = 4; // RB
+    static int const STRAFE_BOTTOM_THRUSTER = 2; // LB
     static int const SHOOTER = 6;
     static int const DROPPER_STAGE1 = 7;
-    static int const DROPPER_STAGE2 = 8;
+    static int const DROPPER_STAGE2 = 8; // LB ( 2 -> 8 )
 
     static inline bool isThruster( int const & id )
     {
