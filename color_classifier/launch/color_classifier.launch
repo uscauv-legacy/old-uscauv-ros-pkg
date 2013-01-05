@@ -1,6 +1,7 @@
 <launch>
     <arg name="model" default="model"/>
-    <arg name="source" default="/camera1/image_rect_color" />
+    <!-- <arg name="source" default="/camera1/image_rect_color" /> -->
+    <arg name="source" default="/image_server/output_image" />
     <!--arg name="mask" default="$(arg source)/output_adaptation_mask" /-->
 
     <arg name="pkg" value="color_classifier" />
