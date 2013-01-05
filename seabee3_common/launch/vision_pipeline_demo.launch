@@ -1,0 +1,29 @@
+<launch>
+    <arg name="simulate" default="false" />
+
+    <group if="$(arg simulate)">
+      <include file="$(find image_server)/launch/image_server.launch" />
+    </group>
+
+    <group unless="$(arg simulate)">
+      <include file="$(find seabee3_common)/launch/camera1.launch"/>
+    </group>
+    
+    <include file="$(find color_classifier)/launch/color_classifier.launch">
+      <arg if="$(arg simulate)" name="source" value="/image_server/output_image" />
+      <arg unless="$(arg simulate)" name="source" value="/camera1/image_rect_color" />
+    </include>
+    
+    <include file="$(find seabee3_common)/launch/image_array_viewer.launch" >
+      <arg name="source" value="/color_classifier/classified_images" />
+    </include>
+
+    <include file="$(find contour_matcher)/launch/contour_finder.launch" />
+    
+    <include file="$(find landmark_finder)/launch/buoy_finder.launch">
+      <arg if="$(arg simulate)" name="camera_info" value="/image_server/camera_info" />
+      <arg unless="$(arg simulate)" name="camera_info" value="/camera1/camera_info" />
+    </include>
+    
+    
+</launch>
