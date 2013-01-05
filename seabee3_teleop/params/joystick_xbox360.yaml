@@ -1,7 +1,7 @@
 axes: {
   linear.x: { index: 1, scale: 1.5 },
   linear.y: { index: 0, scale: 0.75 },
-  linear.z: { index: 4, scale: 0.15 },
+  linear.z: { index: 7, scale: 0.15 },
   angular.z: { index: 3, scale: 1.57079633 },
   fire_device: { index: 5, scale: 1.0 } }
 buttons: {

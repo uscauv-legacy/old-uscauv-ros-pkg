@@ -7,7 +7,7 @@
     <arg name="manager" default="manager" />
     <arg name="nodelet" default="false" />
 
-    <arg name="controller" default="ps3" />
+    <arg name="controller" default="xbox360" />
 
     <rosparam param="/$(arg name)/joystick" command="load" file="$(find seabee3_teleop)/params/joystick_$(arg controller).yaml" />
 

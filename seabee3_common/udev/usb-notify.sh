@@ -1,5 +1,7 @@
 #!/bin/sh
 
+icon_path="/usr/local/seabee/seabee_logo_transparent.png"
+
 device=$1
 
 if [ -z $device ]; then
@@ -25,12 +27,9 @@ for var in "$@"; do
     fi
 done
 
-
-icon_path="/usr/local/seabee/seabee_logo_transparent.png"
-
+# We don't know which user connected the device, so we will notify all users
 users=`users`
 
-# We don't know which user connected the device, so we will notify all users
 for user in $users; do
 
     if [ "$user" = "$last_user" ]; then
@@ -50,9 +49,8 @@ for user in $users; do
 	
 	DBUS_SESSION_BUS_ADDRESS=`grep -z DBUS_SESSION_BUS_ADDRESS /proc/$pid/environ | sed -e 's/DBUS_SESSION_BUS_ADDRESS=//'`
 	
-	su "$user" -s /bin/sh -c "DBUS_SESSION_BUS_ADDRESS=$DBUS_SESSION_BUS_ADDRESS notify-send -u low -i $icon_path 'Seabee' '""Mounted $device $info""'"
+	su "$user" -s /bin/sh -c "DBUS_SESSION_BUS_ADDRESS=$DBUS_SESSION_BUS_ADDRESS notify-send -u low -t 100 -i $icon_path 'Seabee' '""Mounted $device $info""'"
 	
     done
     
 done
-
