@@ -10,7 +10,8 @@
     <arg name="nodelet" default="false" />
 
     <rosparam param="/$(arg name)/reconfigure" command="load" file="$(find seabee3_driver)/params/reconfigure.yaml" />
-
+    <rosparam param="/$(arg name)/surface_pressure" command="load" file="$(find seabee3_driver)/params/surface_pressure.yaml" />
+    
     <node
         if="$(arg nodelet)"
         pkg="nodelet"

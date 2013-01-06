@@ -36,6 +36,8 @@
 #ifndef SEABEE3DRIVER_SEABEE3DRIVERNODE_H_
 #define SEABEE3DRIVER_SEABEE3DRIVERNODE_H_
 
+#include <cstdlib>
+
 #include <quickdev/node.h>
 
 // policies
@@ -54,6 +56,7 @@
 
 // service
 #include <seabee3_msgs/FiringDeviceAction.h>
+#include <seabee3_msgs/CalibrateDouble.h>
 
 // cfgs
 #include <seabee3_driver/FakeSeabeeConfig.h>
@@ -64,6 +67,7 @@ typedef seabee3_msgs::KillSwitch _KillSwitchMsg;
 typedef seabee3_msgs::Pressure _PressureMsg;
 
 typedef seabee3_msgs::FiringDeviceAction _FiringDeviceActionService;
+typedef seabee3_msgs::CalibrateDouble _CalibrateSurfacePressureService;
 
 typedef seabee3_driver::FakeSeabeeConfig _FakeSeabeeCfg;
 
@@ -72,17 +76,19 @@ typedef quickdev::ServiceServerPolicy<_FiringDeviceActionService, 0> _Shooter1Se
 typedef quickdev::ServiceServerPolicy<_FiringDeviceActionService, 1> _Shooter2ServiceServer;
 typedef quickdev::ServiceServerPolicy<_FiringDeviceActionService, 2> _Dropper1ServiceServer;
 typedef quickdev::ServiceServerPolicy<_FiringDeviceActionService, 3> _Dropper2ServiceServer;
+typedef quickdev::ServiceServerPolicy<_CalibrateSurfacePressureService, 4> _CalibrateSurfacePressureServiceServer;
 typedef quickdev::ReconfigurePolicy<_FakeSeabeeCfg> _FakeSeabeeLiveParams;
 typedef quickdev::TfTranceiverPolicy _TfTranceiverPolicy;
 
 using namespace seabee3_common;
 
-QUICKDEV_DECLARE_NODE( Seabee3Driver, _RobotDriver, _Shooter1ServiceServer, _Shooter2ServiceServer, _Dropper1ServiceServer, _Dropper2ServiceServer, _FakeSeabeeLiveParams )
+QUICKDEV_DECLARE_NODE( Seabee3Driver, _RobotDriver, _Shooter1ServiceServer, _Shooter2ServiceServer, _Dropper1ServiceServer, _Dropper2ServiceServer, _CalibrateSurfacePressureServiceServer, _FakeSeabeeLiveParams )
 
 QUICKDEV_DECLARE_NODE_CLASS( Seabee3Driver )
 {
     BeeStem3Driver bee_stem3_driver_;
     std::array<int, movement::NUM_MOTOR_CONTROLLERS> motor_dirs_;
+    double surface_pressure_;
 
     QUICKDEV_DECLARE_NODE_CONSTRUCTOR( Seabee3Driver )
     {
@@ -92,8 +98,11 @@ QUICKDEV_DECLARE_NODE_CLASS( Seabee3Driver )
     QUICKDEV_SPIN_FIRST()
     {
         QUICKDEV_GET_RUNABLE_NODEHANDLE( nh_rel );
-
-        motor_dirs_[movement::MotorControllerIDs::FWD_RIGHT_THRUSTER] =     -1;
+	
+	/// TODO: Change default value to 895, figure out how to properly resolve param namespace
+	surface_pressure_ = ros::ParamReader<double, 1>::readParam( nh_rel, "surface_pressure", 666);
+		
+	motor_dirs_[movement::MotorControllerIDs::FWD_RIGHT_THRUSTER] =     -1;
         motor_dirs_[movement::MotorControllerIDs::FWD_LEFT_THRUSTER] =      -1;
         motor_dirs_[movement::MotorControllerIDs::DEPTH_FRONT_THRUSTER] =   -1;
         motor_dirs_[movement::MotorControllerIDs::DEPTH_BACK_THRUSTER] =     1;
@@ -105,6 +114,7 @@ QUICKDEV_DECLARE_NODE_CLASS( Seabee3Driver )
         _Shooter2ServiceServer::registerCallback( quickdev::auto_bind( &Seabee3DriverNode::shooter2CB, this ) );
         _Dropper1ServiceServer::registerCallback( quickdev::auto_bind( &Seabee3DriverNode::dropper1CB, this ) );
         _Dropper2ServiceServer::registerCallback( quickdev::auto_bind( &Seabee3DriverNode::dropper2CB, this ) );
+	_CalibrateSurfacePressureServiceServer::registerCallback( quickdev::auto_bind( &Seabee3DriverNode::calibrateSurfacePressureCB, this) );
         _FakeSeabeeLiveParams::registerCallback( quickdev::auto_bind( &Seabee3DriverNode::reconfigureCB, this ) );
 
         initPolicies
@@ -113,7 +123,8 @@ QUICKDEV_DECLARE_NODE_CLASS( Seabee3Driver )
             _Shooter1ServiceServer,
             _Shooter2ServiceServer,
             _Dropper1ServiceServer,
-            _Dropper2ServiceServer
+	    _Dropper2ServiceServer,
+	    _CalibrateSurfacePressureServiceServer
         >
         (
             "enable_key_ids", true, // enable keys with IDs appended for all policies in this group
@@ -121,7 +132,8 @@ QUICKDEV_DECLARE_NODE_CLASS( Seabee3Driver )
             "service_name_param0", std::string( "/seabee3/shooter1" ),
             "service_name_param1", std::string( "/seabee3/shooter2" ),
             "service_name_param2", std::string( "/seabee3/dropper1" ),
-            "service_name_param3", std::string( "/seabee3/dropper2" )
+            "service_name_param3", std::string( "/seabee3/dropper2" ),
+	    "service_name_param4", std::string( "/seabee3/calibrate_surface_pressure" )
         );
 
         // initialize any remaining policies
@@ -176,7 +188,8 @@ QUICKDEV_DECLARE_NODE_CLASS( Seabee3Driver )
 
     inline double getDepthFromPressure( int const & observed_pressure ) const
     {
-        return ( observed_pressure - config_.surface_pressure ) / config_.montalbos_per_meter;
+      /* return ( observed_pressure - config_.surface_pressure ) / config_.montalbos_per_meter; */
+      return ( observed_pressure - surface_pressure_ ) / config_.montalbos_per_meter;
     }
 
     QUICKDEV_SPIN_ONCE()
@@ -185,7 +198,7 @@ QUICKDEV_DECLARE_NODE_CLASS( Seabee3Driver )
         _PressureMsg extl_pressure_msg;
         _DepthMsg depth_msg;
         _KillSwitchMsg kill_switch_msg;
-
+	
         if( config_.simulate )
         {
             intl_pressure_msg.value = config_.internal_pressure;
@@ -234,6 +247,24 @@ QUICKDEV_DECLARE_NODE_CLASS( Seabee3Driver )
         return true;
     }
 
+    double runSurfacePressureCalibration(const unsigned int & num_samples)
+    {
+      ROS_INFO( "Aquiring pressure samples..." );
+      int internal_pressure, external_pressure;
+      double surface_pressure = 0.0;
+      
+      for(unsigned int i = 0; i < num_samples && QUICKDEV_GET_RUNABLE_POLICY()::running(); ++i)
+	{
+	  bee_stem3_driver_.readPressure(internal_pressure, external_pressure);
+	  surface_pressure += external_pressure;
+	    
+	  ros::spinOnce();
+	  QUICKDEV_GET_RUNABLE_POLICY()::getLoopRate()->sleep();
+	}
+      
+      return surface_pressure / double(num_samples);
+    }
+    
     QUICKDEV_DECLARE_MESSAGE_CALLBACK( motorValsCB, _MotorValsMsg )
     {
         if( config_.simulate && config_.is_killed ) return;
@@ -242,23 +273,23 @@ QUICKDEV_DECLARE_NODE_CLASS( Seabee3Driver )
         auto const & mask = msg->mask;
         for( size_t i = 0; i < motors.size(); ++i )
         {
-            if( config_.override_kill_switch )
+	  if( config_.override_kill_switch )
             {
-                bee_stem3_driver_.setThruster( i, 0 );
-                continue;
+	      bee_stem3_driver_.setThruster( i, 0 );
+	      continue;
             }
-            if( mask[i] )
+	  if( mask[i] )
             {
-                auto motor_value = motor_dirs_[i] * motors[i];
-                if( motor_value != 0 && abs( motor_value ) < config_.motor_speed_floor ) motor_value = 0;
-
-                if( config_.simulate )
-                {
-                    PRINT_INFO( "Setting motor id %zu to %d", i, motor_value );
+	      auto motor_value = motor_dirs_[i] * motors[i];
+	      if( motor_value != 0 && abs( motor_value ) < config_.motor_speed_floor ) motor_value = 0;
+	      
+	      if( config_.simulate )
+		{
+		  PRINT_INFO( "Setting motor id %zu to %d", i, motor_value );
                 }
-                else
+	      else
                 {
-                    bee_stem3_driver_.setThruster( i, motor_value );
+		  bee_stem3_driver_.setThruster( i, motor_value );
                 }
             }
         }
@@ -296,8 +327,56 @@ QUICKDEV_DECLARE_NODE_CLASS( Seabee3Driver )
         return true;
     }
 
+    /// Return value tells client whether or not the data returned is valid
+    QUICKDEV_DECLARE_SERVICE_CALLBACK2( calibrateSurfacePressureCB, _CalibrateSurfacePressureService, request, response )
+      {
+	ROS_INFO( "Running surface pressure calibration..." );
+
+	if( config_.simulate)
+	  {
+	    ROS_WARN( "Calibrating surface pressure using simulated data..." );
+	    surface_pressure_ = config_.surface_pressure;
+	  }
+	else
+	  {
+	    surface_pressure_ = runSurfacePressureCalibration(request.num_samples);
+	  }
+	response.calibration = surface_pressure_;
+	/// TODO: Use node namespace for parameter
+	ros::param::set("/seabee3_driver/surface_pressure", surface_pressure_);
+
+	/// Write params to file
+	if( !system(NULL) )
+	  {
+	    ROS_ERROR( "Unable to write surface pressure calibration to file (processor unavailable)." );
+	    return false;
+	  }
+	else
+	  {
+	    /// TODO: Get namespace of node rather than hard-coding it
+	    int system_return = system("rosparam dump `rospack find seabee3_driver`/params/surface_pressure.yaml /seabee3_driver/surface_pressure");
+	    if(system_return)
+	      {
+		ROS_ERROR( "Failed to write surface calibration to file (system call returned with %d).", system_return );
+		return false;
+	      }
+	    else 
+	      {
+		ROS_INFO( "Wrote calibration to file." );
+		return true;
+	      }
+	  }
+	
+      }
+
+    /// TODO: Set value of surface_pressure_ on callback
+   /**
+    * config refers to the _FakeSeabeeCfg passed as the argument to this function by the reconfigure server
+    * The value of config_ is set to config immediately after this function is called
+    */
     QUICKDEV_DECLARE_RECONFIGURE_CALLBACK( reconfigureCB, _FakeSeabeeCfg )
     {
+
         if( !config.simulate )
         {
             bee_stem3_driver_.connect( config.port );
