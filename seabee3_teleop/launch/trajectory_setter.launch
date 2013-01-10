@@ -1,0 +1,36 @@
+<launch>
+    <arg name="pkg" value="seabee3_teleop" />
+    <arg name="name" value="trajectory_setter" />
+    <arg name="type" default="$(arg name)_node" />
+    <arg name="rate" default="5" />
+    <!-- Note: Args of the form ~joystick:=/joy mean that trajectory_setter/joystick is remapped to /joy -->
+    <arg name="args" value="_loop_rate:=$(arg rate) ~joystick:=/joy ~visualization_marker_array:=/visualization_marker_array" />
+    <arg name="manager" default="manager" />
+    <arg name="nodelet" default="false" />
+
+    <arg name="controller" default="xbox360" />
+
+    <rosparam param="/$(arg name)/joystick" command="load" file="$(find seabee3_teleop)/params/joystick_$(arg controller)_trajectory.yaml" />
+
+    <node pkg="tf" type="static_transform_publisher" name="world_to_cursor_tf" args="0 0 0 0 0 0 1 /world /trajectory_setter/cursor 100" />
+
+    <node
+        pkg="joy"
+        type="joy_node"
+        name="joy_node" />
+
+    <node
+        if="$(arg nodelet)"
+        pkg="nodelet"
+        type="nodelet"
+        name="$(arg name)"
+        args="load $(arg pkg)/$(arg type) $(arg manager) $(arg args)"
+        output="screen" />
+    <node
+        unless="$(arg nodelet)"
+        pkg="$(arg pkg)"
+        type="$(arg type)"
+        name="$(arg name)"
+        args="$(arg args)"
+        output="screen" />
+</launch>

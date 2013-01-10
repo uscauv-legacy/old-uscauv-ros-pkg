@@ -11,6 +11,8 @@
   <depend package="quickdev_cpp"/>
   <depend package="nodelet"/>
   <depend package="seabee3_msgs"/>
+  <depend package="seabee3_common" />
+  <depend package="visualization_msgs" />
   <export>
     <nodelet plugin="${prefix}/nodelets/nodelet_plugins.xml"/>
   </export>
