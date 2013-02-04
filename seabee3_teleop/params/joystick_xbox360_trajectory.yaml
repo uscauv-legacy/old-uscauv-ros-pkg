@@ -2,13 +2,14 @@
 axes: {
   # Left joystick
   linear.x: { index: 1, scale: 2.0 },
-  linear.y: { index: 0, scale: 2.0 },
+  # linear.y: { index: 0, scale: 2.0 },
   # D-Pad Y-Axis
   linear.z: { index: 7, scale: 2.0 },
   # Right joystick Y-Axis
-  angular.y: { index: 4, scale: 3.14 },
+  angular.y: { index: 4, scale: 3.14 }, #Shouldn't actually need to use this under normal circumstances
   # Right joystick X-Axis
-  angular.z: { index: 3, scale: 3.14 }}
+  # angular.z: { index: 3, scale: 3.14 }}
+  angular.z: { index: 0, scale: 3.14 }}
 buttons: {
   # Left bumper
   enable: 4,

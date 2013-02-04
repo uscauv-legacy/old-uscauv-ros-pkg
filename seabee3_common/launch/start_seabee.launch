@@ -1,11 +1,28 @@
 <launch>
-    <arg name="simulate" default="false" />
+  <arg name="simulate"  default="false" />
+  <arg name="visualize" default="false" />
+  <arg name="teleop"    default="false" />
+    
 
-    <include file="$(find seabee3_driver)/launch/seabee3_driver.launch" >
-        <arg name="simulate" value="$(arg simulate)" />
-    </include>
+  <include file="$(find seabee3_driver)/launch/seabee3_driver.launch" >
+    <arg name="simulate" value="$(arg simulate)" />
+  </include>
+  
+  <include file="$(find xsens_driver)/launch/xsens_driver.launch" >
+    <arg name="simulate" value="$(arg simulate)" />
+  </include>
+  
+  <include file="$(find seabee3_controls)/launch/simple_controls.launch" >
+  </include>
 
-    <include file="$(find xsens_driver)/launch/xsens_driver.launch" >
-        <arg name="simulate" value="$(arg simulate)" />
-    </include>
+  <include file="$(find seabee3_physics)/launch/seabee3_physics.launch" >
+  </include>
+  
+  <include if="$(arg teleop)" file="$(find seabee3_teleop)/launch/seabee3_teleop.launch">
+  </include>
+    
+  <node if="$(arg visualize)" type="rviz" name="rviz" pkg="rviz">
+  </node>
+  
+    
 </launch>

@@ -260,59 +260,59 @@ class CursorMarker : public CompositeMarker
  public:
  CursorMarker(): CompositeMarker()
     {
-      _MarkerMsg z_arrow, yaw_arrow, ring;
-      /* _MarkerMsg z_arrow, yaw_arrow, ring, spheres; */
+      /* _MarkerMsg z_arrow, yaw_arrow, ring; */
 
-      z_arrow.type = yaw_arrow.type = _MarkerMsg::ARROW;
-      ring.type = _MarkerMsg::LINE_STRIP;
-      /* spheres.type = _MarkerMsg::SPHERE_LIST; */
+      /* z_arrow.type = yaw_arrow.type = _MarkerMsg::ARROW; */
+      /* ring.type = _MarkerMsg::LINE_STRIP; */
 
-      /// Populate Z-arrow marker. The marker points along the z axis to the center of the marker at unit rotation.
-      /// Quaternion here expresses a 90 degree rotation around the y axis
-      tf::poseTFToMsg(_Pose(_Quaternion(0.0, 0.7071, 0.0, 0.7071),
-			    _Vector3(0.0, 0.0, 0.5)), z_arrow.pose);
-      z_arrow.scale.x = z_arrow.scale.y = 2.0;
-      z_arrow.scale.z = 0.5;
+      /* /// Populate Z-arrow marker. The marker points along the z axis to the center of the marker at unit rotation. */
+      /* /// Quaternion here expresses a 90 degree rotation around the y axis */
+      /* tf::poseTFToMsg(_Pose(_Quaternion(0.0, 0.7071, 0.0, 0.7071), */
+      /* 			    _Vector3(0.0, 0.0, 0.5)), z_arrow.pose); */
+      /* z_arrow.scale.x = z_arrow.scale.y = 2.0; */
+      /* z_arrow.scale.z = 0.5; */
 
-      /// Populate Yaw marker. The marker points from the center to the ring in the direction of the marker's yaw.
-      tf::poseTFToMsg(_Pose(_Quaternion(0.0, 0.0, 0.0, 1.0),
-			    _Vector3(0.5, 0.0, 0.0)), yaw_arrow.pose);
-      yaw_arrow.scale.x = yaw_arrow.scale.y = 2.0;
-      yaw_arrow.scale.z = 0.1;
-      
-      /// Populate ring marker. This marker is an octagonal ring around the marker's pose, sitting on the z-axis when the pose has unit rotation.
-      ring.points.resize(9);
-      tf::pointTFToMsg(_Point(0.5, 0.0, 0.0), ring.points[0]);
-      tf::pointTFToMsg(_Point(0.3536, 0.3536 ,0.0), ring.points[1]);
-      tf::pointTFToMsg(_Point(0.0, 0.5, 0.0), ring.points[2]);
-      tf::pointTFToMsg(_Point(-0.3536, 0.3536 ,0.0), ring.points[3]);
-      tf::pointTFToMsg(_Point(-0.5, 0.0, 0.0), ring.points[4]);
-      tf::pointTFToMsg(_Point(-0.3536, -0.3536 ,0.0), ring.points[5]);
-      tf::pointTFToMsg(_Point(0.0, -0.5, 0.0), ring.points[6]);
-      tf::pointTFToMsg(_Point(0.3536, -0.3536 ,0.0), ring.points[7]);
-      tf::pointTFToMsg(_Point(0.5, 0.0, 0.0), ring.points[8]);
-      
-      /// X component of scale sets line width, others are not used
-      tf::vector3TFToMsg(_Vector3(0.1, 0.0, 0.0), ring.scale);
-      tf::poseTFToMsg(_Pose(_Quaternion(0.0, 0.0, 0.0, 1.0),
-			    _Vector3(0.0, 0.0, 0.0)), ring.pose);
-      
-      /// populate sphere list marker
-      /* spheres.points.resize(4); */
-      /* tf::pointTFToMsg(_Point(0.0, 0.5, 0.0), spheres.points[0]); */
-      /* tf::pointTFToMsg(_Point(0.0, -0.5, 0.0), spheres.points[1]); */
-      /* tf::pointTFToMsg(_Point(0.5, 0.0, 0.0), spheres.points[2]); */
-      /* tf::pointTFToMsg(_Point(-0.5, 0.0, 0.0), spheres.points[3]); */
-
-      /* tf::vector3TFToMsg(_Vector3(0.2, 0.2, 0.2), spheres.scale); */
+      /* /// Populate Yaw marker. The marker points from the center to the ring in the direction of the marker's yaw. */
       /* tf::poseTFToMsg(_Pose(_Quaternion(0.0, 0.0, 0.0, 1.0), */
-      /* 			    _Vector3(0.0, 0.0, 0.0)), spheres.pose); */
+      /* 			    _Vector3(0.5, 0.0, 0.0)), yaw_arrow.pose); */
+      /* yaw_arrow.scale.x = yaw_arrow.scale.y = 2.0; */
+      /* yaw_arrow.scale.z = 0.1; */
+      
+      /* /// Populate ring marker. This marker is an octagonal ring around the marker's pose, sitting on the z-axis when the pose has unit rotation. */
+      /* ring.points.resize(9); */
+      /* tf::pointTFToMsg(_Point(0.5, 0.0, 0.0), ring.points[0]); */
+      /* tf::pointTFToMsg(_Point(0.3536, 0.3536 ,0.0), ring.points[1]); */
+      /* tf::pointTFToMsg(_Point(0.0, 0.5, 0.0), ring.points[2]); */
+      /* tf::pointTFToMsg(_Point(-0.3536, 0.3536 ,0.0), ring.points[3]); */
+      /* tf::pointTFToMsg(_Point(-0.5, 0.0, 0.0), ring.points[4]); */
+      /* tf::pointTFToMsg(_Point(-0.3536, -0.3536 ,0.0), ring.points[5]); */
+      /* tf::pointTFToMsg(_Point(0.0, -0.5, 0.0), ring.points[6]); */
+      /* tf::pointTFToMsg(_Point(0.3536, -0.3536 ,0.0), ring.points[7]); */
+      /* tf::pointTFToMsg(_Point(0.5, 0.0, 0.0), ring.points[8]); */
+      
+      /* /// X component of scale sets line width, others are not used */
+      /* tf::vector3TFToMsg(_Vector3(0.1, 0.0, 0.0), ring.scale); */
+      /* tf::poseTFToMsg(_Pose(_Quaternion(0.0, 0.0, 0.0, 1.0), */
+      /* 			    _Vector3(0.0, 0.0, 0.0)), ring.pose); */
+      
 
-      /// Add markers
-      addMarker(z_arrow);
-      addMarker(yaw_arrow);
-      addMarker(ring);
-      /* addMarker(spheres); */
+      /* /// Add markers */
+      /* addMarker(z_arrow); */
+      /* addMarker(yaw_arrow); */
+      /* addMarker(ring); */
+
+      _MarkerMsg outline;
+      outline.type = _MarkerMsg::LINE_STRIP;
+      outline.points.resize(5);
+      tf::pointTFToMsg(_Point(0.5, 0.0, 0.0), outline.points[0]);
+      tf::pointTFToMsg(_Point(-0.25, -0.25 ,0.0), outline.points[1]);
+      tf::pointTFToMsg(_Point(0.0, 0.0, 0.0), outline.points[2]);
+      tf::pointTFToMsg(_Point(-0.25, 0.25 ,0.0), outline.points[3]);
+      tf::pointTFToMsg(_Point(0.5, 0.0, 0.0), outline.points[4]);
+      tf::vector3TFToMsg(_Vector3(0.1, 0.0, 0.0), outline.scale);
+      tf::poseTFToMsg(_Pose(_Quaternion(0.0, 0.0, 0.0, 1.0),
+      			    _Vector3(0.0, 0.0, 0.0)), outline.pose);
+      addMarker(outline);
     }
 };
 

@@ -50,6 +50,8 @@
 
 
 typedef quickdev::JoystickPolicy _JoystickPolicy;
+typedef quickdev::Axis _Axis;
+
 typedef seabee::TrajectoryCursor _TrajectoryCursor;
 typedef visualization_msgs::MarkerArray _MarkerArrayMsg;
 
@@ -65,22 +67,68 @@ public:
   ros::MultiPublisher<> multi_pub_;
   
   _TrajectoryCursor cursor_;
-  
-  QUICKDEV_DECLARE_NODE_CONSTRUCTOR( TrajectorySetter )
+  std::string current_button_;
+
+  QUICKDEV_DECLARE_NODE_CONSTRUCTOR( TrajectorySetter ), current_button_("")
     {
 
     }
 
-
-    QUICKDEV_DECLARE_MESSAGE_CALLBACK( joystickCB, _JoystickPolicy::_JoystickMsg )
+  /** 
+   * Try to get a lock on a joystick button. A lock is aquired when the no buttons other than desired button are active.
+   * The lock is held until the button is released.
+   *
+   * @param axis Axis we wish to lock
+   * @param msg Message with the axis data
+   * 
+   * @return True if a lock was aquired, false otherwise
+   */
+  bool tryGetButtonLock(_Axis const & axis, _JoystickMsg::ConstPtr const & msg)
+  {
+    if( axis.getValueAsButton(msg) > 0)
       {
-	if( _JoystickPolicy::isEnabled() )
+	if( current_button_ == "" )
 	  {
-	    cursor_.setVelocity( *(_JoystickPolicy::getVelocityMsg()) );
+	    current_button_ = axis.name_;
+	    return true;
 	  }
       }
+    else
+      {
+	if( axis.name_ == current_button_)
+	  {
+	    current_button_ = "";
+	    return false;
+	  }
+      }
+    return false;
+  }
     
-    QUICKDEV_SPIN_FIRST()
+  
+  QUICKDEV_DECLARE_MESSAGE_CALLBACK2( joystickCB, _JoystickPolicy::_JoystickMsg, joystick_msg )
+    {
+      if( _JoystickPolicy::isEnabled() )
+	{
+	  
+	  _Axis const & action_axis = _JoystickPolicy::getAxis("action");
+	  if( action_axis.getValueAsButton(joystick_msg) )
+	    {
+	      cursor_.setStatus(_TrajectoryCursor::SUCCESS);
+	    }
+	  else
+	    {
+	      cursor_.setStatus(_TrajectoryCursor::SELECT);
+	    }
+	  	  
+	  /**
+	   * Update the velocity of the cursor. The cursor will automatically integrate its last velocity
+	   * and update its pose before this velocity is set.
+	   */
+	  cursor_.setVelocity( *(_JoystickPolicy::getVelocityMsg()) );
+	}
+    }
+  
+  QUICKDEV_SPIN_FIRST()
     {
       QUICKDEV_GET_RUNABLE_NODEHANDLE(nh_rel);    
       
@@ -89,7 +137,7 @@ public:
        * Created on node_name/visualization_marker_array because nh_rel is initialized to "~" 
        */
       multi_pub_.addPublishers<_MarkerArrayMsg>(nh_rel, {"visualization_marker_array"});
-
+      
       /// Set the frame of the cursor marker
       /// TODO:
       cursor_.setFrameID("/trajectory_setter/cursor");
@@ -97,8 +145,8 @@ public:
       // initialize any remaining policies
       initPolicies<quickdev::policy::ALL>();
     }
-
-    QUICKDEV_SPIN_ONCE()
+  
+  QUICKDEV_SPIN_ONCE()
     {
       /// Update, but don't automatically publish velocity to cmd_vel
       _JoystickPolicy::update(false);
