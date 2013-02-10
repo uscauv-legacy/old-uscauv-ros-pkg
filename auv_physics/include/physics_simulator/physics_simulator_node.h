@@ -41,8 +41,10 @@
 #include <std_msgs/String.h> //what to use for msgs?
 #include <tf/transform_broadcaster.h>
 
-/// didn't #include any seabee3_common stuff
-/* using namespace seabee3_common; */
+/// Services
+#include <auv_physics/SimulationCommand.h>
+
+typedef auv_physics::SimulationCommand _SimulationCommandSrv;
 
 class SimpleAUVPhysicsSimulatorNode {
  public:
@@ -103,16 +105,21 @@ class SimpleAUVPhysicsSimulatorNode {
     return;
   }
 
+  /// Message callbacks
+ public:
 
-	void callback(const std_msgs::StringConstPtr& str)
-	{
-	
-	}
-	
-  /// Methods for handling service callbacks
+  void callback(const std_msgs::StringConstPtr& str)
+  {
+    
+  }
+  
+  /// Service callbacks
  private:
-  
-  
+	
+  bool simulationCommandCallback(_SimulationCommandSrv::Request & request, _SimulationCommandSrv::Response & response)
+  {
+    
+  }
   
 };
 
