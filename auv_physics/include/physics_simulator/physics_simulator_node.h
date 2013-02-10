@@ -41,42 +41,91 @@
 #include <std_msgs/String.h> //what to use for msgs?
 #include <tf/transform_broadcaster.h>
 
-/// Services
+/// kinematics and dynamics
+#include <kdl/frames.hpp>
+
+/// Simulation Commands
+#include <auv_physics/SimulationInstruction.h>
+#include <auv_physics/SimulationState.h>
 #include <auv_physics/SimulationCommand.h>
 
+typedef KDL::Vector _Vector;
+typedef KDL::Rotation _Rotation;
+typedef KDL::Frame _Frame;
+typedef KDL::Twist _Twist;
+typedef KDL::Wrench _Wrench;
+
+
+typedef auv_physics::SimulationInstruction _SimulationInstructionMsg;
+typedef auv_physics::SimulationState _SimulationStateMsg;
 typedef auv_physics::SimulationCommand _SimulationCommandSrv;
 
 class SimpleAUVPhysicsSimulatorNode {
- public:
-  SimpleAUVPhysicsSimulatorNode(){}; // Constructor, what params?
-  ~SimpleAUVPhysicsSimulatorNode(){}; // Destructor
+ private:
 
+  /// Publishers and subscribers
   ros::Subscriber motor_cmd_sub_;
 
-  tf::Transform transform_;
+  /// Services
+  ros::ServiceServer simulation_cmd_server_;
   
+  /// Simulation data
+  bool sim_running_;
+  ros::Time last_velocity_update_time_;
+  
+  /// Robot state
+  _Frame  current_pose_;
+  _Twist  current_velocity_;
+  _Wrench current_force_;
+  
+  tf::Transform transform_;
+
+  /// Constructor and destructor ------------------------------------
+ public:
+ SimpleAUVPhysicsSimulatorNode()
+   :
+  sim_running_( false ),
+  current_pose_ ( _Frame::Identity() ),
+  current_velocity_( _Twist::Zero() ),
+  current_force_( _Wrench::Zero() )
+    {
+    };   
+
+  ~SimpleAUVPhysicsSimulatorNode(){}; // Destructor
+    
   /// Methods for flow control 
  public:
+
   /// Running spin() will cause this function to be called before the node begins looping the spingOnce() function.
   void spinFirst()
   {
-  		ros::NodeHandle nh_s("~");
-  		//motor_cmd_sub_ = nh_s.subscribe("motor_cmd", 100, callback);
+    ros::NodeHandle nh_s("~");
+    //motor_cmd_sub_ = nh_s.subscribe("motor_cmd", 100, callback);
 
-    	ROS_INFO( "Finished spinning up." );
-    	return;
+    /// Begin service servers ------------------------------------
+    
+    simulation_cmd_server_ = nh_s.advertiseService("simulation_cmd", &SimpleAUVPhysicsSimulatorNode::simulationCommandCallback, this);
+
+    ROS_INFO( "Finished spinning up." );
+    return;
   }
 
   /// Running spin() will cause this function to get called at the loop rate until this node is killed.
   void spinOnce()
   {
-    	//transform.setOrigin()
-    	//transform.setRotation()
-    	//do other things to transform?
-    	static tf::TransformBroadcaster broadcaster_;
-    	broadcaster_.sendTransform(tf::StampedTransform(transform_, ros::Time::now(), "world", "physics_simulation_pose"));
+    //transform.setOrigin()
+    //transform.setRotation()
+    //do other things to transform?
+    static tf::TransformBroadcaster broadcaster_;
+    broadcaster_.sendTransform(tf::StampedTransform(transform_, ros::Time::now(), "world", "physics_simulation_pose"));
+    
+    
+    if ( !sim_running_ )
+      return;
+    
+    /// TODO: call simulation function
+    
   }
-
   
   void spin()
   {
@@ -86,10 +135,10 @@ class SimpleAUVPhysicsSimulatorNode {
     double loop_rate_hz;
     
     if( !nh_rel.getParam("loop_rate", loop_rate_hz) )
-    {
-      ROS_WARN("Parameter [loop_rate] not found. Using default.");
-      loop_rate_hz = 10.0;
-    }
+      {
+	ROS_WARN("Parameter [loop_rate] not found. Using default.");
+	loop_rate_hz = 10.0;
+      }
 
     ros::Rate loop_rate( loop_rate_hz );
 
@@ -97,6 +146,7 @@ class SimpleAUVPhysicsSimulatorNode {
     spinFirst();
 
     ROS_INFO( "Physics Simulator is spinning at %.2f Hz.", loop_rate_hz ); 
+    
     while( ros::ok() )
       {
 	spinOnce();
@@ -106,22 +156,154 @@ class SimpleAUVPhysicsSimulatorNode {
     return;
   }
 
+
+  /// Control functions
+  bool stopSimulation()
+  {
+    sim_running_ = false;
+
+    return true;
+  }
+
+  bool startSimulation(_SimulationCommandSrv::Request & request)
+  {
+    ros::Time now = ros::Time::now();
+
+    const geometry_msgs::Point & p = request.command.initial_pose.position;
+    const geometry_msgs::Quaternion & q = request.command.initial_pose.orientation;
+    const geometry_msgs::Vector3 & t1 = request.command.initial_velocity.linear;
+    const geometry_msgs::Vector3 & t2 = request.command.initial_velocity.angular;
+    
+    /// Convert from geometry_msgs to KDL
+    current_pose_     = _Frame( _Rotation::Quaternion(q.x, q.y, q.z, q.w), _Vector(p.x, p.y, p.z) );
+    current_velocity_ = _Twist( _Vector(t1.x, t1.y, t1.z), _Vector(t2.x, t2.y, t2.z) );
+
+    /// Integrate velocity over the time between now and timestamp in request
+    double dt = (now - request.command.header.stamp).toSec();
+    
+    /// Second argument is sample frequency for 1st order integration approximation
+    current_pose_.Integrate(current_velocity_, 1.0/dt);
+        
+    last_velocity_update_time_ = now;
+    return true;
+  }
+
   /// Message callbacks
  public:
 
-  void callback(const std_msgs::StringConstPtr& str)
+  void callback(std_msgs::String::ConstPtr& str)
   {
     
   }
   
   /// Service callbacks
- private:
-	
+ public:
   bool simulationCommandCallback(_SimulationCommandSrv::Request & request, _SimulationCommandSrv::Response & response)
   {
-    
+    /// Print info
+    if( request.command.type == _SimulationInstructionMsg::START )
+      {
+	if ( sim_running_ )
+	  {
+	    ROS_INFO( "Received a start request, but physics simulation is already running." );
+	  }
+	else
+	  {
+	    const geometry_msgs::Point & p = request.command.initial_pose.position;
+	    const geometry_msgs::Quaternion & q = request.command.initial_pose.orientation;
+ 	    const geometry_msgs::Vector3 & t1 = request.command.initial_velocity.linear;
+	    const geometry_msgs::Vector3 & t2 = request.command.initial_velocity.angular;
+	    
+	    ROS_INFO( "Starting physics simulation..." );
+	    ROS_INFO( "Using pose with position: (%.2f, %.2f, %.2f), rotation: (%.2f, %.2f, %.2f, %.2f)",
+		      p.x, p.y, p.z, q.x, q.y, q.z, q.w );
+	    ROS_INFO( "Using velocity with linear: (%.2f, %.2f, %.2f), angular: (%.2f, %.2f, %.2f)",
+		      t1.x, t1.y, t1.z, t2.x, t2.y, t2.z);
+	
+	    if( startSimulation( request ) )
+	      {
+		ROS_INFO( "Stopped physics simulation successfully." );
+	      }
+	    else
+	      {
+		ROS_WARN( "Failed to stop physics simulation." );
+		return false;
+	      }
+	  }
+      }
+    else if( request.command.type == _SimulationInstructionMsg::RESTART )
+      {
+	
+	const geometry_msgs::Point & p = request.command.initial_pose.position;
+	const geometry_msgs::Quaternion & q = request.command.initial_pose.orientation;
+	const geometry_msgs::Vector3 & t1 = request.command.initial_velocity.linear;
+	const geometry_msgs::Vector3 & t2 = request.command.initial_velocity.angular;
+	
+
+	if ( !sim_running_ )
+	  {
+	    ROS_INFO( "Received a stop request, but physics simulation is already stopped." );
+	  }
+	else
+	  {
+	    ROS_INFO( "Halting physics simulation..." );
+	    
+	    if( stopSimulation() )
+	      {
+		ROS_INFO( "Halted physics simulation successfully." );
+	      }
+	    else
+	      {
+		ROS_WARN( "Failed to halt physics simulation." );
+		return false;
+	      }
+	  }
+	
+	ROS_INFO( "Using pose with position: (%.2f, %.2f, %.2f), rotation: (%.2f, %.2f, %.2f, %.2f)",
+		  p.x, p.y, p.z, q.x, q.y, q.z, q.w );
+	ROS_INFO( "Using velocity with linear: (%.2f, %.2f, %.2f), angular: (%.2f, %.2f, %.2f)",
+		  t1.x, t1.y, t1.z, t2.x, t2.y, t2.z);
+	
+	ROS_INFO( "Restarting simulation..." );
+	if( startSimulation( request ) )
+	  {
+	    ROS_INFO( "Restarted physics simulation successfully." );
+	  }
+	else
+	  {
+	    ROS_WARN( "Failed to halt physics simulation." );
+	    return false;
+	  }
+	
+      }
+    else if( request.command.type == _SimulationInstructionMsg::STOP )
+      {
+	if ( !sim_running_ )
+	  {
+	    ROS_INFO( "Received a stop request, but physics simulation is already stopped." );
+	  }
+	else
+	  {
+	    ROS_INFO( "Stopping physics simulation..." );
+	
+	    if( stopSimulation() )
+	      {
+		ROS_INFO( "Stopped physics simulation successfully." );
+	      }
+	    else
+	      {
+		ROS_WARN( "Failed to stop physics simulation." );
+		return false;
+	      }
+	  }
+      }
+
+    /// Have to cast these enums to ints to avoid compiler warnings, this is stupid
+    response.state.state = ( sim_running_ ) ? int(_SimulationStateMsg::RUNNING) : int(_SimulationStateMsg::STOPPED);
+
+    return true;
   }
-  
+
 };
 
 #endif //USCAUV_AUVPHYSICS_PHYSICSSIMULATORNODE_H
