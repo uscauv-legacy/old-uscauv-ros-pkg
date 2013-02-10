@@ -1,0 +1,16 @@
+<package>
+  <description brief="physics_simulator">
+
+     physics_simulator
+
+  </description>
+  <author>Dylan Foster, Franesca Nannizzi</author>
+  <license>BSD</license>
+  <review status="unreviewed" notes=""/>
+  <url>http://ros.org/wiki/physics_simulator</url>
+
+  <depend package="geometry_msgs" />
+
+</package>
+
+
