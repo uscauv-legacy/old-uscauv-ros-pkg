@@ -50,15 +50,20 @@ class SimpleAUVPhysicsSimulatorNode {
  public:
   SimpleAUVPhysicsSimulatorNode(){}; // Constructor, what params?
   ~SimpleAUVPhysicsSimulatorNode(){}; // Destructor
+
   ros::Subscriber sub;
   static tf::TransformBroadcaster broadcaster;
   tf::Transform transform;
   
-
-  /// Running spin() will cause this function to be called before the node begins looping the spinOnce() function.
+  /// Methods for flow control 
+ public:
+  /// Running spin() will cause this function to be called before the node begins looping the spingOnce() function.
   void spinFirst()
   {
 	  sub = nh_rel.subscribe("motor commands", 100, );
+
+    ROS_INFO( "Finished spinning up." );
+    return;
   }
 
   /// Running spin() will cause this function to get called at the loop rate until this node is killed.
@@ -98,12 +103,11 @@ class SimpleAUVPhysicsSimulatorNode {
     
     return;
   }
- 
- private:
-  //callback function?
-		
 
-	
+  /// Methods for handling services
+ private:
+  
+  
 };
 
 #endif //USCAUV_PHYSICSSIMULATORNODE_H
