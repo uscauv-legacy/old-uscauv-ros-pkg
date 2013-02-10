@@ -42,6 +42,7 @@ ____________________________________|*/
 
 #include <ros/ros.h>
 #include <std_msgs/String.h> //what to use for msgs?
+#include <tf/transform_broadcaster.h>
 
 /// didn't #include any seabee3_common stuff
 /* using namespace seabee3_common; */
@@ -50,12 +51,17 @@ class SimpleAUVPhysicsSimulatorNode {
  public:
   SimpleAUVPhysicsSimulatorNode(){}; // Constructor, what params?
   ~SimpleAUVPhysicsSimulatorNode(){}; // Destructor
+
+  ros::Subscriber sub;
+  static tf::TransformBroadcaster broadcaster;
+  tf::Transform transform;
   
   /// Methods for flow control 
  public:
   /// Running spin() will cause this function to be called before the node begins looping the spingOnce() function.
   void spinFirst()
   {
+	  sub = nh_rel.subscribe("motor commands", 100, );
 
     ROS_INFO( "Finished spinning up." );
     return;
@@ -64,7 +70,10 @@ class SimpleAUVPhysicsSimulatorNode {
   /// Running spin() will cause this function to get called at the loop rate until this node is killed.
   void spinOnce()
   {
-    
+    	//transform.setOrigin()
+    	//transform.setRotation()
+    	//do other things to transform?
+    	broadcaster.sendTransform(tf::StampedTransform(transform, ros::Time::now(), "world", "physics_simulation_pose"));
   }
 
   
