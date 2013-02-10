@@ -50,7 +50,6 @@ class SimpleAUVPhysicsSimulatorNode {
   ~SimpleAUVPhysicsSimulatorNode(){}; // Destructor
 
   ros::Subscriber motor_cmd_sub_;
-
   tf::Transform transform_;
   
   /// Methods for flow control 
