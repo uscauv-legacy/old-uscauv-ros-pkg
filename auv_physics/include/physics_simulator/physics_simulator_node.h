@@ -49,12 +49,15 @@ class SimpleAUVPhysicsSimulatorNode {
  public:
   SimpleAUVPhysicsSimulatorNode(){}; // Constructor, what params?
   ~SimpleAUVPhysicsSimulatorNode(){}; // Destructor
-  void initialize_simulator();
   
-
+  /// Methods for flow control 
+ public:
   /// Running spin() will cause this function to be called before the node begins looping the spingOnce() function.
   void spinFirst()
   {
+
+    ROS_INFO( "Finished spinning up." );
+    return;
   }
 
   /// Running spin() will cause this function to get called at the loop rate until this node is killed.
@@ -91,26 +94,11 @@ class SimpleAUVPhysicsSimulatorNode {
     
     return;
   }
- 
+
+  /// Methods for handling services
  private:
-  //callback function?
-		
-
-  /* void physics_simulator() */
-  /* { */
-  /*   ros::init(//argc, argv, "name"? */
-  /* 		 ); */
-		 
-		 
-
-  /* } */
-
-  /* void initialize_simulator() */
-  /* { */
-
-  /* } */
-	
-	
+  
+  
 };
 
 #endif //USCAUV_PHYSICSSIMULATORNODE_H
