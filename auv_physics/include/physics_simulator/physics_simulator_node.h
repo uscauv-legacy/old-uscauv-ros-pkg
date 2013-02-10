@@ -39,9 +39,12 @@
 
 #include <ros/ros.h>
 #include <std_msgs/String.h> //what to use for msgs?
-#include <tf/transform_broadcaster.h>
 
-/// kinematics and dynamics
+/// tf
+#include <tf/transform_broadcaster.h>
+#include <tf_conversions/tf_kdl.h>
+
+/// kinematics and dynamics library
 #include <kdl/frames.hpp>
 
 /// Simulation Commands
@@ -69,16 +72,20 @@ class SimpleAUVPhysicsSimulatorNode {
   /// Services
   ros::ServiceServer simulation_cmd_server_;
   
+  /// tf
+  tf::TransformBroadcaster pose_br_;
+
   /// Simulation data
   bool sim_running_;
-  ros::Time last_velocity_update_time_;
+  ros::Time last_update_time_;
+  std::string parent_frame_name_;
   
   /// Robot state
   _Frame  current_pose_;
   _Twist  current_velocity_;
   _Wrench current_force_;
   
-  tf::Transform transform_;
+  
 
   /// Constructor and destructor ------------------------------------
  public:
@@ -99,12 +106,12 @@ class SimpleAUVPhysicsSimulatorNode {
   /// Running spin() will cause this function to be called before the node begins looping the spingOnce() function.
   void spinFirst()
   {
-    ros::NodeHandle nh_s("~");
-    //motor_cmd_sub_ = nh_s.subscribe("motor_cmd", 100, callback);
+    ros::NodeHandle nh_rel("~");
+    //motor_cmd_sub_ = nh_rel.subscribe("motor_cmd", 100, callback);
 
     /// Begin service servers ------------------------------------
     
-    simulation_cmd_server_ = nh_s.advertiseService("simulation_cmd", &SimpleAUVPhysicsSimulatorNode::simulationCommandCallback, this);
+    simulation_cmd_server_ = nh_rel.advertiseService("simulation_cmd", &SimpleAUVPhysicsSimulatorNode::simulationCommandCallback, this);
 
     ROS_INFO( "Finished spinning up." );
     return;
@@ -113,18 +120,14 @@ class SimpleAUVPhysicsSimulatorNode {
   /// Running spin() will cause this function to get called at the loop rate until this node is killed.
   void spinOnce()
   {
-    //transform.setOrigin()
-    //transform.setRotation()
-    //do other things to transform?
-    static tf::TransformBroadcaster broadcaster_;
-    broadcaster_.sendTransform(tf::StampedTransform(transform_, ros::Time::now(), "world", "physics_simulation_pose"));
+   
+    /* broadcaster_.sendTransform(tf::StampedTransform(transform_, ros::Time::now(), "world", "physics_simulation_pose")); */
     
+    /// Run physics simulation
+    if ( sim_running_ )
+      simulateAndPublish();
     
-    if ( !sim_running_ )
-      return;
-    
-    /// TODO: call simulation function
-    
+    return;
   }
   
   void spin()
@@ -150,6 +153,7 @@ class SimpleAUVPhysicsSimulatorNode {
     while( ros::ok() )
       {
 	spinOnce();
+	ros::spinOnce();
 	loop_rate.sleep();
       }
     
@@ -157,7 +161,43 @@ class SimpleAUVPhysicsSimulatorNode {
   }
 
 
+  /// Physics simulation implementation
+ private:
+  void simulateAndPublish()
+  {
+    /// timing
+    ros::Time now = ros::Time::now();
+    double dt = (now - last_update_time_).toSec();
+    
+
+    /// Integrate velocity
+    current_pose_.Integrate( current_velocity_, 1.0/dt );
+
+    /// TODO: Integrate acceleration here.
+    
+    
+    /// TODO: Apply forces to get new acceleration and velocity here.
+    
+    /// Publish current odometry estimate ------------------------------------
+    
+    /// Have to convert our KDL frame representation of pose to a tf stamped transform
+    tf::Transform pose_tf;
+    tf::poseKDLToTF(current_pose_, pose_tf);
+
+    tf::StampedTransform pose_stamped_tf( pose_tf, now, parent_frame_name_, "simulated_pose" );
+
+    pose_br_.sendTransform( pose_stamped_tf );
+    
+    /// update our timekeeping
+    last_update_time_ = now;
+
+    ROS_INFO(" dt was %f", dt);
+    
+    return;
+  }
+
   /// Control functions
+ private:
   bool stopSimulation()
   {
     sim_running_ = false;
@@ -174,6 +214,8 @@ class SimpleAUVPhysicsSimulatorNode {
     const geometry_msgs::Vector3 & t1 = request.command.initial_velocity.linear;
     const geometry_msgs::Vector3 & t2 = request.command.initial_velocity.angular;
     
+    parent_frame_name_ = request.command.header.frame_id;
+    
     /// Convert from geometry_msgs to KDL
     current_pose_     = _Frame( _Rotation::Quaternion(q.x, q.y, q.z, q.w), _Vector(p.x, p.y, p.z) );
     current_velocity_ = _Twist( _Vector(t1.x, t1.y, t1.z), _Vector(t2.x, t2.y, t2.z) );
@@ -183,8 +225,11 @@ class SimpleAUVPhysicsSimulatorNode {
     
     /// Second argument is sample frequency for 1st order integration approximation
     current_pose_.Integrate(current_velocity_, 1.0/dt);
-        
-    last_velocity_update_time_ = now;
+    
+    /// update simulator state data
+    last_update_time_ = now;
+    sim_running_ = true;
+    
     return true;
   }
 
@@ -219,14 +264,15 @@ class SimpleAUVPhysicsSimulatorNode {
 		      p.x, p.y, p.z, q.x, q.y, q.z, q.w );
 	    ROS_INFO( "Using velocity with linear: (%.2f, %.2f, %.2f), angular: (%.2f, %.2f, %.2f)",
 		      t1.x, t1.y, t1.z, t2.x, t2.y, t2.z);
-	
+	    ROS_INFO( "Using parent frame [ %s ]", request.command.header.frame_id.c_str() );
+	    
 	    if( startSimulation( request ) )
 	      {
-		ROS_INFO( "Stopped physics simulation successfully." );
+		ROS_INFO( "Started physics simulation successfully." );
 	      }
 	    else
 	      {
-		ROS_WARN( "Failed to stop physics simulation." );
+		ROS_WARN( "Failed to start physics simulation." );
 		return false;
 	      }
 	  }
@@ -263,7 +309,8 @@ class SimpleAUVPhysicsSimulatorNode {
 		  p.x, p.y, p.z, q.x, q.y, q.z, q.w );
 	ROS_INFO( "Using velocity with linear: (%.2f, %.2f, %.2f), angular: (%.2f, %.2f, %.2f)",
 		  t1.x, t1.y, t1.z, t2.x, t2.y, t2.z);
-	
+	ROS_INFO( "Using parent frame [ %s ]", request.command.header.frame_id.c_str() );
+
 	ROS_INFO( "Restarting simulation..." );
 	if( startSimulation( request ) )
 	  {
