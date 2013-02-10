@@ -33,4 +33,19 @@
  *
  **************************************************************************/
 
+/// where just about all of the source code for this project is
+#include <physics_simulator/physics_simulator_node.h>
 
+#include <ros/ros.h>
+
+/// Instantiate our physics simulator and initialize the ROS node
+int main( int argc, char * argv[] )
+{
+  ros::init(argc, argv, "physics_simulator");
+  
+  SimpleAUVPhysicsSimulatorNode physics_sim;
+
+  physics_sim.spin();
+  
+  return 0;
+}

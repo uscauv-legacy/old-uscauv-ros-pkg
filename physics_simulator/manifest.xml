@@ -9,8 +9,9 @@
   <review status="unreviewed" notes=""/>
   <url>http://ros.org/wiki/physics_simulator</url>
 
+  <depend package="roscpp" />
   <depend package="geometry_msgs" />
-
+  
 </package>
 
 

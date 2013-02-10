@@ -36,36 +36,81 @@
 /* New physics simulator			|
 ____________________________________|*/
 
-
+#ifndef USCAUV_PHYSICSSIMULATORNODE_H
+#define USCAUV_PHYSICSSIMULATORNODE_H
 
 #include <ros/ros.h>
 #include <std_msgs/String.h> //what to use for msgs?
 
-using namespace seabee3_common;
+/// didn't #include any seabee3_common stuff
+/* using namespace seabee3_common; */
 
-class physics_simulator {
-	public:o
-		physics_simulator(); // Constructor, what params?
-		~physics_simulator(){}; // Destructor
-		initialize_simulator();
-		
-	private:
-		//callback function?
+class SimpleAUVPhysicsSimulatorNode {
+ public:
+  SimpleAUVPhysicsSimulatorNode(){}; // Constructor, what params?
+  ~SimpleAUVPhysicsSimulatorNode(){}; // Destructor
+  void initialize_simulator();
+  
+
+  /// Running spin() will cause this function to be called before the node begins looping the spingOnce() function.
+  void spinFirst()
+  {
+  }
+
+  /// Running spin() will cause this function to get called at the loop rate until this node is killed.
+  void spinOnce()
+  {
+    
+  }
+
+  
+  void spin()
+  {
+    /// nodehandle will resolve namespaces relative to this node's name
+    ros::NodeHandle nh_rel("~");
+
+    double loop_rate_hz;
+    
+    if( !nh_rel.getParam("loop_rate", loop_rate_hz) )
+    {
+      ROS_WARN("Parameter [loop_rate] not found. Using default.");
+      loop_rate_hz = 10.0;
+    }
+
+    ros::Rate loop_rate( loop_rate_hz );
+
+    ROS_INFO( "Spinning up Physics Simulator..." );
+    spinFirst();
+
+    ROS_INFO( "Physics Simulator is spinning at %.2f Hz.", loop_rate_hz ); 
+    while( ros::ok() )
+      {
+	spinOnce();
+	loop_rate.sleep();
+      }
+    
+    return;
+  }
+ 
+ private:
+  //callback function?
 		
 
-	void physics_simulator()
-	{
-		ros::init(//argc, argv, "name"?
-		 );
+  /* void physics_simulator() */
+  /* { */
+  /*   ros::init(//argc, argv, "name"? */
+  /* 		 ); */
 		 
 		 
 
-	}
+  /* } */
 
-	void initialize_simulator()
-	{
+  /* void initialize_simulator() */
+  /* { */
 
-	}
+  /* } */
 	
 	
-}
+};
+
+#endif //USCAUV_PHYSICSSIMULATORNODE_H
