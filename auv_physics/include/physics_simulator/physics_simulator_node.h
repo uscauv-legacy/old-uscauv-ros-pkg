@@ -33,9 +33,6 @@
  *
  **************************************************************************/
 
-/* New physics simulator			|
-____________________________________|*/
-
 #ifndef USCAUV_PHYSICSSIMULATORNODE_H
 #define USCAUV_PHYSICSSIMULATORNODE_H
 
@@ -51,19 +48,20 @@ class SimpleAUVPhysicsSimulatorNode {
   SimpleAUVPhysicsSimulatorNode(){}; // Constructor, what params?
   ~SimpleAUVPhysicsSimulatorNode(){}; // Destructor
 
-  ros::Subscriber sub;
-  static tf::TransformBroadcaster broadcaster;
-  tf::Transform transform;
+  ros::Subscriber motor_cmd_sub_;
+
+  tf::Transform transform_;
   
   /// Methods for flow control 
  public:
   /// Running spin() will cause this function to be called before the node begins looping the spingOnce() function.
   void spinFirst()
   {
-	  sub = nh_rel.subscribe("motor commands", 100, );
+  		ros::NodeHandle nh_s("~");
+  		//motor_cmd_sub_ = nh_s.subscribe("motor_cmd", 100, callback);
 
-    ROS_INFO( "Finished spinning up." );
-    return;
+    	ROS_INFO( "Finished spinning up." );
+    	return;
   }
 
   /// Running spin() will cause this function to get called at the loop rate until this node is killed.
@@ -72,7 +70,8 @@ class SimpleAUVPhysicsSimulatorNode {
     	//transform.setOrigin()
     	//transform.setRotation()
     	//do other things to transform?
-    	broadcaster.sendTransform(tf::StampedTransform(transform, ros::Time::now(), "world", "physics_simulation_pose"));
+    	static tf::TransformBroadcaster broadcaster_;
+    	broadcaster_.sendTransform(tf::StampedTransform(transform_, ros::Time::now(), "world", "physics_simulation_pose"));
   }
 
   
@@ -104,7 +103,11 @@ class SimpleAUVPhysicsSimulatorNode {
     return;
   }
 
-  /// Methods for handling services
+	void callback(const std_msgs::StringConstPtr& str)
+	{
+	
+	}
+	
  private:
   
   
