@@ -52,7 +52,7 @@ class SimpleAUVPhysicsSimulatorNode {
   void initialize_simulator();
   
 
-  /// Running spin() will cause this function to be called before the node begins looping the spingOnce() function.
+  /// Running spin() will cause this function to be called before the node begins looping the spinOnce() function.
   void spinFirst()
   {
   
