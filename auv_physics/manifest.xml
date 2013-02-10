@@ -1,7 +1,7 @@
 <package>
-  <description brief="physics_simulator">
+  <description brief="auv_physics_simulator">
 
-     physics_simulator
+    Extremely primitive "hydrodynamics" simulator for AUVs.
 
   </description>
   <author>Dylan Foster, Franesca Nannizzi</author>
