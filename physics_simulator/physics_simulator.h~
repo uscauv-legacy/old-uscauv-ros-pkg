@@ -1,0 +1,27 @@
+/* New physics simulator			|
+____________________________________|*/
+
+
+
+#include <ros/ros.h>
+#include <std_msgs/String.h> //what to use for msgs?
+
+using namespace seabee3_common;
+
+class PhysicsSimulator {
+	public:
+		PhysicsSimulator(); // Constructor, what params?
+		~PhysicsSimulator(){}; // Destructor
+		initialize();
+		
+	private:
+		//callback function?
+		
+
+void PhysicsSimulator(){
+	ros::init(
+
+}
+	
+	
+}
