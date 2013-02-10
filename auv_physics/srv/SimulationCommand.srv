@@ -1,0 +1,4 @@
+# This service is used to command the state of a physics simulation, e.g. stop, start, restart.
+
+auv_physics/SimulationInstruction command
+---

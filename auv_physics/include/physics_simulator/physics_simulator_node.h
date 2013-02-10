@@ -33,8 +33,9 @@
  *
  **************************************************************************/
 
-#ifndef USCAUV_PHYSICSSIMULATORNODE_H
-#define USCAUV_PHYSICSSIMULATORNODE_H
+/// follows team -> package -> source file convention
+#ifndef USCAUV_AUVPHYSICS_PHYSICSSIMULATORNODE_H
+#define USCAUV_AUVPHYSICS_PHYSICSSIMULATORNODE_H
 
 #include <ros/ros.h>
 #include <std_msgs/String.h> //what to use for msgs?
@@ -103,14 +104,17 @@ class SimpleAUVPhysicsSimulatorNode {
     return;
   }
 
+
 	void callback(const std_msgs::StringConstPtr& str)
 	{
 	
 	}
 	
+  /// Methods for handling service callbacks
  private:
+  
   
   
 };
 
-#endif //USCAUV_PHYSICSSIMULATORNODE_H
+#endif //USCAUV_AUVPHYSICS_PHYSICSSIMULATORNODE_H
