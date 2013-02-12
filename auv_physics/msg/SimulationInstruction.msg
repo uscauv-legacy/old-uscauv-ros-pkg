@@ -9,4 +9,4 @@ Header header # Parent frame and time stamp must be set. Simulation is relative 
 int32 type
 
 geometry_msgs/Pose initial_pose
-geometry_msgs/Twist initial_twist
+geometry_msgs/Twist initial_velocity
