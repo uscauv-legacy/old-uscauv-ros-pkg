@@ -1,0 +1,21 @@
+<package>
+  <description brief="auv_physics_simulator">
+
+    Extremely primitive "hydrodynamics" simulator for AUVs.
+
+  </description>
+  <author>Dylan Foster, Franesca Nannizzi</author>
+  <license>BSD</license>
+  <review status="unreviewed" notes=""/>
+  <url>http://ros.org/wiki/physics_simulator</url>
+
+  <depend package="roscpp" />
+  <depend package="std_msgs" />
+  <depend package="geometry_msgs" />
+  <depend package="tf" />
+  <depend package="kdl" />
+  <depend package="tf_conversions" />
+  
+</package>
+
+

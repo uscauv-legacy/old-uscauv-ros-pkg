@@ -1,0 +1,20 @@
+<launch>
+    <arg name="pkg" value="auv_physics" />
+    <arg name="name" value="physics_simulator" />
+    <arg name="type" default="$(arg name)" />
+    <arg name="rate" default="30" />
+    <arg name="args" value="_loop_rate:=$(arg rate)" />
+    
+<<<<<<< HEAD
+	<rosparam param=" /$(arg name)/water_temperature_density_map" command="load" file="$(find auv_physics)/params/water_temperature_density_map.yaml" />
+    
+=======
+>>>>>>> a229a0a5eabf6ee22fdec61be79ccba955323973
+    <node
+        pkg="$(arg pkg)"
+        type="$(arg type)"
+        name="$(arg name)"
+        args="$(arg args)"
+        output="screen" />
+
+</launch>
