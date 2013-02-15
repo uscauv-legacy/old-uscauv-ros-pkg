@@ -1,7 +1,0 @@
-<library path="lib/libimage_server_nodelets">
-  <class name="image_server/image_server" type="image_server::ImageServerNodelet" base_class_type="nodelet::Nodelet">
-    <description> 
-      loads a set of images and publishes them at a constant rate
-    </description>
-  </class>
-</library>

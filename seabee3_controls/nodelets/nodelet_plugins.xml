@@ -1,8 +1,0 @@
-<library path="lib/libseabee3_controls_nodelets">
-
-  <class name="seabee3_controls/seabee3_controls" type="seabee3_controls::Seabee3ControlsNodelet" base_class_type="nodelet::Nodelet">
-    <description>
-      todo: fill this in
-    </description>
-  </class>
-</library>

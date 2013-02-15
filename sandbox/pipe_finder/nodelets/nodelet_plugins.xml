@@ -1,8 +1,0 @@
-<library path="lib/libpipe_finder_nodelets">
-
-  <class name="pipe_finder/pipe_finder" type="pipe_finder::PipeFinderNodelet" base_class_type="nodelet::Nodelet">
-    <description>
-      todo: fill this in
-    </description>
-  </class>
-</library>

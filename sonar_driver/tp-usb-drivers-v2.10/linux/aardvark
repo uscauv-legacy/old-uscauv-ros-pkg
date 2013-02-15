@@ -1,9 +1,0 @@
-#!/bin/bash
-#
-# This script gives all users permission to use Aardvark devices.
-# If more security is desired, modify the chown and chmod lines below.
-#
-if [ "${ACTION}" = "add" ] && [ -f "${DEVICE}" ]; then
-    chown root.root "${DEVICE}"
-    chmod 0666 "${DEVICE}"
-fi

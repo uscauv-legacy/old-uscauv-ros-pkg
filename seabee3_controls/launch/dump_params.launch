@@ -1,4 +1,0 @@
-<launch>
-    <rosparam command="dump" ns="/seabee3_controls/pid" file="$(find seabee3_controls)/params/pid.yaml" />
-    <rosparam command="dump" ns="/seabee3_controls/reconfigure" file="$(find seabee3_controls)/params/reconfigure.yaml" />
-</launch>

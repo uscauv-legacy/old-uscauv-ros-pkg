@@ -1,8 +1,0 @@
-<library path="lib/libseabee3_physics_nodelets">
-
-  <class name="seabee3_physics/seabee3_physics" type="seabee3_physics::Seabee3PhysicsNodelet" base_class_type="nodelet::Nodelet">
-    <description>
-      todo: fill this in
-    </description>
-  </class>
-</library>

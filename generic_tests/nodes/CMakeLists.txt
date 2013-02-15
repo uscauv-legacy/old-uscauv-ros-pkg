@@ -1,1 +1,0 @@
-rosbuild_add_executable( message_io_test_node message_io_test_node.cpp )

@@ -1,8 +1,0 @@
-<library path="lib/libseabee3_sensor_aggregator_nodelets">
-
-  <class name="seabee3_sensor_aggregator/seabee3_sensor_aggregator" type="seabee3_sensor_aggregator::Seabee3SensorAggregatorNodelet" base_class_type="nodelet::Nodelet">
-    <description>
-      todo: fill this in
-    </description>
-  </class>
-</library>
