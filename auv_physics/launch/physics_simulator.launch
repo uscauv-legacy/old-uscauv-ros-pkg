@@ -2,7 +2,7 @@
     <arg name="pkg" value="auv_physics" />
     <arg name="name" value="physics_simulator" />
     <arg name="type" default="$(arg name)" />
-    <arg name="rate" default="30" />
+    <arg name="rate" default="1000" />
     <arg name="args" value="_loop_rate:=$(arg rate)" />
     
     <node

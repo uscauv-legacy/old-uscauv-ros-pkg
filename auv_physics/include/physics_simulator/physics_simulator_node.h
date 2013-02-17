@@ -38,7 +38,7 @@
 #define USCAUV_AUVPHYSICS_PHYSICSSIMULATORNODE_H
 
 #include <ros/ros.h>
-#include <std_msgs/String.h> //what to use for msgs?
+#include <std_msgs/Float64.h>
 
 /// tf
 #include <tf/transform_broadcaster.h>
@@ -63,11 +63,83 @@ typedef auv_physics::SimulationInstruction _SimulationInstructionMsg;
 typedef auv_physics::SimulationState _SimulationStateMsg;
 typedef auv_physics::SimulationCommand _SimulationCommandSrv;
 
-class SimpleAUVPhysicsSimulatorNode {
+template<class __KeyType, class __ValueType>
+struct LookupTable
+{
+public:
+  std::vector<__KeyType> key_;
+  std::vector<__ValueType> value_;
+
+  LookupTable(){};
+LookupTable(std::vector<__KeyType> const & key,
+	    std::vector<__ValueType> const & value)
+:
+  key_(key),
+    value_(value)
+  {
+    assert( key_.size() == value_.size() );
+  }
+
+  __ValueType lookupBinary(__KeyType const & key, double eps = 0.0)
+  {
+    assert( key_.size() == value_.size() );
+    
+    int left = 0;
+    int right = value_.size() - 1;
+    int middle;
+    
+    while ( right >= left )
+      {
+	middle = ( left + right ) / 2;
+
+        __KeyType test_key = key_[middle];
+
+        if ( std::abs( test_key - key ) < eps )
+          return value_[middle];
+        else if ( test_key > key )
+          right = middle - 1;
+        else if (test_key < key )
+          left = middle + 1;
+      }
+
+    /// At this point left and right are the same, so the choice of index is arbitrary
+    ROS_WARN_STREAM( "Warning: Lookup for [ " << key << " ] failed." );
+    return value_[left];
+  }
+
+  __ValueType lookupClosest(__KeyType const & key)
+  {
+    assert( key_.size() == value_.size() );
+    
+    double min_error;
+    int ii = 0;
+    int size = key_.size();
+    
+    int min_index = 0;
+    min_error = std::abs( key_[ii] - key);
+    
+    for(; ii < size; ++ii)
+      {
+        double error = std::abs( key_[ii] - key );
+	
+	if (error < min_error )
+          {
+            min_error = error;
+            min_index = ii;
+          }
+      }
+    
+    return value_[min_index];
+  }
+};
+
+class SimpleAUVPhysicsSimulatorNode 
+{
  private:
 
   /// Publishers and subscribers
   ros::Subscriber motor_cmd_sub_;
+  ros::Subscriber water_temp_sub_;
   tf::Transform transform_;
 
   /// Services
@@ -81,11 +153,18 @@ class SimpleAUVPhysicsSimulatorNode {
   ros::Time last_update_time_;
   std::string parent_frame_name_;
   
+  /// Robot model
+  
+  
   /// Robot state
   _Frame  current_pose_;
   _Twist  current_velocity_;
   _Wrench current_force_;
   
+  /// Parameters
+  double gravity_;
+  LookupTable<double, double> water_density_lookup_;
+  double water_density_;
   
 
   /// Constructor and destructor ------------------------------------
@@ -93,11 +172,11 @@ class SimpleAUVPhysicsSimulatorNode {
  SimpleAUVPhysicsSimulatorNode()
    :
   sim_running_( false ),
-  current_pose_ ( _Frame::Identity() ),
-  current_velocity_( _Twist::Zero() ),
-  current_force_( _Wrench::Zero() )
-    {
-    };   
+    current_pose_ ( _Frame::Identity() ),
+    current_velocity_( _Twist::Zero() ),
+    current_force_( _Wrench::Zero() )
+      {
+      };   
 
   ~SimpleAUVPhysicsSimulatorNode(){}; // Destructor
     
@@ -108,10 +187,13 @@ class SimpleAUVPhysicsSimulatorNode {
   void spinFirst()
   {
     ros::NodeHandle nh_rel("~");
-    //motor_cmd_sub_ = nh_rel.subscribe("motor_cmd", 100, callback);
-
-    /// Begin service servers ------------------------------------
     
+    getParameters();
+
+    /// Subscribe to topics ------------------------------------
+    water_temp_sub_ = nh_rel.subscribe("water_temp", 1, &SimpleAUVPhysicsSimulatorNode::waterTempCallback, this);
+    
+    /// Begin service servers ------------------------------------
     simulation_cmd_server_ = nh_rel.advertiseService("simulation_cmd", &SimpleAUVPhysicsSimulatorNode::simulationCommandCallback, this);
 
     ROS_INFO( "Finished spinning up." );
@@ -160,6 +242,46 @@ class SimpleAUVPhysicsSimulatorNode {
     
     return;
   }
+  
+  /// Parameters
+ private:
+  void getParameters()
+  {
+    ros::NodeHandle nh;
+    
+    /// Get gravity ------------------------------------
+    if (! nh.getParam( "environment/constants/gravity", gravity_ ) )
+      {
+	ROS_WARN( "Parameter [gravity] not found. Using default.");
+	gravity_ = 9.8;
+      }
+    
+    /// Get water density lookup ------------------------------------
+    XmlRpc::XmlRpcValue wtd_map;
+    if( !nh.getParam("environment/maps/water_temp_density", wtd_map) )
+      {
+	ROS_ERROR( "Couldn't find water density map." );
+	ros::shutdown();
+      }
+    
+    /// initialize our lookup table with the ugliest syntax possible (thanks Cinco!)
+    std::vector<double> temperature, density;
+    XmlRpc::XmlRpcValue & xml_temp = wtd_map["temp"];
+    XmlRpc::XmlRpcValue & xml_density = wtd_map["density"];
+
+    ROS_ASSERT( xml_temp.size() == xml_density.size() );
+    
+    for(int i = 0; i < xml_temp.size(); ++i)
+      {
+	water_density_lookup_.key_.push_back(xml_temp[i]);
+	water_density_lookup_.value_.push_back(xml_density[i]);
+      }
+        
+    /// get density at room temperature
+    water_density_ = water_density_lookup_.lookupClosest( 20.0 );
+    
+    return;
+  }
 
 
   /// Physics simulation implementation
@@ -192,7 +314,7 @@ class SimpleAUVPhysicsSimulatorNode {
     /// update our timekeeping
     last_update_time_ = now;
 
-    ROS_INFO(" dt was %f", dt);
+    ROS_INFO("dt was %f", dt);
     
     return;
   }
@@ -237,9 +359,14 @@ class SimpleAUVPhysicsSimulatorNode {
   /// Message callbacks
  public:
 
-  void callback(std_msgs::String::ConstPtr& str)
+  void waterTempCallback(std_msgs::Float64::ConstPtr msg)
   {
+    /// Get the water density at this temperature
+    water_density_ = water_density_lookup_.lookupClosest( msg->data );
     
+    /// Simulate
+    if ( sim_running_ )
+      simulateAndPublish();
   }
   
   /// Service callbacks
@@ -346,7 +473,7 @@ class SimpleAUVPhysicsSimulatorNode {
 	  }
       }
 
-    /// Have to cast these enums to ints to avoid compiler warnings, this is stupid
+    /// Have to cast these enums to ints to avoid compiler warnings. This is stupid
     response.state.state = ( sim_running_ ) ? int(_SimulationStateMsg::RUNNING) : int(_SimulationStateMsg::STOPPED);
 
     return true;
