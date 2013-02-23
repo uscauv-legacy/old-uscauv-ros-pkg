@@ -1,6 +1,6 @@
 #!/bin/sh
 
-icon_path="/usr/local/seabee/seabee_logo_transparent.png"
+icon_path="/usr/local/uscauv/seabee_logo_transparent.png"
 
 device=$1
 
