@@ -1,0 +1,17 @@
+<package>
+  <description brief="auv_msgs">
+
+    Messages used in USC AUV Team projects.
+
+  </description>
+  <author>nalyd</author>
+  <license>BSD</license>
+  <review status="unreviewed" notes=""/>
+  <url>http://ros.org/wiki/auv_msgs</url>
+  
+  <depend package="std_msgs" />
+
+
+</package>
+
+
