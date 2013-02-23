@@ -42,6 +42,7 @@
 
 /// tf
 #include <tf/transform_broadcaster.h>
+#include <tf/transform_listener.h>
 #include <tf_conversions/tf_kdl.h>
 
 /// kinematics and dynamics library
@@ -131,6 +132,103 @@ LookupTable(std::vector<__KeyType> const & key,
     
     return value_[min_index];
   }
+
+  int fromXmlRpc(XmlRpc::XmlRpcValue & xml_lookup, std::string const & key_name, std::string const & value_name)
+  {
+    XmlRpc::XmlRpcValue & xml_key   = xml_lookup[key_name];
+    XmlRpc::XmlRpcValue & xml_value = xml_lookup[value_name];
+
+    if( xml_key.size() != xml_value.size() )
+      return -1;
+    
+    /// If key size isn't the same as value size at this point something has gone horribly wrong.
+    for(int i = 0; i < xml_key.size(); ++i)
+      {
+	key_.push_back(xml_key[i]);
+	value_.push_back(xml_value[i]);
+      }
+    return 0;
+  }
+  
+};
+
+class ThrusterModel
+{
+  /// Data members
+ public:
+  std::string name_;
+  _Frame cm_to_thruster_;
+  LookupTable<double, double> power_to_force_;
+  
+ public:
+
+  /**
+   * Given an XmlRpcValue from the parameter server, populate the fields of the thruster model.
+   *
+   * @param xml_thruster The XmlRpcValue containing the thruster data
+   *
+   * @return Zero of successful, non-zero otherwise.
+   */
+  int fromXmlRpc(std::string name, XmlRpc::XmlRpcValue xml_thruster)
+  {
+    name_ = name;
+        
+    if( !power_to_force_.fromXmlRpc( xml_thruster, "power", "force" ) )
+      {
+	ROS_WARN( "Failed to load power-force map for thruster [ %s ].", name.c_str() );
+	return -1;
+      }
+
+    tf::TransformListener tf_listener;
+    tf::StampedTransform stamped_transform;
+
+    std::stringstream tf_name;
+    tf_name << name_ << "_link";
+
+    if( tf_listener.waitForTransform( tf_name.str(), "cm_link", ros::Time(0),
+				      ros::Duration(1.0), ros::Duration(0.1)) )
+      {
+    
+	/// Get the transform from the center of mass to the thruster
+	try
+	  {
+	    tf_listener.lookupTransform( tf_name.str(), "cm_link", ros::Time(0), stamped_transform );
+	    /* tf_listener.lookupTransform("/cm_link", tf_name.str(), ros::Time(0), stamped_transform ); */
+	  }
+	catch (tf::TransformException ex) 
+	  {
+	    ROS_ERROR( "%s",ex.what() );
+	    return -1;
+	  }
+      }
+    else
+      {
+	ROS_WARN( "Lookup of thruster [ %s ] transform failed.", name_.c_str() );
+	return -1;
+      }
+
+    tf::transformTFToKDL( stamped_transform, cm_to_thruster_ );
+    
+    return 0;
+  }
+
+  /**
+   * Given a motor controller power output,
+   * calculate the force experienced at the center of mass due to the thruster.
+   *
+   * @param power Power output, in Watts.
+   *
+   * @return Force experienced around center of mass.
+   */
+  _Wrench applyPower(double power)
+  {
+    double f = power_to_force_.lookupClosest( power );
+            
+    _Wrench force = _Wrench( _Vector( f, 0.0, 0.0 ), _Vector() );
+
+    /// Get our torques around CM via cross product
+    return cm_to_thruster_ * force;
+  }
 };
 
 class SimpleAUVPhysicsSimulatorNode 
@@ -154,7 +252,7 @@ class SimpleAUVPhysicsSimulatorNode
   std::string parent_frame_name_;
   
   /// Robot model
-  
+  std::deque<ThrusterModel> thruster_models_;
   
   /// Robot state
   _Frame  current_pose_;
@@ -186,6 +284,8 @@ class SimpleAUVPhysicsSimulatorNode
   /// Running spin() will cause this function to be called before the node begins looping the spingOnce() function.
   void spinFirst()
   {
+    ros::spinOnce();
+    
     ros::NodeHandle nh_rel("~");
     
     getParameters();
@@ -264,21 +364,43 @@ class SimpleAUVPhysicsSimulatorNode
 	ros::shutdown();
       }
     
-    /// initialize our lookup table with the ugliest syntax possible (thanks Cinco!)
-    std::vector<double> temperature, density;
-    XmlRpc::XmlRpcValue & xml_temp = wtd_map["temp"];
-    XmlRpc::XmlRpcValue & xml_density = wtd_map["density"];
-
-    ROS_ASSERT( xml_temp.size() == xml_density.size() );
-    
-    for(int i = 0; i < xml_temp.size(); ++i)
+    if( water_density_lookup_.fromXmlRpc( wtd_map, "temp", "density" ) )
       {
-	water_density_lookup_.key_.push_back(xml_temp[i]);
-	water_density_lookup_.value_.push_back(xml_density[i]);
+	ROS_ERROR( "Failed to build water-temperature-density map." );
+	ros::shutdown();
+	return;
       }
         
     /// get density at room temperature
     water_density_ = water_density_lookup_.lookupClosest( 20.0 );
+
+    /// Get thruster models ------------------------------------
+    XmlRpc::XmlRpcValue thrusters_xml;
+    if (! nh.getParam( "model/thrusters", thrusters_xml ) )
+      {
+	ROS_WARN( "No thrusters parameter found. Thruster force will not be simulated." );
+	return;
+      }
+    for(std::map<std::string, XmlRpc::XmlRpcValue>::iterator thruster_it = thrusters_xml.begin(); 
+	thruster_it != thrusters_xml.end(); ++thruster_it)
+      {
+	ThrusterModel thruster;
+	
+	if( thruster.fromXmlRpc(thruster_it->first, thruster_it->second) )
+	  {
+	    ROS_WARN( "Failed to load thruster model [ %s ].", thruster_it->first.c_str() );
+	    continue;
+	  }
+	else
+	  {
+	    ROS_INFO( "Loaded thruster model [ %s ].", thruster_it->first.c_str() );
+	  }	
+	
+	thruster_models_.push_back(thruster);
+      }
+    
+    if( !thruster_models_.size() )
+      ROS_WARN( "No thruster models were loaded. Thruster force will not be simulated." );
     
     return;
   }
