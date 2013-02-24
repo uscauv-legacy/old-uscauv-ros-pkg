@@ -1,0 +1,14 @@
+<package>
+  <description brief="uscauv_visualization">
+
+    Visualization tools for the USC AUV Team.
+
+  </description>
+  <author>nalyd</author>
+  <license>BSD</license>
+  <review status="unreviewed" notes=""/>
+  <url>http://ros.org/wiki/uscauv_visualization</url>
+
+</package>
+
+
