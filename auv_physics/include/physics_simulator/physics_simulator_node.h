@@ -165,16 +165,24 @@ template<class __KeyType, class __ValueType>
   }
 };
 
-/// TODO: Convert to ODE
+
 class ThrusterModel
 {
   /// Data members
  public:
-  _Frame cm_to_thruster_;
+  dVector3 cm_to_thruster_;
+  dVector3 thrust_dir_;
+  
+  double current_force_;
+  
   LookupTable<double, double> power_to_force_;
   
  public:
 
+ ThrusterModel() :
+  current_force_( 0.0 )
+    {}
+  
   /**
    * Given an XmlRpcValue from the parameter server, populate the fields of the thruster model.
    *
@@ -191,19 +199,19 @@ class ThrusterModel
       }
 
     tf::TransformListener tf_listener;
-    tf::StampedTransform stamped_transform;
+    tf::StampedTransform cm_to_thruster_tf;
 
     std::stringstream tf_name;
     tf_name << name << "_link";
 
-    if( tf_listener.waitForTransform( tf_name.str(), "cm_link", ros::Time(0),
+    if( tf_listener.waitForTransform( "cm_link", tf_name.str(), ros::Time(0),
 				      ros::Duration(5.0), ros::Duration(0.1)) )
       {
     
 	/// Get the transform from the center of mass to the thruster
 	try
 	  {
-	    tf_listener.lookupTransform( tf_name.str(), "cm_link", ros::Time(0), stamped_transform );
+	    tf_listener.lookupTransform( "cm_link", tf_name.str(), ros::Time(0), cm_to_thruster_tf );
 	  }
 	catch (tf::TransformException ex) 
 	  {
@@ -217,30 +225,36 @@ class ThrusterModel
 	return -1;
       }
 
-    tf::transformTFToKDL( stamped_transform, cm_to_thruster_ );
+    /// Point where the thruster lies with respect to the auv's center of mass
+    tf::Vector3 const & cm_to_thruster_vec = cm_to_thruster_tf.getOrigin();
     
+    /// Unit vector in the direction of thrust, with respect to the auv's center of mass
+    tf::Vector3 const thrust_dir_unit = cm_to_thruster_tf * tf::Vector3(1.0, 0.0, 0.0);
+    
+    cm_to_thruster_[0] = cm_to_thruster_vec.x();
+    cm_to_thruster_[1] = cm_to_thruster_vec.y();
+    cm_to_thruster_[2] = cm_to_thruster_vec.z();
+    
+    thrust_dir_[0] = thrust_dir_unit.x();
+    thrust_dir_[1] = thrust_dir_unit.y();
+    thrust_dir_[2] = thrust_dir_unit.z();
+
     return 0;
   }
-
-  /**
-   * Given a motor controller power output,
-   * calculate the force experienced at the center of mass due to the thruster.
-   *
-   * @param power Power output, in Watts.
-   *
-   * @return Force experienced around center of mass.
-   */
-  _Wrench applyPower(double const & power) const
+  
+  void updateForce(double const & power)
   {
-    double f = power_to_force_.lookupClosest( power );
-            
-    _Wrench force = _Wrench( _Vector( f, 0.0, 0.0 ), _Vector() );
-
-    /// Get our torques around CM via cross product
-    ROS_INFO("cm to thruster is: (%.4f, %.4f, %.4f)", 
-	     cm_to_thruster_.p.x(), cm_to_thruster_.p.y(), cm_to_thruster_.p.z());
-    return (cm_to_thruster_ * force).RefPoint( cm_to_thruster_.p );
+    current_force_ = power_to_force_.lookupClosest( power );
   }
+  
+  void applyForce( dBodyID const & auv_body ) const
+  {
+    dBodyAddRelForceAtRelPos( auv_body, current_force_ * thrust_dir_[0], current_force_ * thrust_dir_[1],
+			      current_force_  * thrust_dir_[2], cm_to_thruster_[0], 
+			      cm_to_thruster_[1], cm_to_thruster_[2] );
+    
+  }
+
 };
 
 class AUVDynamicsModel
@@ -541,12 +555,13 @@ class SimpleAUVPhysicsSimulatorNode
   {
     /// timing
     ros::Time now = ros::Time::now();
-    double dt = (now - last_update_time_).toSec();
+    /* double dt = (now - last_update_time_).toSec(); */
 
-    ROS_INFO("dt was %f.", dt);
+    /* ROS_INFO("dt was %f.", dt); */
 
     /// Apply forces on the body ------------------------------------
     simulateBuoyancy();
+    simulateThrusters();
     
     /// Step simulation and publish the results ------------------------------------
     
@@ -588,11 +603,21 @@ class SimpleAUVPhysicsSimulatorNode
     double buoyancy_c = water_density_ * auv_dynamics_.volume_;
     
     dBodyAddForceAtRelPos( auv_body_, -gravity[0] * buoyancy_c,
-			      -gravity[1] * buoyancy_c, -gravity[2] * buoyancy_c,
-			      auv_dynamics_.cm_to_cv_[0], auv_dynamics_.cm_to_cv_[1], 
-			      auv_dynamics_.cm_to_cv_[2] );
-        
+			   -gravity[1] * buoyancy_c, -gravity[2] * buoyancy_c,
+			   auv_dynamics_.cm_to_cv_[0], auv_dynamics_.cm_to_cv_[1], 
+			   auv_dynamics_.cm_to_cv_[2] ); 
+       
     return;
+  }
+  
+  void simulateThrusters()
+  {
+    for(std::map<std::string, ThrusterModel>::iterator model_it = thruster_models_.begin();
+	model_it != thruster_models_.end(); ++model_it )
+      {
+	model_it->second.applyForce( auv_body_ );
+      }
+    
   }
   
   /// Control functions
@@ -648,32 +673,23 @@ class SimpleAUVPhysicsSimulatorNode
     return;
   }
 
-  /// TODO: Convert this to ODE
   void motorPowerCallback(_MotorPowerArrayMsg::ConstPtr msg)
   {
-    /// Simulate
-    /* if ( sim_running_ ) */
-    /*   simulateAndPublish(); */
-    /* else */
-    /*   return; */
+    /// TODO: Step simulation before applying new motor forces    
+    if ( !sim_running_ )
+      return;
 
-    /* current_thruster_force_ = _Wrench::Zero(); */
-
-    /* for(std::vector<_MotorPowerMsg>::const_iterator power_it = msg->powers.begin(); power_it != msg->powers.end(); ++power_it) */
-    /*   { */
-    /* 	std::map<std::string, ThrusterModel>::iterator model_it = thruster_models_.find( power_it->name ) ; */
-    /* 	if ( model_it == thruster_models_.end() ) */
-    /* 	  { */
-    /* 	    ROS_WARN( "Received thruster power, but no model is loaded. [ %s ]", power_it->name.c_str() ); */
-    /* 	    continue; */
-    /* 	  } */
+    for(std::vector<_MotorPowerMsg>::const_iterator power_it = msg->powers.begin(); power_it != msg->powers.end(); ++power_it)
+      {
+    	std::map<std::string, ThrusterModel>::iterator model_it = thruster_models_.find( power_it->name ) ;
+    	if ( model_it == thruster_models_.end() )
+    	  {
+    	    ROS_WARN( "Received thruster power, but no model is loaded. [ %s ]", power_it->name.c_str() );
+    	    continue;
+    	  }
 	
-    /* 	_Wrench f = model_it->second.applyPower( power_it->power ); */
-    /* 	current_thruster_force_ += f; */
-    /* 	ROS_INFO("Applying thruster force [ %s ] (%.4f, %.4f, %.4f, %.4f, %.4f, %.4f)", */
-    /* 		 power_it->name.c_str(), f.force.x(), f.force.y(), f.force.z(), */
-    /* 		 f.torque.x(), f.torque.y(), f.torque.z()); */
-    /*   } */
+    	model_it->second.updateForce( power_it->power );
+      }
     
     return;
   }
