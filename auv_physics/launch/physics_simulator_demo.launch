@@ -1,9 +1,28 @@
 <launch>
 
+  <arg name="visualize" default="false"/>
+  <arg name="dummy_accel" default="false" />
+  
   <include file="$(find auv_physics)/launch/physics_simulator.launch" />
 
   <!-- Params -->
   <include file="$(find global_config)/launch/environment_params.launch" />
-  <include file="$(find auv_model)/launch/upload_model.launch"    />
+  <include file="$(find auv_model)/launch/upload_model.launch" >
+    <arg name="robot" value="seabee3" />
+  </include>
+
+  <node pkg="tf" type="static_transform_publisher" name="physics_to_cm_tf"
+	args="0 0 0 0 0 0 /simulated_pose /cm_link 100" />
+  
+  <!-- rviz -->
+  <include file="$(find uscauv_visualization)/launch/auv_model_visualization.launch"
+	   if="$(arg visualize)">
+    <arg name="fixed_frame" value="/world" />
+  </include>
+
+  <group if="$(arg dummy_accel)" >
+    <node pkg="rostopic" type="rostopic" name="motor_power_pub"
+	  args="pub /physics_simulator/motor_power auv_msgs/MotorPowerArray '{powers: [{name: thruster1, power: 0}, {name: thruster2, power: 30}] }' -r 10" />
+  </group>
 
 </launch>

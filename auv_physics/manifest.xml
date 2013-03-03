@@ -14,7 +14,10 @@
   <depend package="geometry_msgs" />
   <depend package="tf" />
   <depend package="kdl" />
+  <depend package="opende" />
   <depend package="tf_conversions" />
+
+  <depend package="auv_msgs" />
   
 </package>
 

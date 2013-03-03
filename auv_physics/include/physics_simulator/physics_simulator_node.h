@@ -45,6 +45,9 @@
 #include <tf/transform_listener.h>
 #include <tf_conversions/tf_kdl.h>
 
+/// dynamics
+#include <ode/ode.h>
+
 /// kinematics and dynamics library
 #include <kdl/frames.hpp>
 
@@ -53,37 +56,45 @@
 #include <auv_physics/SimulationState.h>
 #include <auv_physics/SimulationCommand.h>
 
+/// AUV messages
+#include <auv_msgs/MotorPower.h>
+#include <auv_msgs/MotorPowerArray.h>
+
+/// TODO: Get rid of KDL
 typedef KDL::Vector _Vector;
 typedef KDL::Rotation _Rotation;
 typedef KDL::Frame _Frame;
 typedef KDL::Twist _Twist;
 typedef KDL::Wrench _Wrench;
 
+typedef auv_msgs::MotorPower _MotorPowerMsg;
+typedef auv_msgs::MotorPowerArray _MotorPowerArrayMsg;
 
 typedef auv_physics::SimulationInstruction _SimulationInstructionMsg;
 typedef auv_physics::SimulationState _SimulationStateMsg;
 typedef auv_physics::SimulationCommand _SimulationCommandSrv;
 
-template<class __KeyType, class __ValueType>
-struct LookupTable
+template<class __KeyType, class __ValueType> 
+  class LookupTable
 {
-public:
+ public:
   std::vector<__KeyType> key_;
   std::vector<__ValueType> value_;
 
   LookupTable(){};
-LookupTable(std::vector<__KeyType> const & key,
-	    std::vector<__ValueType> const & value)
-:
+ LookupTable(std::vector<__KeyType> const & key,
+	     std::vector<__ValueType> const & value)
+   :
   key_(key),
     value_(value)
-  {
-    assert( key_.size() == value_.size() );
-  }
+    {
+      assert( key_.size() == value_.size() );
+    }
 
-  __ValueType lookupBinary(__KeyType const & key, double eps = 0.0)
+  __ValueType lookupBinary(__KeyType const & key, double eps = 0.0) const
   {
     assert( key_.size() == value_.size() );
+    assert( key_.size() );
     
     int left = 0;
     int right = value_.size() - 1;
@@ -108,21 +119,21 @@ LookupTable(std::vector<__KeyType> const & key,
     return value_[left];
   }
 
-  __ValueType lookupClosest(__KeyType const & key)
+  __ValueType lookupClosest(__KeyType const & key) const
   {
     assert( key_.size() == value_.size() );
+    assert( key_.size() );
     
     double min_error;
     int ii = 0;
     int size = key_.size();
-    
     int min_index = 0;
     min_error = std::abs( key_[ii] - key);
     
     for(; ii < size; ++ii)
       {
+
         double error = std::abs( key_[ii] - key );
-	
 	if (error < min_error )
           {
             min_error = error;
@@ -137,26 +148,28 @@ LookupTable(std::vector<__KeyType> const & key,
   {
     XmlRpc::XmlRpcValue & xml_key   = xml_lookup[key_name];
     XmlRpc::XmlRpcValue & xml_value = xml_lookup[value_name];
+    int key_size = xml_key.size(), value_size = xml_value.size();
 
     if( xml_key.size() != xml_value.size() )
-      return -1;
-    
-    /// If key size isn't the same as value size at this point something has gone horribly wrong.
-    for(int i = 0; i < xml_key.size(); ++i)
       {
-	key_.push_back(xml_key[i]);
-	value_.push_back(xml_value[i]);
+	ROS_WARN("Lookup table key size does not match value size (key: %d) != (value: %d )", key_size, value_size);
+	return -1;
+      }
+    /// If key size isn't the same as value size at this point something has gone horribly wrong.
+    for(int i = 0; i < key_size; ++i)
+      {
+	key_.push_back( xml_key[i] );
+	value_.push_back( xml_value[i] );
       }
     return 0;
   }
-  
 };
 
+/// TODO: Convert to ODE
 class ThrusterModel
 {
   /// Data members
  public:
-  std::string name_;
   _Frame cm_to_thruster_;
   LookupTable<double, double> power_to_force_;
   
@@ -169,11 +182,9 @@ class ThrusterModel
    *
    * @return Zero of successful, non-zero otherwise.
    */
-  int fromXmlRpc(std::string name, XmlRpc::XmlRpcValue xml_thruster)
+  int fromXmlRpc(std::string const & name, XmlRpc::XmlRpcValue & xml_thruster)
   {
-    name_ = name;
-        
-    if( !power_to_force_.fromXmlRpc( xml_thruster, "power", "force" ) )
+    if( power_to_force_.fromXmlRpc( xml_thruster, "power", "force" ) )
       {
 	ROS_WARN( "Failed to load power-force map for thruster [ %s ].", name.c_str() );
 	return -1;
@@ -183,27 +194,26 @@ class ThrusterModel
     tf::StampedTransform stamped_transform;
 
     std::stringstream tf_name;
-    tf_name << name_ << "_link";
+    tf_name << name << "_link";
 
     if( tf_listener.waitForTransform( tf_name.str(), "cm_link", ros::Time(0),
-				      ros::Duration(1.0), ros::Duration(0.1)) )
+				      ros::Duration(5.0), ros::Duration(0.1)) )
       {
     
 	/// Get the transform from the center of mass to the thruster
 	try
 	  {
 	    tf_listener.lookupTransform( tf_name.str(), "cm_link", ros::Time(0), stamped_transform );
-	    /* tf_listener.lookupTransform("/cm_link", tf_name.str(), ros::Time(0), stamped_transform ); */
 	  }
 	catch (tf::TransformException ex) 
 	  {
-	    ROS_ERROR( "%s",ex.what() );
+	    ROS_ERROR( "%s", ex.what() );
 	    return -1;
 	  }
       }
     else
       {
-	ROS_WARN( "Lookup of thruster [ %s ] transform failed.", name_.c_str() );
+	ROS_WARN( "Lookup of thruster [ %s ] transform failed.", name.c_str() );
 	return -1;
       }
 
@@ -220,15 +230,77 @@ class ThrusterModel
    *
    * @return Force experienced around center of mass.
    */
-  _Wrench applyPower(double power)
+  _Wrench applyPower(double const & power) const
   {
     double f = power_to_force_.lookupClosest( power );
             
     _Wrench force = _Wrench( _Vector( f, 0.0, 0.0 ), _Vector() );
 
     /// Get our torques around CM via cross product
-    return cm_to_thruster_ * force;
+    ROS_INFO("cm to thruster is: (%.4f, %.4f, %.4f)", 
+	     cm_to_thruster_.p.x(), cm_to_thruster_.p.y(), cm_to_thruster_.p.z());
+    return (cm_to_thruster_ * force).RefPoint( cm_to_thruster_.p );
   }
+};
+
+class AUVDynamicsModel
+{
+ public:
+  double volume_;
+  /// Incorporates mass at CM and inertial tensor
+  dMass mass_;
+  
+  dVector3 cm_to_cv_;
+  
+  int fromXmlRpc(XmlRpc::XmlRpcValue & xml_model)
+  {
+    /// Get dynamics parameters (already retrieved from parameter server) ------------------------------------
+    
+    XmlRpc::XmlRpcValue & xml_tensor = xml_model["inertial_tensor"];
+
+    volume_ = xml_model["volume"];
+    
+    /// Last six arguments are the non-redundant elements of the inertial tensor 
+    dMassSetParameters( &mass_, xml_model["mass"],
+			0.0, 0.0, 0.0,
+			xml_tensor[0], xml_tensor[4], xml_tensor[8],
+			xml_tensor[1], xml_tensor[2], xml_tensor[5] );
+    
+    /// Look up the transform to the center of volume ------------------------------------
+    tf::TransformListener tf_listener;
+    tf::StampedTransform cm_to_cv_tf;
+    
+    /// TODO: Verify that this gets the transform expressing 
+    if( tf_listener.waitForTransform( "cm_link", "cv_link", ros::Time(0),
+				      ros::Duration(5.0), ros::Duration(0.1)) )
+      {
+	try
+	  {
+	    tf_listener.lookupTransform( "cm_link", "cv_link" , ros::Time(0), cm_to_cv_tf );
+	  }
+	catch (tf::TransformException ex) 
+	  {
+	    ROS_ERROR( "%s", ex.what() );
+	    return -1;
+	  }
+      }
+    else
+      {
+	ROS_WARN( "Lookup of [cv_link] failed." );
+	return -1;
+      }
+
+    tf::Vector3 const & cm_to_cv_vec = cm_to_cv_tf.getOrigin();
+    
+    cm_to_cv_[0] = cm_to_cv_vec.x();
+    cm_to_cv_[1] = cm_to_cv_vec.y();
+    cm_to_cv_[2] = cm_to_cv_vec.z();
+
+    ROS_INFO("Loaded center-of-volume transform: ( %f, %f, %f )", cm_to_cv_[0], cm_to_cv_[1], cm_to_cv_[2] );
+    
+    return 0;
+  }
+  
 };
 
 class SimpleAUVPhysicsSimulatorNode 
@@ -236,7 +308,7 @@ class SimpleAUVPhysicsSimulatorNode
  private:
 
   /// Publishers and subscribers
-  ros::Subscriber motor_cmd_sub_;
+  ros::Subscriber motor_power_sub_;
   ros::Subscriber water_temp_sub_;
   tf::Transform transform_;
 
@@ -248,54 +320,77 @@ class SimpleAUVPhysicsSimulatorNode
 
   /// Simulation data
   bool sim_running_;
+  double loop_rate_hz_;
   ros::Time last_update_time_;
   std::string parent_frame_name_;
   
   /// Robot model
-  std::deque<ThrusterModel> thruster_models_;
-  
-  /// Robot state
-  _Frame  current_pose_;
-  _Twist  current_velocity_;
-  _Wrench current_force_;
+  std::map<std::string, ThrusterModel> thruster_models_;
   
   /// Parameters
   double gravity_;
   LookupTable<double, double> water_density_lookup_;
   double water_density_;
   
-
+  /// physics world
+  double simulation_delta_;
+  
+  dWorldID auv_world_;
+  dBodyID  auv_body_;
+  
+  AUVDynamicsModel auv_dynamics_;
+  
   /// Constructor and destructor ------------------------------------
  public:
  SimpleAUVPhysicsSimulatorNode()
    :
-  sim_running_( false ),
-    current_pose_ ( _Frame::Identity() ),
-    current_velocity_( _Twist::Zero() ),
-    current_force_( _Wrench::Zero() )
-      {
-      };   
-
-  ~SimpleAUVPhysicsSimulatorNode(){}; // Destructor
-    
+  sim_running_( false )
+    {
+    }
+  
+  ~SimpleAUVPhysicsSimulatorNode()
+    {
+      /// destroy dynamics world. What happens if this is called without calling dWorldCreate()?
+      dWorldDestroy( auv_world_ );
+      dBodyDestroy( auv_body_ );
+      
+    } // Destructor
+  
   /// Methods for flow control 
  public:
 
   /// Running spin() will cause this function to be called before the node begins looping the spingOnce() function.
   void spinFirst()
   {
+    /// TODO: Figure out why this is called here. Maybe so that parameters are available?
     ros::spinOnce();
-    
+   
+    /// Set up physics world ------------------------------------
+    auv_world_ = dWorldCreate();
+    auv_body_  = dBodyCreate(auv_world_);
+
+    /// Get ROS ready ------------------------------------
     ros::NodeHandle nh_rel("~");
     
     getParameters();
 
     /// Subscribe to topics ------------------------------------
     water_temp_sub_ = nh_rel.subscribe("water_temp", 1, &SimpleAUVPhysicsSimulatorNode::waterTempCallback, this);
+    motor_power_sub_ = nh_rel.subscribe("motor_power", 1, &SimpleAUVPhysicsSimulatorNode::motorPowerCallback, this);
     
     /// Begin service servers ------------------------------------
     simulation_cmd_server_ = nh_rel.advertiseService("simulation_cmd", &SimpleAUVPhysicsSimulatorNode::simulationCommandCallback, this);
-
+        
+    /// Print ODE info ------------------------------------
+    ROS_INFO("Launching ODE simulation with parameters:");
+    ROS_INFO("ERP: %f", dWorldGetERP(auv_world_) );
+    ROS_INFO("CFM: %f", dWorldGetCFM(auv_world_) );
+    ROS_INFO("AutoDisableFlag: %d", dWorldGetAutoDisableFlag(auv_world_) );
+    ROS_INFO("AutoDisableLinearThreshold: %f", dWorldGetAutoDisableLinearThreshold(auv_world_) );
+    ROS_INFO("AutoDisableAngularThreshold: %f", dWorldGetAutoDisableAngularThreshold(auv_world_) );
+    ROS_INFO("AutoDisableSteps: %d", dWorldGetAutoDisableSteps(auv_world_) );
+    ROS_INFO("AutoDisableTime: %f", dWorldGetAutoDisableTime(auv_world_) );
+    
     ROS_INFO( "Finished spinning up." );
     return;
   }
@@ -303,9 +398,6 @@ class SimpleAUVPhysicsSimulatorNode
   /// Running spin() will cause this function to get called at the loop rate until this node is killed.
   void spinOnce()
   {
-   
-    /* broadcaster_.sendTransform(tf::StampedTransform(transform_, ros::Time::now(), "world", "physics_simulation_pose")); */
-    
     /// Run physics simulation
     if ( sim_running_ )
       simulateAndPublish();
@@ -318,20 +410,20 @@ class SimpleAUVPhysicsSimulatorNode
     /// nodehandle will resolve namespaces relative to this node's name
     ros::NodeHandle nh_rel("~");
 
-    double loop_rate_hz;
-    
-    if( !nh_rel.getParam("loop_rate", loop_rate_hz) )
+    if( !nh_rel.getParam("loop_rate", loop_rate_hz_) )
       {
 	ROS_WARN("Parameter [loop_rate] not found. Using default.");
-	loop_rate_hz = 10.0;
+	loop_rate_hz_ = 10.0;
       }
 
-    ros::Rate loop_rate( loop_rate_hz );
+    ros::Rate loop_rate( loop_rate_hz_ );
 
     ROS_INFO( "Spinning up Physics Simulator..." );
     spinFirst();
 
-    ROS_INFO( "Physics Simulator is spinning at %.2f Hz.", loop_rate_hz ); 
+    ROS_INFO( "Physics Simulator is spinning at %.2f Hz.", loop_rate_hz_ ); 
+
+    simulation_delta_ = 1.0 / loop_rate_hz_;
     
     while( ros::ok() )
       {
@@ -349,13 +441,18 @@ class SimpleAUVPhysicsSimulatorNode
   {
     ros::NodeHandle nh;
     
+    double gravity;
+    
     /// Get gravity ------------------------------------
-    if (! nh.getParam( "environment/constants/gravity", gravity_ ) )
+    if (! nh.getParam( "environment/constants/gravity", gravity ) )
       {
 	ROS_WARN( "Parameter [gravity] not found. Using default.");
-	gravity_ = 9.8;
+	gravity = -9.8;
       }
     
+    /// Set gravity in the z-direction
+    dWorldSetGravity(auv_world_, 0.0, 0.0, gravity);
+
     /// Get water density lookup ------------------------------------
     XmlRpc::XmlRpcValue wtd_map;
     if( !nh.getParam("environment/maps/water_temp_density", wtd_map) )
@@ -379,29 +476,61 @@ class SimpleAUVPhysicsSimulatorNode
     if (! nh.getParam( "model/thrusters", thrusters_xml ) )
       {
 	ROS_WARN( "No thrusters parameter found. Thruster force will not be simulated." );
+      }
+    else
+      {
+	for(std::map<std::string, XmlRpc::XmlRpcValue>::iterator thruster_it = thrusters_xml.begin(); 
+	    thruster_it != thrusters_xml.end(); ++thruster_it)
+	  {
+	    ThrusterModel thruster;
+	
+	    if( thruster.fromXmlRpc(thruster_it->first, thruster_it->second) )
+	      {
+		ROS_WARN( "Failed to load thruster model [ %s ].", thruster_it->first.c_str() );
+		continue;
+	      }
+	    else
+	      {
+		ROS_INFO( "Loaded thruster model [ %s ].", thruster_it->first.c_str() );
+	      }	
+	
+	    if ( thruster_models_.insert( std::pair<std::string, ThrusterModel>(thruster_it->first, thruster) ).second == false )
+	      {
+		ROS_WARN( "Thruster [ %s ] is already loaded. Ignoring...", thruster_it->first.c_str());
+		continue;
+	      }
+	  }
+    
+	if( !thruster_models_.size() )
+	  ROS_WARN( "No thruster models were loaded. Thruster force will not be simulated." );
+      }
+
+    XmlRpc::XmlRpcValue dynamics_xml;
+    if (! nh.getParam( "model/dynamics", dynamics_xml ) )
+      {
+	ROS_ERROR( "Failed to load AUV dynamics model." );
+	ros::shutdown();
 	return;
       }
-    for(std::map<std::string, XmlRpc::XmlRpcValue>::iterator thruster_it = thrusters_xml.begin(); 
-	thruster_it != thrusters_xml.end(); ++thruster_it)
-      {
-	ThrusterModel thruster;
-	
-	if( thruster.fromXmlRpc(thruster_it->first, thruster_it->second) )
-	  {
-	    ROS_WARN( "Failed to load thruster model [ %s ].", thruster_it->first.c_str() );
-	    continue;
-	  }
-	else
-	  {
-	    ROS_INFO( "Loaded thruster model [ %s ].", thruster_it->first.c_str() );
-	  }	
-	
-	thruster_models_.push_back(thruster);
-      }
     
-    if( !thruster_models_.size() )
-      ROS_WARN( "No thruster models were loaded. Thruster force will not be simulated." );
+    auv_dynamics_.fromXmlRpc(dynamics_xml);
     
+    dBodySetMass( auv_body_, &auv_dynamics_.mass_ );
+
+    dMass test_mass;
+    dBodyGetMass(auv_body_, &test_mass);
+    
+    dVector3 const & test_cm = test_mass.c;
+    dMatrix3 const & test_it = test_mass.I;
+    
+    ROS_INFO("Loaded dynamics model with parameters:" );
+    ROS_INFO("Mass: %f, Volume: %f", test_mass.mass, auv_dynamics_.volume_ );
+    ROS_INFO("Center of Mass: ( %f, %f, %f )", test_cm[0], test_cm[1], test_cm[2]);
+    ROS_INFO("Inertial Tensor: [ %f, %f, %f; %f, %f, %f; %f, %f, %f]",
+	     test_it[0], test_it[1], test_it[2], 
+	     test_it[4], test_it[5], test_it[6], 
+	     test_it[8], test_it[9], test_it[10]);
+    	     
     return;
   }
 
@@ -413,34 +542,59 @@ class SimpleAUVPhysicsSimulatorNode
     /// timing
     ros::Time now = ros::Time::now();
     double dt = (now - last_update_time_).toSec();
-    
 
-    /// Integrate velocity
-    current_pose_.Integrate( current_velocity_, 1.0/dt );
+    ROS_INFO("dt was %f.", dt);
 
-    /// TODO: Integrate acceleration here.
+    /// Apply forces on the body ------------------------------------
+    simulateBuoyancy();
     
+    /// Step simulation and publish the results ------------------------------------
     
-    /// TODO: Apply forces to get new acceleration and velocity here.
+    /**
+     * Step the physics simulation. This is a little non-physical because it assumes that this function is called at exactly 1/loop_rate
+     * Not using a fixed step size will cause instability in simulation
+     */
+    dWorldStep( auv_world_, simulation_delta_ );
     
-    /// Publish current odometry estimate ------------------------------------
+    const dReal * world_to_auv_vec = dBodyGetPosition( auv_body_ );
+    const dReal * world_to_auv_quat = dBodyGetQuaternion( auv_body_ );
     
-    /// Have to convert our KDL frame representation of pose to a tf stamped transform
-    tf::Transform pose_tf;
-    tf::poseKDLToTF(current_pose_, pose_tf);
+    tf::Transform world_to_auv ( tf::Quaternion( world_to_auv_quat[1],
+						 world_to_auv_quat[2],
+						 world_to_auv_quat[3],
+						 world_to_auv_quat[0]),
 
-    tf::StampedTransform pose_stamped_tf( pose_tf, now, parent_frame_name_, "simulated_pose" );
-
-    pose_br_.sendTransform( pose_stamped_tf );
+				 tf::Vector3( world_to_auv_vec[0],
+					      world_to_auv_vec[1],
+					      world_to_auv_vec[2]) );
     
+    tf::StampedTransform world_to_auv_stamped( world_to_auv, now, parent_frame_name_, "simulated_pose" );
+
+    pose_br_.sendTransform( world_to_auv_stamped );
+
     /// update our timekeeping
     last_update_time_ = now;
 
-    ROS_INFO("dt was %f", dt);
-    
     return;
   }
 
+  /// Add force opposing the gravity vector at the auv's volume centroid
+  void simulateBuoyancy()
+  {
+    dVector3 gravity;
+    
+    dWorldGetGravity( auv_world_, gravity );
+    
+    double buoyancy_c = water_density_ * auv_dynamics_.volume_;
+    
+    dBodyAddForceAtRelPos( auv_body_, -gravity[0] * buoyancy_c,
+			      -gravity[1] * buoyancy_c, -gravity[2] * buoyancy_c,
+			      auv_dynamics_.cm_to_cv_[0], auv_dynamics_.cm_to_cv_[1], 
+			      auv_dynamics_.cm_to_cv_[2] );
+        
+    return;
+  }
+  
   /// Control functions
  private:
   bool stopSimulation()
@@ -461,15 +615,18 @@ class SimpleAUVPhysicsSimulatorNode
     
     parent_frame_name_ = request.command.header.frame_id;
     
-    /// Convert from geometry_msgs to KDL
-    current_pose_     = _Frame( _Rotation::Quaternion(q.x, q.y, q.z, q.w), _Vector(p.x, p.y, p.z) );
-    current_velocity_ = _Twist( _Vector(t1.x, t1.y, t1.z), _Vector(t2.x, t2.y, t2.z) );
+    dQuaternion world_to_auv_quat;
+    world_to_auv_quat[0] = q.w;
+    world_to_auv_quat[1] = q.x;
+    world_to_auv_quat[2] = q.y;
+    world_to_auv_quat[3] = q.z;
 
-    /// Integrate velocity over the time between now and timestamp in request
-    double dt = (now - request.command.header.stamp).toSec();
+    dBodySetPosition( auv_body_, p.x, p.y, p.z );
+    dBodySetQuaternion( auv_body_, world_to_auv_quat );
+    dBodySetLinearVel( auv_body_, t1.x, t1.y, t2.z );
+    dBodySetAngularVel( auv_body_, t2.x, t2.y, t2.z );
     
-    /// Second argument is sample frequency for 1st order integration approximation
-    current_pose_.Integrate(current_velocity_, 1.0/dt);
+    /// TODO: Integrate velocity over time elapsed since message was published
     
     /// update simulator state data
     last_update_time_ = now;
@@ -478,20 +635,50 @@ class SimpleAUVPhysicsSimulatorNode
     return true;
   }
 
-  /// Message callbacks
+  /// Message callbacks ------------------------------------
  public:
 
   void waterTempCallback(std_msgs::Float64::ConstPtr msg)
   {
+    /// TODO: Step simulation before applying water density change. 
+    
     /// Get the water density at this temperature
     water_density_ = water_density_lookup_.lookupClosest( msg->data );
     
+    return;
+  }
+
+  /// TODO: Convert this to ODE
+  void motorPowerCallback(_MotorPowerArrayMsg::ConstPtr msg)
+  {
     /// Simulate
-    if ( sim_running_ )
-      simulateAndPublish();
+    /* if ( sim_running_ ) */
+    /*   simulateAndPublish(); */
+    /* else */
+    /*   return; */
+
+    /* current_thruster_force_ = _Wrench::Zero(); */
+
+    /* for(std::vector<_MotorPowerMsg>::const_iterator power_it = msg->powers.begin(); power_it != msg->powers.end(); ++power_it) */
+    /*   { */
+    /* 	std::map<std::string, ThrusterModel>::iterator model_it = thruster_models_.find( power_it->name ) ; */
+    /* 	if ( model_it == thruster_models_.end() ) */
+    /* 	  { */
+    /* 	    ROS_WARN( "Received thruster power, but no model is loaded. [ %s ]", power_it->name.c_str() ); */
+    /* 	    continue; */
+    /* 	  } */
+	
+    /* 	_Wrench f = model_it->second.applyPower( power_it->power ); */
+    /* 	current_thruster_force_ += f; */
+    /* 	ROS_INFO("Applying thruster force [ %s ] (%.4f, %.4f, %.4f, %.4f, %.4f, %.4f)", */
+    /* 		 power_it->name.c_str(), f.force.x(), f.force.y(), f.force.z(), */
+    /* 		 f.torque.x(), f.torque.y(), f.torque.z()); */
+    /*   } */
+    
+    return;
   }
   
-  /// Service callbacks
+  /// Service callbacks ------------------------------------
  public:
   bool simulationCommandCallback(_SimulationCommandSrv::Request & request, _SimulationCommandSrv::Response & response)
   {

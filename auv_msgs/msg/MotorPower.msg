@@ -2,4 +2,4 @@
 float64 power
 
 # Name of the thruster this power corresponds to
-std_msgs/String name
+string name
