@@ -51,7 +51,7 @@
 // utils
 #include <math.h> //for pow, sqrt
 #include <quickdev/unit_conversions.h> // for unit conversions, specifically radian <-> degree
-#include <quickdev/message_conversions.h> // for message conversions, specifically btVector3 <-> geometry_msgs::Vector3
+#include <quickdev/message_conversions.h> // for message conversions, specifically tf::Vector3 <-> geometry_msgs::Vector3
 
 //msgs
 #include <geometry_msgs/Vector3.h>
@@ -86,7 +86,7 @@ typedef XSensDriver::Vector3 _XSensVector3;
 
 DECLARE_UNIT_CONVERSION_LAMBDA( _XSensVector3, _Vector3, xsens_vec, return _Vector3( xsens_vec.x, xsens_vec.y, xsens_vec.z ); );
 DECLARE_UNIT_CONVERSION_LAMBDA( _XSensVector3, _Vector3Msg, xsens_vec, return unit::convert<_Vector3Msg>( unit::convert<_Vector3>( xsens_vec ) ); );
-DECLARE_UNIT_CONVERSION_LAMBDA( _XSensVector3, _Quaternion, xsens_vec, return unit::convert<_Quaternion>( btVector3( Radian( Degree( xsens_vec.x ) ), Radian( Degree( xsens_vec.y ) ), Radian( Degree( xsens_vec.z ) ) ) ); );
+DECLARE_UNIT_CONVERSION_LAMBDA( _XSensVector3, _Quaternion, xsens_vec, return unit::convert<_Quaternion>( tf::Vector3( Radian( Degree( xsens_vec.x ) ), Radian( Degree( xsens_vec.y ) ), Radian( Degree( xsens_vec.z ) ) ) ); );
 DECLARE_UNIT_CONVERSION_LAMBDA( _XSensVector3, _QuaternionMsg, xsens_vec, return unit::convert<_QuaternionMsg>( unit::convert<_Quaternion>( xsens_vec ) ); );
 
 // declare a node called XsensDriverNode
@@ -105,8 +105,8 @@ private:
     ros::MultiPublisher<> multi_pub_;
 
     // offset from imu's "north"
-    btVector3 relative_orientation_offset_;
-    btVector3 rotation_compensated_ambient_linear_acceleration_;
+    tf::Vector3 relative_orientation_offset_;
+    tf::Vector3 rotation_compensated_ambient_linear_acceleration_;
 
     std::string port_, frame_id_;
     double orientation_stdev_, angular_velocity_stdev_, linear_acceleration_stdev_;
@@ -169,14 +169,14 @@ private:
         initPolicies<quickdev::policy::ALL>();
     }
 
-    static btVector3 toRad( btVector3 const & vec )
+    static tf::Vector3 toRad( tf::Vector3 const & vec )
     {
-        return btVector3( Radian( Degree( vec.getX() ) ), Radian( Degree( vec.getY() ) ), Radian( Degree( vec.getZ() ) ) );
+        return tf::Vector3( Radian( Degree( vec.getX() ) ), Radian( Degree( vec.getY() ) ), Radian( Degree( vec.getZ() ) ) );
     }
 
-    static btVector3 toDeg( btVector3 const & vec )
+    static tf::Vector3 toDeg( tf::Vector3 const & vec )
     {
-        return btVector3( Degree( Radian( vec.getX() ) ), Degree( Radian( vec.getY() ) ), Degree( Radian( vec.getZ() ) ) );
+        return tf::Vector3( Degree( Radian( vec.getX() ) ), Degree( Radian( vec.getY() ) ), Degree( Radian( vec.getZ() ) ) );
     }
 
     void updateIMUData()
@@ -219,7 +219,7 @@ private:
         for ( size_t i = 0; i < num_steps && QUICKDEV_GET_RUNABLE_POLICY()::running(); ++i )
         {
             updateIMUData();
-            relative_orientation_offset_ += toRad( unit::convert<btVector3>( imu_driver_ptr_->ori_ ) );
+            relative_orientation_offset_ += toRad( unit::convert<tf::Vector3>( imu_driver_ptr_->ori_ ) );
             ros::spinOnce();
             QUICKDEV_GET_RUNABLE_POLICY()::getLoopRate()->sleep();
         }
@@ -254,10 +254,10 @@ private:
     /*! Specifically, rotate the linear acceleration vector by the current orientation. This could be pictured as placing a virtual,
      *  non-rotatable IMU at the center of the real IMU, such that we only measure acceleration due to motion, and not due to orientation
      */
-    btVector3 calculateRotationCompensatedLinearAcceleration( btQuaternion const & orientation, btVector3 const & linear_acceleration )
+    tf::Vector3 calculateRotationCompensatedLinearAcceleration( tf::Quaternion const & orientation, tf::Vector3 const & linear_acceleration )
     {
         // create a transform from the current orientation
-        btTransform const orientation_tf( orientation );
+        tf::Transform const orientation_tf( orientation );
         // rotate the acceleration vector by that transform
         return orientation_tf * linear_acceleration;
     }
@@ -302,13 +302,13 @@ private:
         imu_msg.header.frame_id = "/seabee3/sensors/imu";
 
         // our rotation vector from the IMU; convert from degrees to radians
-        btVector3 const orientation_rpy = toRad( unit::convert<btVector3>( imu_driver_ptr_->ori_ ) );
+        tf::Vector3 const orientation_rpy = toRad( unit::convert<tf::Vector3>( imu_driver_ptr_->ori_ ) );
         // our rotation vector, offset by the results of any relative orientation calibration
-        btVector3 const orientation_rpy_with_offset = unit::implicit_convert( orientation_rpy - relative_orientation_offset_ );
+        tf::Vector3 const orientation_rpy_with_offset = unit::implicit_convert( orientation_rpy - relative_orientation_offset_ );
         // our orientation from the IMU
-        btQuaternion const orientation = unit::implicit_convert( imu_driver_ptr_->ori_ );
+        tf::Quaternion const orientation = unit::implicit_convert( imu_driver_ptr_->ori_ );
         // our orientation from the IMU, with any offset from calibration
-        btQuaternion const orientation_with_offset = unit::implicit_convert( orientation_rpy_with_offset );
+        tf::Quaternion const orientation_with_offset = unit::implicit_convert( orientation_rpy_with_offset );
 
         seabee_imu_msg.accel = unit::implicit_convert( imu_driver_ptr_->accel_ );
         seabee_imu_msg.gyro = unit::implicit_convert( imu_driver_ptr_->gyro_ );
@@ -325,22 +325,22 @@ private:
 
         rot_comp_imu_msg = imu_msg;
 
-        btVector3 const linear_acceleration = unit::implicit_convert( imu_driver_ptr_->accel_ );
+        tf::Vector3 const linear_acceleration = unit::implicit_convert( imu_driver_ptr_->accel_ );
         /* get our linear acceleration, compensated by our current orientation; this will result in a linear acceleration as perceived by an IMU
          * in a fixed frame, regardless of our current orientation
         */
-        btVector3 const rotation_compensated_linear_acceleration = calculateRotationCompensatedLinearAcceleration( orientation, linear_acceleration );
+        tf::Vector3 const rotation_compensated_linear_acceleration = calculateRotationCompensatedLinearAcceleration( orientation, linear_acceleration );
 
         // remove any ambient acceleration (ie due to gravity) picked up by our calibration
-        btVector3 const compensated_linear_acceleration = rotation_compensated_linear_acceleration - rotation_compensated_ambient_linear_acceleration_;
+        tf::Vector3 const compensated_linear_acceleration = rotation_compensated_linear_acceleration - rotation_compensated_ambient_linear_acceleration_;
 
         // construct a rotation-only transform from our current orientation
-        btTransform const relative_orientation_offset_tf( orientation );
+        tf::Transform const relative_orientation_offset_tf( orientation );
 
         /* rotate the above acceleration back into our current frame; this will result in the ideal rotation-compensated, ambient-acceleration-
          * compensated value that we're looking for
          */
-        btVector3 const rotated_compensated_linear_acceleration = relative_orientation_offset_tf.inverse() * compensated_linear_acceleration;
+        tf::Vector3 const rotated_compensated_linear_acceleration = relative_orientation_offset_tf.inverse() * compensated_linear_acceleration;
 
         imu_msg.linear_acceleration = unit::implicit_convert( imu_driver_ptr_->accel_ );
         rot_comp_imu_msg.linear_acceleration = unit::implicit_convert( rotated_compensated_linear_acceleration );
@@ -356,7 +356,7 @@ private:
         seabee_imu_msg.ori = unit::implicit_convert( temp );
 */
 
-        _TfTranceiverPolicy::publishTransform( btTransform( orientation_with_offset, btVector3( 0, 0, 0 ) ), "/world", "/seabee3/sensors/imu", now );
+        _TfTranceiverPolicy::publishTransform( tf::Transform( orientation_with_offset, tf::Vector3( 0, 0, 0 ) ), "/world", "/seabee3/sensors/imu", now );
         multi_pub_.publish( "imu", imu_msg, "rot_comp_imu", rot_comp_imu_msg, "seabee_imu", seabee_imu_msg );
         //imu_pub_raw_.publish( msg_raw );
     }

@@ -19,4 +19,6 @@ else
 
     cp "$PDIR/81-seabee.rules" -t $RULES_PATH
 
+    udevadm control --reload-rules
+    
 fi
