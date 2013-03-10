@@ -43,13 +43,13 @@
 /// tf
 #include <tf/transform_broadcaster.h>
 #include <tf/transform_listener.h>
-#include <tf_conversions/tf_kdl.h>
 
 /// dynamics
 #include <ode/ode.h>
 
-/// kinematics and dynamics library
-#include <kdl/frames.hpp>
+/// dynamic reconfigure
+#include <dynamic_reconfigure/server.h>
+#include <auv_physics/PhysicsSimulatorConfig.h>
 
 /// Simulation Commands
 #include <auv_physics/SimulationInstruction.h>
@@ -59,13 +59,6 @@
 /// AUV messages
 #include <auv_msgs/MotorPower.h>
 #include <auv_msgs/MotorPowerArray.h>
-
-/// TODO: Get rid of KDL
-typedef KDL::Vector _Vector;
-typedef KDL::Rotation _Rotation;
-typedef KDL::Frame _Frame;
-typedef KDL::Twist _Twist;
-typedef KDL::Wrench _Wrench;
 
 typedef auv_msgs::MotorPower _MotorPowerMsg;
 typedef auv_msgs::MotorPowerArray _MotorPowerArrayMsg;
@@ -345,6 +338,7 @@ class SimpleAUVPhysicsSimulatorNode
   double gravity_;
   LookupTable<double, double> water_density_lookup_;
   double water_density_;
+  bool force_neutral_buoyancy_;
   
   /// physics world
   double simulation_delta_;
@@ -358,7 +352,8 @@ class SimpleAUVPhysicsSimulatorNode
  public:
  SimpleAUVPhysicsSimulatorNode()
    :
-  sim_running_( false )
+  sim_running_( false ),
+  force_neutral_buoyancy_( false )
     {
     }
   
@@ -455,17 +450,15 @@ class SimpleAUVPhysicsSimulatorNode
   {
     ros::NodeHandle nh;
     
-    double gravity;
-    
     /// Get gravity ------------------------------------
-    if (! nh.getParam( "environment/constants/gravity", gravity ) )
+    if (! nh.getParam( "environment/constants/gravity", gravity_ ) )
       {
 	ROS_WARN( "Parameter [gravity] not found. Using default.");
-	gravity = -9.8;
+	gravity_ = -9.8;
       }
     
     /// Set gravity in the z-direction
-    dWorldSetGravity(auv_world_, 0.0, 0.0, gravity);
+    dWorldSetGravity(auv_world_, 0.0, 0.0, gravity_);
 
     /// Get water density lookup ------------------------------------
     XmlRpc::XmlRpcValue wtd_map;
@@ -548,16 +541,12 @@ class SimpleAUVPhysicsSimulatorNode
     return;
   }
 
-
   /// Physics simulation implementation
  private:
   void simulateAndPublish()
   {
     /// timing
     ros::Time now = ros::Time::now();
-    /* double dt = (now - last_update_time_).toSec(); */
-
-    /* ROS_INFO("dt was %f.", dt); */
 
     /// Apply forces on the body ------------------------------------
     simulateBuoyancy();
@@ -596,17 +585,22 @@ class SimpleAUVPhysicsSimulatorNode
   /// Add force opposing the gravity vector at the auv's volume centroid
   void simulateBuoyancy()
   {
-    dVector3 gravity;
-    
-    dWorldGetGravity( auv_world_, gravity );
-    
-    double buoyancy_c = water_density_ * auv_dynamics_.volume_;
-    
-    dBodyAddForceAtRelPos( auv_body_, -gravity[0] * buoyancy_c,
-			   -gravity[1] * buoyancy_c, -gravity[2] * buoyancy_c,
-			   auv_dynamics_.cm_to_cv_[0], auv_dynamics_.cm_to_cv_[1], 
-			   auv_dynamics_.cm_to_cv_[2] ); 
-       
+
+    if( force_neutral_buoyancy_ )
+      {
+	dBodyAddForceAtRelPos( auv_body_, 0.0,
+			       0.0, -gravity_ * auv_dynamics_.mass_.mass,
+			       auv_dynamics_.cm_to_cv_[0], auv_dynamics_.cm_to_cv_[1], 
+			       auv_dynamics_.cm_to_cv_[2] ); 
+      }
+    else
+      {
+	dBodyAddForceAtRelPos( auv_body_, 0.0,
+			       0.0, -gravity_* water_density_ * auv_dynamics_.volume_,
+			       auv_dynamics_.cm_to_cv_[0], auv_dynamics_.cm_to_cv_[1], 
+			       auv_dynamics_.cm_to_cv_[2] ); 
+      }
+
     return;
   }
   
@@ -693,7 +687,12 @@ class SimpleAUVPhysicsSimulatorNode
     
     return;
   }
-  
+
+  void reconfigureCallback(auv_physics::PhysicsSimulatorConfig & config, uint32_t level)
+  {
+    force_neutral_buoyancy_ = config.force_neutral_buoyancy;
+  }
+
   /// Service callbacks ------------------------------------
  public:
   bool simulationCommandCallback(_SimulationCommandSrv::Request & request, _SimulationCommandSrv::Response & response)

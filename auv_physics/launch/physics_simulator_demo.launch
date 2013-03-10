@@ -1,6 +1,7 @@
 <launch>
 
   <arg name="visualize" default="false"/>
+  <arg name="reconfigure" default="false" />
   <arg name="dummy_accel" default="false" />
   
   <include file="$(find auv_physics)/launch/physics_simulator.launch" />
@@ -22,7 +23,11 @@
 
   <group if="$(arg dummy_accel)" >
     <node pkg="rostopic" type="rostopic" name="motor_power_pub"
-	  args="pub /physics_simulator/motor_power auv_msgs/MotorPowerArray '{powers: [{name: thruster1, power: 0}, {name: thruster2, power: 30}] }' -r 10" />
+	  args="pub /physics_simulator/motor_power auv_msgs/MotorPowerArray '{powers: [{name: thruster5, power: 50}, {name: thruster6, power: 50}] }' -r 10" />
+  </group>
+
+  <group if="$(arg reconfigure)" >
+    <node pkg="rqt_reconfigure" type="rqt_reconfigure" name="physics_reconfigure" />
   </group>
 
 </launch>

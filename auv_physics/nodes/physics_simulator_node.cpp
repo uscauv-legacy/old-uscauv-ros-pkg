@@ -38,14 +38,25 @@
 
 #include <ros/ros.h>
 
+
 /// Instantiate our physics simulator and initialize the ROS node
 int main( int argc, char * argv[] )
 {
   ros::init(argc, argv, "physics_simulator");
-  
+
   SimpleAUVPhysicsSimulatorNode physics_sim;
+  
+  dynamic_reconfigure::Server<auv_physics::PhysicsSimulatorConfig> reconfigure_server;
+
+  dynamic_reconfigure::Server<auv_physics::PhysicsSimulatorConfig>::CallbackType rc;
+
+  rc = boost::bind(&SimpleAUVPhysicsSimulatorNode::reconfigureCallback,
+		   &physics_sim, _1, _2);
+
+  reconfigure_server.setCallback( rc );
 
   physics_sim.spin();
   
+
   return 0;
 }
