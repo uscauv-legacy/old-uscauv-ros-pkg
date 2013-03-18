@@ -2,7 +2,7 @@ ATTR{idVendor}=="1e10", ATTR{idProduct}=="2000", ATTR{manufacturer}=="Point Grey
 
 ATTR{idVendor}=="1e10", ATTR{idProduct}=="2000", ATTR{manufacturer}=="Point Grey Research", ATTR{product}=="Firefly MV FMVU-03MTC", ATTR{serial}=="0090F9DE", GROUP="plugdev", SYMLINK+="seabee/camera2", RUN+="/usr/local/uscauv/usb-notify.sh 'Camera 2' '$attr{speed}' '$kernel' '$attr{bMaxPower}' "
 
-#ATTR{idVendor}=="1e10", ATTR{idProduct}=="2000", ATTR{manufacturer}=="Point Grey Research", ATTR{product}=="Firefly MV FMVU-03MTC", ATTR{serial}=="0090F9--", GROUP="plugdev", SYMLINK+="seabee/camera3", RUN+="/usr/local/uscauv/usb-notify.sh 'Camera 3' '$attr{speed}' '$kernel' '$attr{bMaxPower}' "
+ATTR{idVendor}=="1e10", ATTR{idProduct}=="2000", ATTR{manufacturer}=="Point Grey Research", ATTR{product}=="Firefly MV FMVU-03MTC", ATTR{serial}=="0090F9DC", GROUP="plugdev", SYMLINK+="seabee/camera3", RUN+="/usr/local/uscauv/usb-notify.sh 'Camera 3' '$attr{speed}' '$kernel' '$attr{bMaxPower}' "
 
 ATTR{idVendor}=="1e10", ATTR{idProduct}=="2000", ATTR{manufacturer}=="Point Grey Research", ATTR{product}=="Firefly MV FMVU-03MTC", ATTR{serial}=="0090F9D6", GROUP="plugdev", SYMLINK+="seabee/camera4", RUN+="/usr/local/uscauv/usb-notify.sh 'Camera 4' '$attr{speed}' '$kernel' '$attr{bMaxPower}' "
 

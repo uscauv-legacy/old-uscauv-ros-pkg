@@ -1,0 +1,38 @@
+<launch>
+
+  <arg name="camera_name" />
+  
+  <group ns="$(arg camera_name)" >
+
+    <rosparam param="driver" command="load" file="$(find camera_model)/driver/$(arg camera_name)_driver.yaml" />
+    
+    <remap from="camera/" to="$(arg camera_name)" />
+    <remap from="$(arg camera_name)/image_raw" to="image_raw" />
+    <remap from="$(arg camera_name)/set_camera_info" to="set_camera_info" />
+    
+    <!-- nodelet manager process -->
+    <node pkg="nodelet" type="nodelet" name="nodelet_manager"
+	  args="manager" />
+
+    <!-- camera driver nodelet -->
+    <node pkg="nodelet" type="nodelet" name="driver" args="load camera1394/driver nodelet_manager" >
+    </node>
+    
+    <!-- Bayer color decoding -->
+    <node pkg="nodelet" type="nodelet" name="image_proc_debayer"
+	  args="load image_proc/debayer nodelet_manager">
+    </node>
+
+    <!-- mono rectification -->
+    <node pkg="nodelet" type="nodelet" name="image_proc_rect"
+	  args="load image_proc/rectify nodelet_manager">
+    </node>
+
+    <!-- color rectification -->
+    <node pkg="nodelet" type="nodelet" name="image_proc_rect_color"
+	  args="load image_proc/rectify nodelet_manager">
+    </node>
+
+  </group>
+
+</launch>
