@@ -1,17 +1,13 @@
 <launch>
-    <arg name="camera_name" />
 
-    <rosparam param="$(arg camera_name)" command="load" file="$(find camera_model)/driver/$(arg camera_name)_driver.yaml" />
+  <arg name="camera" />
 
-    <node name="$(arg camera_name)" pkg="camera1394" type="camera1394_node" output="screen" >
-      <!-- camera1394 names these topics camera/<topic> by default, but we want them to be <camera_name>/<topic> -->
-      <remap from="camera/image_raw" to="~/image_raw" />
-      <remap from="camera/set_camera_info" to="~/set_camera_info" />
-    </node>
+  <group ns="$(arg camera)" >
 
-    <!-- image_proc expects to be started in the namespace of the camera stream it is operating on -->
-    <group ns="$(arg camera_name)" >
-      <node name="image_proc" pkg="image_proc" type="image_proc" />
-    </group>
+    <include file="$(find uscauv_camera)/launch/monocular_pipeline_base.launch" >
+      <arg name="camera" value="$(arg camera)" />
+    </include>
+
+  </group>
 
 </launch>

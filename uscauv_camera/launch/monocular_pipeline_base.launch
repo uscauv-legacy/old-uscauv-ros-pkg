@@ -1,0 +1,41 @@
+<!-- This launch file is not meant to be used on its own. Namespaces will get wierd. -->
+
+<launch>
+
+  <arg name="camera" />
+  
+  <rosparam param="driver" command="load" file="$(find camera_model)/driver/$(arg camera)_driver.yaml" />
+  
+  <remap from="camera/" to="$(arg camera)" />
+  <remap from="$(arg camera)/image_raw" to="image_raw" />
+  <remap from="$(arg camera)/set_camera_info" to="set_camera_info" />
+  
+  <!-- nodelet manager process -->
+  <node pkg="nodelet" type="nodelet" name="nodelet_manager"
+	args="manager" />
+  
+  <!-- camera driver nodelet -->
+  <node pkg="nodelet" type="nodelet" name="driver" args="load camera1394/driver nodelet_manager" >
+    <!-- Path to the camera calibration file -->
+    <!-- It seems to be necessary to use the "package://camera_model" syntax instead of "$(find camera_model)" -->
+    <param name="camera_info_url" value="package://camera_model/model/$(arg camera)_model.yaml" />  
+  </node>
+  
+  <!-- Bayer color decoding -->
+  <node pkg="nodelet" type="nodelet" name="image_proc_debayer"
+	args="load image_proc/debayer nodelet_manager">
+  </node>
+  
+  <!-- mono rectification -->
+  <node pkg="nodelet" type="nodelet" name="image_proc_rect"
+  	args="load image_proc/rectify nodelet_manager">
+  </node>
+  
+  <!-- color rectification -->
+  <node pkg="nodelet" type="nodelet" name="image_proc_rect_color"
+	args="load image_proc/rectify nodelet_manager">
+    <remap from="image_mono" to="image_color" />
+    <remap from="image_rect" to="image_rect_color" />
+  </node>
+  
+</launch>
