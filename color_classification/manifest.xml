@@ -1,0 +1,17 @@
+<package>
+  <description brief="color_classification">
+
+     color_classification
+
+  </description>
+  <author>nalyd</author>
+  <license>BSD</license>
+  <review status="unreviewed" notes=""/>
+  <url>http://ros.org/wiki/color_classification</url>
+
+  <depend package="roscpp" />
+  <depend package="opencv2" />
+  
+</package>
+
+
