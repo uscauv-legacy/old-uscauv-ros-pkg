@@ -48,6 +48,8 @@ namespace _FileSys = boost::filesystem3;
 
 typedef std::vector<std::pair<cv::Mat, cv::Mat> > _ImagePairArray;
 
+/// TODO: Insert date string into generate yaml as a comment
+
 int main(int argc, char ** argv)
 {
   if (argc != 4)
@@ -55,6 +57,11 @@ int main(int argc, char ** argv)
       std::cout << "usage: " << argv[0] << "training_dir output_name iterations" << std::endl;
       return 0;
     }
+
+  int iterations;
+  std::stringstream( argv[3] ) >> iterations;
+  
+  std::string output_name( argv[2] );
 
   _ImagePairArray input_images;
 
@@ -146,76 +153,52 @@ int main(int argc, char ** argv)
       return 0;
     }
 
-  return 0;
 
+  cv::Mat all_training, all_mask;
 
-  int iterations;
-  std::stringstream( argv[3] ) >> iterations;
-  std::cout << "Max iterations: " << iterations << std::endl; 
+  unsigned int positive_mask_count = 0;
   
-  cv::Mat data_image, mask_image, input_image;
-  
-  input_image = cv::imread(argv[1], CV_LOAD_IMAGE_COLOR);
-  mask_image = cv::imread(argv[2], CV_LOAD_IMAGE_GRAYSCALE);
+  /// Concatenate all of the input images into one giant vector of pixels for training
+  for( _ImagePairArray::iterator input_it = input_images.begin(); input_it != input_images.end(); ++input_it )
 
-  input_image.convertTo(data_image, CV_32F );
-  
-  std::cout << "input type: " << data_image.type() << ", mask type: " << mask_image.type() << std::endl;
-  
-
-  /// TODO: make sure mask is binary
-  /// TODO: make sure images have same dimensions
-  /// TODO: Copy images into svm formatting efficiently using opencv builtins
-  unsigned int mask_count = 0;
-
-  std::vector<float> labels;
-  std::vector<cv::Vec3f> data;
-
-  cv::MatConstIterator_<cv::Vec3f> data_it = data_image.begin<cv::Vec3f>();
-  for(cv::MatConstIterator_<unsigned char> mask_it = mask_image.begin<unsigned char>(); mask_it != mask_image.end<unsigned char>(); ++mask_it, ++data_it)
     {
-      if ( *mask_it == 255 )
-      // if ( *mask_it )
+      cv::Mat input, mask;
+
+      /// OpenCV SVM training requires floating point data
+      input_it->first.convertTo( input, CV_32F );
+      input = input.reshape( 1, input.size().height * input.size().width );
+      all_training.push_back( input );
+
+      mask = input_it->second;
+      // input_it->second.convertTo( mask, CV_32FC1 );
+      // mask = mask.reshape( 1, input.size().height * input.size().width );
+
+      /// TODO: Convert data without explicitly using this for loop
+      for(cv::MatConstIterator_<unsigned char> mask_it = mask.begin<unsigned char>(); mask_it != mask.end<unsigned char>(); ++mask_it)
 	{
-	  labels.push_back( 1.0 );
-	  ++mask_count;
+	  if ( *mask_it == 255 )
+	    {
+	      /// SVM only accepts CV_32FS, so we must explicitly add elements as floats using the trailing f.
+	      all_mask.push_back( 1.0f );
+	      ++positive_mask_count;
+	    }
+	  else 
+	    {
+	      all_mask.push_back( -1.0f );
+	    }
 	}
-      else labels.push_back( -1.0 );
-      
-      // labels.push_back( ( (*mask_it > 128) ) ? 1 : -1);
-      
-      // std::cout << int(*mask_it) << ", ";
-      // data.push_back( cv::saturate_cast<cv::Vec3f>(*data_it) );
-      data.push_back( *data_it );
     }
-
-  std::cout << "Positive mask contains " << mask_count << " pixels." << std::endl;
-
-  std::cout << "labels size: " << labels.size() << ", data size: " << data.size() << std::endl;
-
-  /// doesn't copy data
-  cv::Mat maskMat( labels );
-
-  // cv::namedWindow("mask converted", CV_WINDOW_AUTOSIZE);
-  // cv::imshow("mask converted", maskMat.reshape(1, mask_image.size().height));
-  // cv::waitKey(0);
-
-  cv::Mat dataMat( data );
-
-  /// Reshape from Nx1 & 3-Channel to Nx3 & 1-channel
-  dataMat = dataMat.reshape(1, 0);
   
-  std::cout << "maskMat type: " << maskMat.type() << ", dataMat type: " << dataMat.type() << std::endl;
+  std::cout << "Training data size: " << "( " << all_training.size().height << ", " << all_training.size().width << " ), Depth: "
+	    << all_training.depth() << ", Channels: " << all_training.channels() << std::endl;
+  std::cout << "Mask data size: " << "( " << all_mask.size().height << ", " << all_mask.size().width << " ), Depth: "
+	    << all_mask.depth() << ", Channels: " << all_mask.channels() << std::endl;
 
-  cv::Size mask_size = maskMat.size(), data_size = dataMat.size();
+  std::cout << "Positive mask contains " << positive_mask_count << " pixels." << std::endl;
 
-  std::cout << "Mask size: " << "( " << mask_size.height << ", " << mask_size.width << " ), Depth: "
-	    << maskMat.depth() << ", Channels: " << maskMat.channels() << std::endl;
-  std::cout << "Data size: " << "( " << data_size.height << ", " << data_size.width << " ), Depth: "
-	    << dataMat.depth() << ", Channels: " << dataMat.channels() << std::endl;
+  std::cout << "Training SVM..." << std::endl;
 
-
-  /// Initialize SVM Params ------------------------------------
+    /// Initialize SVM Params ------------------------------------
   cv::SVMParams svm_params;
   
   svm_params.svm_type = cv::SVM::C_SVC;
@@ -224,90 +207,215 @@ int main(int argc, char ** argv)
   /// criteria for svm training to complete
   /// TODO: figure out what these parameters are, and what their counterparts in that output yaml correspond to
   svm_params.term_crit = cv::TermCriteria( CV_TERMCRIT_ITER, (int)iterations, 1e-6f );
+
+  time_t before_train, after_train;
+  double seconds;
+
+  time( &before_train );
   
   /// Train the SVM ------------------------------------
   cv::SVM SVM;
-  /// TODO: Figure out what the two Mat() constructors are arguments for
-  SVM.train( dataMat, maskMat, cv::Mat(), cv::Mat(), svm_params );
 
-  std::cout << "Training finished." << std::endl;
+  /// This function expects response data to be CV_32FC1 or CV_32SC1
+  SVM.train( all_training, all_mask, cv::Mat(), cv::Mat(), svm_params );
 
-  std::cout << "Classifying training image..." << std::endl;
-					   
-  /// Classify the image that we used to train
-  cv::Mat predict_image = cv::Mat( data_image.size(), CV_8UC3 );
-  
-  cv::Vec3b orange( 0, 150, 250), grey( 50, 50, 50);
+  time( &after_train );
+  seconds = difftime( after_train, before_train );
 
-  cv::MatIterator_<cv::Vec3b> img_it = predict_image.begin<cv::Vec3b>();
-  data_it = data_image.begin<cv::Vec3f>();
-  
-  for(; data_it != data_image.end<cv::Vec3f>() ; ++data_it, ++img_it )
+  std::cout << "Training finished in [ " << seconds << " ] seconds." << std::endl;
+
+  /// Run classification on the training images as a sanity check ------------------------------------
+
+  std::cout << "Classifying training images..." << std::endl;
+
+  unsigned int image_count = 1;
+  for( _ImagePairArray::iterator input_it = input_images.begin(); input_it != input_images.end(); ++input_it, ++image_count )
     {
-      float response = SVM.predict( cv::Mat(*data_it) );
+      std::stringstream image_name;
+      image_name << output_name << image_count << ".png";
+
+      cv::Mat & input = input_it->first, input_float, prediction, output;
+
+      input.convertTo( input_float, CV_32F );
       
-      // std::cout << response << ", ";
+      /// Classify the image that we used to train
+      prediction = cv::Mat( input.size(), CV_8UC3 );
+  
+      cv::Vec3b white( 255, 255, 255), black( 0, 0, 0 );
+
+      cv::MatIterator_<cv::Vec3b> img_it = prediction.begin<cv::Vec3b>();
+      cv::MatConstIterator_<cv::Vec3f> data_it = input_float.begin<cv::Vec3f>();
+  
+      for(; data_it != input_float.end<cv::Vec3f>() ; ++data_it, ++img_it )
+	{
+	  float response = SVM.predict( cv::Mat(*data_it) );
       
-      if (response == 1.0)
-	*img_it = orange;
-      else if (response == -1.0)
-	*img_it = grey;
-      else
-	std::cout << "Warning: Response was: " << response << std::endl;
+	  if (response == 1.0)
+	    *img_it = white;
+	  else if (response == -1.0)
+	    *img_it = black;
+	  else
+	    std::cout << "Warning: Response was: " << response << std::endl;
+	}
+      
+      cv::hconcat( input, prediction, output );
+      
+      cv::imwrite( image_name.str() , output );
     }
+  
+  return 0;
 
-  std::cout << "Classify finished." << std::endl;
+  
+  // input_image.convertTo(data_image, CV_32F );
+  
+  // std::cout << "input type: " << data_image.type() << ", mask type: " << mask_image.type() << std::endl;
+  
 
-  /// TODO: Make separate plot to draw decision regions
-  /// draw support vectors
-  // for(int i = 0 ; i < SVM.get_support_vector_count(); ++i)
+  // /// TODO: make sure mask is binary
+  // /// TODO: make sure images have same dimensions
+  // /// TODO: Copy images into svm formatting efficiently using opencv builtins
+  // unsigned int mask_count = 0;
+
+  // std::vector<float> labels;
+  // std::vector<cv::Vec3f> data;
+
+  // cv::MatConstIterator_<cv::Vec3f> data_it = data_image.begin<cv::Vec3f>();
+  // for(cv::MatConstIterator_<unsigned char> mask_it = mask_image.begin<unsigned char>(); mask_it != mask_image.end<unsigned char>(); ++mask_it, ++data_it)
   //   {
-  //     const float * v = SVM.get_support_vector(i);
-  //     cv::circle( predict_image, cv::Point( (int) v[0], (int) v[1]), 6,
-  // 		  cv::Scalar(200, 200, 200), 2, 8);
+  //     if ( *mask_it == 255 )
+  // 	// if ( *mask_it )
+  // 	{
+  // 	  labels.push_back( 1.0 );
+  // 	  ++mask_count;
+  // 	}
+  //     else labels.push_back( -1.0 );
+      
+  //     // labels.push_back( ( (*mask_it > 128) ) ? 1 : -1);
+      
+  //     // std::cout << int(*mask_it) << ", ";
+  //     // data.push_back( cv::saturate_cast<cv::Vec3f>(*data_it) );
+  //     data.push_back( *data_it );
   //   }
 
-  /// Save classfied image demo ------------------------------------
+  // std::cout << "Positive mask contains " << mask_count << " pixels." << std::endl;
+
+  // std::cout << "labels size: " << labels.size() << ", data size: " << data.size() << std::endl;
+
+  // /// doesn't copy data
+  // cv::Mat maskMat( labels );
+
+  // // cv::namedWindow("mask converted", CV_WINDOW_AUTOSIZE);
+  // // cv::imshow("mask converted", maskMat.reshape(1, mask_image.size().height));
+  // // cv::waitKey(0);
+
+  // cv::Mat dataMat( data );
+
+  // /// Reshape from Nx1 & 3-Channel to Nx3 & 1-channel
+  // dataMat = dataMat.reshape(1, 0);
   
-  time_t rawtime;
-  struct tm * timeinfo;
+  // std::cout << "maskMat type: " << maskMat.type() << ", dataMat type: " << dataMat.type() << std::endl;
 
-  time ( &rawtime );
-  timeinfo = localtime ( &rawtime );
+  // cv::Size mask_size = maskMat.size(), data_size = dataMat.size();
 
-  std::stringstream date_string;
-  std::string image_path, svm_path;
+  // std::cout << "Mask size: " << "( " << mask_size.height << ", " << mask_size.width << " ), Depth: "
+  // 	    << maskMat.depth() << ", Channels: " << maskMat.channels() << std::endl;
+  // std::cout << "Data size: " << "( " << data_size.height << ", " << data_size.width << " ), Depth: "
+  // 	    << dataMat.depth() << ", Channels: " << dataMat.channels() << std::endl;
 
-  date_string << timeinfo->tm_mon << "_" << timeinfo->tm_mday << "_" << timeinfo->tm_year
-	      << timeinfo->tm_hour << "_" << timeinfo->tm_min  << "_" << timeinfo->tm_sec;
+
+  /// Initialize SVM Params ------------------------------------
+  // cv::SVMParams svm_params;
   
-  image_path = date_string.str() + ".png";
-  svm_path = date_string.str() + ".yaml";
+  // svm_params.svm_type = cv::SVM::C_SVC;
+  // svm_params.C = 0.1;
+  // svm_params.kernel_type = cv::SVM::LINEAR;
+  // /// criteria for svm training to complete
+  // /// TODO: figure out what these parameters are, and what their counterparts in that output yaml correspond to
+  // svm_params.term_crit = cv::TermCriteria( CV_TERMCRIT_ITER, (int)iterations, 1e-6f );
+  
+  // /// Train the SVM ------------------------------------
+  // cv::SVM SVM;
+  // /// TODO: Figure out what the two Mat() constructors are arguments for
+  // SVM.train( dataMat, maskMat, cv::Mat(), cv::Mat(), svm_params );
+
+  // std::cout << "Training finished." << std::endl;
+
+  // std::cout << "Classifying training image..." << std::endl;
+					   
+  // /// Classify the image that we used to train
+  // cv::Mat predict_image = cv::Mat( data_image.size(), CV_8UC3 );
+  
+  // cv::Vec3b orange( 0, 150, 250), grey( 50, 50, 50);
+
+  // cv::MatIterator_<cv::Vec3b> img_it = predict_image.begin<cv::Vec3b>();
+  // data_it = data_image.begin<cv::Vec3f>();
+  
+  // for(; data_it != data_image.end<cv::Vec3f>() ; ++data_it, ++img_it )
+  //   {
+  //     float response = SVM.predict( cv::Mat(*data_it) );
+      
+  //     // std::cout << response << ", ";
+      
+  //     if (response == 1.0)
+  // 	*img_it = orange;
+  //     else if (response == -1.0)
+  // 	*img_it = grey;
+  //     else
+  // 	std::cout << "Warning: Response was: " << response << std::endl;
+  //   }
+
+  // std::cout << "Classify finished." << std::endl;
+
+  // /// TODO: Make separate plot to draw decision regions
+  // /// draw support vectors
+  // // for(int i = 0 ; i < SVM.get_support_vector_count(); ++i)
+  // //   {
+  // //     const float * v = SVM.get_support_vector(i);
+  // //     cv::circle( predict_image, cv::Point( (int) v[0], (int) v[1]), 6,
+  // // 		  cv::Scalar(200, 200, 200), 2, 8);
+  // //   }
+
+  // /// Save classfied image demo ------------------------------------
+  
+  // time_t rawtime;
+  // struct tm * timeinfo;
+
+  // time ( &rawtime );
+  // timeinfo = localtime ( &rawtime );
+
+  // std::stringstream date_string;
+  // std::string image_path, svm_path;
+
+  // date_string << timeinfo->tm_mon << "_" << timeinfo->tm_mday << "_" << timeinfo->tm_year
+  // 	      << timeinfo->tm_hour << "_" << timeinfo->tm_min  << "_" << timeinfo->tm_sec;
+  
+  // image_path = date_string.str() + ".png";
+  // svm_path = date_string.str() + ".yaml";
     
-  std::cout << "Writing test image to file: " << image_path << std::endl;
-  cv::imwrite( image_path.c_str(), predict_image );
-  std::cout << "Write success." << std::endl;
+  // std::cout << "Writing test image to file: " << image_path << std::endl;
+  // cv::imwrite( image_path.c_str(), predict_image );
+  // std::cout << "Write success." << std::endl;
 
-  /// Write training data to file ------------------------------------
+  // /// Write training data to file ------------------------------------
   
-  /// TODO: The second SVM.write arg should be set to the name of the top level node in the yaml file (i.e. green, orange, etc.)
-  std::cout << "Writing svm parameters to file: " << svm_path << std::endl;
+  // /// TODO: The second SVM.write arg should be set to the name of the top level node in the yaml file (i.e. green, orange, etc.)
+  // std::cout << "Writing svm parameters to file: " << svm_path << std::endl;
   
-  CvFileStorage * svm_storage = cvOpenFileStorage(svm_path.c_str(), 0, CV_STORAGE_WRITE );
-  SVM.write(svm_storage, "test_svm_name");
-  cvReleaseFileStorage( &svm_storage );
-  std::cout << "Write success." << std::endl;
+  // CvFileStorage * svm_storage = cvOpenFileStorage(svm_path.c_str(), 0, CV_STORAGE_WRITE );
+  // SVM.write(svm_storage, "test_svm_name");
+  // cvReleaseFileStorage( &svm_storage );
+  // std::cout << "Write success." << std::endl;
 
 
-  cv::namedWindow("Training Image", CV_WINDOW_AUTOSIZE);
-  cv::namedWindow("Mask Image", CV_WINDOW_AUTOSIZE);
-  cv::namedWindow("Classified Training Image", CV_WINDOW_AUTOSIZE);
+  // cv::namedWindow("Training Image", CV_WINDOW_AUTOSIZE);
+  // cv::namedWindow("Mask Image", CV_WINDOW_AUTOSIZE);
+  // cv::namedWindow("Classified Training Image", CV_WINDOW_AUTOSIZE);
   
-  cv::imshow("Training Image", input_image);
-  cv::imshow("Mask Image", mask_image);
-  cv::imshow("Classified Training Image", predict_image);  
+  // cv::imshow("Training Image", input_image);
+  // cv::imshow("Mask Image", mask_image);
+  // cv::imshow("Classified Training Image", predict_image);  
   
-  cv::waitKey(0);
+  // cv::waitKey(0);
 
-  return 0;
+  // return 0;
 }
