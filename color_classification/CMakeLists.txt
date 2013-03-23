@@ -16,8 +16,14 @@ set(EXECUTABLE_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/bin)
 #set the default path for built libraries to the "lib" directory
 set(LIBRARY_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/lib)
 
+# Link boost ( svm_trainer uses boost::filesystem )
+rosbuild_add_boost_directories()
+
+
 # Build the SVM color classifier library
 rosbuild_add_library(${PROJECT_NAME} src/svm_color_classifier.cpp)
 
-# Color classifier node
+# Color classifier node and trainer program
 rosbuild_add_executable( color_classifier nodes/color_classifier_node.cpp )
+rosbuild_add_executable( svm_trainer src/svm_trainer.cpp )
+rosbuild_link_boost( svm_trainer filesystem )

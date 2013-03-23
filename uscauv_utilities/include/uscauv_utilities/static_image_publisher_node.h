@@ -51,7 +51,10 @@
 #include <cv_bridge/cv_bridge.h>
 
 
-
+/**
+ * Loads a single image file and publishes it to static_image_publisher/image_color at a given loop rate.
+ * 
+ */
 class StaticImagePublisherNode
 {
  private:
