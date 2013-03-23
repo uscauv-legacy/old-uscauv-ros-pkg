@@ -64,9 +64,9 @@ class ColorClassifierNode
 {
  private:
   /// publishers and subscribers
+  ros::NodeHandle nh_rel_;
+  image_transport::ImageTransport img_transport_;
   image_transport::Subscriber image_sub_;
-  
-  /// TODO: Change to a map from color name to publisher 
   _ColorPublisherMap classified_image_pub_;
 
   /// parameters
@@ -76,14 +76,26 @@ class ColorClassifierNode
   SvmColorClassifier color_classifier_;
   std::vector<std::string> color_names_;
   
-private:
+ public:
+
+  /** 
+   * Default Constructor
+   * 
+   */
+  ColorClassifierNode()
+    :
+    nh_rel_("~"),
+    img_transport_( nh_rel_ )
+    {}
+    
+ private:
   
   /// Running spin() will cause this function to be called before the node begins looping the spingOnce() function.
   void spinFirst()
   {
     /// Get ROS ready ------------------------------------
-    ros::NodeHandle nh, nh_rel("~");
-    image_transport::ImageTransport img_transport( nh_rel );
+    ros::NodeHandle nh;
+    img_transport_ = image_transport::ImageTransport( nh_rel_ );
     
     /// Load SVMs ------------------------------------
     XmlRpc::XmlRpcValue xml_colors;
@@ -101,16 +113,20 @@ private:
     
     for(std::vector<std::string>::const_iterator color_it = color_names_.begin(); color_it != color_names_.end(); ++color_it )
       {
-	image_transport::Publisher color_pub;
+	ROS_INFO( "Creating publisher... [ %s ]", color_it->c_str() );
 	
+	image_transport::Publisher color_pub;
+
 	/// We will publish each color classified image to a topic called <color_name>_classified.
-	color_pub = img_transport.advertise( *color_it + "_classified", 1);
+	color_pub = img_transport_.advertise( *color_it + "_classified", 1);
 	
 	classified_image_pub_[ *color_it ] = color_pub;
+	
+	ROS_INFO( "Created publisher successfully." );
       }
 	  
     /// Subscribe to input image topic ------------------------------------
-    image_sub_ = img_transport.subscribe( "image_color", 1, &ColorClassifierNode::imageCallback, this);
+    image_sub_ = img_transport_.subscribe( "image_color", 1, &ColorClassifierNode::imageCallback, this);
 
     
     ROS_INFO( "Finished spinning up." );
@@ -127,10 +143,7 @@ private:
   
   void spin()
   {
-    /// nodehandle will resolve namespaces relative to this node's name
-    ros::NodeHandle nh_rel("~");
-
-    if( !nh_rel.getParam("loop_rate", loop_rate_hz_) )
+    if( !nh_rel_.getParam("loop_rate", loop_rate_hz_) )
       {
 	ROS_WARN("Parameter [loop_rate] not found. Using default.");
 	loop_rate_hz_ = 10.0;
@@ -156,8 +169,10 @@ private:
  private:
 
   /// For each color, classify the incoming image and publish the results
-  void imageCallback(const sensor_msgs::ImageConstPtr & msg)
+  
+void imageCallback(const sensor_msgs::ImageConstPtr & msg)
   {
+    ROS_INFO("inside image callback" );
     cv_bridge::CvImagePtr cv_ptr;
 
     try
@@ -172,7 +187,8 @@ private:
     
     for ( _ColorPublisherMap::iterator color_it = classified_image_pub_.begin(); color_it != classified_image_pub_.end(); ++color_it )
       {
-	cv_bridge::CvImage classified_image;
+	/// New image with the same header as the input image
+	cv_bridge::CvImage classified_image( cv_ptr->header , "bgr8");
 	
 	if ( color_classifier_.classify( color_it->first, cv_ptr->image, classified_image.image) )
 	  {

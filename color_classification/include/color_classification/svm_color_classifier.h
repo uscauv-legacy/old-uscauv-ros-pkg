@@ -116,7 +116,7 @@ class SvmColorClassifier
 	svm_node = cvGetFileNodeByName( svm_storage, NULL, color_name.c_str() );
 	if (svm_node == NULL)
 	  {
-	    ROS_WARN( "Failed to find SVM node. [ %s ]", color_name.c_str() );
+	    ROS_WARN( "Failed to find SVM file node. [ %s ]", color_name.c_str() );
 	    continue;
 	  }
 	
@@ -124,6 +124,9 @@ class SvmColorClassifier
 
 	/// populate the fields the the cv::SVM
 	color_svm->read( svm_storage, svm_node );
+	
+	/// Add to the map
+	color_svm_map_[ color_name ] = color_svm;
 	
 	cvReleaseFileStorage( &svm_storage );
 	
@@ -172,7 +175,7 @@ class SvmColorClassifier
 	  *cl_it == true_color_;
 	else
 	  {
-	    ROS_WARN( "SVM [ %s ] has incorrect output format. Image will not be classied. Valid output: {-1, 1}", color_name.c_str() );
+	    ROS_WARN( "SVM [ %s ] has incorrect output format. Image will not be classifed. Valid output: {-1, 1}", color_name.c_str() );
 	    return -1;
 	  }
       }
