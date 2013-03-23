@@ -41,18 +41,21 @@
 
 /// OpenCV
 #include <opencv2/core/core.hpp>
+#include <opencv2/highgui/highgui.hpp>
 #include <opencv2/ml/ml.hpp>
 #include <opencv/cxcore.h>
 
 /// xmlrpcpp
 #include <XmlRpcValue.h>
 
-
-
-
-
-
-
+/** #################################### **/
+/**
+ * This class uses Support Vector Machines to classify colors in images.
+ * It supports loading of multiple named cv::SVMs from yaml.
+ * Once the SVM is loaded, the classify() function can be called with the 
+ * name of the SVM to classify an input image.
+ */
+/** #################################### **/
 class SvmColorClassifier
 {
  private:
@@ -60,7 +63,7 @@ class SvmColorClassifier
 
   _ColorSvmMap color_svm_map_;
 
-  static const cv::Vec3b false_color_, true_color_;
+  const cv::Vec3b false_color_, true_color_;
   
  public:
 
@@ -68,7 +71,10 @@ class SvmColorClassifier
    * Default Constructor
    * 
    */
-  SvmColorClassifier()
+ SvmColorClassifier()
+   :
+  false_color_( cv::Vec3b( 0, 0, 0 ) ),
+  true_color_( cv::Vec3b( 255, 255, 255) )
     {}
 
   /** 
@@ -144,6 +150,7 @@ class SvmColorClassifier
   int classify(std::string const & color_name, cv::Mat const & input_image,
 		cv::Mat & classified_image)
   {
+    unsigned int match_count = 0;
     
     /// Look up the requested color
     _ColorSvmMap::iterator svm_it = color_svm_map_.find( color_name );
@@ -172,14 +179,23 @@ class SvmColorClassifier
 	if ( response == -1.0)
 	  *cl_it = false_color_;
 	else if ( response == 1.0 )
-	  *cl_it == true_color_;
+	  {
+	    *cl_it = true_color_;
+	    ++match_count;
+	  }
 	else
 	  {
-	    ROS_WARN( "SVM [ %s ] has incorrect output format. Image will not be classifed. Valid output: {-1, 1}", color_name.c_str() );
+	    ROS_WARN( "[ %s ] SVM has incorrect output format. Image will not be classifed. Valid output: {-1, 1}", color_name.c_str() );
 	    return -1;
 	  }
       }
 
+    ROS_INFO("[ %s ] SVM matched %d pixels. ", color_name.c_str(),match_count);
+    
+    /* cv::namedWindow("Classify Test", CV_WINDOW_AUTOSIZE); */
+    /* cv::imshow("Classify Test", classified_image); */
+    /* cv::waitKey(0); */
+        
     return 0;
   }
   
@@ -204,10 +220,5 @@ class SvmColorClassifier
 
   /// TODO: Add function to classify all colors so that input image doesn't need to be converted to a float for every color
 };
-
-/// Have to initialize these static variables outside the class declaration
-const cv::Vec3b SvmColorClassifier::true_color_  = cv::Vec3b( 255, 255, 255);
-const cv::Vec3b SvmColorClassifier::false_color_ = cv::Vec3b( 0, 0, 0);
-
 
 #endif // USCAUV_COLORCLASSIFICATION_SVMCOLORCLASSIFIER_H

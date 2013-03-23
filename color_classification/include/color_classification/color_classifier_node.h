@@ -168,11 +168,13 @@ class ColorClassifierNode
 
  private:
 
-  /// For each color, classify the incoming image and publish the results
-  
-void imageCallback(const sensor_msgs::ImageConstPtr & msg)
+  /** 
+   * For each color, classify the incoming image and publish the results
+   * 
+   * @param msg Color Image
+   */
+  void imageCallback(const sensor_msgs::ImageConstPtr & msg)
   {
-    ROS_INFO("inside image callback" );
     cv_bridge::CvImagePtr cv_ptr;
 
     try
