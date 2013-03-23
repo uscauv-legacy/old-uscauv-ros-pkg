@@ -19,4 +19,5 @@ set(LIBRARY_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/lib)
 # Build the SVM color classifier library
 rosbuild_add_library(${PROJECT_NAME} src/svm_color_classifier.cpp)
 
-
+# Color classifier node
+rosbuild_add_executable( color_classifier nodes/color_classifier_node.cpp )

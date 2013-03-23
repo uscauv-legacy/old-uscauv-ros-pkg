@@ -198,6 +198,8 @@ class SvmColorClassifier
   
 
   /// TODO: Add function to get support vector data for a given color
+
+  /// TODO: Add function to classify all colors so that input image doesn't need to be converted to a float for every color
 };
 
 /// Have to initialize these static variables outside the class declaration
