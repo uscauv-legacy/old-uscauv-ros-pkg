@@ -1,0 +1,16 @@
+<launch>
+  <arg name="pkg" value="uscauv_utilities" />
+  <arg name="name" value="static_image_publisher" />
+  <arg name="type" default="$(arg name)" />
+  <arg name="rate" default="10" />
+  <arg name="image_path" />
+  <arg name="args" value="_loop_rate:=$(arg rate) _image_path:=$(arg image_path)" />
+
+  <node
+      pkg="$(arg pkg)"
+      type="$(arg type)"
+      name="$(arg name)"
+      args="$(arg args)"
+      output="screen" />
+  
+</launch>
