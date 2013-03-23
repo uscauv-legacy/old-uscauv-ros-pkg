@@ -52,30 +52,48 @@ typedef std::vector<std::pair<cv::Mat, cv::Mat> > _ImagePairArray;
 /// TODO: Take optional comment as argument to insert into yaml
 /// TODO: Use proper OpenCV command line parsing
 /// TODO: Generate dedicated directory for output data
+/// TODO: Check size of training image and mask
 
-int main(int argc, char ** argv)
+const std::string keys =
+  "{    h| help          |false | Print this message.                         }"
+  "{    i| input         |false | Training image directory                    }"
+  "{    c| color         |false | Name of color to classify                   }"
+  "{    I| iterations    |10000 | Iterations for training                     }"
+  "{    o| output        |.     | Directory for output data (not supported)   }"
+  "{    C| error-penalty |0.1   | SVM weighting                               }"
+  ;
+
+int main(int argc, const char ** argv)
 {
-  if (argc != 4)
+  std::cout << "USC AUV SVM color classifier trainer" << std::endl;
+  
+  cv::CommandLineParser parser( argc, argv, keys.c_str() );
+
+  if ( parser.get<bool>("help") || parser.get<std::string>("input") == "false" || parser.get<std::string>("color") == "false" )
     {
-      std::cout << "usage: " << argv[0] << "training_dir output_name iterations" << std::endl;
+      std::cout << "usage: " << argv[0]  << " --input=\"training_path\" --color=\"color_name\"" << std::endl;
+      parser.printParams();
       return 0;
     }
-
-  int iterations;
-  std::stringstream( argv[3] ) >> iterations;
+    
+  const std::string image_path  = parser.get<std::string>("input");
+  const std::string color_name  = parser.get<std::string>("color");
+  const std::string output_path = parser.get<std::string>("output");
+  const double iterations       = parser.get<float>("iterations");
+  const double error_penalty    = parser.get<float>("error-penalty");
   
-  std::string output_name( argv[2] );
-
   _ImagePairArray input_images;
 
-  _FileSys::path image_dir( argv[1] );
+  /// Traverse image directory and attempt to load images ------------------------------------
+
+  _FileSys::path image_dir( image_path );
 
   try
     {
       /// If the path given does not exist or is not a directory, exit
       if ( !_FileSys::exists( image_dir ) || !_FileSys::is_directory( image_dir) )
 	{
-	  std::cout << "Invalid directory. [ " << image_dir << " ]\n";
+	  std::cout << "Invalid training image directory. [ " << image_dir << " ]\n";
 	  return 0;
 	}
 
@@ -200,12 +218,13 @@ int main(int argc, char ** argv)
   std::cout << "Positive mask contains " << positive_mask_count << " pixels." << std::endl;
 
   std::cout << "Training SVM..." << std::endl;
-
+  std::cout << "Max iterations: " << (int)iterations << ", Error penalty: " << error_penalty << std::endl;
+  
     /// Initialize SVM Params ------------------------------------
   cv::SVMParams svm_params;
   
   svm_params.svm_type = cv::SVM::C_SVC;
-  svm_params.C = 0.1;
+  svm_params.C = error_penalty;
   svm_params.kernel_type = cv::SVM::LINEAR;
   /// criteria for svm training to complete
   /// TODO: figure out what these parameters are, and what their counterparts in that output yaml correspond to
@@ -231,11 +250,15 @@ int main(int argc, char ** argv)
 
   std::cout << "Classifying training images..." << std::endl;
 
+  cv::Vec3b const white( 255, 255, 255), black( 0, 0, 0 );
+
+  std::cout << "Wrote image: ";
+  
   unsigned int image_count = 1;
   for( _ImagePairArray::iterator input_it = input_images.begin(); input_it != input_images.end(); ++input_it, ++image_count )
     {
       std::stringstream image_name;
-      image_name << output_name << image_count << ".png";
+      image_name << color_name << image_count << ".png";
 
       cv::Mat & input = input_it->first, input_float, prediction, output;
 
@@ -244,8 +267,6 @@ int main(int argc, char ** argv)
       /// Classify the image that we used to train
       prediction = cv::Mat( input.size(), CV_8UC3 );
   
-      cv::Vec3b white( 255, 255, 255), black( 0, 0, 0 );
-
       cv::MatIterator_<cv::Vec3b> img_it = prediction.begin<cv::Vec3b>();
       cv::MatConstIterator_<cv::Vec3f> data_it = input_float.begin<cv::Vec3f>();
   
@@ -261,19 +282,25 @@ int main(int argc, char ** argv)
 	    std::cout << "Warning: Response was: " << response << std::endl;
 	}
       
+      /// Stick the training image and its classified counterpart side-by-side and write to file
       cv::hconcat( input, prediction, output );
       
       cv::imwrite( image_name.str() , output );
+      
+      // std::cout << "[ " << image_name.str() << " ]" << (( (data_it+1) == input_float.end<cv::Vec3f>() ) ? "" : ", ");
+      std::cout << "[ " << image_name.str() << " ], ";
     }
 
+  std::cout <<std::endl;
+
   std::stringstream svm_path;
-  svm_path << output_name << ".yaml";
+  svm_path << color_name << ".yaml";
   
   /// The second SVM.write arg sets the name of the top level node in the yaml file (i.e. green, orange, etc.)
   std::cout << "Writing svm parameters to file... [ " << svm_path.str() << " ]" << std::endl;
   
   CvFileStorage * svm_storage = cvOpenFileStorage( svm_path.str().c_str(), 0, CV_STORAGE_WRITE );
-  SVM.write(svm_storage, output_name.c_str() );
+  SVM.write(svm_storage, color_name.c_str() );
   cvReleaseFileStorage( &svm_storage );
   std::cout << "Write success." << std::endl;
   
