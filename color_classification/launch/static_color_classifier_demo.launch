@@ -1,0 +1,19 @@
+<launch>
+  <!-- Name of the camera we will be streaming data from -->
+  <arg name="image_path" />
+  <arg name="rate" default="10" />
+  
+  <include file="$(find uscauv_utilities)/launch/static_image_publisher.launch" >
+    <arg name="rate" value="$(arg rate)" />
+    <arg name="image_path" value="$(arg image_path)" />
+  </include>
+
+  <include ns="model" file="$(find color_model)/launch/upload_test_colors.launch" />
+
+  <remap from="color_classifier/image_color" to="/static_image_publisher/image_color" />
+
+  <include file="$(find color_classification)/launch/color_classifier.launch" >
+    <arg name="rate" value="$(arg rate)" />
+  </include>
+
+</launch>
