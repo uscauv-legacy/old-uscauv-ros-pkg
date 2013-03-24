@@ -48,19 +48,17 @@ namespace _FileSys = boost::filesystem3;
 
 typedef std::vector<std::pair<cv::Mat, cv::Mat> > _ImagePairArray;
 
-/// TODO: Insert date string into generate yaml as a comment
-/// TODO: Take optional comment as argument to insert into yaml
-/// TODO: Use proper OpenCV command line parsing
 /// TODO: Generate dedicated directory for output data
 /// TODO: Check size of training image and mask
 
 const std::string keys =
-  "{    h| help          |false | Print this message.                         }"
-  "{    i| input         |false | Training image directory                    }"
-  "{    c| color         |false | Name of color to classify                   }"
-  "{    I| iterations    |10000 | Iterations for training                     }"
-  "{    o| output        |.     | Directory for output data (not supported)   }"
-  "{    C| error-penalty |0.1   | SVM weighting                               }"
+  "{    h| help          |false | Print this message.                                   }"
+  "{    i| input         |false | Training image directory                              }"
+  "{    c| color         |false | Name of color to classify                             }"
+  "{    I| iterations    |10000 | Iterations for training                               }"
+  "{    o| output        |.     | Directory for output data (not supported)             }"
+  "{    e| error-penalty |0.1   | SVM weighting                                         }"
+  "{    C| comment       |false | Optional comment to be inserted into output YAML file }"
   ;
 
 int main(int argc, const char ** argv)
@@ -79,10 +77,14 @@ int main(int argc, const char ** argv)
   const std::string image_path  = parser.get<std::string>("input");
   const std::string color_name  = parser.get<std::string>("color");
   const std::string output_path = parser.get<std::string>("output");
+  const std::string comment     = parser.get<std::string>("comment");
   const double iterations       = parser.get<float>("iterations");
   const double error_penalty    = parser.get<float>("error-penalty");
   
   _ImagePairArray input_images;
+
+  /// Used later on when we write the names of all of the images we used to file
+  std::vector<std::pair<std::string, std::string> > path_str;
 
   /// Traverse image directory and attempt to load images ------------------------------------
 
@@ -157,6 +159,7 @@ int main(int argc, const char ** argv)
 	  std::cout << "Mask image loaded successfully." << std::endl;
 
 	  input_images.push_back( std::make_pair( input, mask ) );
+	  path_str.push_back ( std::make_pair( input_str, mask_str ) );
 	}
 
     }
@@ -296,11 +299,47 @@ int main(int argc, const char ** argv)
   std::stringstream svm_path;
   svm_path << color_name << ".yaml";
   
-  /// The second SVM.write arg sets the name of the top level node in the yaml file (i.e. green, orange, etc.)
+
   std::cout << "Writing svm parameters to file... [ " << svm_path.str() << " ]" << std::endl;
   
   CvFileStorage * svm_storage = cvOpenFileStorage( svm_path.str().c_str(), 0, CV_STORAGE_WRITE );
+
+  time_t rawtime;
+  struct tm * timeinfo;
+  time ( &rawtime );
+  timeinfo = localtime ( &rawtime );
+
+  std::stringstream date_string;
+  date_string << "Generated: " << asctime( timeinfo );
+
+  /// Write date string
+  cvWriteComment( svm_storage, date_string.str().c_str(), 0 );
+
+  /// Write the image paths
+  std::stringstream training_comment, mask_comment;
+  training_comment << "Training images: ";
+  mask_comment << "Mask images: ";
+
+  for(std::vector<std::pair<std::string, std::string> >::const_iterator path_it = path_str.begin(); path_it != path_str.end(); ++path_it)
+    {
+      training_comment << "[ " << path_it->first << " ], ";
+      mask_comment << "[ " << path_it->second << " ], ";
+    }
+    
+  cvWriteComment( svm_storage, training_comment.str().c_str(), 0);
+  cvWriteComment( svm_storage, mask_comment.str().c_str(), 0);
+
+  /// newline
+  cvWriteComment( svm_storage, "", 0);
+  
+  /// Write optional user comment to file
+  if ( comment != "false" )
+    cvWriteComment( svm_storage, comment.c_str(), 0);
+
+  /// The second SVM.write arg sets the name of the top level node in the yaml file (i.e. green, orange, etc.)
   SVM.write(svm_storage, color_name.c_str() );
+
+  
   cvReleaseFileStorage( &svm_storage );
   std::cout << "Write success." << std::endl;
   
