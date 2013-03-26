@@ -33,16 +33,21 @@
  *
  **************************************************************************/
 
+#include <iostream>
+
 /// OpenCV
 #include <opencv2/core/core.hpp>
 #include <opencv2/highgui/highgui.hpp>
+#include <opencv2/imgproc/imgproc.hpp>
 #include <opencv2/ml/ml.hpp>
 #include <opencv/cxcore.h>
 
 /// Boost filesystem
 #include <boost/filesystem.hpp>
 
-#include <iostream>
+/// C++11 Threading
+#include <thread>
+#include <mutex>
 
 namespace _FileSys = boost::filesystem3;
 
@@ -51,14 +56,23 @@ typedef std::vector<std::pair<cv::Mat, cv::Mat> > _ImagePairArray;
 /// TODO: Generate dedicated directory for output data
 /// TODO: Check size of training image and mask
 
+std::map<std::string, int> basis_map =
+  {{"linear", cv::SVM::LINEAR},
+   {"rbf", cv::SVM::RBF},
+   {"poly", cv::SVM::POLY},
+   {"sigmoid", cv::SVM::SIGMOID}};
+
 const std::string keys =
-  "{    h| help          |false | Print this message.                                   }"
-  "{    i| input         |false | Training image directory                              }"
-  "{    c| color         |false | Name of color to classify                             }"
-  "{    I| iterations    |10000 | Iterations for training                               }"
-  "{    o| output        |.     | Directory for output data (not supported)             }"
-  "{    e| error-penalty |0.1   | SVM weighting                                         }"
-  "{    C| comment       |false | Optional comment to be inserted into output YAML file }"
+  "{    h| help          |false | Print this message.                                       }"
+  "{    i| input         |false | Training image directory                                  }"
+  "{    c| color         |false | Name of color to classify                                 }"
+  "{    I| iterations    |10000 | Iterations for training                                   }"
+  "{    o| output        |.     | Directory for output data (not supported)                 }"
+  "{    e| error-penalty |0.1   | SVM weighting                                             }"
+  "{    s| scale         |.125  | Factor by which input images will be downsampled          }"
+  "{    k| kernel        |rbf   | Kernel type (rbf, linear, poly, sigmoid)                  }"
+  "{    a| auto          |false | Automatically search for optimal SVM training parameters. }"
+  "{    C| comment       |false | Optional comment to be inserted into output YAML file     }"
   ;
 
 int main(int argc, const char ** argv)
@@ -80,7 +94,14 @@ int main(int argc, const char ** argv)
   const std::string comment     = parser.get<std::string>("comment");
   const double iterations       = parser.get<float>("iterations");
   const double error_penalty    = parser.get<float>("error-penalty");
+  const double scale            = parser.get<float>("scale");
+  const bool auto_train         = parser.get<bool>("auto");
   
+  std::string kernel_str   = parser.get<std::string>("kernel");
+  std::transform(kernel_str.begin(), kernel_str.end(), kernel_str.begin(), ::tolower);
+  
+  const int kernel_type = basis_map[kernel_str];
+
   _ImagePairArray input_images;
 
   /// Used later on when we write the names of all of the images we used to file
@@ -186,14 +207,28 @@ int main(int argc, const char ** argv)
   for( _ImagePairArray::iterator input_it = input_images.begin(); input_it != input_images.end(); ++input_it )
 
     {
-      cv::Mat input, mask;
+      cv::Mat input, input_ds, mask;
 
       /// OpenCV SVM training requires floating point data
-      input_it->first.convertTo( input, CV_32F );
+      
+      cv::resize( input_it->first, input_ds, cv::Size(0.0,0.0), scale, scale, cv::INTER_LINEAR);
+
+      /// convert to hsv color scheme
+      cv::cvtColor(input_ds, input_ds, CV_BGR2HSV);
+
+      /// Remove value channel
+      cv::Mat input_hs( input_ds.rows, input_ds.cols, CV_8UC2 ), input_v( input_ds.rows, input_ds.cols, CV_8UC1 );
+      cv::Mat mix_out[] { input_hs, input_v };
+      int from_to[] = { 0,0, 1,1, 2,2 };
+      cv::mixChannels( &input_ds, 1, mix_out, 2, from_to, 3);
+
+      
+      input_hs.convertTo( input, CV_32F );
       input = input.reshape( 1, input.size().height * input.size().width );
       all_training.push_back( input );
 
-      mask = input_it->second;
+      cv::resize( input_it->second, mask, cv::Size(0.0,0.0), scale, scale, cv::INTER_LINEAR);
+      // mask = input_it->second;
       // input_it->second.convertTo( mask, CV_32FC1 );
       // mask = mask.reshape( 1, input.size().height * input.size().width );
 
@@ -221,14 +256,16 @@ int main(int argc, const char ** argv)
   std::cout << "Positive mask contains " << positive_mask_count << " pixels." << std::endl;
 
   std::cout << "Training SVM..." << std::endl;
+  std::cout << "Kernel type: [ " << kernel_str << " ]" << std::endl;
   std::cout << "Max iterations: " << (int)iterations << ", Error penalty: " << error_penalty << std::endl;
+
   
     /// Initialize SVM Params ------------------------------------
   cv::SVMParams svm_params;
   
   svm_params.svm_type = cv::SVM::C_SVC;
   svm_params.C = error_penalty;
-  svm_params.kernel_type = cv::SVM::LINEAR;
+  svm_params.kernel_type = kernel_type;
   /// criteria for svm training to complete
   /// TODO: figure out what these parameters are, and what their counterparts in that output yaml correspond to
   svm_params.term_crit = cv::TermCriteria( CV_TERMCRIT_ITER, (int)iterations, 1e-6f );
@@ -238,11 +275,67 @@ int main(int argc, const char ** argv)
 
   time( &before_train );
   
-  /// Train the SVM ------------------------------------
+  /**
+   * ------------------------------------------------------------------------------------------------------------  
+   * Train the support vector machine. The training and a status printing function are 
+   * run on separate threads
+   * ------------------------------------------------------------------------------------------------------------
+   */
   cv::SVM SVM;
 
-  /// This function expects response data to be CV_32FC1 or CV_32SC1
-  SVM.train( all_training, all_mask, cv::Mat(), cv::Mat(), svm_params );
+  bool svm_done = false;
+  std::mutex svm_done_mutex;
+
+  /// captures local variables by reference
+  std::function<void()> train_f;
+
+  if (auto_train )
+    train_f = [&]() { SVM.train_auto( all_training, all_mask, cv::Mat(), cv::Mat(), svm_params ); 
+					  svm_done_mutex.lock(); svm_done = true; svm_done_mutex.unlock(); };
+  else
+    train_f = [&]() { SVM.train( all_training, all_mask, cv::Mat(), cv::Mat(), svm_params ); 
+		      svm_done_mutex.lock(); svm_done = true; svm_done_mutex.unlock(); };
+
+
+  std::function<void()> status_f = [&]() { 
+    time_t start_time, current_time, last_update_time; time( &start_time ); time( &last_update_time );
+    while(true)
+      { 
+	time( &current_time ); 
+	if ( difftime( current_time, last_update_time) >= 1.0 ) 
+	  {
+	    std::cout << "Current time: " << difftime(current_time, start_time) << std::endl;; 
+	    time( &last_update_time ); 
+	  }
+	if( svm_done_mutex.try_lock() )
+	  {
+	    if ( svm_done ) 
+	      {
+		svm_done_mutex.unlock(); 
+		return;
+	      } 
+	    else 
+		svm_done_mutex.unlock(); 
+	  }
+      }
+  };
+  
+  
+  std::thread training_thread( train_f );
+  std::thread status_thread( status_f );
+
+  /**
+   * First arg is the function to call, the second is the object to call it from, and the rest are the function's arguments
+   * This function expects response data to be CV_32FC1 or CV_32SC1
+   * The big method typecast on the first argument is necessary because cv::SVM::train is overloaded and is ambiguous otherwise
+   */
+  // std::thread training_thread( (bool (cv::SVM::*)(const cv::Mat&, const cv::Mat&, const cv::Mat&, const cv::Mat&, cv::SVMParams)) &cv::SVM::train, 
+  // 			       &SVM, all_training, all_mask, cv::Mat(), cv::Mat(), svm_params);
+
+  training_thread.join();
+  status_thread.join();
+
+  // SVM.train( all_training, all_mask, cv::Mat(), cv::Mat(), svm_params );
 
   time( &after_train );
   seconds = difftime( after_train, before_train );
@@ -265,15 +358,24 @@ int main(int argc, const char ** argv)
 
       cv::Mat & input = input_it->first, input_float, prediction, output;
 
-      input.convertTo( input_float, CV_32F );
-      
+      /// convert to hsv color scheme
+      cv::cvtColor(input, input_float, CV_BGR2HSV);
+
+      /// remove v term
+      cv::Mat input_hs( input_float.rows, input_float.cols, CV_8UC2 ), input_v( input_float.rows, input_float.cols, CV_8UC1 );
+      cv::Mat mix_out[] { input_hs, input_v };
+      int from_to[] = { 0,0, 1,1, 2,2 };
+      cv::mixChannels( &input_float, 1, mix_out, 2, from_to, 3);
+
+      input_hs.convertTo( input_hs, CV_32F );
+
       /// Classify the image that we used to train
       prediction = cv::Mat( input.size(), CV_8UC3 );
   
       cv::MatIterator_<cv::Vec3b> img_it = prediction.begin<cv::Vec3b>();
-      cv::MatConstIterator_<cv::Vec3f> data_it = input_float.begin<cv::Vec3f>();
+      cv::MatConstIterator_<cv::Vec2f> data_it = input_hs.begin<cv::Vec2f>();
   
-      for(; data_it != input_float.end<cv::Vec3f>() ; ++data_it, ++img_it )
+      for(; data_it != input_hs.end<cv::Vec2f>() ; ++data_it, ++img_it )
 	{
 	  float response = SVM.predict( cv::Mat(*data_it) );
       
