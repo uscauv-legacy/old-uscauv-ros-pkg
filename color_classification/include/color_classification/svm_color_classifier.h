@@ -42,6 +42,7 @@
 /// OpenCV
 #include <opencv2/core/core.hpp>
 #include <opencv2/highgui/highgui.hpp>
+#include <opencv2/imgproc/imgproc.hpp>
 #include <opencv2/ml/ml.hpp>
 #include <opencv/cxcore.h>
 
@@ -162,17 +163,26 @@ class SvmColorClassifier
 	return -1;
       }
 
+    /// convert to HSV
+    cv::cvtColor(input_image, input_image, CV_BGR2HSV);
+    
+    cv::Mat input_hs( input_image.rows, input_image.cols, CV_8UC2 ), input_v( input_image.rows, input_image.cols, CV_8UC1 );
+    cv::Mat mix_out[] { input_hs, input_v };
+    int from_to[] = { 0,0, 1,1, 2,2 };
+    cv::mixChannels( &input_image, 1, mix_out, 2, from_to, 3);
+    
+    
     cv::Mat input_float;
-    input_image.convertTo( input_float, CV_32F );
+    input_hs.convertTo( input_float, CV_32F );
     
     classified_image = cv::Mat( input_image.size(), CV_8UC3 );
     
     /// Classify the input image.
     /// TODO: Use binary image for classified image
     cv::MatIterator_<cv::Vec3b> cl_it = classified_image.begin<cv::Vec3b>();
-    cv::MatConstIterator_<cv::Vec3f> in_it = input_float.begin<cv::Vec3f>();
+    cv::MatConstIterator_<cv::Vec2f> in_it = input_float.begin<cv::Vec2f>();
 
-    for(; in_it != input_float.end<cv::Vec3f>(); ++in_it, ++cl_it)
+    for(; in_it != input_float.end<cv::Vec2f>(); ++in_it, ++cl_it)
       {
 	float response = svm_it->second->predict( cv::Mat(*in_it) );
 
