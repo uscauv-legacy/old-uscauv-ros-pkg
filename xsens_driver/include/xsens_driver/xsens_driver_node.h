@@ -303,12 +303,21 @@ private:
 
         // our rotation vector from the IMU; convert from degrees to radians
         tf::Vector3 const orientation_rpy = toRad( unit::convert<tf::Vector3>( imu_driver_ptr_->ori_ ) );
+	/* tf::Vector3 orientation_rpy; */
+	
         // our rotation vector, offset by the results of any relative orientation calibration
         tf::Vector3 const orientation_rpy_with_offset = unit::implicit_convert( orientation_rpy - relative_orientation_offset_ );
         // our orientation from the IMU
         tf::Quaternion const orientation = unit::implicit_convert( imu_driver_ptr_->ori_ );
+
         // our orientation from the IMU, with any offset from calibration
-        tf::Quaternion const orientation_with_offset = unit::implicit_convert( orientation_rpy_with_offset );
+	tf::Quaternion orientation_with_offset;
+
+	/* Construct from yaw, pitch, roll */	
+	/* Yaw = Angle around Z, pitch = angle around Y, roll = angle around X */
+	orientation_with_offset.setEulerZYX( orientation_rpy_with_offset.getZ(), orientation_rpy_with_offset.getY(),
+								       orientation_rpy_with_offset.getX() );
+
 
         seabee_imu_msg.accel = unit::implicit_convert( imu_driver_ptr_->accel_ );
         seabee_imu_msg.gyro = unit::implicit_convert( imu_driver_ptr_->gyro_ );
