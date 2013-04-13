@@ -1,8 +1,8 @@
 /***************************************************************************
- *  nodes/xsens_driver.cpp
+ *  nodes/xsens_driver_node.cpp
  *  --------------------
  *
- *  Copyright (c) 2011, Edward T. Kaszubski ( ekaszubski@gmail.com )
+ *  Copyright (c) 2013, Dylan Foster
  *  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
@@ -15,7 +15,7 @@
  *    copyright notice, this list of conditions and the following disclaimer
  *    in the documentation and/or other materials provided with the
  *    distribution.
- *  * Neither the name of usc-ros-pkg nor the names of its
+ *  * Neither the name of USC AUV nor the names of its
  *    contributors may be used to endorse or promote products derived from
  *    this software without specific prior written permission.
  *
@@ -35,9 +35,14 @@
 
 #include <xsens_driver/xsens_driver_node.h>
 
-// These are not the codes you're looking for...probably
-// This file was auto-generated; you probably want to modify ../include/xsens_driver/xsens_driver_node.h
 
-// instantiate our node; this macro expands to an int main( ... ) in which an instance of our node is created and started
-//
-QUICKDEV_INST_NODE( XsensDriverNode, "xsens_driver" )
+int main(int argc, char ** argv)
+{
+  ros::init(argc, argv, "xsens_driver");
+
+  XsensDriverNode xsens_driver;
+
+  xsens_driver.spin();
+
+  return 0;
+}

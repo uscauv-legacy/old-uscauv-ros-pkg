@@ -3,23 +3,15 @@
 
     <arg name="pkg" value="xsens_driver" />
     <arg name="name" value="xsens_driver" />
-    <arg name="type" default="$(arg name)_node" />
+    <arg name="type" default="$(arg name)" />
     <arg name="rate" default="110" />
     <arg name="args" value="_loop_rate:=$(arg rate) _port:=/dev/seabee/imu" />
-    <arg name="manager" default="manager" />
-    <arg name="nodelet" default="false" />
+
     <node
-        if="$(arg nodelet)"
-        pkg="nodelet"
-        type="nodelet"
-        name="$(arg name)"
-        args="load $(arg pkg)/$(arg type) $(arg manager) $(arg args)"
-        output="screen" />
-    <node
-        unless="$(arg nodelet)"
         pkg="$(arg pkg)"
         type="$(arg type)"
         name="$(arg name)"
         args="$(arg args)"
         output="screen" />
+
 </launch>

@@ -1,5 +1,5 @@
 /***************************************************************************
- *  xsens_driver.h
+ *  /include/xsens_driver/xsens_driver.h
  *  --------------------
  *
  *  Copyright (c) 2013, Dylan Foster
@@ -59,10 +59,32 @@ static _MacroStringMap const BAUD_NAMES_
   {CMT_BAUD_RATE_230K4, "230k4"},
   {CMT_BAUD_RATE_460K8, "460k8"},
   {CMT_BAUD_RATE_921K6, "921k6"},
+  /// In general, providing 0 as an argument to the cmt libs will make them check all baud rates
+  {0, "All"}
 };
 
+/* #define CMT_GETTER_LAMBDA(__FunctionCall, __CMTInstance, __MemberVar, __DataString) \ */
+/*   [&](){xsens::XsensResultValue res = \ */
+/*       __CMTInstance.__FunctionCall(__MemberVar); \ */
+/*     if (res != XRV_OK)\ */
+/*       ROS_ERROR("Unable to fetch [ %s ].", __DataString }; */
 
-class XSensDriver
+struct CmtInfo
+{
+  double heading_offset_;
+  double magnetic_declination_;
+  double sample_frequency_;
+  double current_scenario_;
+  double gravity_magnitude_;
+
+  CmtVector lat_lon_alt_;
+  CmtMatrix object_alignment_matrix_;
+  
+  uint16_t processing_flags_;
+  uint16_t transmission_delay_;
+};
+
+class XsensDriver
 {
  private:
   /* Put the IMU data that will be pulled from the device every time update() is called here */
@@ -88,7 +110,7 @@ class XSensDriver
   xsens::Cmt3 cmt3_;
 
   /// If connect() is successful, contains baud rate, COM port, etc.
-  xsens::CmtPortInfo port_info_;
+  CmtPortInfo port_info_;
 
  public:
 
@@ -108,6 +130,8 @@ class XSensDriver
   int connect(uint32_t const & baudrate = CMT_BAUD_RATE_921K6);
 
   int settingsFromDevice();
+
+  int settingsToDevice();
 
   /// Just calls connect -> settingsFromDevice
   int init();

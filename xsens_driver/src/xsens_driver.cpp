@@ -1,5 +1,5 @@
 /***************************************************************************
- *  ../../src/xsens_driver.cpp
+ *  src/xsens_driver.cpp
  *  --------------------
  *
  *  Copyright (c) 2013, Dylan Foster
@@ -35,16 +35,21 @@
 
 #include <xsens_driver/xsens_driver.h>
 
-int XsensDriver::connect(uint32_t baudrate)
+int XsensDriver::connect(uint32_t const & baudrate)
 {
-  xsens::CmtPortInfo target_port;
-  xsens::XsensResultValue open_result;
+  /// Initialize all port info fields to zero (device ID, bus, baud, port name)
+  CmtPortInfo target_port = {0, 0, 0, ""};
+  XsensResultValue open_result;
   int device_count;
-  int device_id;
+  /// uint32_t
+  CmtDeviceId device_id;
   
-  ROS_INFO("Scanning for connected Xsens devices on port [ %s ] with baud rate [ %d ]...", port_.c_str(), baudrate);
+  /// Set name of the port to scan
+  sprintf( target_port.m_portName, "%s", port_.c_str() );
+
+  ROS_INFO("Scanning for connected Xsens devices on port [ %s ] with baud rate [ %s ]...", target_port.m_portName, baud_string_map_[ 0 ].c_str() );
   
-  if ( !xsens::cmtScanPort( target_port, baudrate ) )
+  if ( !xsens::cmtScanPort( target_port, 0 ) )
     {
       ROS_ERROR("Failed to find device.");
       return -1;
@@ -53,7 +58,7 @@ int XsensDriver::connect(uint32_t baudrate)
   port_info_ = target_port;
 
   ROS_INFO("Found device [ %d ] on COM port [ %s ], port number [ %d ] at baud rate [ %s ].", 
-	   port_info_.m_deviceId, port_info_.m_portName, port_info_.m_portNr, baud_string_map_[ port_info.m_baudrate ].c_str() );
+	   port_info_.m_deviceId, port_info_.m_portName, port_info_.m_portNr, baud_string_map_[ port_info_.m_baudrate ].c_str() );
 
   /// If cmtScanPort is unable to connect with the requested baud rate, it will try others and set the m_baudrate field if it finds a match
   if( baudrate != port_info_.m_baudrate )
@@ -67,7 +72,7 @@ int XsensDriver::connect(uint32_t baudrate)
    */
   open_result = cmt3_.openPort(port_info_.m_portName, port_info_.m_baudrate);
 
-  if ( open_result != xsens::XRV_OK )
+  if ( open_result != XRV_OK )
     {
       ROS_ERROR("Failed to open COM port.");
       return -1;
@@ -75,7 +80,8 @@ int XsensDriver::connect(uint32_t baudrate)
 
   /// If device count isn't set to 1 at this point we have done something horribly wrong.
   device_count = cmt3_.getMtCount();
-  device_id    = cmt3_.getDeviceId();
+  /// TODO: Check result value for this function call
+  cmt3_.getDeviceId( 1, device_id );
   
   ROS_INFO( "Opened [ %d ] device with ID [ %d ]. The device is now in config mode.", device_count, device_id );
 
@@ -85,5 +91,5 @@ int XsensDriver::connect(uint32_t baudrate)
 
 int XsensDriver::settingsFromDevice()
 {
-  
-};
+  return -1;
+}

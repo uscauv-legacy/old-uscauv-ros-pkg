@@ -25,6 +25,7 @@ set(LIBRARY_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/lib)
 # Note: requires "rosbuild_include( quickdev_cpp dynamic_reconfigure )"
 #quickdev_gencfg()
 
-add_subdirectory( src )
-add_subdirectory( nodes )
-add_subdirectory( nodelets )
+# add_subdirectory( src )
+rosbuild_add_library( xsens_driver src/xsens_driver.cpp src/cmt1.cpp src/cmt2.cpp src/cmt3.cpp src/cmtmessage.cpp src/cmtpacket.cpp src/cmtscan.cpp src/xsens_std.cpp src/xsens_time.cpp )
+rosbuild_add_executable( xsens_driver  nodes/xsens_driver_node.cpp )
+
