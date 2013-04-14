@@ -45,8 +45,10 @@
 #include "cmtscan.h"
 #include "cmt3.h"
 
+#include <uscauv_utilities/stream.h>
 
 typedef std::map<int, std::string> _MacroStringMap;
+typedef std::vector<std::function<void()> > _LambdaArray;
 
 static _MacroStringMap const BAUD_NAMES_
 {
@@ -63,25 +65,48 @@ static _MacroStringMap const BAUD_NAMES_
   {0, "All"}
 };
 
-/* #define CMT_GETTER_LAMBDA(__FunctionCall, __CMTInstance, __MemberVar, __DataString) \ */
-/*   [&](){xsens::XsensResultValue res = \ */
-/*       __CMTInstance.__FunctionCall(__MemberVar); \ */
-/*     if (res != XRV_OK)\ */
-/*       ROS_ERROR("Unable to fetch [ %s ].", __DataString }; */
+/// TODO: Figure out how to make printing work when there is more than one
+/// variadic arg
+/// Or when the return value is not an argument to the function call
+/// probably need to switch to templates to do this
+/// Is it possible to call a function on __Args that will convert Arg1, Arg2, ... to Arg1 << ", " << Arg2 << ", " << ...
+
+
+#define GET_CMT_GETTER_LAMBDA(__FunctionCall, __CMTInstance, __DataString, __Args...) \
+  [&](){XsensResultValue res =						\
+      __CMTInstance.__FunctionCall(__Args);				\
+    if (res != XRV_OK)							\
+      ROS_ERROR("Unable to fetch device parameter [ %s ]. Error: [ %s ]", __DataString, xsensResultText( res )); \
+    else ROS_INFO_STREAM("Retrieved parameter [ " << __DataString	\
+			 << " ] with value [ " << make_stream(std::string(", "),  __Args ) << " ]");}
+
+/* static std::vector<std::function> const GETTER_FUNCTIONS_ */
+/* { */
+/* } */
+
+
+
 
 struct CmtInfo
 {
   double heading_offset_;
   double magnetic_declination_;
   double sample_frequency_;
-  double current_scenario_;
   double gravity_magnitude_;
+
+  uint8_t current_scenario_type_;
+  uint8_t current_scenario_version_;
+  CmtScenario available_scenarios_[16];
 
   CmtVector lat_lon_alt_;
   CmtMatrix object_alignment_matrix_;
   
   uint16_t processing_flags_;
   uint16_t transmission_delay_;
+
+  char product_code_[128];
+  CmtVersion firmware_revision_;
+
 };
 
 class XsensDriver
@@ -91,7 +116,8 @@ class XsensDriver
 
  private:
   /* IMU Config parameters */
-  /* Should these be in a struct? */
+  CmtInfo cmt_info_;
+  _LambdaArray cmt_getter_functions_;
 
  private:
   /* Misc parameters */
@@ -118,7 +144,25 @@ class XsensDriver
   port_(port),
   baud_string_map_( BAUD_NAMES_ )
   {
-    
+    /* std::function<void()> getmagdec_f = GET_CMT_GETTER_LAMBDA( getMagneticDeclination, cmt3_, "Magnetic Declination", cmt_info_.magnetic_declination_); */
+    /* cmt_getter_functions_.push_back( getmagdec_f ); */
+
+    /// TODO: Sample frequency (returns value ), current scenarios (print will fail due to two args), available scenarios (needs print overloaded)
+    /// Lat lon alt (need to overload CmtVector), alignment (need to overload CmtMatrix), 
+    /// Firmware revision (overload)
+    _LambdaArray getters
+    {
+      GET_CMT_GETTER_LAMBDA( getHeading, cmt3_, "Heading Offset", cmt_info_.heading_offset_),
+      GET_CMT_GETTER_LAMBDA( getMagneticDeclination, cmt3_, "Magnetic Declination", cmt_info_.magnetic_declination_),
+      GET_CMT_GETTER_LAMBDA( getGravityMagnitude, cmt3_, "Gravity Magnitude", cmt_info_.gravity_magnitude_),
+      GET_CMT_GETTER_LAMBDA( getProcessingFlags, cmt3_, "Processing Flags", cmt_info_.processing_flags_),
+      GET_CMT_GETTER_LAMBDA( getTransmissionDelay, cmt3_, "Transmission Delay", cmt_info_.transmission_delay_),
+      GET_CMT_GETTER_LAMBDA( getProductCode, cmt3_, "Product Code", cmt_info_.product_code_),
+      /* GET_CMT_GETTER_LAMBDA( getScenario, cmt3_, "Current Scenario", cmt_info_.current_scenario_type_, cmt_info_.current_scenario_version_) */
+   };
+
+    cmt_getter_functions_ = getters;
+
   }
 
   /** 
@@ -133,7 +177,8 @@ class XsensDriver
 
   int settingsToDevice();
 
-  /// Just calls connect -> settingsFromDevice
+  /// Just calls connect -> settingsFromDevice -> gotoMeasurement
+  /// TODO: Check that avaiable output modes match our desired mode
   int init();
 
 };

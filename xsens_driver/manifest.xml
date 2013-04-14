@@ -9,8 +9,10 @@
   <review status="unreviewed" notes=""/>
   <url>http://ros.org/wiki/xsens_driver</url>
   <depend package="quickdev_cpp"/>
-  <depend package="nodelet"/>
   <depend package="seabee3_msgs"/>
+
+  <depend package="uscauv_utilities" />
+
   <export>
     <cpp cflags="-I${prefix}/include" lflags="-Wl,-rpath,${prefix}/lib -L${prefix}/lib"/>
     <nodelet plugin="${prefix}/nodelets/nodelet_plugins.xml"/>

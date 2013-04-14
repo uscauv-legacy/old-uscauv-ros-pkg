@@ -83,6 +83,7 @@ class XsensDriverNode
       xsens_driver_ = std::make_shared<XsensDriver>(port_);
 
       xsens_driver_->connect();
+      xsens_driver_->settingsFromDevice();
 
       /// TODO: Warn if node loop rate is lower than MTi output rate
       

@@ -7,7 +7,7 @@ include($ENV{ROS_ROOT}/core/rosbuild/rosbuild.cmake)
 #  Release        : w/o debug symbols, w/ optimization
 #  RelWithDebInfo : w/ debug symbols, w/ optimization
 #  MinSizeRel     : w/o debug symbols, w/ optimization, stripped binaries
-#set(ROS_BUILD_TYPE RelWithDebInfo)
+set(ROS_BUILD_TYPE Release)
 
 rosbuild_init()
 
@@ -18,3 +18,5 @@ set(LIBRARY_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/lib)
 
 # Static image publisher node
 rosbuild_add_executable( static_image_publisher nodes/static_image_publisher_node.cpp )
+
+rosbuild_add_library( uscauv_utilities src/stream.cpp )

@@ -74,7 +74,7 @@ int XsensDriver::connect(uint32_t const & baudrate)
 
   if ( open_result != XRV_OK )
     {
-      ROS_ERROR("Failed to open COM port.");
+      ROS_ERROR("Failed to open COM port. [ %s ]", xsensResultText( open_result ) );
       return -1;
     }
 
@@ -91,5 +91,13 @@ int XsensDriver::connect(uint32_t const & baudrate)
 
 int XsensDriver::settingsFromDevice()
 {
-  return -1;
+  for (_LambdaArray::const_iterator getter_it = cmt_getter_functions_.begin();
+       getter_it != cmt_getter_functions_.end(); ++getter_it)
+    {
+      (*getter_it)();
+    }
+
+  // ROS_INFO("Got magnetic declination [ %f ]", cmt_info_.magnetic_declination_);
+
+  return 0;
 }
