@@ -43,6 +43,8 @@
 #include <dynamic_reconfigure/server.h>
 #include <auv_controls/PIDConfig.h>
 
+#include <auv_controls/controller.h>
+
 class ReconfigurablePIDSettings
 {
  public:
@@ -59,19 +61,24 @@ class ReconfigurablePIDSettings
   std::function<void()> settings_changed_callback_;
   
  public:
- ReconfigurablePIDSettings(std::string const & name, std::string const & ns = "pid"):
-  p_( 1.0f ),
-  i_( 0.0f ),
-  d_( 0.0f ),
-  name_( ns + "/" + name ),
+  /// TODO: Modify so that ROS doesn't need to be running when the class is constructed
+ ReconfigurablePIDSettings(double const & p = 1.0f, double const & i = 0.0f, double const & d = 0.0f):
+  p_( p ),
+  i_( i ),
+  d_( d ),
   nh_rel_( "~" )
   {
+  }
+
+  void init(std::string const & name, std::string const & ns = "pid")
+  {
+    name_ = ns + "/" + name;
+    
     /// Reconfigure server will resolve namespaces relative to ~/ns/name
     ros::NodeHandle nh_pid( nh_rel_, name_ );
     reconfigure_server_ = std::make_shared<_PIDReconfigureServer>( nh_pid );
 
     _PIDReconfigureServer::CallbackType reconfigure_callback;
-
     reconfigure_callback = std::bind(&ReconfigurablePIDSettings::reconfigureCallback, this,
     				     std::placeholders::_1, std::placeholders::_2);
 
@@ -108,3 +115,71 @@ class ReconfigurablePIDSettings
   }
   
 };
+
+class PID1D
+{
+ private:
+  double setpoint_, integral_term_, observed_value_, last_error_;
+
+  ros::Time last_update_time_;
+
+  ReconfigurablePIDSettings settings_;
+  
+ public:
+
+ PID1D():
+  setpoint_( 0.0f ),
+  integral_term_( 0.0f ),
+  observed_value_( 0.0f ),
+  last_error_( 0.0f )
+    {
+      
+    }
+ 
+  void init(std::string const & name)
+  {
+    settings_.init( name );
+    
+    last_update_time_ = ros::Time::now();
+
+    return;
+  }
+
+  void setSetpoint(double const & setpoint)
+  {
+    setpoint_ = setpoint;
+    return;
+  }
+  
+  void setObserved(double const & observed)
+  {
+    observed_value_ = observed;
+    return;
+  }
+  
+  double update()
+  {
+    ros::Time now = ros::Time::now();
+    
+    double dt = (now - last_update_time_).toSec();
+
+    /// error terms
+    double error = setpoint_ - observed_value_;
+    double dedt = (error - last_error_) / dt;
+    integral_term_ += error * dt;
+    last_error_ = error;
+    
+    double const & p = settings_.p_;
+    double const & i = settings_.i_;
+    double const & d = settings_.d_;
+
+    double output = p*error + i*integral_term_ + d*dedt;
+        
+    last_update_time_ = now;
+      
+    return output;
+  }
+ 
+};
+
+typedef ControllerND<PID1D, 6> PID6D;

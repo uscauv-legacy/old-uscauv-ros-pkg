@@ -25,5 +25,5 @@ gencfg()
 #uncomment if you have defined services
 #rosbuild_gensrv()
 
-rosbuild_add_library(${PROJECT_NAME} src/pid.cpp)
+rosbuild_add_library(${PROJECT_NAME} src/pid.cpp src/controller.cpp)
 

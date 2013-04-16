@@ -4,7 +4,7 @@
      auv_controls
 
   </description>
-  <author>nalyd</author>
+  <author>Dylan Foster</author>
   <license>BSD</license>
   <review status="unreviewed" notes=""/>
   <url>http://ros.org/wiki/auv_controls</url>
@@ -12,6 +12,10 @@
   <depend package="roscpp" />
   <depend package="cpp11" />
 
+    <export>
+      <cpp cflags="-I${prefix}/include" lflags="-Wl,-rpath,${prefix}/lib -L${prefix}/lib -lauv_controls"/>
+  </export>
+  
 </package>
 
 
