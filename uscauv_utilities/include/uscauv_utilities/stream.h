@@ -32,34 +32,50 @@
  *  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  **************************************************************************/
+#ifndef USCAUV_USCAUVUTILITIES_STREAM_H
+#define USCAUV_USCAUVUTILITIES_STREAM_H
 
 #include <sstream>
 #include <iostream>
+#include <type_traits>
 
-static void make_stream_recursive(std::stringstream &ss, std::string const & delim){}
-
-template <typename __Arg, typename... __Args>
-  void make_stream_recursive(std::stringstream & ss, std::string const & delim, __Arg const & arg)
+namespace uscauv
 {
-  ss << arg;
+  static void make_stream_recursive(std::stringstream &ss, std::string const & delim){}
+
+  template <typename __Arg, typename... __Args>
+    static typename std::enable_if<!std::is_arithmetic<__Arg>::value, void>::type make_stream_recursive(std::stringstream & ss, std::string const & delim, __Arg const & arg)
+  {
+    ss << arg;
+  }
+
+  template <typename __Arg, typename... __Args>
+    static typename std::enable_if<std::is_arithmetic<__Arg>::value, void>::type make_stream_recursive(std::stringstream & ss, std::string const & delim, __Arg const & arg)
+  {
+    ss << std::to_string(arg);
+  }
+
+  template <typename __Arg, typename... __Args>
+    static typename std::enable_if<!std::is_arithmetic<__Arg>::value, void>::type make_stream_recursive(std::stringstream & ss, std::string const & delim, __Arg const & arg, __Args&&... args)
+  {
+    ss << arg << delim;
+    make_stream_recursive(ss, delim, args...);
+  }
+
+  template <typename __Arg, typename... __Args>
+    static typename std::enable_if<std::is_arithmetic<__Arg>::value, void>::type make_stream_recursive(std::stringstream & ss, std::string const & delim, __Arg const & arg, __Args&&... args)
+  {
+    ss << std::to_string(arg) << delim;
+    make_stream_recursive(ss, delim, args...);
+  }
+
+  template <typename... __Args>
+    static std::string make_stream(std::string const & delim, __Args&&... args)
+    {
+      std::stringstream ss;
+      make_stream_recursive(ss, delim, args...);
+      return ss.str();
+    }
 }
 
-template <typename __Arg, typename... __Args>
-static  void make_stream_recursive(std::stringstream & ss, std::string const & delim, __Arg const & arg, __Args&&... args)
-{
-  ss << arg << delim;
-  make_stream_recursive(ss, delim, args...);
-}
-
-template <typename... __Args>
-static std::string make_stream(std::string const & delim, __Args&&... args)
-{
-  std::stringstream ss;
-  make_stream_recursive(ss, delim, args...);
-  return ss.str();
-}
-
-
-
-
-
+#endif // USCAUV_USCAUVUTILITIES_STREAM_H

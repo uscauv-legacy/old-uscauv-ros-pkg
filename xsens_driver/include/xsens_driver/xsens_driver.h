@@ -78,7 +78,7 @@ static _MacroStringMap const BAUD_NAMES_
     if (res != XRV_OK)							\
       ROS_ERROR("Unable to fetch device parameter [ %s ]. Error: [ %s ]", __DataString, xsensResultText( res )); \
     else ROS_INFO_STREAM("Retrieved parameter [ " << __DataString	\
-			 << " ] with value [ " << make_stream(std::string(", "), __Args) << " ]");}
+			 << " ] with value [ " << uscauv::make_stream(std::string(", "), __Args) << " ]");}
 
 struct CmtInfo
 {
