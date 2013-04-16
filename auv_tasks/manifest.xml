@@ -1,0 +1,18 @@
+<package>
+  <description brief="auv_tasks">
+
+     auv_tasks
+
+  </description>
+  <author>nalyd</author>
+  <license>BSD</license>
+  <review status="unreviewed" notes=""/>
+  <url>http://ros.org/wiki/auv_tasks</url>
+
+  <depend package="roscpp" />
+  <depend package="cpp11" />
+  <depend package="auv_controls" />
+  
+</package>
+
+

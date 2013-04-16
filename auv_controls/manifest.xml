@@ -13,7 +13,7 @@
   <depend package="cpp11" />
 
     <export>
-      <cpp cflags="-I${prefix}/include" lflags="-Wl,-rpath,${prefix}/lib -L${prefix}/lib -lauv_controls"/>
+      <cpp cflags="-I${prefix}/include -I${prefix}/cfg/cpp" lflags="-Wl,-rpath,${prefix}/lib -L${prefix}/lib -lauv_controls"/>
   </export>
   
 </package>
