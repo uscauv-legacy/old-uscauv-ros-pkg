@@ -43,13 +43,13 @@ namespace uscauv
 {
   static void make_stream_recursive(std::stringstream &ss, std::string const & delim){}
 
-  template <typename __Arg, typename... __Args>
+  template <typename __Arg>
     static typename std::enable_if<!std::is_arithmetic<__Arg>::value, void>::type make_stream_recursive(std::stringstream & ss, std::string const & delim, __Arg const & arg)
   {
     ss << arg;
   }
 
-  template <typename __Arg, typename... __Args>
+  template <typename __Arg>
     static typename std::enable_if<std::is_arithmetic<__Arg>::value, void>::type make_stream_recursive(std::stringstream & ss, std::string const & delim, __Arg const & arg)
   {
     ss << std::to_string(arg);
