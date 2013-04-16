@@ -78,14 +78,7 @@ static _MacroStringMap const BAUD_NAMES_
     if (res != XRV_OK)							\
       ROS_ERROR("Unable to fetch device parameter [ %s ]. Error: [ %s ]", __DataString, xsensResultText( res )); \
     else ROS_INFO_STREAM("Retrieved parameter [ " << __DataString	\
-			 << " ] with value [ " << make_stream(std::string(", "),  __Args ) << " ]");}
-
-/* static std::vector<std::function> const GETTER_FUNCTIONS_ */
-/* { */
-/* } */
-
-
-
+			 << " ] with value [ " << make_stream(std::string(", "), __Args) << " ]");}
 
 struct CmtInfo
 {
@@ -158,7 +151,7 @@ class XsensDriver
       GET_CMT_GETTER_LAMBDA( getProcessingFlags, cmt3_, "Processing Flags", cmt_info_.processing_flags_),
       GET_CMT_GETTER_LAMBDA( getTransmissionDelay, cmt3_, "Transmission Delay", cmt_info_.transmission_delay_),
       GET_CMT_GETTER_LAMBDA( getProductCode, cmt3_, "Product Code", cmt_info_.product_code_),
-      /* GET_CMT_GETTER_LAMBDA( getScenario, cmt3_, "Current Scenario", cmt_info_.current_scenario_type_, cmt_info_.current_scenario_version_) */
+      GET_CMT_GETTER_LAMBDA( getScenario, cmt3_, "Current Scenario", cmt_info_.current_scenario_type_, cmt_info_.current_scenario_version_)
    };
 
     cmt_getter_functions_ = getters;

@@ -36,20 +36,7 @@
 #include <sstream>
 #include <iostream>
 
-template <typename... __Args>
-std::string make_stream(std::string const & delim, __Args&&... args)
-{
-  std::stringstream ss;
-  make_stream_recursive(ss, delim, args...);
-  return ss.str();
-}
-
-template <typename __Arg, typename... __Args>
-  void make_stream_recursive(std::stringstream & ss, std::string const & delim, __Arg const & arg, __Args&&... args)
-{
-  ss << arg << delim;
-  make_stream_recursive(ss, delim, args...);
-}
+static void make_stream_recursive(std::stringstream &ss, std::string const & delim){}
 
 template <typename __Arg, typename... __Args>
   void make_stream_recursive(std::stringstream & ss, std::string const & delim, __Arg const & arg)
@@ -57,4 +44,22 @@ template <typename __Arg, typename... __Args>
   ss << arg;
 }
 
-/* void make_stream_recursive(std::stringstream &ss, std::string const & delim){} */
+template <typename __Arg, typename... __Args>
+static  void make_stream_recursive(std::stringstream & ss, std::string const & delim, __Arg const & arg, __Args&&... args)
+{
+  ss << arg << delim;
+  make_stream_recursive(ss, delim, args...);
+}
+
+template <typename... __Args>
+static std::string make_stream(std::string const & delim, __Args&&... args)
+{
+  std::stringstream ss;
+  make_stream_recursive(ss, delim, args...);
+  return ss.str();
+}
+
+
+
+
+
