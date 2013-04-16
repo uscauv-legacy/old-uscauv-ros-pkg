@@ -1,5 +1,5 @@
 /***************************************************************************
- *  include/auv_tasks/task_executor.h
+ *  src/teleop_task_node.cpp
  *  --------------------
  *
  *  Copyright (c) 2013, Dylan Foster
@@ -34,56 +34,16 @@
  **************************************************************************/
 
 
-#include <ros/ros.h>
-
-/// controllers
-#include <auv_controls/pid.h>
+#include <auv_tasks/teleop_task_node.h>
 
 
-class TaskExecutorNode
+int main(int argc, char ** argv)
 {
- private:
-  /// ROS interfaces
-  ros::NodeHandle nh_rel_;
+  ros::init(argc, argv, "teleop_task");
 
-  double loop_rate_hz_;
+  TeleopTaskNode teleop_task_;
 
- protected:
-  PID6D controller_;
+  teleop_task_.spin();
 
- protected:
-
-  /// Running spin() will cause this function to be called before the node begins looping the spingOnce() function.
-  virtual void spinFirst() = 0;
-
-  /// Running spin() will cause this function to get called at the loop rate until this node is killed.
-  virtual void spinOnce() = 0;
-
- public:
-  
-  void spin()
-  {
-    if( !nh_rel_.getParam("loop_rate", loop_rate_hz_) )
-      {
-	ROS_WARN("Parameter [loop_rate] not found. Using default.");
-	loop_rate_hz_ = 10.0;
-      }
-
-    ros::Rate loop_rate( loop_rate_hz_ );
-
-    ROS_INFO( "Spinning up Task Executor..." );
-    spinFirst();
-
-    ROS_INFO( "Task Executor is spinning at %.2f Hz.", loop_rate_hz_ ); 
-
-    while( ros::ok() )
-      {
-	spinOnce();
-	ros::spinOnce();
-	loop_rate.sleep();
-      }
-    
-    return;
-  }
-
-};
+  return 0;
+}

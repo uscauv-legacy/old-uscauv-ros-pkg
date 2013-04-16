@@ -12,6 +12,7 @@
   <depend package="roscpp" />
   <depend package="cpp11" />
   <depend package="auv_controls" />
+  <depend package="dynamic_reconfigure" />
   
 </package>
 

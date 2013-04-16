@@ -22,3 +22,5 @@ set(LIBRARY_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/lib)
 #rosbuild_gensrv()
 
 rosbuild_add_library(${PROJECT_NAME} src/task_executor.cpp)
+
+rosbuild_add_executable(teleop_task src/teleop_task_node.cpp)
