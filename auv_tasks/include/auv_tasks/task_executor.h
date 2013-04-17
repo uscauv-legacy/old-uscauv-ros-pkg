@@ -60,6 +60,11 @@ class TaskExecutorNode
   virtual void spinOnce() = 0;
 
  public:
+
+ TaskExecutorNode():
+  nh_rel_("~")
+    {}
+
   
   void spin()
   {

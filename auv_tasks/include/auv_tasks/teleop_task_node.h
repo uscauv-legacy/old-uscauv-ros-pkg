@@ -53,7 +53,7 @@ class TeleopTaskNode: public TaskExecutorNode
 
   void spinOnce()
   {
-    /* ROS_INFO("Nips Ecno"); */
+    controller_.updateAll();
   }
 
 };

@@ -20,9 +20,9 @@ rosbuild_find_ros_package(dynamic_reconfigure)
 include(${dynamic_reconfigure_PACKAGE_PATH}/cmake/cfgbuild.cmake)
 gencfg()
 
+rosbuild_genmsg()
+
 # Without this, libraries that link to this package will fail to find dynamic reconfigure headers
 include_directories(${PROJECT_SOURCE_DIR}/cfg/cpp)
 
 rosbuild_add_library(${PROJECT_NAME} src/pid.cpp src/controller.cpp)
-
-rosbuild_add_executable( pid_test src/pid_test.cpp )

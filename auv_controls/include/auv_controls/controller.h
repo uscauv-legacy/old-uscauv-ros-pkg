@@ -42,7 +42,9 @@ template <class __ControlType, unsigned int __Dim>
 class ControllerND
 {
  private:
-  std::array<__ControlType, __Dim> controllers_;
+  typedef std::array<__ControlType, __Dim> _ControllerArray;
+  
+  _ControllerArray controllers_;
 
  public:
   
@@ -88,6 +90,19 @@ class ControllerND
     typename std::enable_if<(__Idx < __Dim), double>::type update()
   {
     return controllers_.at(__Idx).update();
+  }
+
+  /** 
+   * Update all individual controllers
+   * 
+   */
+  void updateAll()
+  {
+    for(typename _ControllerArray::iterator controller_it = controllers_.begin();
+	controller_it != controllers_.end(); ++controller_it)
+      {
+	controller_it->update();
+      }
   }
 
   /** 

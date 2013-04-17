@@ -1,0 +1,6 @@
+<launch>
+  <arg name="topic" />
+
+  <node pkg="rqt_plot" type="rqt_plot" name="pid_plotter" args="$(arg topic)/x:y:e" />
+  
+</launch>

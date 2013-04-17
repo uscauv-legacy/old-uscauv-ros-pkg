@@ -43,7 +43,11 @@
 #include <dynamic_reconfigure/server.h>
 #include <auv_controls/PIDConfig.h>
 
+/// generic controller array
 #include <auv_controls/controller.h>
+
+#include <auv_controls/FeedbackLoop.h>
+
 
 class ReconfigurablePIDSettings
 {
@@ -55,7 +59,7 @@ class ReconfigurablePIDSettings
   typedef auv_controls::PIDConfig _PIDConfig;
   typedef dynamic_reconfigure::Server<_PIDConfig> _PIDReconfigureServer;
   
-  ros::NodeHandle nh_rel_;
+  ros::NodeHandle nh_rel_, nh_pid_;
   std::shared_ptr<_PIDReconfigureServer> reconfigure_server_;
   
   std::function<void()> settings_changed_callback_;
@@ -70,22 +74,24 @@ class ReconfigurablePIDSettings
   {
   }
 
-  void init(std::string const & name, std::string const & ns = "pid")
+  void init(std::string const & name)
   {
-    name_ = ns + "/" + name;
-    
+    name_ = name;
+
     /// Reconfigure server will resolve namespaces relative to ~/ns/name
-    ros::NodeHandle nh_pid( nh_rel_, name_ );
-    reconfigure_server_ = std::make_shared<_PIDReconfigureServer>( nh_pid );
+    nh_pid_ = ros::NodeHandle( nh_rel_, name_ );
+    
+    reconfigure_server_ = std::make_shared<_PIDReconfigureServer>( nh_pid_ );
 
     _PIDReconfigureServer::CallbackType reconfigure_callback;
     reconfigure_callback = std::bind(&ReconfigurablePIDSettings::reconfigureCallback, this,
     				     std::placeholders::_1, std::placeholders::_2);
 
     reconfigure_server_->setCallback( reconfigure_callback );
-
+    
     ROS_INFO("Created PID reconfigure server [ %s ]." , name_.c_str() );
-  }
+    
+ }
 
   void reconfigureCallback( _PIDConfig & config, uint32_t level )
   {
@@ -122,8 +128,17 @@ class PID1D
   double setpoint_, integral_term_, observed_value_, last_error_;
 
   ros::Time last_update_time_;
+  std::string name_;
 
   ReconfigurablePIDSettings settings_;
+
+ private:
+  typedef auv_controls::FeedbackLoop _FeedbackLoopMsg;
+  
+  /// ROS interfaces
+  ros::NodeHandle nh_rel_, nh_pid_;
+
+  ros::Publisher feedback_pub_;
   
  public:
 
@@ -131,15 +146,25 @@ class PID1D
   setpoint_( 0.0f ),
   integral_term_( 0.0f ),
   observed_value_( 0.0f ),
-  last_error_( 0.0f )
+  last_error_( 0.0f ),
+  nh_rel_("~")
     {
       
     }
  
-  void init(std::string const & name)
+  void init(std::string const & name, std::string const & ns = "pid")
   {
-    settings_.init( name );
+    name_ = ns + "/" + name;
     
+    /// nh_pid will resolve namespaces relative to ~/ns/name
+    nh_pid_ = ros::NodeHandle( nh_rel_, name_ );
+    
+    settings_.init( name_ );
+    
+    feedback_pub_ = nh_pid_.advertise<_FeedbackLoopMsg>( "feedback", 1 );
+    
+    ROS_INFO("Created PID publisher [ %s ].", (name_ + "/feedback").c_str());
+
     last_update_time_ = ros::Time::now();
 
     return;
@@ -177,9 +202,23 @@ class PID1D
         
     last_update_time_ = now;
       
+    publishLoop(setpoint_, observed_value_, output);
+
     return output;
   }
- 
+  
+ private:
+  void publishLoop(double const & x, double const & y, double const & e)
+    {
+      boost::shared_ptr<_FeedbackLoopMsg> msg( new _FeedbackLoopMsg );
+      
+      msg->x = x;
+      msg->y = y;
+      msg->e = e;
+      
+      feedback_pub_.publish(msg);
+    }
+   
 };
 
 typedef ControllerND<PID1D, 6> PID6D;
