@@ -39,21 +39,131 @@
 /// generic task
 #include <auv_tasks/task_executor.h>
 
+#include <tf/transform_listener.h>
 
+/// Seabee
+#include <seabee3_msgs/MotorVals.h>
+#include <seabee3_common/movement.h>
+
+typedef seabee3_msgs::MotorVals _MotorValsMsg;
+
+using namespace seabee3_common;
 
 class TeleopTaskNode: public TaskExecutorNode
 {
+ private:
+  /// ROS interfaces
+  ros::NodeHandle nh_rel_;
+  tf::TransformListener tf_listener_;
+  ros::Publisher motor_vals_pub_;
   
+ private:
+  std::string imu_frame_name_;
+
+  private:
   void spinFirst()
   {
+    /// all setpoints are initializes to zero
     controller_.init("linear/x", "linear/y", "linear/z",
-    		     "angular/x", "angular/y", "angular/z");
+    		     "angular/yaw", "angular/pitch", "angular/roll");
+
+    /// TODO: Load this as param
+    imu_frame_name_ = "/seabee3/sensors/imu";
+
+    nh_rel_ = ros::NodeHandle("~");
+    
+    motor_vals_pub_ = nh_rel_.advertise<_MotorValsMsg>("motor_vals", 1);
     
   }
 
   void spinOnce()
   {
-    controller_.updateAll();
+   	if( tf_listener_.canTransform( "/world", imu_frame_name_, ros::Time(0) ))
+	  {
+	    tf::StampedTransform world_to_imu_tf;
+	    
+	    try
+	      {
+		tf_listener_.lookupTransform( "/world", imu_frame_name_, ros::Time(0), world_to_imu_tf);
+
+	      }
+	    catch(tf::TransformException & ex)
+	      {
+		ROS_ERROR( "%s", ex.what() );
+		return;
+	      }
+
+	    double roll, pitch, yaw;
+	    
+	    /* Yaw around Z, pitch around Y, roll around X */
+	    world_to_imu_tf.getBasis().getEulerZYX( yaw, pitch, roll );
+	    
+	    roll *= 180 / M_PI;
+	    pitch *= 180 / M_PI;
+	    yaw *= 180 / M_PI;
+	   
+
+	    /// TODO: Add enum-type thing to PID6D such that axes 0-6 are called PID6D::YAW etc.
+	    controller_.setObserved<3>(yaw);
+	    controller_.setObserved<4>(pitch);
+	    controller_.setObserved<5>(roll);
+	    
+	  }
+	
+	publishMotors();
   }
+
+ private:
+  void publishMotors()
+  {
+    _MotorValsMsg msg;
+    
+    applyMotors(msg, movement::Axes::YAW, controller_.update<3>() );
+    applyMotors(msg, movement::Axes::PITCH, controller_.update<4>() );
+    applyMotors(msg, movement::Axes::ROLL, controller_.update<5>() );
+    
+    motor_vals_pub_.publish( msg );
+    
+  }
+
+  /// TODO:Redo this entire function
+  void applyMotors(_MotorValsMsg & msg, int const & axis, double val)
+  {
+    if( val > 100)
+      val = 100;
+    else if( val < -100)
+      val = -100;
+
+    int motor1_id = movement::ThrusterPairs::values[axis][0];
+    int motor2_id = movement::ThrusterPairs::values[axis][1];
+
+    msg.mask[motor1_id] = 1;
+    msg.mask[motor2_id] = 1;
+    
+    switch(axis)
+      {
+      case movement::Axes::YAW:
+	{
+	  msg.motors[motor1_id] += val;
+	  msg.motors[motor2_id] += -val;
+	  break;
+	}
+      case movement::Axes::PITCH:
+	{
+	  msg.motors[motor1_id] += -val;
+	  msg.motors[motor2_id] += val;
+	  break;
+	}
+      case movement::Axes::ROLL:
+	{
+	  msg.motors[motor1_id] += -val;
+	  msg.motors[motor2_id] += -val;
+	  break;
+	}
+      }
+    
+  }
+
+
 
 };

@@ -10,9 +10,13 @@
   <url>http://ros.org/wiki/auv_tasks</url>
 
   <depend package="roscpp" />
+  <depend package="tf" />
   <depend package="cpp11" />
   <depend package="auv_controls" />
   <depend package="dynamic_reconfigure" />
+
+  <depend package="seabee3_common" />
+  <depend package="seabee3_msgs" />
   
 </package>
 

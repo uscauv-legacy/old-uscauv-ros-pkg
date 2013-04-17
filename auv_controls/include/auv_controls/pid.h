@@ -160,6 +160,10 @@ class PID1D
     nh_pid_ = ros::NodeHandle( nh_rel_, name_ );
     
     settings_.init( name_ );
+
+    std::function<void()> reconfigure_cb = std::bind(&PID1D::reconfigureCallback, this);
+
+    settings_.registerCallback( reconfigure_cb );
     
     feedback_pub_ = nh_pid_.advertise<_FeedbackLoopMsg>( "feedback", 1 );
     
@@ -205,6 +209,13 @@ class PID1D
     publishLoop(setpoint_, observed_value_, output);
 
     return output;
+  }
+
+  void reconfigureCallback()
+  {
+    ROS_INFO("Resetting integral term...");
+
+    integral_term_ = 0.0f;
   }
   
  private:
