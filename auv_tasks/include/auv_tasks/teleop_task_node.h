@@ -38,6 +38,7 @@
 
 /// generic task
 #include <auv_tasks/task_executor.h>
+#include <auv_tasks/teleop_policy.h>
 
 #include <tf/transform_listener.h>
 
@@ -49,7 +50,7 @@ typedef seabee3_msgs::MotorVals _MotorValsMsg;
 
 using namespace seabee3_common;
 
-class TeleopTaskNode: public TaskExecutorNode
+class TeleopTaskNode: public TaskExecutorNode, public TeleopPolicy
 {
  private:
   /// ROS interfaces
@@ -59,13 +60,18 @@ class TeleopTaskNode: public TaskExecutorNode
   
  private:
   std::string imu_frame_name_;
+  
+ public:
+ TeleopTaskNode(): TeleopPolicy("teleop_task"){}
 
-  private:
+ private:
   void spinFirst()
   {
     /// all setpoints are initializes to zero
     controller_.init("linear/x", "linear/y", "linear/z",
     		     "angular/yaw", "angular/pitch", "angular/roll");
+
+    init();
 
     /// TODO: Load this as param
     imu_frame_name_ = "/seabee3/sensors/imu";
@@ -78,39 +84,44 @@ class TeleopTaskNode: public TaskExecutorNode
 
   void spinOnce()
   {
-   	if( tf_listener_.canTransform( "/world", imu_frame_name_, ros::Time(0) ))
+    if( !getButtonByName("enable") )
+      return;
+
+    ROS_INFO("Got enable lock");
+
+    if( tf_listener_.canTransform( "/world", imu_frame_name_, ros::Time(0) ))
+      {
+	tf::StampedTransform world_to_imu_tf;
+	    
+	try
 	  {
-	    tf::StampedTransform world_to_imu_tf;
-	    
-	    try
-	      {
-		tf_listener_.lookupTransform( "/world", imu_frame_name_, ros::Time(0), world_to_imu_tf);
+	    tf_listener_.lookupTransform( "/world", imu_frame_name_, ros::Time(0), world_to_imu_tf);
 
-	      }
-	    catch(tf::TransformException & ex)
-	      {
-		ROS_ERROR( "%s", ex.what() );
-		return;
-	      }
+	  }
+	catch(tf::TransformException & ex)
+	  {
+	    ROS_ERROR( "%s", ex.what() );
+	    return;
+	  }
 
-	    double roll, pitch, yaw;
+	double roll, pitch, yaw;
 	    
-	    /* Yaw around Z, pitch around Y, roll around X */
-	    world_to_imu_tf.getBasis().getEulerZYX( yaw, pitch, roll );
+	/* Yaw around Z, pitch around Y, roll around X */
+	world_to_imu_tf.getBasis().getEulerZYX( yaw, pitch, roll );
 	    
-	    roll *= 180 / M_PI;
-	    pitch *= 180 / M_PI;
-	    yaw *= 180 / M_PI;
+	roll *= 180 / M_PI;
+	pitch *= 180 / M_PI;
+	yaw *= 180 / M_PI;
 	   
 
-	    /// TODO: Add enum-type thing to PID6D such that axes 0-6 are called PID6D::YAW etc.
-	    controller_.setObserved<3>(yaw);
-	    controller_.setObserved<4>(pitch);
-	    controller_.setObserved<5>(roll);
+	/// TODO: Add enum-type thing to PID6D such that axes 0-6 are called PID6D::YAW etc.
+	controller_.setObserved<3>(yaw);
+	controller_.setObserved<4>(pitch);
+	controller_.setObserved<5>(roll);
 	    
-	  }
+      }
 	
-	publishMotors();
+    publishMotors();
   }
 
  private:
