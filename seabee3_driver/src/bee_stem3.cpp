@@ -438,7 +438,7 @@ void BeeStem3::setThruster( int num, int val )
      */
 
     mMotorControllerState[num] = val; //save the new state
-    printf( "Set thruster [%d]:%d\n", num, val );
+    // printf( "Set thruster [%d]:%d\n", num, val );
     char thrusterCmd = 0xff;
     //char temp;
 

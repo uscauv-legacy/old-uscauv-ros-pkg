@@ -38,8 +38,8 @@
 
 
 #define TELEOPPOLICY_CHECK_ENABLED()					\
-  if ( !(initialized_) ){					\
-    ROS_WARN("Teleop policy [ %s ] is not ready.", name_.c_str() ); return false; }
+  if ( !(initialized_ && cached_) ){					\
+    ROS_DEBUG("Teleop policy [ %s ] is not ready.", name_.c_str() ); return false; }
 
 class TeleopPolicy
 {
@@ -55,7 +55,7 @@ class TeleopPolicy
   /// variables
   std::string name_;
 
-  bool initialized_;
+  bool initialized_, cached_;
 
   /// TODO: Set all of the member values of this message to zero (need to figure out what length of vectors to use)
   _JoyMsg last_joystick_message_;
@@ -66,7 +66,8 @@ class TeleopPolicy
   TeleopPolicy(std::string const & name):
   nh_rel_("~"),
   name_(name),
-  initialized_( false )
+  initialized_( false ),
+  cached_( false )
     {}
 
   void init()
@@ -104,6 +105,8 @@ class TeleopPolicy
   
   void joyCallback(const _JoyMsg::ConstPtr & msg )
   {
+    if (!cached_) cached_ = true;
+    
     last_joystick_message_ = *msg;
     return;
   }
@@ -115,7 +118,7 @@ class TeleopPolicy
     return last_joystick_message_.buttons[ button_map_[ button_name ] ];   
   }
 
-  float getAxisByIndex(std::string const & axis_name )
+  float getAxisByName(std::string const & axis_name )
   {
     TELEOPPOLICY_CHECK_ENABLED();
 

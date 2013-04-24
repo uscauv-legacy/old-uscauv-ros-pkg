@@ -18,3 +18,4 @@ set(LIBRARY_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/lib)
 
 # Static image publisher node
 rosbuild_add_executable( static_image_publisher nodes/static_image_publisher_node.cpp )
+rosbuild_add_library( uscauv_utilities src/pose_integrator.cpp )

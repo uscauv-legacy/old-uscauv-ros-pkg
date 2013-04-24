@@ -1,29 +1,26 @@
 <launch>
   <arg name="simulate"  default="false" />
-  <arg name="teleop"    default="true" />
-    
+  <arg name="visualize" default="false" />
+
+  <node pkg="rqt_reconfigure" type="rqt_reconfigure" name="reconfigure" />
 
   <remap from="seabee3/motor_vals" to="teleop_task/motor_vals" />
+
+  <remap from="teleop_task/joy" to="joy" />
+
+  <node pkg="joy" type="joy_node" name="joy" />
 
   <include unless="$(arg simulate)" file="$(find seabee3_driver)/launch/seabee3_driver.launch" >
   </include>
   
-  <include file="$(find xsens_driver)/launch/xsens_driver.launch" >
+  <include unless="$(arg simulate)" file="$(find xsens_driver)/launch/xsens_driver.launch" >
   </include>
   
   <include file="$(find auv_tasks)/launch/teleop_task.launch" >
   </include>
 
-  <include file="$(find uscauv_visualization)/launch/imu_visualization.launch" >
+  <include if="$(arg visualize)" file="$(find uscauv_visualization)/launch/imu_visualization.launch" >
     <arg name="driver" value="false" />
   </include>
-
-  <include file="$(find uscauv_visualization)/launch/pid_plotter.launch" >
-    <arg name="topic" value="/teleop_task/pid/angular/yaw/feedback
-			     /teleop_task/pid/angular/pitch/feedback
-			     /teleop_task/pid/angular/roll/feedback" />
-  </include>
-  
-  <node pkg="rqt_reconfigure" type="rqt_reconfigure" name="reconfigure" />
-    
+   
 </launch>

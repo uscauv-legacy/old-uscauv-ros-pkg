@@ -12,8 +12,10 @@
   <depend package="roscpp" />
   <depend package="tf" />
   <depend package="cpp11" />
-  <depend package="auv_controls" />
   <depend package="dynamic_reconfigure" />
+
+  <depend package="auv_controls" />
+  <depend package="uscauv_utilities" />  
 
   <depend package="seabee3_common" />
   <depend package="seabee3_msgs" />
