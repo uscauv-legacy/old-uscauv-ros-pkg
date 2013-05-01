@@ -10,6 +10,8 @@
 
   <node pkg="joy" type="joy_node" name="joy" />
 
+  <rosparam command="load" param="teleop_task/pid" file="$(find controls_config)/params/simple_pid.yaml" />
+  
   <include unless="$(arg simulate)" file="$(find seabee3_driver)/launch/seabee3_driver.launch" >
   </include>
   

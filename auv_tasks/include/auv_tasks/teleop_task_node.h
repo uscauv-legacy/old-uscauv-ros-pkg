@@ -75,10 +75,10 @@ class TeleopTaskNode: public TaskExecutorNode, public TeleopPolicy
  private:
   std::string imu_frame_name_;
 
-  /* PoseIntegrator pose_integrator_; */
+  int pitch_setpoint_;
   
  public:
- TeleopTaskNode(): TeleopPolicy("teleop_task"){}
+ TeleopTaskNode(): TeleopPolicy("teleop_task"),pitch_setpoint_(0){}
 
  private:
   void spinFirst()
@@ -134,26 +134,46 @@ class TeleopTaskNode: public TaskExecutorNode, public TeleopPolicy
 	    
       }
 
-    if( getButtonByName("enable") )
+    if( getButton("enable") )
       {
 	/// Apply setpoints from joystick
 
-	/// Rack-and-pinion-style yaw control
-	controller_.setSetpoint<0>( getAxisByName("linear.x")*100 );
-	controller_.setSetpoint<1>( getAxisByName("linear.y")*100 );
-	controller_.setSetpoint<2>( getAxisByName("linear.z")*100 );
-	
-	controller_.setSetpoint<3>( getAxisByName("angular.z")*180 );
-	
-	if( getButtonByIndex(0))
+	if( getButtonAquired("increment_pitch") )
 	  {
-	    ROS_INFO("Doing a barrel roll...");
- 	    controller_.setSetpoint<5>(getButtonByIndex(0)*180);
+	    if ( !pitch_setpoint_)
+	      pitch_setpoint_ = 90;
+	    else
+	      pitch_setpoint_ = 0;
+	    controller_.setSetpoint<4>(pitch_setpoint_);
+	    ROS_INFO("New pitch setpoint [ %d ]", pitch_setpoint_);
+	  }
+
+	controller_.setSetpoint<0>( getAxis("linear.x")*100 );
+	controller_.setSetpoint<1>( getAxis("linear.y")*100 );
+	controller_.setSetpoint<2>( getAxis("linear.z")*100 );
+	
+	controller_.setSetpoint<3>( getAxis("angular.z")*180 );
+	
+	if( getButton("barrel_roll"))
+	  {
+	    /* ROS_INFO("Doing a barrel roll..."); */
+ 	    controller_.setSetpoint<5>(180);
  	    controller_.setObserved<5>(0);
 	  }
+	
+	if(getButtonAquired("barrel_roll"))
+	  {
+	    ROS_INFO("Entering barrel roll...");
+	  }
+	else if( getButtonReleased("barrel_roll") )
+	  {
+	    controller_.setSetpoint<5>(0);
+	    ROS_INFO("Halted barrel roll.");
+	  }
+	
 	geometry_msgs::Twist twist;
 	
-	twist.linear.z = getAxisByName("linear.z");
+	twist.linear.z = getAxis("linear.z");
 
 	/* pose_integrator_.setVelocity(twist); */
 		
@@ -163,9 +183,8 @@ class TeleopTaskNode: public TaskExecutorNode, public TeleopPolicy
 	controller_.setSetpoint<0>(0);
 	controller_.setSetpoint<1>(0);
 	controller_.setSetpoint<2>(0);
-
 	controller_.setSetpoint<3>(0);
-
+	controller_.setSetpoint<4>(0);
 	controller_.setSetpoint<5>(0);
 	
       }

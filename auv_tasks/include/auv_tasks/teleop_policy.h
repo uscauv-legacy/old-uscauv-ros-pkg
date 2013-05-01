@@ -44,6 +44,7 @@
 class TeleopPolicy
 {
  private:
+  typedef std::map<std::string, std::string> _ButtonMap;
   typedef std::map<std::string, unsigned int> _ButtonIndexMap;
   typedef sensor_msgs::Joy _JoyMsg;
   typedef XmlRpc::XmlRpcValue _XmlVal;
@@ -56,18 +57,22 @@ class TeleopPolicy
   std::string name_;
 
   bool initialized_, cached_;
+  long unsigned int msg_count_;
 
-  /// TODO: Set all of the member values of this message to zero (need to figure out what length of vectors to use)
-  _JoyMsg last_joystick_message_;
+  /// TODO: Initialize to zero
+  _JoyMsg last_joystick_message_, second_last_joystick_message_;
   
-  _ButtonIndexMap axes_map_, button_map_;
+  _ButtonIndexMap axes_msg_map_, button_msg_map_;
+
+  _ButtonMap axes_map_, button_map_;
 
  public:
   TeleopPolicy(std::string const & name):
   nh_rel_("~"),
   name_(name),
   initialized_( false ),
-  cached_( false )
+  cached_( false ),
+  msg_count_( 0 )
     {}
 
   void init()
@@ -86,65 +91,93 @@ class TeleopPolicy
 	return;
       }
 
-    _XmlVal & axes = assignments["axes"];
-    _XmlVal & buttons = assignments["buttons"];
+    _XmlVal & high_level = assignments["high_level"];
+    _XmlVal & low_level = assignments["low_level"]
+;
+    _XmlVal & axes = high_level["axes"];
+    _XmlVal & buttons = high_level["buttons"];
+    _XmlVal & axes_idx = low_level["axes"];
+    _XmlVal & buttons_idx = low_level["buttons"];
     
     for( _XmlVal::iterator axes_it = axes.begin(); axes_it != axes.end(); ++axes_it )
       {
-	axes_map_[axes_it->first] = int(axes_it->second);
+    	axes_map_[axes_it->first] = std::string(axes_it->second);
       }
     
     for( _XmlVal::iterator buttons_it = buttons.begin(); buttons_it != buttons.end(); ++buttons_it )
       {
-	button_map_[buttons_it->first] = int(buttons_it->second);
+    	button_map_[buttons_it->first] = std::string(buttons_it->second);
+      }
+
+    for( _XmlVal::iterator axes_it = axes_idx.begin(); axes_it != axes_idx.end(); ++axes_it )
+      {
+    	axes_msg_map_[axes_it->first] = int(axes_it->second);
+      }
+    
+    for( _XmlVal::iterator buttons_it = buttons_idx.begin(); buttons_it != buttons_idx.end(); ++buttons_it )
+      {
+    	button_msg_map_[buttons_it->first] = int(buttons_it->second);
       }
     
     initialized_ = true;
     return;
   }
   
+  /// TODO: Fix cached criteria
   void joyCallback(const _JoyMsg::ConstPtr & msg )
   {
-    if (!cached_) cached_ = true;
-    
+    second_last_joystick_message_ = last_joystick_message_;
+
     last_joystick_message_ = *msg;
+
+    msg_count_++;
+
+    if ( msg_count_ > 1)
+      cached_ = true;
+    
     return;
   }
 
-  bool getButtonByName(std::string const & button_name )
+  bool getButton(std::string const & button_name )
   {
     TELEOPPOLICY_CHECK_ENABLED();
     
-    return last_joystick_message_.buttons[ button_map_[ button_name ] ];   
+    return last_joystick_message_.buttons[ button_msg_map_ [ button_map_[ button_name ] ] ];   
   }
 
-  float getAxisByName(std::string const & axis_name )
-  {
-    TELEOPPOLICY_CHECK_ENABLED();
-
-    return last_joystick_message_.axes[ axes_map_[ axis_name ] ];   
-  }
-
-  bool getButtonByIndex(unsigned int const & idx )
+  bool getButtonAquired(std::string const & button_name )
   {
     TELEOPPOLICY_CHECK_ENABLED();
     
-    return last_joystick_message_.buttons[ idx ];   
+    unsigned int const & button_idx = button_msg_map_ [ button_map_[ button_name ] ];
+
+    return last_joystick_message_.buttons[ button_idx ]
+      && ! second_last_joystick_message_.buttons[ button_idx ];   
   }
 
-  float getAxisByIndex(unsigned int const & idx )
+  bool getButtonReleased(std::string const & button_name )
+  {
+    TELEOPPOLICY_CHECK_ENABLED();
+    
+    unsigned int const & button_idx = button_msg_map_ [ button_map_[ button_name ] ];
+
+    return ! last_joystick_message_.buttons[ button_idx ]
+      && second_last_joystick_message_.buttons[ button_idx ];   
+  }
+
+  float getAxis(std::string const & axis_name )
   {
     TELEOPPOLICY_CHECK_ENABLED();
 
-    return last_joystick_message_.axes[ idx ];   
+    return last_joystick_message_.axes[ axes_msg_map_[ axes_map_[ axis_name ] ] ];
   }
 
   float getButtonsAsAxis(std::string const & name1, std::string const & name2)
   {
     TELEOPPOLICY_CHECK_ENABLED();
 
-    return last_joystick_message_.axes[ axes_map_[ name1 ] ],
-      - last_joystick_message_.axes[ axes_map_[ name2 ] ];   
+    return last_joystick_message_.buttons[ button_msg_map_[ button_map_[ name1 ] ] ],
+      - last_joystick_message_.buttons[ button_msg_map_[ button_map_[ name2 ] ]];   
   }
 
 };
