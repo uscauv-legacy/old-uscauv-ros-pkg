@@ -1,0 +1,22 @@
+<launch>
+  <!-- Name of the camera we will be streaming data from -->
+  <arg name="camera" />
+  <arg name="rate" default="10" />
+
+  <include file="$(find uscauv_camera)/launch/monocular_camera.launch" >
+    <arg name="camera" value="$(arg camera)" />
+  </include>
+
+  <node name="$(arg camera)_view" type="image_view" pkg="image_view" args="image:=$(arg camera)/image_color" />
+  <node name="color_view" type="image_view" pkg="image_view" args="image:=color_classifier/blaze_orange_classified" />
+
+  <include ns="model" file="$(find color_model)/launch/upload_test_colors.launch" />
+
+  <remap from="color_classifier/image_color" to="$(arg camera)/image_color" />
+
+  <include file="$(find color_classification)/launch/color_classifier.launch" >
+    <arg name="rate" value="$(arg rate)" />
+  </include>
+  
+
+</launch>

@@ -5,3 +5,5 @@ msg_gen/
 srv_gen/
 **/cfg/cpp
 **/cfg/*.cfgc
+*~
+docs/

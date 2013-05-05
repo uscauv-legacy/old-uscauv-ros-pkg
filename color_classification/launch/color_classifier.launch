@@ -1,0 +1,15 @@
+<launch>
+  <arg name="pkg" value="color_classification" />
+  <arg name="name" value="color_classifier" />
+  <arg name="type" default="$(arg name)" />
+  <arg name="rate" default="10" />
+  <arg name="args" value="_loop_rate:=$(arg rate)" />
+
+  <node
+      pkg="$(arg pkg)"
+      type="$(arg type)"
+      name="$(arg name)"
+      args="$(arg args)"
+      output="screen" />
+  
+</launch>
