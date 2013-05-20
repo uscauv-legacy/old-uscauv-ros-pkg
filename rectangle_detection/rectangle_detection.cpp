@@ -4,15 +4,19 @@
 using namespace std;
 
 typedef vector<SearchNode> SearchNodeContainer;
+typedef vector<SearchNode> SuccessorNodeContainer;
+typedef vector<SearchNode> OpenNodeContainer;
+typedef vector<SearchNode> ClosedNodeContainer;
+typedef vector<SearchNode> RectangleContainer;
 typedef vector<Intersect> IntersectsContainer;
 typedef cv::Mat Mat;
 typedef cv::Scalar Scalar;
 
-bool matchNodes(SearchNode, SearchNodeContainer);
-void addSuccessorsToOpenList(SearchNodeContainer, SearchNodeContainer &, SearchNodeContainer &);
-void expandNode(SearchNode, IntersectsContainer, SearchNodeContainer &);
-SearchNode nextNode(SearchNodeContainer &, double);
-void drawDetectedRectangles(const SearchNodeContainer &, Mat &);
+bool matchNodes(const SearchNode &, const SearchNodeContainer &);
+void addSuccessorsToOpenList(const SuccessorNodeContainer &, OpenNodeContainer &, ClosedNodeContainer &);
+void expandNode(SearchNode, const IntersectsContainer &, SuccessorNodeContainer &);
+SearchNode nextNode(OpenNodeContainer &, double);
+void drawDetectedRectangles(const RectangleContainer &, Mat &);
 
 int main(int argc, char** argv)
 {
@@ -44,7 +48,10 @@ int main(int argc, char** argv)
 	{
 	
 		// Data
-		SearchNodeContainer successor_nodes_, open_nodes_, closed_nodes_, rectangles_;
+		SuccessorNodeContainer successor_nodes_; 
+		OpenNodeContainer open_nodes_;
+		ClosedNodeContainer closed_nodes_;
+		RectangleContainer rectangles_;
 	
 		IntersectsContainer initial_intersect_;
 		
@@ -97,9 +104,9 @@ int main(int argc, char** argv)
 }
 
 // Compare successor node to all closed or open nodes
-bool matchNodes(SearchNode successor, SearchNodeContainer nodes)
+bool matchNodes(const SearchNode &successor, const SearchNodeContainer &nodes)
 {
-	for(SearchNodeContainer::iterator it = nodes.begin(); it != nodes.end(); ++it)
+	for(SearchNodeContainer::const_iterator it = nodes.begin(); it != nodes.end(); ++it)
 	{
 		if(successor == *it)
 		{		
@@ -110,54 +117,54 @@ bool matchNodes(SearchNode successor, SearchNodeContainer nodes)
 }
 
 // Adds list of successor nodes to open nodes
-void addSuccessorsToOpenList(SearchNodeContainer successor, SearchNodeContainer &open, SearchNodeContainer &closed)
+void addSuccessorsToOpenList(const SuccessorNodeContainer &successor_nodes, OpenNodeContainer &open_nodes, ClosedNodeContainer &closed_nodes)
 {
-	for(SearchNodeContainer::iterator it = successor.begin(); it != successor.end(); ++it)
+	for(SuccessorNodeContainer::const_iterator it = successor_nodes.begin(); it != successor_nodes.end(); ++it)
 	{		
-		if((!matchNodes(*it, closed)) &&	
-			(!matchNodes(*it, open)))
+		if((!matchNodes(*it, closed_nodes)) &&	
+			(!matchNodes(*it, open_nodes)))
 		{
 			printf("Pushing back successor: ");
 			it->getIntersect().print("");
-			open.push_back(*it);
+			open_nodes.push_back(*it);
 		}
 	}
 }
 
 //TODO: Investigate this function
 // Expand a node
-void expandNode(SearchNode search, const IntersectsContainer intersects, SearchNodeContainer &successor)
+void expandNode(SearchNode search, const IntersectsContainer &intersects, SuccessorNodeContainer &successor_nodes)
 {
-	successor.clear();
+	successor_nodes.clear();
 	IntersectsContainer valid_intersects = search.findValidIntersects(intersects);
 	printf("Number of valid intersect successors: %d \n", valid_intersects.size());
 	for(IntersectsContainer::const_iterator it = intersects.begin(); it != intersects.end(); ++it)
 	{
 		search.addToCorners(search.getIntersect());
 		SearchNode node(*it, search.getCorners());
-		successor.push_back(node);
+		successor_nodes.push_back(node);
 	}
 }
 
 // Determines the next node to expand using value of theta
-SearchNode nextNode(SearchNodeContainer &open, double theta)
+SearchNode nextNode(OpenNodeContainer &open_nodes, double theta)
 {
 	int index = 0;
-	for(SearchNodeContainer::iterator it = open.begin(); it != open.end(); ++it){
+	for(OpenNodeContainer::iterator it = open_nodes.begin(); it != open_nodes.end(); ++it){
 		if((it->differenceFromAngle(theta) + it->getCornersSize())<
-		   (open[index].differenceFromAngle(theta)) + open[index].getCornersSize()){
-			index = (it - open.begin());
+		   (open_nodes[index].differenceFromAngle(theta)) + open_nodes[index].getCornersSize()){
+			index = (it - open_nodes.begin());
 		}
 	}
-	SearchNode return_node = open[index];
-	open.erase(open.begin() + index);
+	SearchNode return_node = open_nodes[index];
+	open_nodes.erase(open_nodes.begin() + index);
 	return return_node;
 }	
 
 // Draw detected rectangles on image
-void drawDetectedRectangles(const SearchNodeContainer &rectangles, Mat &image)
+void drawDetectedRectangles(const RectangleContainer &rectangles, Mat &image)
 {
-	for(SearchNodeContainer::const_iterator it = rectangles.begin(); it != rectangles.end(); ++it)
+	for(RectangleContainer::const_iterator it = rectangles.begin(); it != rectangles.end(); ++it)
 	{
 		line(image, it->getCorners(0).getIntersect(), 
 			 it->getCorners(1).getIntersect(), 

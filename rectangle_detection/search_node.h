@@ -25,7 +25,7 @@ class SearchNode
 		Intersect getCorners(int) const;
 		int getCornersSize() const;
 		void addToCorners(Intersect);
-		bool operator== (const SearchNode &);
+		bool operator== (const SearchNode &) const;
 		void printCorners() const;
 		double differenceFromAngle(double) const;
 		bool isRectangle(double, double) const;
@@ -61,7 +61,7 @@ void SearchNode::addToCorners(Intersect i)
 	corners_.push_back(i);
 }
 
-bool SearchNode::operator== (const SearchNode &right)
+bool SearchNode::operator== (const SearchNode &right) const
 {
     return ((intersect_ == right.getIntersect()) && 
     		(matchCorners(right.corners_)));
