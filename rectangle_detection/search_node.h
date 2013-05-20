@@ -63,8 +63,13 @@ void SearchNode::addToCorners(Intersect i)
 
 bool SearchNode::operator== (const SearchNode &right) const
 {
-    return ((intersect_ == right.getIntersect()) && 
-    		(matchCorners(right.corners_)));
+    bool match = ((intersect_ == right.getIntersect()) && 
+    		(matchCorners(right.getCorners())));
+    		
+    if(match) printf("Matched! \n");
+    else printf("Not matched! \n");
+    
+    return match;
 }
 
 void SearchNode::printCorners() const
@@ -98,10 +103,7 @@ bool SearchNode::matchCorners(const CornersContainer &c) const
 	
 	for(CornersContainer::const_iterator it = corners_.begin(); it != corners_.end(); ++it)
 	{
-		if(it->getIntersect() != c[it-corners_.begin()].getIntersect())
-		{
-			return false;
-		}
+		if(!(it->getIntersect() == c[it-corners_.begin()].getIntersect())) return false;
 	}
 	
 	return true;
@@ -116,8 +118,10 @@ SearchNode::IntersectsContainer SearchNode::findValidIntersects(const Intersects
 		if((it->getLine(1) == intersect_.getLine(1)) || (it->getLine(1) == intersect_.getLine(2)) ||
 		   (it->getLine(2) == intersect_.getLine(1)) || (it->getLine(2) == intersect_.getLine(2)))
 		{
-			valid_intersects.push_back(*it);
-			printf("Intersect added to valid_intersects.\n");
+			if(!(*it == intersect_)){
+				valid_intersects.push_back(*it);
+				it->print("Intersect added to valid_intersects: ");
+			}
 		}
 	}
 

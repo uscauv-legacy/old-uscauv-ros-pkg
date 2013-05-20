@@ -41,8 +41,8 @@ int main(int argc, char** argv)
 	
 	HoughLineTransform transform_(image_src_);
 	transform_.applyHoughLineTransform();
-	imshow("Hough Lines", transform_.getImageDstColor());
-	cv::waitKey(0);
+	//imshow("Hough Lines", transform_.getImageDstColor());
+	//cv::waitKey(0);
 	
 	if(transform_.getIntersectsSize() >= 4) 
 	{
@@ -64,6 +64,7 @@ int main(int argc, char** argv)
 		// While there are unexpanded nodes:
 		while(!open_nodes_.empty()){
 			printf("Number of nodes in open_nodes: %d \n", open_nodes_.size());	
+			if(open_nodes_.size() > 5) break;
 		
 			// Expand (find the successors of) the current node
 			expandNode(search_node_, transform_.getIntersects(), successor_nodes_);
@@ -106,10 +107,14 @@ int main(int argc, char** argv)
 // Compare successor node to all closed or open nodes
 bool matchNodes(const SearchNode &successor, const SearchNodeContainer &nodes)
 {
+	successor.getIntersect().print("Matching nodes to: ");
 	for(SearchNodeContainer::const_iterator it = nodes.begin(); it != nodes.end(); ++it)
 	{
+		it->getIntersect().print("Node to match: ");
+	
 		if(successor == *it)
 		{		
+			printf("Nodes matched! \n");
 			return true;
 		}
 	}
@@ -135,13 +140,14 @@ void addSuccessorsToOpenList(const SuccessorNodeContainer &successor_nodes, Open
 // Expand a node
 void expandNode(SearchNode search, const IntersectsContainer &intersects, SuccessorNodeContainer &successor_nodes)
 {
+	search.getIntersect().print("Expanding node: ");
 	successor_nodes.clear();
 	IntersectsContainer valid_intersects = search.findValidIntersects(intersects);
 	printf("Number of valid intersect successors: %d \n", valid_intersects.size());
-	for(IntersectsContainer::const_iterator it = intersects.begin(); it != intersects.end(); ++it)
+	for(IntersectsContainer::iterator it = valid_intersects.begin(); it != valid_intersects.end(); ++it)
 	{
-		search.addToCorners(search.getIntersect());
 		SearchNode node(*it, search.getCorners());
+		node.addToCorners(search.getIntersect());
 		successor_nodes.push_back(node);
 	}
 }
