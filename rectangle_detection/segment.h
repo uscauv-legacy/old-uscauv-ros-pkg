@@ -8,17 +8,19 @@ using namespace std;
 class Segment 
 {
 	private:
-		cv::Point endpoint_1_, endpoint_2_;
+		typedef cv::Point Point;
+		
+		Point endpoint_1_, endpoint_2_;
 	
 	public:	
-		bool operator== (const Segment &);
-		cv::Point getEndpoint(int) const;
-		Segment(cv::Point, cv::Point);
+		bool operator== (const Segment &) const;
+		Point getEndpoint(int) const;
+		Segment(Point, Point);
 		Segment();
 		~Segment();
 };
 
-bool Segment::operator== (const Segment &right)
+bool Segment::operator== (const Segment &right) const
 {
     return (((endpoint_1_ == right.getEndpoint(1))  || 
     		 (endpoint_1_ == right.getEndpoint(2))) &&
@@ -26,14 +28,14 @@ bool Segment::operator== (const Segment &right)
            	 (endpoint_2_ == right.getEndpoint(2))));
 }
 
-cv::Point Segment::getEndpoint(int num) const
+Segment::Point Segment::getEndpoint(int num) const
 {
 	if(num == 1) return endpoint_1_;
 	
 	else return endpoint_2_;
 }
 
-Segment::Segment(cv::Point p1, cv::Point p2)
+Segment::Segment(Point p1, Point p2)
 {
 	endpoint_1_ = p1;
 	endpoint_2_ = p2;

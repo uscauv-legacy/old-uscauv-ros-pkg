@@ -13,38 +13,43 @@ using namespace std;
 class HoughLineTransform 
 {
 	private:
-		cv::Mat image_src_, image_dst_, image_dst_color_;
-		vector<cv::Vec2f> lines_;
-		vector<Intersect> intersects_;
-		vector<Segment> segments_;
+		typedef vector<cv::Vec2f> LinesContainer;
+		typedef vector<Intersect> IntersectsContainer;
+		typedef vector<Segment> SegmentsContainer;
+		typedef cv::Mat Mat;
+		typedef cv::Point Point;
+		typedef cv::Scalar Scalar;
+		
+		Mat image_src_, image_dst_, image_dst_color_;
+		LinesContainer lines_;
+		IntersectsContainer intersects_;
+		SegmentsContainer segments_;
 		float rho_, theta_;
-		cv::Point point_1_, point_2_;
-		cv::Point point_A1_, point_A2_, point_B1_, point_B2_, intersect_;
-		double a_, b_, x0_, y0_;
-		double theta_error_;
+		Point point_1_, point_2_, point_A1_, point_A2_, point_B1_, point_B2_, intersect_;
+		double a_, b_, x0_, y0_, theta_error_;
 	
 	public:
-		const vector<Intersect> getIntersects() const;
+		const IntersectsContainer getIntersects() const;
 		Intersect getIntersects(int) const;
 		int getIntersectsSize() const;
-		cv::Mat getImageSrc() const;
-		cv::Mat getImageDst() const;
-		cv::Mat getImageDstColor() const;
-		Segment * findMatchingSegment(cv::Point, cv::Point, vector<Segment> &);
-		int calculateDenominator(cv::Point, cv::Point, cv::Point, cv::Point);
-		cv::Point calculateIntersect(cv::Point, cv::Point, cv::Point, cv::Point, int);
+		Mat getImageSrc() const;
+		Mat getImageDst() const;
+		Mat getImageDstColor() const;
+		Segment * findMatchingSegment(Point, Point, SegmentsContainer &);
+		int calculateDenominator(Point, Point, Point, Point) const;
+		Point calculateIntersect(Point, Point, Point, Point, int) const;
 		void calculateTheta(Intersect &);
-		bool storeIntersects(Segment &, Segment &, cv::Point);
+		bool storeIntersects(Segment &, Segment &, Point);
 		void calculateSegments(int);
 		void drawDetectedLines(int);
 		void calculateIntersections(int);
 		void applyHoughLineTransform();
-		HoughLineTransform(cv::Mat);
+		HoughLineTransform(Mat);
 		HoughLineTransform();
 		~HoughLineTransform();
 };
 
-const vector<Intersect> HoughLineTransform::getIntersects() const 
+const HoughLineTransform::IntersectsContainer HoughLineTransform::getIntersects() const 
 {
 	return intersects_;
 }
@@ -59,25 +64,25 @@ int HoughLineTransform::getIntersectsSize() const
 	return intersects_.size();
 }
 
-cv::Mat HoughLineTransform::getImageSrc() const
+HoughLineTransform::Mat HoughLineTransform::getImageSrc() const
 {
 	return image_src_;
 }
 
-cv::Mat HoughLineTransform::getImageDst() const
+HoughLineTransform::Mat HoughLineTransform::getImageDst() const
 {
 	return image_dst_;
 }
 
 
-cv::Mat HoughLineTransform::getImageDstColor() const
+HoughLineTransform::Mat HoughLineTransform::getImageDstColor() const
 {
 	return image_dst_color_;
 }
 
-Segment * HoughLineTransform::findMatchingSegment(cv::Point p1, cv::Point p2, vector<Segment> &ss)
+Segment * HoughLineTransform::findMatchingSegment(Point p1, Point p2, SegmentsContainer &ss)
 {
-	for(vector<Segment>::iterator it = ss.begin(); it != ss.end(); ++it)
+	for(SegmentsContainer::iterator it = ss.begin(); it != ss.end(); ++it)
 	{
 		if((it->getEndpoint(1) == p1) && (it->getEndpoint(2) == p2))
 		{
@@ -88,7 +93,7 @@ Segment * HoughLineTransform::findMatchingSegment(cv::Point p1, cv::Point p2, ve
 } 
 
 
-int HoughLineTransform::calculateDenominator(cv::Point pA1, cv::Point pA2, cv::Point pB1, cv::Point pB2)
+int HoughLineTransform::calculateDenominator(Point pA1, Point pA2, Point pB1, Point pB2) const
 {
 	int d = ((pA1.x -pA2.x)*(pB1.y - pB2.y)) - 
 			((pA1.y - pA2.y)*(pB1.x - pB2.x));
@@ -96,9 +101,9 @@ int HoughLineTransform::calculateDenominator(cv::Point pA1, cv::Point pA2, cv::P
 	return d;
 }
 
-cv::Point HoughLineTransform::calculateIntersect(cv::Point pA1, cv::Point pA2, cv::Point pB1, cv::Point pB2, int d)
+HoughLineTransform::Point HoughLineTransform::calculateIntersect(Point pA1, Point pA2, Point pB1, Point pB2, int d) const
 {
-	cv::Point intersect;
+	Point intersect;
 	intersect.x = ((((pA1.x * pA2.y) - (pA1.y * pA2.x)) * 
 				  (pB1.x - pB2.x)) - ((pA1.x - pA2.x) * 
 				  ((pB1.x * pB2.y) - (pB1.y * pB2.x))))
@@ -114,9 +119,9 @@ cv::Point HoughLineTransform::calculateIntersect(cv::Point pA1, cv::Point pA2, c
 
 void HoughLineTransform::calculateTheta(Intersect &p)
 {
-	cv::Point A = p.getLine(1).getEndpoint(1);
-	cv::Point B = p.getLine(2).getEndpoint(1);
-	cv::Point intersect = p.getIntersect();
+	Point A = p.getLine(1).getEndpoint(1);
+	Point B = p.getLine(2).getEndpoint(1);
+	Point intersect = p.getIntersect();
 		
 	double distanceAI = sqrt(pow((A.x - intersect.x), 2.0) + 
 							 pow((A.y - intersect.y), 2.0));
@@ -133,12 +138,12 @@ void HoughLineTransform::calculateTheta(Intersect &p)
 	//printf("Theta: %f \n", theta);
 }
 			
-bool HoughLineTransform::storeIntersects(Segment &s1, Segment &s2, cv::Point q)
+bool HoughLineTransform::storeIntersects(Segment &s1, Segment &s2, Point q)
 {	
 	Intersect intersect(q, s1, s2);
 	
 	bool match = false;		
-	for(vector<Intersect>::iterator it = intersects_.begin(); it != intersects_.end(); ++it)
+	for(IntersectsContainer::iterator it = intersects_.begin(); it != intersects_.end(); ++it)
 	{
 		if(*it == intersect)
 		{
@@ -178,9 +183,9 @@ void HoughLineTransform::calculateSegments(int i)
 
 void HoughLineTransform::drawDetectedLines(int i)
 {		
-	line(image_dst_color_, segments_[i].getEndpoint(1), segments_[i].getEndpoint(2), cv::Scalar(0, 0, 255), 3, CV_AA);
-	circle(image_dst_color_, segments_[i].getEndpoint(1), 3, cv::Scalar(255,0,0), -1, 8, 0);
-	circle(image_dst_color_, segments_[i].getEndpoint(2), 3, cv::Scalar(255,0,0), -1, 8, 0);
+	line(image_dst_color_, segments_[i].getEndpoint(1), segments_[i].getEndpoint(2), Scalar(0, 0, 255), 3, CV_AA);
+	circle(image_dst_color_, segments_[i].getEndpoint(1), 3, Scalar(255,0,0), -1, 8, 0);
+	circle(image_dst_color_, segments_[i].getEndpoint(2), 3, Scalar(255,0,0), -1, 8, 0);
 }
 
 void HoughLineTransform::calculateIntersections(int i)
@@ -188,7 +193,7 @@ void HoughLineTransform::calculateIntersections(int i)
 	point_A1_ = segments_[i].getEndpoint(1);
 	point_A2_ = segments_[i].getEndpoint(2);
 
-	for(vector<Segment>::iterator it = segments_.begin(); it != segments_.end(); ++it)
+	for(SegmentsContainer::iterator it = segments_.begin(); it != segments_.end(); ++it)
 	{
 		if(i == (it - segments_.begin())) continue;
 		
@@ -204,12 +209,11 @@ void HoughLineTransform::calculateIntersections(int i)
 		{
 			if((intersect_.y >= 0) && (intersect_.y <= image_dst_color_.rows))
 			{
-				bool match = storeIntersects(segments_[i], segments_[it - segments_.begin()], intersect_);
+				bool match = storeIntersects(segments_[i], *it, intersect_);
 				
 				if(!match){
-					printf("Found intersection \n");
 					// Draw intersection
-					circle(image_dst_color_, intersects_.back().getIntersect(), 3, cv::Scalar(0,255,0), -1, 8, 0);		
+					circle(image_dst_color_, intersects_.back().getIntersect(), 3, Scalar(0,255,0), -1, 8, 0);		
 				}
 			}
 		}	
@@ -227,29 +231,24 @@ void HoughLineTransform::applyHoughLineTransform(){
 	HoughLines(image_dst_, lines_, 1, CV_PI/180, 100, 0, 0);	
 	printf("Lines: %d \n", lines_.size());
 	
-	//TODO: Make iterators
-	for(int i = 0; i < lines_.size(); i++)
+	for(LinesContainer::iterator it = lines_.begin(); it != lines_.end(); ++it)
 	{
-		calculateSegments(i);
-	}
-	
-	for(int i = 0; i < segments_.size(); i++)
-	{
-		drawDetectedLines(i);
+		calculateSegments(it - lines_.begin());
+		drawDetectedLines(it - lines_.begin());
 	}
 
-	for(int i = 0; i < segments_.size(); i++)
+	for(SegmentsContainer::iterator it = segments_.begin(); it != segments_.end(); ++it)
 	{
-		calculateIntersections(i);
+		calculateIntersections(it - segments_.begin());
 	}
 
-	for(int i = 0; i < intersects_.size(); i++)
+	for(IntersectsContainer::iterator it = intersects_.begin(); it != intersects_.end(); ++it)
 	{
-		intersects_[i].print("");
+		it->print("");
 	}
 }
 
-HoughLineTransform::HoughLineTransform(cv::Mat src)
+HoughLineTransform::HoughLineTransform(Mat src)
 {
 	image_src_ = src;
 }

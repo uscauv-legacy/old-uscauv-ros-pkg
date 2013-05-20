@@ -13,22 +13,25 @@ using namespace std;
 class SearchNode 
 {
 	private:
+		typedef vector<Intersect> CornersContainer;
+		typedef vector<Intersect> IntersectsContainer;
+		
 		Intersect intersect_;
-		vector<Intersect> corners_;
+		CornersContainer corners_;
 		
 	public:
 		Intersect getIntersect() const;
-		const vector<Intersect> & getCorners() const;
+		const CornersContainer & getCorners() const;
 		Intersect getCorners(int) const;
 		int getCornersSize() const;
 		void addToCorners(Intersect);
 		bool operator== (const SearchNode &);
-		void printCorners();
-		double differenceFromAngle(double);
-		bool isRectangle(double, double);
-		bool matchCorners(vector<Intersect>);
-		vector<Intersect> findValidIntersects(vector<Intersect>);
-		SearchNode(Intersect,vector<Intersect>);
+		void printCorners() const;
+		double differenceFromAngle(double) const;
+		bool isRectangle(double, double) const;
+		bool matchCorners(const CornersContainer &) const;
+		IntersectsContainer findValidIntersects(const IntersectsContainer &) const;
+		SearchNode(Intersect, CornersContainer);
 		SearchNode();		
 		~SearchNode();
 };
@@ -38,7 +41,7 @@ Intersect SearchNode::getIntersect() const
 	return intersect_;
 }
 
-const vector<Intersect> & SearchNode::getCorners() const
+const SearchNode::CornersContainer & SearchNode::getCorners() const
 {
 	return corners_;
 }
@@ -64,22 +67,22 @@ bool SearchNode::operator== (const SearchNode &right)
     		(matchCorners(right.corners_)));
 }
 
-void SearchNode::printCorners()
+void SearchNode::printCorners() const
 {
-	for(vector<Intersect>::iterator it = corners_.begin(); it != corners_.end(); ++it)
+	for(CornersContainer::const_iterator it = corners_.begin(); it != corners_.end(); ++it)
 		printf("Corner: %d, %d", it->getIntersect().x, it->getIntersect().y);
 }
 
-double SearchNode::differenceFromAngle(double angle)
+double SearchNode::differenceFromAngle(double angle) const
 {
 	return abs(angle - intersect_.getTheta());
 }
 
-bool SearchNode::isRectangle(double error, double angle)
+bool SearchNode::isRectangle(double error, double angle) const
 {
 	if(corners_.size() == 4)
 	{
-		for(vector<Intersect>::iterator it = corners_.begin(); it != corners_.end(); ++it)
+		for(CornersContainer::const_iterator it = corners_.begin(); it != corners_.end(); ++it)
 		{
 			if(it->differenceFromAngle(angle) > error) return false;
 		}
@@ -89,11 +92,11 @@ bool SearchNode::isRectangle(double error, double angle)
 	else return false;
 }
 
-bool SearchNode::matchCorners(vector<Intersect> c)
+bool SearchNode::matchCorners(const CornersContainer &c) const
 {
 	if(corners_.size() != c.size()) return false;
 	
-	for(vector<Intersect>::iterator it = corners_.begin(); it != corners_.end(); ++it)
+	for(CornersContainer::const_iterator it = corners_.begin(); it != corners_.end(); ++it)
 	{
 		if(it->getIntersect() != c[it-corners_.begin()].getIntersect())
 		{
@@ -104,16 +107,16 @@ bool SearchNode::matchCorners(vector<Intersect> c)
 	return true;
 }
 
-vector<Intersect> SearchNode::findValidIntersects(vector<Intersect> intersects)
+SearchNode::IntersectsContainer SearchNode::findValidIntersects(const IntersectsContainer &intersects) const
 {	
-	vector<Intersect> valid_intersects;
+	IntersectsContainer valid_intersects;
 	printf("Number of intersects for current node: %d \n", intersects.size());
-	for(vector<Intersect>::iterator it = intersects.begin(); it != intersects.end(); ++it)
+	for(IntersectsContainer::const_iterator it = intersects.begin(); it != intersects.end(); ++it)
 	{
 		if((it->getLine(1) == intersect_.getLine(1)) || (it->getLine(1) == intersect_.getLine(2)) ||
 		   (it->getLine(2) == intersect_.getLine(1)) || (it->getLine(2) == intersect_.getLine(2)))
 		{
-			valid_intersects.push_back(intersects[it - intersects.begin()]);
+			valid_intersects.push_back(*it);
 			printf("Intersect added to valid_intersects.\n");
 		}
 	}
@@ -121,7 +124,7 @@ vector<Intersect> SearchNode::findValidIntersects(vector<Intersect> intersects)
 	return valid_intersects;
 }
 
-SearchNode::SearchNode(Intersect i ,vector<Intersect> c)
+SearchNode::SearchNode(Intersect i , CornersContainer c)
 {
 	intersect_ = i;
 	corners_ = c;	

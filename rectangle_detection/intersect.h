@@ -11,24 +11,26 @@ using namespace std;
 class Intersect
 {
 	private:
-		cv::Point intersect_;
+		typedef cv::Point Point;
+		
+		Point intersect_;
 		Segment line_1_, line_2_;
 		double theta_;
 	
 	public:		
-		cv::Point getIntersect() const;
+		Point getIntersect() const;
 		Segment getLine(int) const;
 		double getTheta() const;
 		void setTheta(double);
-		void print(string);
-		double differenceFromAngle(double);
-		bool operator== (const Intersect &);
-		Intersect(cv::Point, Segment, Segment);
+		void print(string) const;
+		double differenceFromAngle(double) const;
+		bool operator== (const Intersect &) const;
+		Intersect(Point, Segment, Segment);
 		Intersect();
 		~Intersect();
 };
 
-cv::Point Intersect::getIntersect() const
+Intersect::Point Intersect::getIntersect() const
 {
 	return intersect_;
 }
@@ -50,7 +52,7 @@ void Intersect::setTheta(double t)
 	theta_ = t;
 }
 
-void Intersect::print(string input)
+void Intersect::print(string input) const
 {
 	printf("%sIntersect: %d, %d ", input.c_str(), intersect_.x, intersect_.y);
 	printf("Line1: P1: %d, %d, P2: %d, %d ", line_1_.getEndpoint(1).x, line_1_.getEndpoint(1).y, 
@@ -59,12 +61,12 @@ void Intersect::print(string input)
 											   line_2_.getEndpoint(2).x, line_2_.getEndpoint(2).y);
 }
 
-double Intersect::differenceFromAngle(double angle)
+double Intersect::differenceFromAngle(double angle) const
 {
 	return abs(angle - theta_);
 }
 
-bool Intersect::operator== (const Intersect &right)
+bool Intersect::operator== (const Intersect &right) const
 {
     return ((intersect_ == right.getIntersect()) && 
 		  	((line_1_ == right.getLine(1))  ||
@@ -73,7 +75,7 @@ bool Intersect::operator== (const Intersect &right)
 		  	 (line_2_ == right.getLine(2))));
 }
 
-Intersect::Intersect(cv::Point p, Segment s1, Segment s2)
+Intersect::Intersect(Point p, Segment s1, Segment s2)
 {
 	intersect_ = p;
 	line_1_ = s1;
