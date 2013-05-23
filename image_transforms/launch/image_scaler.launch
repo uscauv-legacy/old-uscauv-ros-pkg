@@ -1,4 +1,4 @@
-3<launch>
+<launch>
   <!-- Output color format is BGR8 -->
   
   <arg name="image_in" />

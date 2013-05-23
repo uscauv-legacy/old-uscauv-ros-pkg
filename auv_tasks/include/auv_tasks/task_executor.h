@@ -53,7 +53,7 @@ class TaskExecutorNode
 
  protected:
 
-  /// Running spin() will cause this function to be called before the node begins looping the spingOnce() function.
+  /// Running spin() will cause this function to be called before the node begins looping the spinOnce() function.
   virtual void spinFirst() = 0;
 
   /// Running spin() will cause this function to get called at the loop rate until this node is killed.
