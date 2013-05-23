@@ -1,0 +1,9 @@
+<library path="lib/libimage_transforms_nodelets">
+
+  <class name="image_transforms/image_scaler" type="image_transforms::ImageScalerNodelet" base_class_type="nodelet::Nodelet">
+    <description>
+      todo: fill this in
+    </description>
+  </class>
+
+</library>
