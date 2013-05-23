@@ -40,7 +40,9 @@
 
 function usage()
 {
-    echo "usage: `basename $0` package node [-u user] [-p project]"
+    echo ""
+    echo "Usage: `basename $0` package node [-u user] [-p project]"
+    echo ""
 }
 
 if [ $# -lt 2 ]; then
@@ -99,12 +101,15 @@ PACKAGENAME=`echo $package_name | sed 's/[a-z]/\U&/g' | tr -d _`
 
 header_file="$node_name.h"
 cpp_file="$node_name.cpp"
+launch_file="$node_name.launch"
 
 include_path="include/$package_name"
-src_path="src"
+node_path="nodes"
+launch_path="launch"
 
 header_path="$include_path/$header_file"
-cpp_path="$src_path/$cpp_file"
+cpp_path="$node_path/$cpp_file"
+launchfile_path="$launch_path/$launch_file"
 
 IFNDEF_TEXT="USCAUV_"$PACKAGENAME"_"$NODENAME""
 
@@ -159,19 +164,34 @@ int main(int argc, char ** argv)
   return 0;
 }"
 
+launch_text="
+<launch>
+  <arg name=\"pkg\" value=\"$package_name\" />
+  <arg name=\"name\" value=\"$node_name\" />
+  <arg name=\"type\" default=\"\$(arg name)\" />
+  <arg name=\"rate\" default=\"30\" />
+  <arg name=\"args\" value=\"_loop_rate:=\$(arg rate)\" />
+
+  <node
+      pkg=\"\$(arg pkg)\"
+      type=\"\$(arg type)\"
+      name=\"\$(arg name)\"
+      args=\"\$(arg args)\"
+      output=\"screen\" />
+  
+</launch>"
+
 # Make the magic happen ########################################
 
 cd $package_path
 
-if [ ! -d  "$include_path" ]; then
-    mkdir -vp $include_path
-fi
-if [ ! -d  "$src_path" ]; then
-    mkdir -vp $src_path
-fi
+if [ ! -d  "$include_path" ]; then mkdir -vp $include_path; fi
+if [ ! -d  "$node_path" ];    then mkdir -vp $node_path;    fi
+if [ ! -d  "$launch_path" ];  then mkdir -vp $launch_path;  fi
 
 echo "$header_text" > $header_path
 echo "$cpp_text" > $cpp_path
+echo "$launch_text" > $launchfile_path
 
 uscauv-add-license -u "$users" -p "$project" -f $header_path $cpp_path
 uscauv-print-logo
