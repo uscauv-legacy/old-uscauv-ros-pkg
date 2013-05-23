@@ -38,7 +38,7 @@
 usage()
 {
     echo ""
-    echo "Usage: uscauv-add-license [-p project] [-u user] files"
+    echo "Usage: uscauv-add-license [-p project] [-u user] [-f] files"
     echo ""
 }
 
@@ -52,6 +52,9 @@ while [ "$1" != "" ]; do
 	-p )        shift
 	    project=$1
 	    shift
+	    ;;
+	-f ) shift;
+	    force="1"
 	    ;;
 	-u )        shift
 	    if [ "$users" == "" ]; then
@@ -163,8 +166,6 @@ for target in $targets; do
 
     ext="${target#*.}"
 
-    echo $ext
-    
     shopt -s nocasematch
 
     if grep -qw "$ext" <<<$script_ext; then
@@ -181,7 +182,9 @@ for target in $targets; do
     file_contents=`cat $target`
 
     # Dump the original file contents in case there is an error
-    echo "$file_contents" > $target~
+    if [ "$force" -ne "1" -a -n "$file_contents" ]; then
+	echo "$file_contents" > $target~
+    fi
 
     echo "$license_part1$target$license_part2$file_contents" > $target
 

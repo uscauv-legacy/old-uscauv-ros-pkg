@@ -173,4 +173,5 @@ fi
 echo "$header_text" > $header_path
 echo "$cpp_text" > $cpp_path
 
-uscauv-add-license -u "$users" -p "$project" $header_path $cpp_path
+uscauv-add-license -u "$users" -p "$project" -f $header_path $cpp_path
+uscauv-print-logo

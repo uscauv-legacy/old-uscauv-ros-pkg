@@ -1,0 +1,36 @@
+#!/bin/bash
+logo_text="
+                                                                                                    
+                                                                                                    
+                                                         ##                                         
+                                                       #                                            
+                                                     #                                              
+                                                   j                                                
+                                                        ;                                           
+                                                      #   # f                                       
+                                                    ##    # K                                       
+                                              ;                                                     
+                                             #             #                                        
+                                          #i                                                        
+                                                                                                    
+                                           E             :                                          
+                                            L           #                                           
+    DK        KK   KKKKt       KKKKKKKKK: #           ##  KK:      :K        KK LKK         KK      
+    DK        KK  KKKDL       KKKLLLLLLL #           ##  KKKK      :K        KK  KK        KKj      
+    DK        KK  KK          KK        f#.         ###  KK KK     :K   D    KK   KK       KK       
+    DK        KK  KK          KK       W           ## # KK  KKK    :K  i     KK   :KK     KK        
+    DK        KK  :KKKKKKKKK  KK                  ##  ,KK    KK    :K,#      KK    KK:   KK         
+    DK        KK         :KK: KK                  #    KKKKKKKKK   :K#       KK     KK  :KK         
+    DK        KK           KK KK                      KKKKKKKKKKK  WKi       KK     :KK KK          
+    :KK      :KK          KKj KK                 #   KK        KK:  KK      :KK      KKKK           
+     KKKKKKKKKK   KKKKKKKKKK  :KKKKKKKKK:        #   K:         KK fKKKKKKKKKK        KKK           
+                                            #        :          :j #                                
+                                            #j    #                #                                
+                                             #:                 G# #                                
+                                              f#             ##    #                                
+                                                 ##Wt  f###        #                                
+                                                                                                    
+                                                                    D             
+"
+
+echo "$logo_text"
