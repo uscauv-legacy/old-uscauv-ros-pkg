@@ -1,0 +1,16 @@
+<package>
+  <description brief="uscauv_common">
+
+     uscauv_common
+
+  </description>
+  <author>nalyd</author>
+  <license>BSD</license>
+  <review status="unreviewed" notes=""/>
+  <url>http://ros.org/wiki/uscauv_common</url>
+
+  <depend package="roscpp" />
+  
+</package>
+
+
