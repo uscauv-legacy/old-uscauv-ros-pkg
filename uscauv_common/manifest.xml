@@ -10,6 +10,12 @@
   <url>http://ros.org/wiki/uscauv_common</url>
 
   <depend package="roscpp" />
+  <depend package="cpp11" />
+
+  <!-- Image processing -->
+  <depend package="sensor_msgs" />
+  <depend package="cv_bridge" />
+  <depend package="image_transport" />
 
   <export>
     <cpp cflags="-I${prefix}/include -I${prefix}/cfg/cpp" lflags="-L${prefix}/lib -Wl,-rpath,${prefix}/lib -luscauv_common"/>

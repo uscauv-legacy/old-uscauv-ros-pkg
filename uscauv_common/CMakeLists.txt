@@ -21,4 +21,4 @@ set(LIBRARY_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/lib)
 #uncomment if you have defined services
 #rosbuild_gensrv()
 
-rosbuild_add_library( uscauv_common src/base_node.cpp )
+rosbuild_add_library( uscauv_common src/base_node.cpp src/image_tranceiver.cpp)
