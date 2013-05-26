@@ -1,0 +1,17 @@
+<package>
+  <description brief="shape_matching">
+
+     shape_matching
+
+  </description>
+  <author>nalyd</author>
+  <license>BSD</license>
+  <review status="unreviewed" notes=""/>
+  <url>http://ros.org/wiki/shape_matching</url>
+
+  <depend package="roscpp" />
+  <depend package="uscauv_common" />
+
+</package>
+
+

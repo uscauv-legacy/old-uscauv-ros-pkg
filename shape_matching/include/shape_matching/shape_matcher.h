@@ -1,5 +1,5 @@
 /***************************************************************************
- *  src/image_tranceiver.cpp
+ *  include/shape_matching/shape_matcher.h
  *  --------------------
  *
  *  Copyright (c) 2013, Dylan Foster
@@ -34,4 +34,50 @@
  **************************************************************************/
 
 
-#include <uscauv_common/image_tranceiver.h>
+#ifndef USCAUV_SHAPEMATCHING_SHAPEMATCHER
+#define USCAUV_SHAPEMATCHING_SHAPEMATCHER
+
+// ROS
+#include <ros/ros.h>
+
+// uscauv
+#include <uscauv_common/base_node.h>
+#include <uscauv_common/image_transceiver.h>
+
+class ShapeMatcherNode: public BaseNode, public ImageTransceiver
+{
+  
+ public:
+  ShapeMatcherNode(): BaseNode("ShapeMatcher")
+   {
+   }
+
+ private:
+
+  // Running spin() will cause this function to be called before the node begins looping the spinOnce() function.
+  void spinFirst()
+     {
+       addImagePublisher( "image_denoised", 1);
+       addImagePublisher( "image_matched", 1);
+
+       addImageSubscriber( "image_binary", 1, &ShapeMatcherNode::imageCallback, this);
+     }  
+
+  // Running spin() will cause this function to get called at the loop rate until this node is killed.
+  void spinOnce()
+     {
+
+     }
+
+ public:
+  
+  void imageCallback( cv_bridge::CvImage::ConstPtr const & msg )
+  {
+    publishImage("image_matched", msg, "image_denoised", msg );
+    
+    return;
+  }
+
+};
+
+#endif // USCAUV_SHAPEMATCHING_SHAPEMATCHER

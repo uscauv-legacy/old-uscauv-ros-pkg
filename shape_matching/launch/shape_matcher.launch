@@ -1,0 +1,19 @@
+
+<launch>
+
+  <remap from="shape_matcher/image_binary" to="camera1/image_color" />
+  
+  <arg name="pkg" value="shape_matching" />
+  <arg name="name" value="shape_matcher" />
+  <arg name="type" default="$(arg name)" />
+  <arg name="rate" default="30" />
+  <arg name="args" value="_loop_rate:=$(arg rate)" />
+
+  <node
+      pkg="$(arg pkg)"
+      type="$(arg type)"
+      name="$(arg name)"
+      args="$(arg args)"
+      output="screen" />
+  
+</launch>

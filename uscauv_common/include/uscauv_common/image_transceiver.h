@@ -1,5 +1,5 @@
 /***************************************************************************
- *  include/uscauv_common/image_tranceiver.h
+ *  include/uscauv_common/image_transceiver.h
  *  --------------------
  *
  *  Copyright (c) 2013, Dylan Foster
@@ -34,8 +34,8 @@
  **************************************************************************/
 
 
-#ifndef USCAUV_USCAUVCOMMON_IMAGETRANCEIVER
-#define USCAUV_USCAUVCOMMON_IMAGETRANCEIVER
+#ifndef USCAUV_USCAUVCOMMON_IMAGETRANSCEIVER
+#define USCAUV_USCAUVCOMMON_IMAGETRANSCEIVER
 
 // ROS
 #include <ros/ros.h>
@@ -48,7 +48,7 @@
 /// cpp11
 #include <functional>
 
-class ImageTranceiver
+class ImageTransceiver
 {
  private:
   typedef std::function<void( cv_bridge::CvImage::ConstPtr const & )> _ImageCBFunction;
@@ -65,7 +65,7 @@ class ImageTranceiver
 
  public:
 
- ImageTranceiver():
+ ImageTransceiver():
   nh_rel_("~"),
   image_transport_( nh_rel_ )
   {}
@@ -129,10 +129,10 @@ class ImageTranceiver
     callbacks_[ topic_resolved ] = std::bind( std::forward<__FuncArgs>(cb_args)... , std::placeholders::_1);
 
     /**
-     * Subscriber callbacks will call ImageTranceiver::imageCallback with topic name, which will then look up the correct external callback and call it.
+     * Subscriber callbacks will call ImageTransceiver::imageCallback with topic name, which will then look up the correct external callback and call it.
      * Need to use boost instead of cpp11 for this section because the ImageTransport::subscribe() call expects it
      */
-    boost::function<void( sensor_msgs::ImageConstPtr const & )> sub_cb = boost::bind( &ImageTranceiver::imageCallback, this, topic_resolved, _1 );
+    boost::function<void( sensor_msgs::ImageConstPtr const & )> sub_cb = boost::bind( &ImageTransceiver::imageCallback, this, topic_resolved, _1 );
     
     subscribers_[ topic_resolved ] = image_transport_.subscribe( topic_rel, queue_size, sub_cb );
     
@@ -228,4 +228,4 @@ class ImageTranceiver
   
 };
 
-#endif // USCAUV_USCAUVCOMMON_IMAGETRANCEIVER
+#endif // USCAUV_USCAUVCOMMON_IMAGETRANSCEIVER
