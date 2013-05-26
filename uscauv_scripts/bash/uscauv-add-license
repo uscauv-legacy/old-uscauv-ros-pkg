@@ -47,6 +47,8 @@ if [ $# -le 0 ]; then
     exit
 fi
 
+force="0"
+
 while [ "$1" != "" ]; do
     case $1 in
 	-p )        shift

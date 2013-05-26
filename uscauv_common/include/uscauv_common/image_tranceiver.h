@@ -46,7 +46,6 @@
 #include <cv_bridge/cv_bridge.h>
 
 /// cpp11
-#include <mutex>
 #include <functional>
 
 class ImageTranceiver
@@ -95,7 +94,23 @@ class ImageTranceiver
     return;
   }
 
-  void addImageSubscriber( std::string const & topic_rel, uint32_t const & queue_size, _ImageCBFunction const & image_cb )
+    /** 
+     * This function uses some fancy template metaprogramming to allow for a few different ways of specifying a callback function for the
+     * subscriber. Callbacks can be specified in a few different ways, but must return void and take cv_bridge::CvImage::ConstPtr as their argument.
+     * The goal here was to replicate the syntax of the ImageTransport::subscribe() function. Examples:
+     * Standard C-Style function: addImageSubscriber( ..., ..., &callbackFunction )
+     * C++ Member function: addImageSubscriber( ..., ..., &ClassType::callbackFunction, &ClassInstance )
+     * std::function object:, addImageSubscriber, ..., ..., FunctionObject )
+     * 
+     * @param topic_rel Name of the topic that we will subscribe to, relative to node namespace
+     * @param queue_size Size of incoming image queue
+     * @param cb_args Callback function arguments as described above
+     * 
+     * @return 
+     */
+  template <class... __FuncArgs>
+    typename std::enable_if< (sizeof...(__FuncArgs) > 0), void>::type
+    addImageSubscriber( std::string const & topic_rel, uint32_t const & queue_size, __FuncArgs&&... cb_args )
   {
     /// Get full subscriber topic. 
     std::string const & topic_resolved = nh_rel_.resolveName( topic_rel, true);
@@ -104,14 +119,14 @@ class ImageTranceiver
     
     _NamedSubscriberMap::iterator sub_it = subscribers_.find( topic_resolved );
 
-    /// TODO: Make sure that callback also gets replaced if the topic has already been subscribed to
     if ( sub_it != subscribers_.end() )
       {
 	ROS_WARN("Add subscriber [ %s ] requested, but this subscriber already exists. Overwriting...", topic_resolved.c_str() );
 	sub_it->second.shutdown();
       }
     
-    callbacks_[ topic_resolved ] = image_cb;
+    /// Bind the callback arguments to a single std::function< void( cv_bridge::CvImage::ConstPtr )> object.
+    callbacks_[ topic_resolved ] = std::bind( std::forward<__FuncArgs>(cb_args)... , std::placeholders::_1);
 
     /**
      * Subscriber callbacks will call ImageTranceiver::imageCallback with topic name, which will then look up the correct external callback and call it.
@@ -119,7 +134,7 @@ class ImageTranceiver
      */
     boost::function<void( sensor_msgs::ImageConstPtr const & )> sub_cb = boost::bind( &ImageTranceiver::imageCallback, this, topic_resolved, _1 );
     
-    subscribers_[ topic_resolved ] = image_transport_.subscribe( topic_rel, queue_size, sub_cb); 
+    subscribers_[ topic_resolved ] = image_transport_.subscribe( topic_rel, queue_size, sub_cb );
     
     ROS_INFO("Created subscriber successfully.");
 
@@ -131,7 +146,7 @@ class ImageTranceiver
   /** 
    * This function, along with some of the code in addImageSubscriber is responsible
    * for intercepting image callbacks from image_transport::Subscriber class,
-   * performing a redundant sensor_msgs::Image -> cv_bridge::CvImage conversion that would
+   * performing a sensor_msgs::Image -> cv_bridge::CvImage conversion that would
    * otherwise need to be performed by the user, and forwarding the results to a user-defined
    * external callback.
    * Note that this implicitly converts to the bgr8 encoding, which may not always be correct
@@ -169,6 +184,7 @@ class ImageTranceiver
     return;
   }
 
+  
   void publishImage(std::string const & topic_rel, sensor_msgs::ImagePtr const & image ) const
   {
     /// Get full publisher topic. 
@@ -191,8 +207,19 @@ class ImageTranceiver
     publishImage( topic_rel, image->toImageMsg() );
   }
 
+    /** 
+     * For a variable number of topic/image pairs, call one of the above publishImage functions for each pair
+     * e.g. publishImage( "topic1", image1, "topic2", image2, ...)
+     * 
+     * @param topic_rel First topic name, relative node namespace
+     * @param image First image to publish
+     * @param args The rest of the topics and images
+     * 
+     * @return 
+     */
   template <class __Image, class... __Args>
-    typename std::enable_if< (sizeof...(__Args) % 2) == 0 && (sizeof...(__Args) > 0), void>::type publishImage( std::string const & topic_rel, __Image const & image, __Args && ...args)
+    typename std::enable_if< (sizeof...(__Args) % 2) == 0 && (sizeof...(__Args) > 0), void>::type 
+    publishImage( std::string const & topic_rel, __Image const & image, __Args && ...args)
   {
     publishImage( topic_rel, image);
     publishImage( std::forward<__Args>(args)... );
