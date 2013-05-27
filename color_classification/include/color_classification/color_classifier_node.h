@@ -190,7 +190,8 @@ class ColorClassifierNode
     for ( _ColorPublisherMap::iterator color_it = classified_image_pub_.begin(); color_it != classified_image_pub_.end(); ++color_it )
       {
 	/// New image with the same header as the input image
-	cv_bridge::CvImage classified_image( cv_ptr->header , "bgr8");
+	cv_bridge::CvImage classified_image( cv_ptr->header, 
+					     sensor_msgs::image_encodings::MONO8 );
 	
 	if ( color_classifier_.classify( color_it->first, cv_ptr->image, classified_image.image) )
 	  {

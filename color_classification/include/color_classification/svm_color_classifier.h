@@ -64,7 +64,7 @@ class SvmColorClassifier
 
   _ColorSvmMap color_svm_map_;
 
-  const cv::Vec3b false_color_, true_color_;
+  const unsigned char false_color_, true_color_;
   
  public:
 
@@ -74,8 +74,8 @@ class SvmColorClassifier
    */
  SvmColorClassifier()
    :
-  false_color_( cv::Vec3b( 0, 0, 0 ) ),
-  true_color_( cv::Vec3b( 255, 255, 255) )
+  false_color_( 0 ),
+  true_color_( 255 )
     {}
 
   /** 
@@ -175,11 +175,10 @@ class SvmColorClassifier
     cv::Mat input_float;
     input_hs.convertTo( input_float, CV_32F );
     
-    classified_image = cv::Mat( input_image.size(), CV_8UC3 );
+    classified_image = cv::Mat( input_image.size(), CV_8UC1 );
     
     /// Classify the input image.
-    /// TODO: Use binary image for classified image
-    cv::MatIterator_<cv::Vec3b> cl_it = classified_image.begin<cv::Vec3b>();
+    cv::MatIterator_<unsigned char> cl_it = classified_image.begin<unsigned char>();
     cv::MatConstIterator_<cv::Vec2f> in_it = input_float.begin<cv::Vec2f>();
 
     for(; in_it != input_float.end<cv::Vec2f>(); ++in_it, ++cl_it)
