@@ -104,18 +104,21 @@ class ImageTransceiver
      * 
      * @param topic_rel Name of the topic that we will subscribe to, relative to node namespace
      * @param queue_size Size of incoming image queue
+     * @param encoding Encoding used to interpret incoming images. If it is set to "" or omitted, the encoding in the image header will be used.
      * @param cb_args Callback function arguments as described above
      * 
      * @return 
      */
+
   template <class... __FuncArgs>
     typename std::enable_if< (sizeof...(__FuncArgs) > 0), void>::type
-    addImageSubscriber( std::string const & topic_rel, uint32_t const & queue_size, __FuncArgs&&... cb_args )
+    addImageSubscriber( std::string const & topic_rel, uint32_t const & queue_size, std::string const & encoding, __FuncArgs&&... cb_args )
   {
     /// Get full subscriber topic. 
     std::string const & topic_resolved = nh_rel_.resolveName( topic_rel, true);
     
-    ROS_INFO( "Creating image subscriber [ %s ]... ", topic_resolved.c_str() );
+    ROS_INFO( "Creating image subscriber [ %s ] with encoding [ %s ]... ", topic_resolved.c_str(), 
+	      ( encoding == "" ) ? "from source" : encoding.c_str() );
     
     _NamedSubscriberMap::iterator sub_it = subscribers_.find( topic_resolved );
 
@@ -132,12 +135,27 @@ class ImageTransceiver
      * Subscriber callbacks will call ImageTransceiver::imageCallback with topic name, which will then look up the correct external callback and call it.
      * Need to use boost instead of cpp11 for this section because the ImageTransport::subscribe() call expects it
      */
-    boost::function<void( sensor_msgs::ImageConstPtr const & )> sub_cb = boost::bind( &ImageTransceiver::imageCallback, this, topic_resolved, _1 );
+    boost::function<void( sensor_msgs::ImageConstPtr const & )> sub_cb = boost::bind( &ImageTransceiver::imageCallback, this, topic_resolved, encoding, _1 );
     
     subscribers_[ topic_resolved ] = image_transport_.subscribe( topic_rel, queue_size, sub_cb );
     
     ROS_INFO("Created subscriber successfully.");
 
+    return;
+  }
+
+  /** 
+   * Same function as above, but with default image encoding. When image encoding is set to "",
+   * the encoding of the incoming image is used.
+   * 
+   */
+  template <class __Arg, class... __FuncArgs>
+    typename std::enable_if< (sizeof...(__FuncArgs) > 0) && 
+    !std::is_convertible< __Arg, std::string>::value, void>::type
+    addImageSubscriber( std::string const & topic_rel, uint32_t const & queue_size, __Arg&& arg, __FuncArgs&&... cb_args )
+  {
+    
+    addImageSubscriber( topic_rel, queue_size, std::string(), std::forward<__Arg>(arg), std::forward<__FuncArgs>(cb_args)... );
     return;
   }
 
@@ -154,7 +172,7 @@ class ImageTransceiver
    * @param topic_resolved Global path to the topic that this callback corresponds to 
    * @param msg Image message to be forwarded to an external callback
    */
-  void imageCallback( std::string const & topic_resolved, sensor_msgs::ImageConstPtr const & msg)
+  void imageCallback( std::string const & topic_resolved, std::string const & encoding, sensor_msgs::ImageConstPtr const & msg)
   {
     /// Convert to cv_bridge::CvImage ------------------------------------
 
@@ -162,7 +180,7 @@ class ImageTransceiver
 
     try
       {
-	cv_ptr = cv_bridge::toCvCopy(msg, sensor_msgs::image_encodings::BGR8);
+	cv_ptr = cv_bridge::toCvCopy(msg, encoding);
       }
     catch (cv_bridge::Exception& e)
       {
