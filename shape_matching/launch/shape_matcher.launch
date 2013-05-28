@@ -1,8 +1,5 @@
-
 <launch>
 
-  <remap from="shape_matcher/image_binary" to="camera1/image_color" />
-  
   <arg name="pkg" value="shape_matching" />
   <arg name="name" value="shape_matcher" />
   <arg name="type" default="$(arg name)" />

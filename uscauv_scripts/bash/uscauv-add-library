@@ -114,7 +114,7 @@ header_path="$include_path/$header_file"
 cpp_path="$library_path/$cpp_file"
 cmake_path="$cmake_file"
 
-IFNDEF_TEXT="$PROJECTNAME""_""$PACKAGENAME""_""$NODENAME"""
+IFNDEF_TEXT="$PROJECTNAME""_""$PACKAGENAME""_""$LIBRARYNAME"""
 
 header_text="
 #ifndef $IFNDEF_TEXT
@@ -125,7 +125,14 @@ header_text="
 
 class "$LibraryName"
 {
-  
+ 
+ private:
+
+ public:
+  "$LibraryName"()
+   {}
+
+
 };
 
 #endif // $IFNDEF_TEXT"
@@ -143,7 +150,7 @@ rosbuild_add_library( $package_name $cpp_path )"
 cd $package_path
 
 if [ ! -d  "$include_path" ]; then mkdir -vp $include_path; fi
-if [ ! -d  "$library_path" ];    then mkdir -vp $library_path;    fi
+if [ ! -d  "$library_path" ]; then mkdir -vp $library_path; fi
 
 echo "$header_text" > $header_path
 echo "$cpp_text" > $cpp_path

@@ -6,4 +6,12 @@ srv_gen/
 **/cfg/cpp
 **/cfg/*.cfgc
 *~
+*.png
+*#*
+*.old
+*.jpg
+*.pdf
+*.gv
+*.zip
+*.log
 docs/

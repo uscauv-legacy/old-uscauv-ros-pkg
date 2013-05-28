@@ -4,7 +4,9 @@
 #  scripts/add_license.sh
 #  --------------------
 #
-#  Copyright (c) 2011, Edward T. Kaszubski ( ekaszubski@gmail.com )
+#  Software License Agreement (BSD License)
+#
+#  Copyright (c) 2013, Edward T. Kaszubski ( ekaszubski@gmail.com ), Dylan Foster
 #  All rights reserved.
 #
 #  Redistribution and use in source and binary forms, with or without
@@ -90,6 +92,8 @@ year=`date | awk '{print $6;}'`
  *  "
     license_c_part2="
  *  --------------------
+ *
+ *  Software License Agreement (BSD License)
  *
  *  Copyright (c) $year, $users
  *  All rights reserved.

@@ -107,7 +107,6 @@ class ImageTransceiver
      * @param encoding Encoding used to interpret incoming images. If it is set to "" or omitted, the encoding in the image header will be used.
      * @param cb_args Callback function arguments as described above
      * 
-     * @return 
      */
 
   template <class... __FuncArgs>
@@ -233,7 +232,6 @@ class ImageTransceiver
      * @param image First image to publish
      * @param args The rest of the topics and images
      * 
-     * @return 
      */
   template <class __Image, class... __Args>
     typename std::enable_if< (sizeof...(__Args) % 2) == 0 && (sizeof...(__Args) > 0), void>::type 

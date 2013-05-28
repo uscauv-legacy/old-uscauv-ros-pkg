@@ -43,13 +43,23 @@
 // uscauv
 #include <uscauv_common/base_node.h>
 #include <uscauv_common/image_transceiver.h>
+#include <uscauv_common/multi_reconfigure.h>
 
-class ShapeMatcherNode: public BaseNode, public ImageTransceiver
+/// opencv
+#include <opencv2/imgproc/imgproc.hpp>
+
+/// reconfigure
+#include <shape_matching/ShapeMatcherConfig.h>
+
+typedef shape_matching::ShapeMatcherConfig _ShapeMatcherConfig;
+
+class ShapeMatcherNode: public BaseNode, public ImageTransceiver, public MultiReconfigure
 {
-  
+
  public:
-  ShapeMatcherNode(): BaseNode("ShapeMatcher")
+ ShapeMatcherNode(): BaseNode("ShapeMatcher")
    {
+     
    }
 
  private:
@@ -59,8 +69,10 @@ class ShapeMatcherNode: public BaseNode, public ImageTransceiver
      {
        addImagePublisher( "image_denoised", 1);
        addImagePublisher( "image_matched", 1);
-
-       addImageSubscriber( "image_binary", 1, &ShapeMatcherNode::imageCallback, this);
+       
+       addImageSubscriber( "input_image", 1, "mono8", &ShapeMatcherNode::imageCallback, this);
+       
+       addReconfigureServer<_ShapeMatcherConfig>("image_proc", &ShapeMatcherNode::reconfigureCallback, this);
      }  
 
   // Running spin() will cause this function to get called at the loop rate until this node is killed.
@@ -73,8 +85,26 @@ class ShapeMatcherNode: public BaseNode, public ImageTransceiver
   
   void imageCallback( cv_bridge::CvImage::ConstPtr const & msg )
   {
-    publishImage("image_matched", msg, "image_denoised", msg );
+    // Denoise the incoming image #####################################
+    unsigned int blur_size = getLatestConfig<_ShapeMatcherConfig>("image_proc").kernel_size;
+    blur_size = (blur_size % 2) ? blur_size : blur_size + 1;
     
+    /// sensor_msgs::image_encodings::MONO8 = "mono8", for reference
+    cv_bridge::CvImage::Ptr denoised = boost::make_shared<cv_bridge::CvImage>( msg->header, sensor_msgs::image_encodings::MONO8 );
+
+    cv::GaussianBlur( msg->image, denoised->image, cv::Size(blur_size, blur_size), 0, 0);
+    cv::threshold( denoised->image, denoised->image, 0, 255, cv::THRESH_BINARY + cv::THRESH_OTSU);
+
+    publishImage("image_denoised", denoised, "image_matched", msg);
+    
+    return;
+  }
+  
+  void reconfigureCallback( _ShapeMatcherConfig const & )
+  {
+    ROS_INFO("Inside Shape Matcher RC callback." );
+    
+
     return;
   }
 

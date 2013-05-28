@@ -254,3 +254,6 @@ function waitcam()
 }
 
 alias wc="waitcam"
+
+## The greatest idea ###########################################
+alias roslaunch="uscauv-print-logo && roslaunch $@"
