@@ -1,0 +1,18 @@
+<package>
+  <description brief="auv_vision">
+
+     auv_vision
+
+  </description>
+  <author>nalyd</author>
+  <license>BSD</license>
+  <review status="unreviewed" notes=""/>
+  <url>http://ros.org/wiki/auv_vision</url>
+
+  <depend package="roscpp"/>
+  <depend package="opencv2"/>
+  <depend package="uscauv_common"/>
+
+</package>
+
+

@@ -108,7 +108,7 @@ class ImageTransceiver
      * @param cb_args Callback function arguments as described above
      * 
      */
-
+  /// TODO: Fix the fact that this currently goes crazy if bound function type isn't exactly right ( void( CvImage::ConstPtr & ) is bad, void( CvImage::ConstPtr const & ) is good )
   template <class... __FuncArgs>
     typename std::enable_if< (sizeof...(__FuncArgs) > 0), void>::type
     addImageSubscriber( std::string const & topic_rel, uint32_t const & queue_size, std::string const & encoding, __FuncArgs&&... cb_args )

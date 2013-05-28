@@ -41,6 +41,10 @@
   if ( !(initialized_ && cached_) ){					\
     ROS_DEBUG("Teleop policy [ %s ] is not ready.", name_.c_str() ); return false; }
 
+/// TODO: Change name variable. See if we can get it from basenode
+/// TODO: Change init scheme. User shouldn't have to call init manually, but we don't want to initialize until spinFirst has started.
+/// TODO: Change name, 
+/// TODO: MultiJoystick container, addJoystick("topic") function
 class TeleopPolicy
 {
  private:
@@ -137,6 +141,8 @@ class TeleopPolicy
     
     return;
   }
+
+  // Functions for the user #########################################
 
   bool getButton(std::string const & button_name )
   {

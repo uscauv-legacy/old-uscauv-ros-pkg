@@ -186,14 +186,13 @@ class MultiReconfigure
     {
       std::string const & ns_rcs = nh_rel_.resolveName( ns, true);
       
-      _NamedRCStorageMap::iterator rcs_it = reconfigure_storage_.find( ns_rcs );
+      _NamedRCStorageMap::const_iterator rcs_it = reconfigure_storage_.find( ns_rcs );
       
       if ( rcs_it == reconfigure_storage_.end() )
 	{
 	  ROS_WARN("Requested reconfigure server [ %s ] does not exist.", ns_rcs.c_str() );
 	  
-	  /// TODO: Figure out what the default config is and how to return it.
-	  /* return; */
+	  /// TODO: Throw exception
 	}
       
       std::shared_ptr< ReconfigureStorage<__ConfigType> > rc_storage =
@@ -201,7 +200,27 @@ class MultiReconfigure
 	( rcs_it->second );
       
       return rc_storage->config_;
+    }
 
+  template<class __ConfigType>
+    __ConfigType const & getLatestConfig( std::string const & ns ) const
+    {
+      std::string const & ns_rcs = nh_rel_.resolveName( ns, true);
+      
+      _NamedRCStorageMap::const_iterator rcs_it = reconfigure_storage_.find( ns_rcs );
+      
+      if ( rcs_it == reconfigure_storage_.end() )
+	{
+	  ROS_WARN("Requested reconfigure server [ %s ] does not exist.", ns_rcs.c_str() );
+	  
+	  /// TODO: Throw exception
+	}
+      
+      std::shared_ptr< ReconfigureStorage<__ConfigType> > rc_storage =
+	std::static_pointer_cast< ReconfigureStorage<__ConfigType> >
+	( rcs_it->second );
+      
+      return rc_storage->config_;
     }
 
 };

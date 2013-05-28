@@ -1,0 +1,15 @@
+<launch>
+  <arg name="pkg" value="auv_vision" />
+  <arg name="name" value="optical_flow" />
+  <arg name="type" default="$(arg name)" />
+  <arg name="rate" default="30" />
+  <arg name="args" value="_loop_rate:=$(arg rate)" />
+
+  <node
+      pkg="$(arg pkg)"
+      type="$(arg type)"
+      name="$(arg name)"
+      args="$(arg args)"
+      output="screen" />
+  
+</launch>

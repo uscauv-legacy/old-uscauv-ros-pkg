@@ -86,14 +86,17 @@ class ShapeMatcherNode: public BaseNode, public ImageTransceiver, public MultiRe
   void imageCallback( cv_bridge::CvImage::ConstPtr const & msg )
   {
     // Denoise the incoming image #####################################
-    unsigned int blur_size = getLatestConfig<_ShapeMatcherConfig>("image_proc").kernel_size;
-    blur_size = (blur_size % 2) ? blur_size : blur_size + 1;
+    int & kernel_size = getLatestConfig<_ShapeMatcherConfig>("image_proc").kernel_size;
+    kernel_size = (kernel_size % 2) ? kernel_size : kernel_size + 1;
     
     /// sensor_msgs::image_encodings::MONO8 = "mono8", for reference
     cv_bridge::CvImage::Ptr denoised = boost::make_shared<cv_bridge::CvImage>( msg->header, sensor_msgs::image_encodings::MONO8 );
 
-    cv::GaussianBlur( msg->image, denoised->image, cv::Size(blur_size, blur_size), 0, 0);
+    cv::GaussianBlur( msg->image, denoised->image, cv::Size(kernel_size, kernel_size), 0, 0);
     cv::threshold( denoised->image, denoised->image, 0, 255, cv::THRESH_BINARY + cv::THRESH_OTSU);
+    /* cv::adaptiveThreshold( msg->image, denoised->image, 255, cv::ADAPTIVE_THRESH_GAUSSIAN_C,  */
+    /* 			   cv::THRESH_BINARY, kernel_size,  */
+    /* 			   getLatestConfig<_ShapeMatcherConfig>("image_proc").c ); */
 
     publishImage("image_denoised", denoised, "image_matched", msg);
     
@@ -102,7 +105,7 @@ class ShapeMatcherNode: public BaseNode, public ImageTransceiver, public MultiRe
   
   void reconfigureCallback( _ShapeMatcherConfig const & )
   {
-    ROS_INFO("Inside Shape Matcher RC callback." );
+    /* ROS_INFO("Inside Shape Matcher RC callback." ); */
     
 
     return;

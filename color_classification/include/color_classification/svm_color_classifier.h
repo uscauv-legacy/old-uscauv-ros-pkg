@@ -199,7 +199,7 @@ class SvmColorClassifier
 	  }
       }
 
-    ROS_INFO("[ %s ] SVM matched %d pixels. ", color_name.c_str(),match_count);
+    ROS_DEBUG("[ %s ] SVM matched %d pixels. ", color_name.c_str(),match_count);
     
     /* cv::namedWindow("Classify Test", CV_WINDOW_AUTOSIZE); */
     /* cv::imshow("Classify Test", classified_image); */

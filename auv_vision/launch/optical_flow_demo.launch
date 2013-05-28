@@ -1,0 +1,17 @@
+<launch>
+
+  <arg name="camera" />
+
+  <remap from="optical_flow/image_mono" to="$(arg camera)/image_mono" />
+
+  <include file="$(find auv_vision)/launch/optical_flow.launch" />
+
+  <!-- Camera -->
+  <include file="$(find uscauv_camera)/launch/monocular_camera.launch" >
+    <arg name="camera" value="$(arg camera)" />
+  </include>
+
+  <node pkg="image_view" type="image_view" name="debug_view" 
+	args="image:=optical_flow/image_debug" />
+
+</launch>

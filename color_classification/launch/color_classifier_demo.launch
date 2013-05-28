@@ -1,7 +1,7 @@
 <launch>
   <!-- Name of the camera we will be streaming data from -->
   <arg name="camera" />
-  <arg name="rate" default="10" />
+  <arg name="rate" default="30" />
 
   <!-- Color Classifier -->
   <remap from="color_classifier/image_color" to="$(arg camera)/image_color_scaled" />
