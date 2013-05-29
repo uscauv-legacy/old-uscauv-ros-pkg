@@ -1,0 +1,165 @@
+#!/bin/bash
+
+###########################################################################
+#  uscauv-add-reconfigure
+#  --------------------
+#
+#  Copyright (c) 2013, Dylan Foster
+#  All rights reserved.
+#
+#  Redistribution and use in source and binary forms, with or without
+#  modification, are permitted provided that the following conditions are
+#  met:
+#
+#  # Redistributions of source code must retain the above copyright
+#    notice, this list of conditions and the following disclaimer.
+#  # Redistributions in binary form must reproduce the above
+#    copyright notice, this list of conditions and the following disclaimer
+#    in the documentation and/or other materials provided with the
+#    distribution.
+#  # Neither the name of USC AUV nor the names of its
+#    contributors may be used to endorse or promote products derived from
+#    this software without specific prior written permission.
+#
+#  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+#  "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+#  LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+#  A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+#  OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+#  SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+#  LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+#  DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+#  THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+#  (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+#  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+#
+###########################################################################
+
+
+# Parse commands ###############################################
+
+function usage()
+{
+    echo ""
+    echo "Usage: `basename $0` package config [-u user] [-p project]"
+    echo ""
+}
+
+if [ $# -lt 2 ]; then
+    usage
+    exit
+fi
+
+package_name=$1; shift
+config_name=$1; shift
+
+package_path=`rospack find $package_name`
+if [ -z "$package_path" ]; then exit; fi
+
+while (( "$#" )); do
+
+    case $1 in
+	-p ) shift
+	    if [ -n "$project" ]; then
+		usage
+		exit
+	    else
+		project=$1
+		shift
+	    fi
+	    ;;
+	-u ) shift
+	    if [ -z "$users" ]; then
+		users="$1"
+	    else
+		users="$users, $1"
+	    fi
+	    shift
+	    ;;
+	* ) 
+	    if [ -n "$1" ]; then
+		usage
+		exit
+	    else
+		shift
+	    fi
+	    ;;
+    esac
+done
+
+if [ -z "$project" ]; then project="USC AUV"; fi
+if [ -z "$users" ]; then users=`whoami`; fi
+
+# Process Text #################################################
+
+config_name=`echo $config_name | tr " " _`
+package_name=`echo $package_name | tr " " _`
+
+ConfigName=`echo $config_name | sed 's/[a-z]/\U&/' |sed 's/_[a-z]/\U\0/g' | tr -d _`
+CONFIGNAME=`echo $config_name | sed 's/[a-z]/\U&/g'| tr -d _`
+
+PackageName=`echo $package_name | sed 's/[a-z]/\U&/' |sed 's/_[a-z]/\U\0/g' | tr -d _`
+PACKAGENAME=`echo $package_name | sed 's/[a-z]/\U&/g' | tr -d _`
+
+PROJECTNAME=`echo $project | tr -d " " | tr -d _ | sed 's/[a-z]/\U&/g'`
+
+config_file="$ConfigName.cfg"
+cmake_file="CMakeLists.txt"
+
+cfg_path="cfg"
+
+config_path="$cfg_path/$config_file"
+cmake_path="$cmake_file"
+
+config_text="#!/usr/bin/env python
+
+PACKAGE='$package_name'
+import roslib; roslib.load_manifest(PACKAGE)
+
+from driver_base.msg import SensorLevels
+from dynamic_reconfigure.parameter_generator import *
+
+gen = ParameterGenerator()
+
+################################################################################################################################
+# Parameter Examples. Add your own parameters below
+################################################################################################################################
+
+# Valid types: bool_t, int_t, double_t, str_t
+
+#          Name        Type   Reconfiguration level             Description                         Default Min Max
+# gen.add( \"my_param\", int_t, SensorLevels.RECONFIGURE_RUNNING, \"My very own dynamical parameter.\", 10,     1,  100 )
+
+# Example enum:
+# size_enum = gen.enum([ gen.const(\"Small\", int_t, 0, \"A small constant\"),
+#                   gen.const(\"Medium\", int_t, 1, \"A medium constant\"),
+#                   gen.const(\"Large\", int_t, 2, \"A large constant\"),
+#                   gen.const(\"ExtraLarge\", int_t, 3, \"An extra large constant\") ],
+#                   \"An enum to set size\")
+
+# gen.add(\"size\", int_t, 0, \"A size parameter which is edited via an enum\", 1, 0, 3, edit_method=size_enum)
+
+################################################################################################################################
+################################################################################################################################
+
+
+exit(gen.generate(PACKAGE, \"$config_name\", \"$ConfigName\"))"
+
+
+cmake_text="
+# Auto-generated by uscauv-add-reconfigure
+rosbuild_find_ros_package(dynamic_reconfigure)
+include(\${dynamic_reconfigure_PACKAGE_PATH}/cmake/cfgbuild.cmake)
+gencfg()"
+
+# Make the magic happen ########################################
+
+cd $package_path
+
+if [ ! -d  "$cfg_path" ]; then mkdir -vp $cfg_path; fi
+
+echo "$config_text" > $config_path && chmod 777 $config_path
+# Note that this one is appended:
+echo "$cmake_text" >> $cmake_path
+
+uscauv-print-logo

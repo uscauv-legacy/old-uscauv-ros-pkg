@@ -45,6 +45,11 @@
 // uscauv
 #include <uscauv_common/base_node.h>
 #include <uscauv_common/image_transceiver.h>
+#include <uscauv_common/multi_reconfigure.h>
+#include <uscauv_common/graphics.h>
+
+/// reconfigure
+#include <auv_vision/OpticalFlowConfig.h>
 
 /// opencv2
 #include <opencv2/imgproc/imgproc.hpp>
@@ -56,13 +61,17 @@ typedef cv_bridge::CvImage _CvImage;
 typedef std::vector< cv::Point2f > _FeatureVector;
 typedef std::vector<unsigned char> _StatusVector;
 
-class OpticalFlowNode: public BaseNode, public ImageTransceiver
+using namespace auv_vision;
+
+class OpticalFlowNode: public BaseNode, public ImageTransceiver, public MultiReconfigure
 {
  private:
   cv::Mat prev_image_;
   _FeatureVector prev_features_;
   bool ready_;
-
+  
+  OpticalFlowConfig* config_;
+  
  public:
  OpticalFlowNode(): BaseNode("OpticalFlow"),
     ready_( false )
@@ -76,8 +85,14 @@ class OpticalFlowNode: public BaseNode, public ImageTransceiver
      {
        addImagePublisher("image_debug", 1);
        
-       addImageSubscriber("image_mono", 1, "mono8", &OpticalFlowNode::monoCallback, this);
-     }  
+       addImageSubscriber("image_mono", 1, sensor_msgs::image_encodings::MONO8,
+			  &OpticalFlowNode::monoCallback, this);
+
+       addReconfigureServer<OpticalFlowConfig>("image_proc");
+       /// note: won't be able to do this in a multithreaded node without a mutex
+       config_ = &getLatestConfig<OpticalFlowConfig>("image_proc");
+
+     }
 
   // Running spin() will cause this function to get called at the loop rate until this node is killed.
   void spinOnce()
@@ -95,17 +110,16 @@ class OpticalFlowNode: public BaseNode, public ImageTransceiver
     _StatusVector match_status;
     std::vector<float> err;
     
-    double feature_quality = 0.1f;
-    unsigned int feature_radius = 30;
+    double const & feature_quality = config_->feature_quality;
+    unsigned int const & feature_radius = config_->feature_distance / 2;
 
     // ################################################################
     // Get down to business ###########################################
     // ################################################################
 
-    /// TODO: Variable quality level, variable minimum distance
     cv::goodFeaturesToTrack( msg->image , new_features, 
 			     USCAUV_AUVVISION_OPTICALFLOW_MAXFEATURES,
-			     feature_quality, feature_radius);
+			     feature_quality, 2*feature_radius);
 
     if( !ready_ )
       {
@@ -120,9 +134,7 @@ class OpticalFlowNode: public BaseNode, public ImageTransceiver
     cv::calcOpticalFlowPyrLK( prev_image_, new_image, prev_features_, matched_features,
 			      match_status, err );
 
-    /// update previous frame
-    new_image.copyTo( prev_image_ );
-    prev_features_ = new_features;
+
 
     // ################################################################
     // Draw output image and publish ##################################
@@ -131,7 +143,9 @@ class OpticalFlowNode: public BaseNode, public ImageTransceiver
     cv_bridge::CvImage::Ptr output = 
       boost::make_shared<cv_bridge::CvImage>
       ( msg->header, sensor_msgs::image_encodings::BGR8 );
-    cv::cvtColor( prev_image_, output->image, CV_GRAY2BGR );
+
+    /// this function can process the image in place
+    cv::cvtColor( new_image, output->image, CV_GRAY2BGR );
     
     _FeatureVector::const_iterator matched_it = matched_features.begin();
     _StatusVector::const_iterator status_it = match_status.begin();
@@ -140,33 +154,39 @@ class OpticalFlowNode: public BaseNode, public ImageTransceiver
 	 previous_it != prev_features_.end(); 
 	 ++previous_it, ++matched_it, ++status_it )
       {
-	/// set circle radius so that the closest circles are cotangent
+	/// set circle radius so that the closest circles are tangent
 
 	if( ! *status_it )
 	  {
 	    /// draw features that couldn't be matched
-	    cv::circle( output->image, *previous_it, 
-			feature_radius / 2, cv::Scalar( 160, 120, 200), 2);	
+	    cv::circle( output->image, *previous_it,
+			feature_radius, uscauv::CV_PINK_BGR, 2);
 	    continue;
 	  }
 
 	/// draw features that were matched
-	cv::circle( output->image, *previous_it, 
-		    feature_radius / 2, cv::Scalar( 200, 120, 160), 2);
+	cv::circle( output->image, *previous_it,
+		    feature_radius, uscauv::CV_DENIM_BGR, 2);
 	
 	/// draw estimate
-	cv::circle( output->image, *matched_it, 
-	    feature_radius / 2, cv::Scalar( 120, 200, 160), 2);
+	/* cv::circle( output->image, *matched_it, */
+	/* 	    feature_radius, uscauv::CV_LIME_BGR, 2); */
 
-	/// ray between estimate and previous
-	cv::line( output->image, *previous_it, *matched_it, 
-		  cv::Scalar(200, 200, 200), 2);
+	/// ray between estimate and original feature
+	cv::line( output->image, *previous_it, *matched_it,
+		  cv::Scalar(200, 200, 200), 1);
 	
       }
 
     
 
     publishImage( "image_debug", output );
+
+    /// update previous frame
+    new_image.copyTo( prev_image_ );
+    prev_features_ = new_features;
+
+    return;
   }
 
 

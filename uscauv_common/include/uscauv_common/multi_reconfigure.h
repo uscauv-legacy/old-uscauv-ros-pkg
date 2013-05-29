@@ -44,6 +44,7 @@
 
 /// cpp11
 #include <functional>
+#include <unordered_map>
 
 // dynamic reconfigure
 #include <dynamic_reconfigure/server.h>
@@ -120,7 +121,7 @@ class MultiReconfigure
 {
  private:
   typedef std::shared_ptr< BaseReconfigureStorage > _StoragePointerType;
-  typedef std::map< std::string, _StoragePointerType > _NamedRCStorageMap;
+  typedef std::unordered_map< std::string, _StoragePointerType > _NamedRCStorageMap;
 
   ros::NodeHandle nh_rel_;
   
@@ -182,7 +183,7 @@ class MultiReconfigure
     }
 
   template<class __ConfigType>
-    __ConfigType & getLatestConfig( std::string const & ns )
+    __ConfigType & getLatestConfig( std::string const & ns ) throw( std::exception )
     {
       std::string const & ns_rcs = nh_rel_.resolveName( ns, true);
       
@@ -190,9 +191,12 @@ class MultiReconfigure
       
       if ( rcs_it == reconfigure_storage_.end() )
 	{
-	  ROS_WARN("Requested reconfigure server [ %s ] does not exist.", ns_rcs.c_str() );
+	  std::stringstream error_msg;
+	  error_msg << "Requested reconfigure server [ " << ns_rcs << " ] does not exist.";
 	  
-	  /// TODO: Throw exception
+	  ROS_WARN_STREAM( error_msg.str() );
+	  
+	  throw std::invalid_argument( error_msg.str() );
 	}
       
       std::shared_ptr< ReconfigureStorage<__ConfigType> > rc_storage =
@@ -203,7 +207,7 @@ class MultiReconfigure
     }
 
   template<class __ConfigType>
-    __ConfigType const & getLatestConfig( std::string const & ns ) const
+    __ConfigType const & getLatestConfig( std::string const & ns ) const throw( std::exception )
     {
       std::string const & ns_rcs = nh_rel_.resolveName( ns, true);
       
@@ -211,11 +215,16 @@ class MultiReconfigure
       
       if ( rcs_it == reconfigure_storage_.end() )
 	{
-	  ROS_WARN("Requested reconfigure server [ %s ] does not exist.", ns_rcs.c_str() );
+	  std::stringstream error_msg;
+	  error_msg << "Requested reconfigure server [ " << ns_rcs << " ] does not exist.";
 	  
-	  /// TODO: Throw exception
+	  ROS_WARN_STREAM( error_msg.str() );
+	  
+	  throw std::invalid_argument( error_msg.str() );
 	}
       
+      /// Upcast from BaseReconfigureStorage to ReconfigureStrorage<__ConfigType>. 
+      /// This is kinda dangerous and will mess up at runtime if called with the wrong __ConfigType.
       std::shared_ptr< ReconfigureStorage<__ConfigType> > rc_storage =
 	std::static_pointer_cast< ReconfigureStorage<__ConfigType> >
 	( rcs_it->second );

@@ -255,5 +255,7 @@ function waitcam()
 
 alias wc="waitcam"
 
+alias lsb="ls -lh /dev/seabee"
+
 ## The greatest idea ###########################################
 alias roslaunch="uscauv-print-logo && roslaunch $@"

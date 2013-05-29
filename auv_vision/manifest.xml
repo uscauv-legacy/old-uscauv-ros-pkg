@@ -12,6 +12,7 @@
   <depend package="roscpp"/>
   <depend package="opencv2"/>
   <depend package="uscauv_common"/>
+  <depend package="dynamic_reconfigure" />
 
 </package>
 
