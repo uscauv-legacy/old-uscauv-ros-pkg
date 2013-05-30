@@ -47,6 +47,7 @@
 #include <uscauv_common/image_transceiver.h>
 #include <uscauv_common/multi_reconfigure.h>
 #include <uscauv_common/graphics.h>
+#include <uscauv_common/RANSACConfig.h>
 
 /// reconfigure
 #include <auv_vision/OpticalFlowConfig.h>
@@ -55,13 +56,17 @@
 #include <opencv2/imgproc/imgproc.hpp>
 #include <opencv2/video/video.hpp>
 
+/// cpp11
+#include <random>
+
 #define USCAUV_AUVVISION_OPTICALFLOW_MAXFEATURES 1024
 
 typedef cv_bridge::CvImage _CvImage;
 typedef std::vector< cv::Point2f > _FeatureVector;
 typedef std::vector<unsigned char> _StatusVector;
 
-using namespace auv_vision;
+typedef auv_vision::OpticalFlowConfig _OpticalFlowConfig;
+typedef uscauv_common::RANSACConfig _RANSACConfig;
 
 class OpticalFlowNode: public BaseNode, public ImageTransceiver, public MultiReconfigure
 {
@@ -70,7 +75,8 @@ class OpticalFlowNode: public BaseNode, public ImageTransceiver, public MultiRec
   _FeatureVector prev_features_;
   bool ready_;
   
-  OpticalFlowConfig* config_;
+  _OpticalFlowConfig* of_config_;
+  _RANSACConfig* ransac_config_;
   
  public:
  OpticalFlowNode(): BaseNode("OpticalFlow"),
@@ -88,9 +94,11 @@ class OpticalFlowNode: public BaseNode, public ImageTransceiver, public MultiRec
        addImageSubscriber("image_mono", 1, sensor_msgs::image_encodings::MONO8,
 			  &OpticalFlowNode::monoCallback, this);
 
-       addReconfigureServer<OpticalFlowConfig>("image_proc");
-       /// note: won't be able to do this in a multithreaded node without a mutex
-       config_ = &getLatestConfig<OpticalFlowConfig>("image_proc");
+       addReconfigureServer<_OpticalFlowConfig>("image_proc");
+       addReconfigureServer<_RANSACConfig>("RANSAC");
+       /// note: won't be able to do this in a multithreaded node without mutexes
+       of_config_ = &getLatestConfig<_OpticalFlowConfig>("image_proc");
+       ransac_config_ = &getLatestConfig<_RANSACConfig>("RANSAC");
 
      }
 
@@ -110,8 +118,8 @@ class OpticalFlowNode: public BaseNode, public ImageTransceiver, public MultiRec
     _StatusVector match_status;
     std::vector<float> err;
     
-    double const & feature_quality = config_->feature_quality;
-    unsigned int const & feature_radius = config_->feature_distance / 2;
+    double const & feature_quality = of_config_->feature_quality;
+    unsigned int const & feature_radius = of_config_->feature_distance / 2;
 
     // ################################################################
     // Get down to business ###########################################
@@ -134,11 +142,12 @@ class OpticalFlowNode: public BaseNode, public ImageTransceiver, public MultiRec
     cv::calcOpticalFlowPyrLK( prev_image_, new_image, prev_features_, matched_features,
 			      match_status, err );
 
-
+    
 
     // ################################################################
     // Draw output image and publish ##################################
     // ################################################################
+    _FeatureVector velocity_vectors;
 
     cv_bridge::CvImage::Ptr output = 
       boost::make_shared<cv_bridge::CvImage>
@@ -146,6 +155,10 @@ class OpticalFlowNode: public BaseNode, public ImageTransceiver, public MultiRec
 
     /// this function can process the image in place
     cv::cvtColor( new_image, output->image, CV_GRAY2BGR );
+
+    cv::Size output_size = output->image.size();
+    
+    cv::Point2f output_center( output_size.width/2, output_size.height/2);
     
     _FeatureVector::const_iterator matched_it = matched_features.begin();
     _StatusVector::const_iterator status_it = match_status.begin();
@@ -168,9 +181,7 @@ class OpticalFlowNode: public BaseNode, public ImageTransceiver, public MultiRec
 	cv::circle( output->image, *previous_it,
 		    feature_radius, uscauv::CV_DENIM_BGR, 2);
 	
-	/// draw estimate
-	/* cv::circle( output->image, *matched_it, */
-	/* 	    feature_radius, uscauv::CV_LIME_BGR, 2); */
+	velocity_vectors.push_back( *matched_it - *previous_it );
 
 	/// ray between estimate and original feature
 	cv::line( output->image, *previous_it, *matched_it,
@@ -178,7 +189,21 @@ class OpticalFlowNode: public BaseNode, public ImageTransceiver, public MultiRec
 	
       }
 
+    // ################################################################
+    // Do RANSAC ######################################################
+    // ################################################################
+    _FeatureVector ransac_vectors;
+    double ransac_mse;
+    cv::Point2f ransac_velocity;
     
+    RANSAC( velocity_vectors, ransac_vectors, ransac_mse, ransac_velocity );
+    
+    ROS_INFO("RANSAC: ( %4f, %.4f ) with MSE %.4f. In: %d, Out: %d.",
+	     ransac_velocity.x, ransac_velocity.y, ransac_mse, 
+	     velocity_vectors.size(), ransac_vectors.size() );
+
+    cv::line( output->image, output_center, ransac_velocity + output_center,
+	      uscauv::CV_GREEN_BGR, 3);
 
     publishImage( "image_debug", output );
 
@@ -189,6 +214,93 @@ class OpticalFlowNode: public BaseNode, public ImageTransceiver, public MultiRec
     return;
   }
 
+  void RANSAC( _FeatureVector const & in, _FeatureVector & out, 
+	       double & error, cv::Point2f & model )
+  {
+    int const & n = ransac_config_->sample_size;
+    int const & k = ransac_config_->max_iterations;
+    int const & d = ransac_config_->min_data;
+    double const & t = ransac_config_->consensus_threshold;
+
+    bool error_init = false;
+    
+    for(int i = 0; i < k; ++i)
+      {
+	_FeatureVector  maybe_inliers, rest;
+	getSamplePoints( in, n, maybe_inliers, rest );
+	cv::Point2f const maybe_model = cvPointMean( maybe_inliers );
+	_FeatureVector consensus_set = maybe_inliers;
+	
+	for( _FeatureVector::const_iterator rest_it = rest.begin();
+	     rest_it != rest.end(); ++rest_it)
+	  {
+	    if( cv::norm( maybe_model - *rest_it ) < t )
+	      consensus_set.push_back( *rest_it );
+	  }
+	
+	if( consensus_set.size() > d )
+	  {
+	    cv::Point2f consensus_model = cvPointMean( consensus_set );
+	    double model_error = cvPointMSE( consensus_set, consensus_model );
+	    
+	    if( !error_init || model_error < error )
+	      {
+		error_init = true;
+		error = model_error;
+		model = consensus_model;
+		out = consensus_set;
+	      }
+	  }
+      }
+  }
+  
+  cv::Point2f cvPointMean( _FeatureVector const & in )
+    {
+      cv::Point2f sum( 0.0f, 0.0f);
+      
+      for( _FeatureVector::const_iterator point_it = in.begin();
+	   point_it != in.end(); ++point_it)
+	{
+	  sum += *point_it;
+	}
+
+      /// fyi
+      /* cv::norm(sum); */
+      
+      return sum *= double(1.0L / in.size());
+    }
+
+  double cvPointMSE( _FeatureVector const & in, cv::Point2f const & point )
+    {
+      double sum = 0;
+      
+      for( _FeatureVector::const_iterator point_it = in.begin();
+	   point_it != in.end(); ++point_it)
+	{
+	  sum += pow(cv::norm(*point_it - point), 2);
+	}
+
+      return sum *= double(1.0L / (in.size() -1));
+    }
+
+  /// TODO: Switch rest to a list. Erasing elements is inefficient with vectors
+  _FeatureVector getSamplePoints(_FeatureVector const & in, int const & num, _FeatureVector & sample_points, _FeatureVector & rest)
+    {
+      rest = in;
+      
+      std::default_random_engine generator;
+      std::uniform_int_distribution<int>  distribution(0, in.size() - 1);
+
+      for(int i = 0; i < num; ++i)
+	{
+	  int const n = distribution(generator);
+	  
+	  sample_points.push_back( rest[ n ] );
+	  rest.erase( rest.begin() + n );
+	}
+      
+      return sample_points;
+    }
 
 };
 
