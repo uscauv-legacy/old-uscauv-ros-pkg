@@ -52,30 +52,35 @@ namespace uscauv
   // Colors! Feel free to add more ##################################
   // ################################################################
 
-  static const cv::Scalar CV_RED_BGR     = cv::Scalar( 0  ,   0, 255 );
-  static const cv::Scalar CV_BLUE_BGR    = cv::Scalar( 255, 0  , 0   );
-  static const cv::Scalar CV_GREEN_BGR   = cv::Scalar( 0  , 255, 0   );
-  static const cv::Scalar CV_YELLOW_BGR  = cv::Scalar( 0  , 255, 255 );
-  static const cv::Scalar CV_MAGENTA_BGR = cv::Scalar( 255, 0  , 255 );
-  static const cv::Scalar CV_CYAN_BGR    = cv::Scalar( 255, 255, 0   );
-  static const cv::Scalar CV_WHITE_BGR   = cv::Scalar( 255, 255, 255 );
-  static const cv::Scalar CV_BLACK_BGR   = cv::Scalar( 0  , 0  , 0   );
-  static const cv::Scalar CV_PINK_BGR    = cv::Scalar( 160, 120, 200 );
-  static const cv::Scalar CV_LIME_BGR    = cv::Scalar( 120, 200, 160 );
-  static const cv::Scalar CV_DENIM_BGR   = cv::Scalar( 189,  96, 21  );
-
-  static const cv::Scalar CV_RED_RGB     = cv::Scalar( 255, 0  , 0   );
-  static const cv::Scalar CV_BLUE_RGB    = cv::Scalar( 0  , 0  , 255 );
-  static const cv::Scalar CV_GREEN_RGB   = cv::Scalar( 0  , 255, 0   );
-  static const cv::Scalar CV_YELLOW_RGB  = cv::Scalar( 255, 255, 0   );
-  static const cv::Scalar CV_MAGENTA_RGB = cv::Scalar( 255, 0  , 255 );
-  static const cv::Scalar CV_CYAN_RGB    = cv::Scalar( 0  , 255, 255 );
-  static const cv::Scalar CV_WHITE_RGB   = cv::Scalar( 255, 255, 255 );
-  static const cv::Scalar CV_BLACK_RGB   = cv::Scalar( 0  , 0  , 0   );
-  static const cv::Scalar CV_PINK_RGB    = cv::Scalar( 200, 120, 160 );
-  static const cv::Scalar CV_LIME_RGB    = cv::Scalar( 160, 200, 120 );   
-  static const cv::Scalar CV_DENIM_RGB   = cv::Scalar( 21,  96 , 189 );
-
+  static const cv::Scalar CV_RED_BGR         = cv::Scalar( 0  ,   0, 255 );
+  static const cv::Scalar CV_BLUE_BGR        = cv::Scalar( 255, 0  , 0   );
+  static const cv::Scalar CV_GREEN_BGR       = cv::Scalar( 0  , 255, 0   );
+  static const cv::Scalar CV_YELLOW_BGR      = cv::Scalar( 0  , 255, 255 );
+  static const cv::Scalar CV_MAGENTA_BGR     = cv::Scalar( 255, 0  , 255 );
+  static const cv::Scalar CV_CYAN_BGR        = cv::Scalar( 255, 255, 0   );
+  static const cv::Scalar CV_WHITE_BGR       = cv::Scalar( 255, 255, 255 );
+  static const cv::Scalar CV_BLACK_BGR       = cv::Scalar( 0  , 0  , 0   );
+  static const cv::Scalar CV_ORANGE_BGR      = cv::Scalar( 0  , 127, 255 );
+  static const cv::Scalar CV_PINK_BGR        = cv::Scalar( 160, 120, 200 );
+  static const cv::Scalar CV_LIME_BGR        = cv::Scalar( 120, 200, 160 );
+  static const cv::Scalar CV_DENIM_BGR       = cv::Scalar( 189,  96, 21  );
+  static const cv::Scalar CV_USCCARDINAL_BGR = cv::Scalar( 0  , 0  , 153 );
+  static const cv::Scalar CV_USCGOLD_BGR     = cv::Scalar( 0  , 204, 255 );
+  
+  static const cv::Scalar CV_RED_RGB         = cv::Scalar( 255, 0  , 0   );
+  static const cv::Scalar CV_BLUE_RGB        = cv::Scalar( 0  , 0  , 255 );
+  static const cv::Scalar CV_GREEN_RGB       = cv::Scalar( 0  , 255, 0   );
+  static const cv::Scalar CV_YELLOW_RGB      = cv::Scalar( 255, 255, 0   );
+  static const cv::Scalar CV_MAGENTA_RGB     = cv::Scalar( 255, 0  , 255 );
+  static const cv::Scalar CV_CYAN_RGB        = cv::Scalar( 0  , 255, 255 );
+  static const cv::Scalar CV_WHITE_RGB       = cv::Scalar( 255, 255, 255 );
+  static const cv::Scalar CV_BLACK_RGB       = cv::Scalar( 0  , 0  , 0   );
+  static const cv::Scalar CV_ORANGE_RGB      = cv::Scalar( 255, 127, 0   );
+  static const cv::Scalar CV_PINK_RGB        = cv::Scalar( 200, 120, 160 );
+  static const cv::Scalar CV_LIME_RGB        = cv::Scalar( 160, 200, 120 );   
+  static const cv::Scalar CV_DENIM_RGB       = cv::Scalar( 21,  96 , 189 );
+  static const cv::Scalar CV_USCCARDINAL_RGB = cv::Scalar( 153, 0  , 0   );
+  static const cv::Scalar CV_USCGOLD_RGB     = cv::Scalar( 255, 204, 0   );
 }
 
 #endif // USCAUV_USCAUVCOMMON_GRAPHICS

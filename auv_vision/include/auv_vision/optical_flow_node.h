@@ -76,7 +76,7 @@ class OpticalFlowNode: public BaseNode, public ImageTransceiver, public MultiRec
   bool ready_;
   
   _OpticalFlowConfig* of_config_;
-  _RANSACConfig* ransac_config_;
+  _RANSACConfig*      ransac_config_;
   
  public:
  OpticalFlowNode(): BaseNode("OpticalFlow"),
@@ -93,11 +93,11 @@ class OpticalFlowNode: public BaseNode, public ImageTransceiver, public MultiRec
        
        addImageSubscriber("image_mono", 1, sensor_msgs::image_encodings::MONO8,
 			  &OpticalFlowNode::monoCallback, this);
-
+       
        addReconfigureServer<_OpticalFlowConfig>("image_proc");
        addReconfigureServer<_RANSACConfig>("RANSAC");
        /// note: won't be able to do this in a multithreaded node without mutexes
-       of_config_ = &getLatestConfig<_OpticalFlowConfig>("image_proc");
+       of_config_     = &getLatestConfig<_OpticalFlowConfig>("image_proc");
        ransac_config_ = &getLatestConfig<_RANSACConfig>("RANSAC");
 
      }
@@ -122,7 +122,7 @@ class OpticalFlowNode: public BaseNode, public ImageTransceiver, public MultiRec
     unsigned int const & feature_radius = of_config_->feature_distance / 2;
 
     // ################################################################
-    // Get down to business ###########################################
+    // Get down to business (aka optical flow) ########################
     // ################################################################
 
     cv::goodFeaturesToTrack( msg->image , new_features, 
@@ -142,13 +142,12 @@ class OpticalFlowNode: public BaseNode, public ImageTransceiver, public MultiRec
     cv::calcOpticalFlowPyrLK( prev_image_, new_image, prev_features_, matched_features,
 			      match_status, err );
 
-    
 
     // ################################################################
     // Draw output image and publish ##################################
     // ################################################################
     _FeatureVector velocity_vectors;
-
+    
     cv_bridge::CvImage::Ptr output = 
       boost::make_shared<cv_bridge::CvImage>
       ( msg->header, sensor_msgs::image_encodings::BGR8 );
@@ -192,16 +191,54 @@ class OpticalFlowNode: public BaseNode, public ImageTransceiver, public MultiRec
     // ################################################################
     // Do RANSAC ######################################################
     // ################################################################
+
     _FeatureVector ransac_vectors;
     double ransac_mse;
     cv::Point2f ransac_velocity;
     
-    RANSAC( velocity_vectors, ransac_vectors, ransac_mse, ransac_velocity );
-    
-    ROS_INFO("RANSAC: ( %4f, %.4f ) with MSE %.4f. In: %d, Out: %d.",
-	     ransac_velocity.x, ransac_velocity.y, ransac_mse, 
-	     velocity_vectors.size(), ransac_vectors.size() );
+    /// text params
+    std::string const status_text = "RANSAC: ";
+    int const font = cv::FONT_HERSHEY_SIMPLEX;
+    double const font_scale = 0.5;
+    int const font_thickness = 1.5;
+    int baseline = 0;
+    cv::Point text_origin( 5, 20 );
+    cv::Size status_size = cv::getTextSize( status_text, font, font_scale, 
+					    font_thickness, &baseline );
 
+    cv::putText( output->image, status_text, text_origin, 
+		 font, font_scale, uscauv::CV_GREEN_BGR,
+		 font_thickness );
+    
+    if( RANSAC( velocity_vectors, ransac_vectors, ransac_mse, ransac_velocity ))
+      {
+	ROS_WARN("RANSAC failed.");
+	cv::putText( output->image, "Failure", text_origin + cv::Point( status_size.width, 0), 
+		     font, font_scale, uscauv::CV_RED_BGR,
+		     font_thickness );
+		     
+      }
+    else
+      {
+	std::stringstream vel, mse;
+	vel << "Velocity: (" << ransac_velocity.x << ", " << ransac_velocity.y << ")";
+	mse << "MSE: " << ransac_mse;
+
+	ROS_INFO("RANSAC: ( %.4f, %.4f ) with MSE %.4f. In: %lu, Out: %lu.",
+		 ransac_velocity.x, ransac_velocity.y, ransac_mse, 
+		 velocity_vectors.size(), ransac_vectors.size() );
+	cv::putText( output->image, "Good", text_origin + cv::Point( status_size.width, 0), 
+		     font, font_scale, uscauv::CV_GREEN_BGR,
+		     font_thickness );
+	cv::putText( output->image, vel.str(), text_origin + cv::Point( 0, status_size.height+10), 
+		     font, font_scale, uscauv::CV_GREEN_BGR,
+		     font_thickness );
+	cv::putText( output->image, mse.str(), text_origin + cv::Point( 0, 2*(status_size.height+10)), 
+		     font, font_scale, uscauv::CV_GREEN_BGR,
+		     font_thickness );
+
+
+      }
     cv::line( output->image, output_center, ransac_velocity + output_center,
 	      uscauv::CV_GREEN_BGR, 3);
 
@@ -213,18 +250,28 @@ class OpticalFlowNode: public BaseNode, public ImageTransceiver, public MultiRec
 
     return;
   }
-
-  void RANSAC( _FeatureVector const & in, _FeatureVector & out, 
+  
+  int RANSAC( _FeatureVector const & in, _FeatureVector & out, 
 	       double & error, cv::Point2f & model )
   {
-    int const & n = ransac_config_->sample_size;
-    int const & k = ransac_config_->max_iterations;
-    int const & d = ransac_config_->min_data;
-    double const & t = ransac_config_->consensus_threshold;
+    error = 0.0;
+    model = cv::Point2f(0, 0);
+    out = _FeatureVector();
+    
+    unsigned int const n = ransac_config_->sample_size;
+    unsigned int const k = ransac_config_->max_iterations;
+    unsigned int const d = ransac_config_->min_inliers;
+    double const t = ransac_config_->inlier_max_error;
 
+    if( in.size() < n )
+      {
+	ROS_WARN("RANSAC input is smaller than sample size. Quitting...");
+	return -1;
+      }
+    
     bool error_init = false;
     
-    for(int i = 0; i < k; ++i)
+    for(unsigned int i = 0; i < k; ++i)
       {
 	_FeatureVector  maybe_inliers, rest;
 	getSamplePoints( in, n, maybe_inliers, rest );
@@ -252,6 +299,9 @@ class OpticalFlowNode: public BaseNode, public ImageTransceiver, public MultiRec
 	      }
 	  }
       }
+
+    return (error_init) ? 0 : -1;
+    
   }
   
   cv::Point2f cvPointMean( _FeatureVector const & in )
@@ -264,9 +314,6 @@ class OpticalFlowNode: public BaseNode, public ImageTransceiver, public MultiRec
 	  sum += *point_it;
 	}
 
-      /// fyi
-      /* cv::norm(sum); */
-      
       return sum *= double(1.0L / in.size());
     }
 
@@ -284,14 +331,14 @@ class OpticalFlowNode: public BaseNode, public ImageTransceiver, public MultiRec
     }
 
   /// TODO: Switch rest to a list. Erasing elements is inefficient with vectors
-  _FeatureVector getSamplePoints(_FeatureVector const & in, int const & num, _FeatureVector & sample_points, _FeatureVector & rest)
+  _FeatureVector getSamplePoints(_FeatureVector const & in, unsigned int const & num, _FeatureVector & sample_points, _FeatureVector & rest)
     {
       rest = in;
       
       std::default_random_engine generator;
       std::uniform_int_distribution<int>  distribution(0, in.size() - 1);
 
-      for(int i = 0; i < num; ++i)
+      for(unsigned int i = 0; i < num; ++i)
 	{
 	  int const n = distribution(generator);
 	  
