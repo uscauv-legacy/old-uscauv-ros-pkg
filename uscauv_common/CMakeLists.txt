@@ -24,5 +24,7 @@ gencfg()
 # Include auto-generated dynamic reconfigure headers
 include_directories(${PROJECT_SOURCE_DIR}/cfg/cpp)
 
-rosbuild_add_library( uscauv_common src/base_node.cpp src/image_transceiver.cpp src/multi_reconfigure.cpp src/graphics.cpp)
+rosbuild_add_library( uscauv_common src/base_node.cpp src/image_transceiver.cpp src/multi_reconfigure.cpp src/graphics.cpp src/image_loader.cpp)
+
+
 

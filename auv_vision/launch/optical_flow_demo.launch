@@ -1,6 +1,7 @@
 <launch>
 
   <arg name="camera" />
+  <arg name="rate" default="60" />
 
   <remap from="optical_flow/image_mono" to="$(arg camera)/image_mono" />
 

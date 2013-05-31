@@ -44,9 +44,11 @@
 #include <uscauv_common/base_node.h>
 #include <uscauv_common/image_transceiver.h>
 #include <uscauv_common/multi_reconfigure.h>
+#include <uscauv_common/image_loader.h>
 
 /// opencv
 #include <opencv2/imgproc/imgproc.hpp>
+#include <opencv2/highgui/highgui.hpp>
 
 /// reconfigure
 #include <shape_matching/ShapeMatcherConfig.h>
@@ -55,9 +57,12 @@ typedef shape_matching::ShapeMatcherConfig _ShapeMatcherConfig;
 
 class ShapeMatcherNode: public BaseNode, public ImageTransceiver, public MultiReconfigure
 {
+ private:
 
+  uscauv::ImageLoader template_images_;
+  
  public:
- ShapeMatcherNode(): BaseNode("ShapeMatcher")
+ ShapeMatcherNode(): BaseNode("ShapeMatcher"), template_images_("model")
    {
      
    }
@@ -70,9 +75,11 @@ class ShapeMatcherNode: public BaseNode, public ImageTransceiver, public MultiRe
        addImagePublisher( "image_denoised", 1);
        addImagePublisher( "image_matched", 1);
        
-       addImageSubscriber( "input_image", 1, "mono8", &ShapeMatcherNode::imageCallback, this);
+       addImageSubscriber( "image", 1, "mono8", &ShapeMatcherNode::imageCallback, this);
        
        addReconfigureServer<_ShapeMatcherConfig>("image_proc", &ShapeMatcherNode::reconfigureCallback, this);
+
+       template_images_.loadImagesAt("shapes", CV_LOAD_IMAGE_GRAYSCALE );
      }  
 
   // Running spin() will cause this function to get called at the loop rate until this node is killed.

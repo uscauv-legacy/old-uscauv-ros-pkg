@@ -257,5 +257,7 @@ alias wc="waitcam"
 
 alias lsb="ls -lh /dev/seabee"
 
+alias get_image_header="grep header -A 10"
+
 ## The greatest idea ###########################################
 alias roslaunch="uscauv-print-logo && roslaunch $@"
