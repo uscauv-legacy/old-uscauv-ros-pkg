@@ -65,7 +65,7 @@ typedef cv::Mat                  _Signature;
 
 struct ContourData
 {
-  _Contour contour_;   /// original contour in cartesian, for drawing later  normalized)
+  _Contour2f contour_;   /// original contour in cartesian, for drawing later  normalized)
   _Signature signature_; /// radial histogram for EMD, see Rubner EMD paper
   cv::Point2f mean_;
   cv::Mat eigenvec_;
@@ -222,16 +222,20 @@ class ShapeMatcherNode: public BaseNode, public ImageTransceiver, public MultiRe
 				  CV_DIST_USER, emd_cost_ );
 	    ROS_INFO("[ %s ] EMD: %f", template_it->first.c_str(), emd );
 	    if( emd < config_->emd_boundary )
-	      ROS_INFO("Match detected.");
+	      {
+		ROS_INFO("Match detected.");
+		result.contour_ = template_it->second.contour_;
+		drawContour(match_image, result, template_it->first);
+	      }
 	  }
 	
 	/// finish analyzing, draw
-	cv::Point2f const & mean = result.mean_;
+	/* cv::Point2f const & mean = result.mean_; */
 
 	/* ROS_INFO("Got mean %f, %f", mean.x, mean.y ); */
 	/* ROS_INFO("Got rotation %f.", result.rotation_ * 180 / M_PI); */
 	/* ROS_INFO("Got bounding circle radius: %f", result.radius_ ); */
-	cv::circle(match_image, mean, result.radius_, uscauv::CV_RED_BGR, 2);
+	/* cv::circle(match_image, mean, result.radius_, uscauv::CV_RED_BGR, 2); */
 	
       }
     
@@ -292,7 +296,7 @@ class ShapeMatcherNode: public BaseNode, public ImageTransceiver, public MultiRe
       return -1;
         
     result = ContourData();
-    _Contour output_contour;
+    _Contour2f output_contour;
     _Signature output_signature;
     float rotation;
     double max_radius;
@@ -371,7 +375,7 @@ class ShapeMatcherNode: public BaseNode, public ImageTransceiver, public MultiRe
     for(int idx = 0; idx < contour_sorted.rows; ++idx)
       {
 	float* row = contour_sorted.ptr<float>(idx);
-	output_contour.push_back( cv::Point2i( row[1]*cos(row[0]), row[1]*sin(row[0])));
+	output_contour.push_back( cv::Point2f( row[1]*cos(row[0]), row[1]*sin(row[0])));
       }    
 
     /// create the final signature
@@ -412,14 +416,72 @@ class ShapeMatcherNode: public BaseNode, public ImageTransceiver, public MultiRe
     return 0;
   }
 
+  /// I copied and pasted a bunch of code from the analyzeContours function because I'm lazy!
+  void drawContour(cv::Mat & img, ContourData const & contour_data, std::string const & name = "")
+  {
+    int const pc_size = 10;
+    int const thickness = 1.5;
+
+    int const font = cv::FONT_HERSHEY_SIMPLEX;
+    double const font_scale = 0.5;
+    int const font_thickness = 1.5;
+
+    cv::Point2i mean( contour_data.mean_.x, contour_data.mean_.y); 
+    
+    _Contour output_contour;
+    std::vector<_Contour> contours;
+    cv::Mat contour; cv::Mat(contour_data.contour_).convertTo(contour, CV_32F);
+    contour = contour.reshape(1, 0); 
+
+    for(int idx = 0; idx < contour.rows; ++idx)
+      {
+	float* row = contour.ptr<float>(idx);
+	float theta = cv::fastAtan2( row[1], row[0] );
+	/// rotate to zero
+	theta += (contour_data.rotation_*180/M_PI); 
+	/// Make sure that theta stays in the range [0, 2pi]
+	theta = 
+	  ((theta < 0 ) ? 360 - theta: 
+	   (theta > 360 ) ? -360 + theta: 
+	   theta) * M_PI / 180;
+	float rad = sqrt(pow(row[0], 2) + pow(row[1], 2)) * contour_data.radius_;
+	row[0] = theta; row[1] = rad;
+      }
+    /// TODO: Combine these loops
+    for(int idx = 0; idx < contour.rows; ++idx)
+      {
+	float* row = contour.ptr<float>(idx);
+	cv::Point2i mp = cv::Point2i( row[1]*cos(row[0]), row[1]*sin(row[0]))+mean;
+	output_contour.push_back(mp);
+      }    
+    contours.push_back(output_contour);
+
+    /// TODO: fix this
+    /// draw the contour
+    /* cv::drawContours(img, contours, 0, uscauv::CV_USCCARDINAL_BGR, 2); */
+    /// draw principal components
+    const float* evec = contour_data.eigenvec_.ptr<float>(0);
+    cv::Point2i e1( evec[0]*pc_size, evec[1]*pc_size), 
+      e2( evec[2]*pc_size, evec[3]*pc_size);
+
+    cv::line(img, mean - e1, mean + e1,
+	     uscauv::CV_USCCARDINAL_BGR, thickness );
+    cv::line(img, mean - e2, mean + e2,
+	     uscauv::CV_USCCARDINAL_BGR, thickness );
+
+    /// draw text
+    if( name != "" )
+      cv::putText( img, name, mean, font, font_scale, 
+		   uscauv::CV_USCGOLD_BGR, font_thickness );
+    
+   }
+
   /**
    * Generate a cost matrix for the cv::EMD function. Our signatures
    * live in polar coordinates and thus have a circular distance function.
    */
-  int algebraic_mod(int a, int b)
-  {
-    return ((a%b)+b)%b;
-  }
+
+  int algebraic_mod(int a, int b){ return ((a%b)+b)%b; }
   
   void circularCostEuclidian( cv::Mat & cost, int nd )
   {
