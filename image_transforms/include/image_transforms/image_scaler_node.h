@@ -85,7 +85,14 @@ protected:
     {
         QUICKDEV_GET_RUNABLE_NODEHANDLE( nh_rel );
 
-        initPolicies<_ImageProcPolicy>( "image_callback_param", quickdev::auto_bind( &ImageScalerNode::imageCB, this ) );
+        initPolicies<_ImageProcPolicy, quickdev::RunablePolicy>( 
+				       "image_callback_param", quickdev::auto_bind( &ImageScalerNode::imageCB, this ), 
+				       "publish_image_param", true,
+				       "image_topic_param", std::string("image"),
+				       "image_cache_size_param", 1,
+				       "output_image_topic_param", std::string("output_image"),
+				       "spin_ros_thread_param", false
+					);
 
         debayer_ = quickdev::ParamReader::readParam<decltype( debayer_ )>( nh_rel, "debayer", true );
         scale_camera_info_ = quickdev::ParamReader::readParam<decltype( scale_camera_info_ )>( nh_rel, "scale_camera_info", true );
