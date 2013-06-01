@@ -382,7 +382,7 @@ class ShapeMatcherNode: public BaseNode, public ImageTransceiver, public MultiRe
 	float ub = bin * 2*M_PI / nd;
 	float acc = 0.0f;
 	int n = 0;
-	DEBUG_SIZE( contour_sorted, "cs");
+	/* DEBUG_SIZE( contour_sorted, "cs"); */
 	
 	while( contour_sorted.at<float>(idx,0) < ub && idx < contour_sorted.rows)
 	  {
@@ -416,6 +416,11 @@ class ShapeMatcherNode: public BaseNode, public ImageTransceiver, public MultiRe
    * Generate a cost matrix for the cv::EMD function. Our signatures
    * live in polar coordinates and thus have a circular distance function.
    */
+  int algebraic_mod(int a, int b)
+  {
+    return ((a%b)+b)%b;
+  }
+  
   void circularCostEuclidian( cv::Mat & cost, int nd )
   {
     cost.create( nd, nd, CV_32FC1 );
@@ -425,7 +430,8 @@ class ShapeMatcherNode: public BaseNode, public ImageTransceiver, public MultiRe
 	float * cost_row = cost.ptr<float>( idy );
 	for(int idx = 0; idx < nd; ++idx )
 	  {
-	    cost_row[ idx ] = std::min( (idx - idy ) % nd, (idy - idx) % nd );
+	    cost_row[ idx ] = std::min( algebraic_mod(idx - idy, nd), 
+					algebraic_mod(idy - idx, nd) );
 	  }
       }
   }
