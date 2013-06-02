@@ -148,7 +148,7 @@ class SvmColorClassifier
     return 0;
   }
   
-  int classify(std::string const & color_name, cv::Mat const & input_image,
+  int classify(std::string const & color_name, cv::Mat & input_image,
 		cv::Mat & classified_image)
   {
     unsigned int match_count = 0;
