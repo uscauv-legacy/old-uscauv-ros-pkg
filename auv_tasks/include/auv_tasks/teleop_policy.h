@@ -130,6 +130,12 @@ class TeleopPolicy
   /// TODO: Fix cached criteria
   void joyCallback(const _JoyMsg::ConstPtr & msg )
   {
+    if( msg->axes.size() != axes_msg_map_.size() || msg->buttons.size() != button_msg_map_.size() )
+      {
+	ROS_WARN( "Received joystick message is not compatible with current mapping scheme. Ignoring...");
+	return;
+      }
+    
     second_last_joystick_message_ = last_joystick_message_;
 
     last_joystick_message_ = *msg;
