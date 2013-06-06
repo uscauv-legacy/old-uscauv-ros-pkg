@@ -52,6 +52,7 @@ class TeleopPolicy
   typedef std::map<std::string, unsigned int> _ButtonIndexMap;
   typedef sensor_msgs::Joy _JoyMsg;
   typedef XmlRpc::XmlRpcValue _XmlVal;
+  typedef std::function< void(void)> _CallbackType;
   
   /// ROS interfaces
   ros::NodeHandle nh_rel_;
@@ -70,6 +71,8 @@ class TeleopPolicy
 
   _ButtonMap axes_map_, button_map_;
 
+  _CallbackType external_callback_;
+
  public:
   TeleopPolicy(std::string const & name):
   nh_rel_("~"),
@@ -79,7 +82,14 @@ class TeleopPolicy
   msg_count_( 0 )
     {}
 
-  void init()
+  template<class... __BindArgs>
+    void initJoystick( __BindArgs... bind_args)
+    {
+      external_callback_ = std::bind( std::forward<__BindArgs>( bind_args )... );
+      initJoystick();
+    }
+
+  void initJoystick()
   {
     ros::NodeHandle nh;
     _XmlVal assignments;
@@ -144,6 +154,19 @@ class TeleopPolicy
 
     if ( msg_count_ > 1)
       cached_ = true;
+
+    if(external_callback_)
+      {
+	try
+	  {
+	    external_callback_();
+	  }
+	catch( std::exception const &ex)
+	  {
+	    ROS_WARN("Joystick callback exception [ %s ].", ex.what() );
+	    return;
+	  }
+      }
     
     return;
   }
@@ -157,7 +180,7 @@ class TeleopPolicy
     return last_joystick_message_.buttons[ button_msg_map_ [ button_map_[ button_name ] ] ];   
   }
 
-  bool getButtonAquired(std::string const & button_name )
+  bool getButtonAcquired(std::string const & button_name )
   {
     TELEOPPOLICY_CHECK_ENABLED();
     

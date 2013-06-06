@@ -76,9 +76,11 @@ class TeleopTaskNode: public TaskExecutorNode, public TeleopPolicy
   std::string imu_frame_name_;
 
   int pitch_setpoint_;
+  bool follow_pipe_;
   
  public:
- TeleopTaskNode(): TeleopPolicy("teleop_task"),pitch_setpoint_(0){}
+ TeleopTaskNode(): TeleopPolicy("teleop_task"),
+    pitch_setpoint_(0), follow_pipe_(false){}
 
  private:
   void spinFirst()
@@ -87,7 +89,7 @@ class TeleopTaskNode: public TaskExecutorNode, public TeleopPolicy
     controller_.init("linear/x", "linear/y", "linear/z",
     		     "angular/yaw", "angular/pitch", "angular/roll");
 
-    init();
+    initJoystick( &TeleopTaskNode::joyCallback, this );
 
     /// TODO: Load this as param
     imu_frame_name_ = "/seabee3/sensors/imu";
@@ -138,7 +140,7 @@ class TeleopTaskNode: public TaskExecutorNode, public TeleopPolicy
       {
 	/// Apply setpoints from joystick
 
-	if( getButtonAquired("increment_pitch") )
+	if( getButtonAcquired("increment_pitch") )
 	  {
 	    if ( !pitch_setpoint_)
 	      pitch_setpoint_ = 90;
@@ -161,7 +163,7 @@ class TeleopTaskNode: public TaskExecutorNode, public TeleopPolicy
  	    controller_.setObserved<5>(0);
 	  }
 	
-	if(getButtonAquired("barrel_roll"))
+	if(getButtonAcquired("barrel_roll"))
 	  {
 	    ROS_INFO("Entering barrel roll...");
 	  }
@@ -190,6 +192,16 @@ class TeleopTaskNode: public TaskExecutorNode, public TeleopPolicy
       }
 	
     publishMotors();
+  }
+
+  void joyCallback()
+  {
+    if ( getButtonAcquired("follow_pipe") )
+      {
+	follow_pipe_ = !follow_pipe_;
+	ROS_INFO("%s pipe following mode.",
+		 ( follow_pipe_) ? "Entered" : "Exited");
+      }
   }
 
  private:
