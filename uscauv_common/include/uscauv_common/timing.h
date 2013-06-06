@@ -39,6 +39,8 @@
 #ifndef USCAUV_USCAUVCOMMON_TIMING
 #define USCAUV_USCAUVCOMMON_TIMING
 
+#include <ros/ros.h>
+
 #include <thread>
 #include <functional>
 #include <chrono>
@@ -56,6 +58,7 @@ private:
   std::function<void(void)> callback_;
   bool running_;
   std::mutex timer_state_mutex_;
+  std::thread countdown_thread_;
 
 public:
   template< class... __BindArgs>
@@ -71,15 +74,15 @@ public:
     timer_state_mutex_.lock();
     running_ = true; 
     timer_state_mutex_.unlock();
-    std::thread countdown_thread( &AsynchronousTimer::countdownThread, this );
-    countdown_thread.detach();
-    
+    countdown_thread_ = std::thread( &AsynchronousTimer::countdownThread, this );
   }
 
   void stop()
   {
-    std::lock_guard<std::mutex> lock(timer_state_mutex_);
+    timer_state_mutex_.lock();
     running_ = false;
+    timer_state_mutex_.unlock();
+    countdown_thread_.join();
   }
   
   bool running()
@@ -94,11 +97,7 @@ public:
     
     while( countdown_ != __DurationType::zero() )
       {
-	/* std::cout << "thread is counting down " << countdown_.count() << std::endl; */
-
-	std::this_thread::sleep_for( __DurationType(1) );
-	--countdown_;
-
+	/* ROS_INFO_STREAM("thread is counting down " << countdown_.count() ); */
 
 	if( timer_state_mutex_.try_lock() )
 	  {
@@ -109,6 +108,10 @@ public:
 	      }
 	    timer_state_mutex_.unlock();
 	  }
+
+	std::this_thread::sleep_for( __DurationType(1) );
+	--countdown_;
+
       }
 
     /// call the external callback

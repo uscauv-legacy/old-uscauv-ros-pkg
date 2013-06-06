@@ -87,7 +87,7 @@ class TeleopPolicy
     {}
 
   template<class... __BindArgs>
-    void initJoystick( __BindArgs... bind_args)
+    void initJoystick( __BindArgs&&... bind_args)
     {
       external_callback_ = std::bind( std::forward<__BindArgs>( bind_args )... );
       initJoystick();

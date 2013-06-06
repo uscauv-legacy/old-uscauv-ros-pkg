@@ -40,17 +40,24 @@
 #include <auv_tasks/task_executor.h>
 #include <auv_tasks/teleop_policy.h>
 
-/// 
-/* #include <uscauv_utilities/pose_integrator.h> */
+/// uscauv
+#include <uscauv_common/timing.h>
 
 /// transforms
 #include <tf/transform_listener.h>
 
+/// msgs
+#include <auv_msgs/MatchedShape.h>
+#include <auv_msgs/MatchedShapeArray.h>
+
 /// Seabee
+/// TODO: Stop using old seabee movement API
 #include <seabee3_msgs/MotorVals.h>
 #include <seabee3_common/movement.h>
 
 typedef seabee3_msgs::MotorVals _MotorValsMsg;
+typedef auv_msgs::MatchedShape _MatchedShape;
+typedef auv_msgs::MatchedShapeArray _MatchedShapeArray;
 
 using namespace seabee3_common;
 
@@ -71,16 +78,27 @@ class TeleopTaskNode: public TaskExecutorNode, public TeleopPolicy
   ros::NodeHandle nh_rel_;
   tf::TransformListener tf_listener_;
   ros::Publisher motor_vals_pub_;
-  
+  ros::Subscriber matched_shape_sub_;
+
  private:
   std::string imu_frame_name_;
-
+  int follow_timeout_;
+  
+  /// for pitch toggle button
   int pitch_setpoint_;
-  bool follow_pipe_;
+
+  /// for pipe following
+  _MatchedShape last_matched_pipe_;
+  float first_match_scale_;
+  bool follow_pipe_mode_;
+  bool lock_to_pipe_;
+  /// TODO: Get rid of this - it works horribly
+  uscauv::AsynchronousTimer<std::chrono::milliseconds> follow_timer_;
   
  public:
- TeleopTaskNode(): TeleopPolicy("teleop_task"),
-    pitch_setpoint_(0), follow_pipe_(false){}
+ TeleopTaskNode(): TeleopPolicy("teleop_task"), nh_rel_("~"),
+    pitch_setpoint_(0), follow_pipe_mode_(false), lock_to_pipe_(false),
+    follow_timer_( &TeleopTaskNode::followTimeoutCallback, this) {}
 
  private:
   void spinFirst()
@@ -93,11 +111,13 @@ class TeleopTaskNode: public TaskExecutorNode, public TeleopPolicy
 
     /// TODO: Load this as param
     imu_frame_name_ = "/seabee3/sensors/imu";
+    follow_timeout_ = 10000; // milliseconds
 
-    nh_rel_ = ros::NodeHandle("~");
-    
     motor_vals_pub_ = nh_rel_.advertise<_MotorValsMsg>("motor_vals", 1);
-    
+
+    matched_shape_sub_ = nh_rel_.subscribe("matched_shapes", 10, 
+					   &TeleopTaskNode::matchedShapeCallback, this);
+
   }
 
   void spinOnce()
@@ -136,48 +156,75 @@ class TeleopTaskNode: public TaskExecutorNode, public TeleopPolicy
 	    
       }
 
-    if( getButton("enable") )
+    /// TODO: Reset observed x/y/z/theta to zero when not locking to pipe
+    /// TODO: 
+    if( 1 )
       {
 	/// Apply setpoints from joystick
-
-	if( getButtonAcquired("increment_pitch") )
+	
+	if( 1 )
 	  {
-	    if ( !pitch_setpoint_)
-	      pitch_setpoint_ = 90;
+	    if( lock_to_pipe_)
+	      {
+		/// FRANCESCA/TURNER: Play around with the signs on these four setsetPoint arguments if you run into direction issues
+		controller_.setSetpoint<0>( last_matched_pipe_.y );
+		controller_.setSetpoint<1>( last_matched_pipe_.x );
+		controller_.setSetpoint<2>(first_match_scale_);
+		controller_.setSetpoint<3>( last_matched_pipe_.theta*180/M_PI );
+
+		controller_.setObserved<0>( 0 );
+		controller_.setObserved<1>( 0 );
+		controller_.setObserved<2>(last_matched_pipe_.scale); 
+		controller_.setObserved<3>( 0 );
+	      }
 	    else
-	      pitch_setpoint_ = 0;
-	    controller_.setSetpoint<4>(pitch_setpoint_);
-	    ROS_INFO("New pitch setpoint [ %d ]", pitch_setpoint_);
+	      {
+		/// Go forward at medium speed until we find something
+		controller_.setSetpoint<0>( 60 );
+	      }
+	  }
+	else
+	  {
+	    if( getButtonAcquired("increment_pitch") )
+	      {
+		if ( !pitch_setpoint_)
+		  pitch_setpoint_ = 90;
+		else
+		  pitch_setpoint_ = 0;
+		controller_.setSetpoint<4>(pitch_setpoint_);
+		ROS_INFO("New pitch setpoint [ %d ]", pitch_setpoint_);
+	      }
+
+	    controller_.setSetpoint<0>( getAxis("linear.x")*100 );
+	    controller_.setSetpoint<1>( getAxis("linear.y")*100 );
+	    controller_.setSetpoint<2>( getAxis("linear.z")*100 );
+	
+	    controller_.setSetpoint<3>( getAxis("angular.z")*180 );
+	
+	    if( getButton("barrel_roll"))
+	      {
+		/* ROS_INFO("Doing a barrel roll..."); */
+		controller_.setSetpoint<5>(180);
+		controller_.setObserved<5>(0);
+	      }
+	
+	    if(getButtonAcquired("barrel_roll"))
+	      {
+		ROS_INFO("Entering barrel roll...");
+	      }
+	    else if( getButtonReleased("barrel_roll") )
+	      {
+		controller_.setSetpoint<5>(0);
+		ROS_INFO("Halted barrel roll.");
+	      }
+	
+	    geometry_msgs::Twist twist;
+	
+	    twist.linear.z = getAxis("linear.z");
+
+	    /* pose_integrator_.setVelocity(twist); */
 	  }
 
-	controller_.setSetpoint<0>( getAxis("linear.x")*100 );
-	controller_.setSetpoint<1>( getAxis("linear.y")*100 );
-	controller_.setSetpoint<2>( getAxis("linear.z")*100 );
-	
-	controller_.setSetpoint<3>( getAxis("angular.z")*180 );
-	
-	if( getButton("barrel_roll"))
-	  {
-	    /* ROS_INFO("Doing a barrel roll..."); */
- 	    controller_.setSetpoint<5>(180);
- 	    controller_.setObserved<5>(0);
-	  }
-	
-	if(getButtonAcquired("barrel_roll"))
-	  {
-	    ROS_INFO("Entering barrel roll...");
-	  }
-	else if( getButtonReleased("barrel_roll") )
-	  {
-	    controller_.setSetpoint<5>(0);
-	    ROS_INFO("Halted barrel roll.");
-	  }
-	
-	geometry_msgs::Twist twist;
-	
-	twist.linear.z = getAxis("linear.z");
-
-	/* pose_integrator_.setVelocity(twist); */
 		
       }
     else
@@ -196,18 +243,82 @@ class TeleopTaskNode: public TaskExecutorNode, public TeleopPolicy
 
   void joyCallback()
   {
-    if ( getButtonAcquired("follow_pipe") )
+    if ( getButtonAcquired("follow_pipe") && getButton( "enable" ))
       {
-	follow_pipe_ = !follow_pipe_;
+	follow_pipe_mode_ = !follow_pipe_mode_;
 	ROS_INFO("%s pipe following mode.",
-		 ( follow_pipe_) ? "Entered" : "Exited");
+		 ( follow_pipe_mode_ ) ? "Entered" : "Exited");
       }
+  }
+  
+  void matchedShapeCallback( _MatchedShapeArray::ConstPtr const & msg )
+  {
+    /* std::chrono::time_point<std::chrono::system_clock> start, end; */
+    /* start = std::chrono::system_clock::now(); */
+
+    _MatchedShape match;
+    float candidate_scale = 0.0f;
+    /// find the biggest matching shape
+    for( std::vector<_MatchedShape>::const_iterator shape_it= msg->shapes.begin();
+	 shape_it != msg->shapes.end(); ++shape_it)
+      {
+	if( shape_it->color == "blaze_orange" && 
+	    shape_it->type == "pipe" &&
+	    shape_it->scale > candidate_scale)
+	  {
+	    candidate_scale = shape_it->scale;
+	    match = *shape_it;
+	  }
+      }
+    /// no matches
+    if( candidate_scale <= 0.0f)
+      return;
+    else
+      {
+	last_matched_pipe_ = match;
+
+	if( lock_to_pipe_)
+	  {
+	    follow_timer_.stop();
+	    follow_timer_.start( std::chrono::seconds( follow_timeout_ ));
+	  }
+	else
+	  {
+	    ROS_INFO("Detected new pipe.");
+	    first_match_scale_ = match.scale;
+	    follow_timer_.start( std::chrono::seconds( follow_timeout_ ));
+	    lock_to_pipe_ = true;
+	  }
+      }
+    /* end = std::chrono::system_clock::now(); */
+
+    /* int elapsed_seconds = std::chrono::duration_cast<std::chrono::milliseconds> */
+    /*   (end-start).count(); */
+ 
+    /* ROS_INFO_STREAM( "elapsed time: " << elapsed_seconds); */
+  }
+
+  void followTimeoutCallback()
+  {
+    ROS_INFO("Pipe follower timed out.");
+    lock_to_pipe_ = false;
+
+    /// Reset XYZ and yaw
+    controller_.setObserved<0>(0);
+    controller_.setObserved<1>(0);
+    controller_.setObserved<2>(0);
+    controller_.setObserved<3>(0);
   }
 
  private:
   void publishMotors()
   {
     _MotorValsMsg msg;
+    
+    ROS_INFO("Speed has pid value: %f", controller_.update<0>());
+    ROS_INFO("Strafe has pid value: %f", controller_.update<1>());
+    ROS_INFO("Depth has pid value: %f", controller_.update<2>());
+    ROS_INFO("Yaw has pid value: %f", controller_.update<3>());
     
     applyMotors(msg, movement::Axes::SPEED, controller_.update<0>() );
     applyMotors(msg, movement::Axes::STRAFE, controller_.update<1>() );
@@ -217,6 +328,7 @@ class TeleopTaskNode: public TaskExecutorNode, public TeleopPolicy
     applyMotors(msg, movement::Axes::ROLL, controller_.update<5>() );
     
     /// TODO: THrottle down to 100 here so that the sum is < 100
+    /// TODO: Should really normalize instead of clipping
     motor_vals_pub_.publish( msg );
     
   }

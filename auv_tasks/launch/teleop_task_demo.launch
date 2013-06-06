@@ -5,12 +5,15 @@
   <node pkg="rqt_reconfigure" type="rqt_reconfigure" name="reconfigure" />
 
   <remap from="seabee3/motor_vals" to="teleop_task/motor_vals" />
+  <remap from="teleop_task/matched_shapes" to="shape_matcher/matched_shapes" />
 
   <remap from="teleop_task/joy" to="joy" />
 
   <node pkg="joy" type="joy_node" name="joy" />
 
   <rosparam command="load" param="teleop_task/pid" file="$(find controls_config)/params/simple_pid.yaml" />
+
+  <include if="$(arg simulate)" file="$(find shape_matching)/launch/static_shape_matcher_demo.launch" />
   
   <include unless="$(arg simulate)" file="$(find seabee3_driver)/launch/seabee3_driver.launch" >
   </include>
@@ -20,9 +23,8 @@
   
   <include file="$(find auv_tasks)/launch/teleop_task.launch" >
   </include>
-
+  
   <include if="$(arg visualize)" file="$(find uscauv_visualization)/launch/imu_visualization.launch" >
     <arg name="driver" value="false" />
   </include>
-   
 </launch>

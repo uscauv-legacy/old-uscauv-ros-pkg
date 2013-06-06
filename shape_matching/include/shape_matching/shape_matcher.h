@@ -239,12 +239,12 @@ class ShapeMatcherNode: public BaseNode, public ImageTransceiver, public MultiRe
 	    /// calculate EMD using our custom cost matrix
 	    double emd = cv::EMD( result.signature_, template_it->second.signature_,
 				  CV_DIST_USER, emd_cost_ );
-	    ROS_INFO("[ %s ] EMD: %f", template_it->first.c_str(), emd );
+	    ROS_DEBUG("[ %s ] EMD: %f", template_it->first.c_str(), emd );
 	    
 	    if( emd < config_->emd_boundary )
 	      {
 		/// Draw 
-		ROS_INFO("Match detected.");
+		ROS_DEBUG("Match detected.");
 		/* result.contour_ = template_it->second.contour_; */
 		drawContour(match_image, result, template_it->first);
 
@@ -368,8 +368,8 @@ class ShapeMatcherNode: public BaseNode, public ImageTransceiver, public MultiRe
     /// so that column eigenvectors are in rows, making them easier to access.
     cv::transpose( cov, cov );
 
-    ROS_INFO("Got eigenvals: %f, %f", eigenval.at<float>(0, 0), eigenval.at<float>(1,0));
-    ROS_INFO("Got eigenvectors: [%f, %f; %f, %f].",
+    ROS_DEBUG("Got eigenvals: %f, %f", eigenval.at<float>(0, 0), eigenval.at<float>(1,0));
+    ROS_DEBUG("Got eigenvectors: [%f, %f; %f, %f].",
 	     eigenvec.at<float>(0, 0), eigenvec.at<float>(0,1),
 	     eigenvec.at<float>(1, 0), eigenvec.at<float>(1,1));
     
