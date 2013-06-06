@@ -1,0 +1,27 @@
+<launch>
+
+  <arg name="camera" />
+  <arg name="color" default="blaze_orange" />
+
+  <remap from="shape_matcher/image_mono" to="color_classifier/$(arg color)_classified" />
+
+  <include ns="model" file="$(find shape_model)/launch/upload_test_shapes.launch" />
+
+  <include file="$(find shape_matching)/launch/shape_matcher.launch" />
+
+  <include file="$(find color_classification)/launch/color_classifier_demo.launch">
+    <arg name="camera" value="$(arg camera)" />
+  </include>
+  
+  <node pkg="image_view" type="image_view" name="denoise_view" 
+	args="image:=shape_matcher/image_denoised" />
+
+  <node pkg="image_view" type="image_view" name="contours_view" 
+	args="image:=shape_matcher/image_contours" />
+
+    <node pkg="image_view" type="image_view" name="match_view" 
+	args="image:=shape_matcher/image_matched" />
+
+  <!-- <node pkg="rqt_reconfigure" type="rqt_reconfigure" name="reconfigure" /> -->
+
+</launch>
