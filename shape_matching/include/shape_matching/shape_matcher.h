@@ -54,7 +54,14 @@
 /// reconfigure
 #include <shape_matching/ShapeMatcherConfig.h>
 
+/// messages
+#include <auv_msgs/MatchedShape.h>
+#include <auv_msgs/MatchedShapeArray.h>
+
 typedef shape_matching::ShapeMatcherConfig _ShapeMatcherConfig;
+
+typedef auv_msgs::MatchedShape      _MatchedShape;
+typedef auv_msgs::MatchedShapeArray _MatchedShapeArray;
 
 typedef std::vector<cv::Point2i> _Contour;
 typedef std::vector<cv::Point2f> _Contour2f;
@@ -65,7 +72,7 @@ typedef cv::Mat                  _Signature;
 
 struct ContourData
 {
-  _Contour2f contour_;   /// original contour in cartesian, for drawing later  normalized)
+  _Contour2f contour_;   /// original contour in cartesian, for drawing later  (normalized)
   _Signature signature_; /// radial histogram for EMD, see Rubner EMD paper
   cv::Point2f mean_;
   cv::Mat eigenvec_;
@@ -87,15 +94,19 @@ class ShapeMatcherNode: public BaseNode, public ImageTransceiver, public MultiRe
   _NamedContourMap template_contours_;
   _ImageLoader template_images_;
   _ShapeMatcherConfig* config_;
-
+  
+  /// ros interfaces
+  ros::Publisher match_pub_;
+  ros::NodeHandle nh_rel_;
+  
   /// cost matrix for EMD algorithm
   cv::Mat emd_cost_;
 
  public:
- ShapeMatcherNode(): BaseNode("ShapeMatcher")
-   {
-     
-   }
+ ShapeMatcherNode(): BaseNode("ShapeMatcher"), nh_rel_("~")
+    {
+      
+    }
 
  private:
 
@@ -107,6 +118,10 @@ class ShapeMatcherNode: public BaseNode, public ImageTransceiver, public MultiRe
        addImagePublisher( "image_matched", 1);
        
        addImageSubscriber( "image_mono", 1, "mono8", &ShapeMatcherNode::imageCallback, this);
+       
+       /// TODO: Make a MultiPublisher class to make this a little nice
+       match_pub_ = nh_rel_.advertise<_MatchedShapeArray>("matched_shapes", 10);
+
        
        /// relative to global namespace, not node namespace
        if(template_images_.loadImagesAt("model/shapes", CV_LOAD_IMAGE_GRAYSCALE ))
@@ -172,7 +187,7 @@ class ShapeMatcherNode: public BaseNode, public ImageTransceiver, public MultiRe
     // ################################################################
     // Segment out contours ############################################
     // ################################################################
-
+        
     cv::Mat contour_image;
     denoised.copyTo(contour_image);
     
@@ -201,6 +216,14 @@ class ShapeMatcherNode: public BaseNode, public ImageTransceiver, public MultiRe
     // ################################################################
     // Analyze contours and match shapes ##############################
     // ################################################################
+
+    /// TODO: Populate this with hierarchy
+    _MatchedShapeArray matches;
+    /// so that time and frame data is preserved
+    matches.header = msg->header;
+    matches.image_rows = msg->image.rows;
+    matches.image_cols = msg->image.cols;
+
     cv::Mat match_image;
     contour_image.copyTo(match_image);
     
@@ -214,18 +237,38 @@ class ShapeMatcherNode: public BaseNode, public ImageTransceiver, public MultiRe
 	    template_it != templates_.end(); ++template_it )
 	  {
 	    /// calculate EMD using our custom cost matrix
-	    /* DEBUG_SIZE( result.signature_, "s1"); */
-	    /* DEBUG_SIZE(template_it->second.signature_, "s2" ); */
-	    /* DEBUG_SIZE( emd_cost_, "cost" ); */
-
 	    double emd = cv::EMD( result.signature_, template_it->second.signature_,
 				  CV_DIST_USER, emd_cost_ );
 	    ROS_INFO("[ %s ] EMD: %f", template_it->first.c_str(), emd );
+	    
 	    if( emd < config_->emd_boundary )
 	      {
+		/// Draw 
 		ROS_INFO("Match detected.");
-		result.contour_ = template_it->second.contour_;
+		/* result.contour_ = template_it->second.contour_; */
 		drawContour(match_image, result, template_it->first);
+
+		/// Populate match message
+		_MatchedShape match;
+		/// switch from image coordinates to camera coordinates
+		match.x = (result.mean_.x - msg->image.cols/2);
+		/// negate because the image has a flipped y axis
+		match.y = -(result.mean_.y - msg->image.rows/2);
+		/// same deal as y
+		match.theta = -result.rotation_;
+		match.scale = result.radius_;
+		
+		match.color = "blaze_orange"; /// TODO: Refactor color classifier publishing scheme so that this isn't hard-coded
+		match.type = template_it->first;
+
+		/// Arbitrary measure of confidence. Covariance matrix is diagonal to reflect uncorrelatedness of parameters.
+		/// TODO: Analyze this a further
+		match.covariance = { {emd, 0, 0, 0,
+				      0, emd, 0, 0,
+				      0, 0, emd, 0,
+				      0, 0, 0, emd} };
+
+		matches.shapes.push_back( match );
 	      }
 	  }
 	
@@ -243,8 +286,7 @@ class ShapeMatcherNode: public BaseNode, public ImageTransceiver, public MultiRe
     // ################################################################
     // Publish results ################################################
     // ################################################################
-    
-    
+       
     /// sensor_msgs::image_encodings::MONO8 = "mono8", for reference
     cv_bridge::CvImage::Ptr denoised_output = boost::make_shared<cv_bridge::CvImage>
       ( msg->header, sensor_msgs::image_encodings::MONO8, denoised );
@@ -258,6 +300,11 @@ class ShapeMatcherNode: public BaseNode, public ImageTransceiver, public MultiRe
 		 "image_denoised", denoised_output,
 		 "image_matched", match_output 
 		 );
+
+    /// publish matched shapes
+    if (matches.shapes.size() > 0 )
+      match_pub_.publish( matches );
+
     return;
   }
 
@@ -458,7 +505,7 @@ class ShapeMatcherNode: public BaseNode, public ImageTransceiver, public MultiRe
 
     /// TODO: fix this
     /// draw the contour
-    /* cv::drawContours(img, contours, 0, uscauv::CV_USCCARDINAL_BGR, 2); */
+    cv::drawContours(img, contours, 0, uscauv::CV_USCCARDINAL_BGR, 2);
     /// draw principal components
     const float* evec = contour_data.eigenvec_.ptr<float>(0);
     cv::Point2i e1( evec[0]*pc_size, evec[1]*pc_size), 

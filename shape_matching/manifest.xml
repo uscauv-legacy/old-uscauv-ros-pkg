@@ -13,6 +13,7 @@
   <depend package="uscauv_common" />
   <depend package="opencv2" />
   <depend package="dynamic_reconfigure" />
+  <depend package="auv_msgs" />
 
 </package>
 
