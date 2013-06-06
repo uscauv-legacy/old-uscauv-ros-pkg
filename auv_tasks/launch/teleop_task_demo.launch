@@ -1,6 +1,7 @@
 <launch>
   <arg name="simulate"  default="false" />
   <arg name="visualize" default="false" />
+  <arg name="camera" />
 
   <node pkg="rqt_reconfigure" type="rqt_reconfigure" name="reconfigure" />
 
@@ -14,6 +15,10 @@
   <rosparam command="load" param="teleop_task/pid" file="$(find controls_config)/params/simple_pid.yaml" />
 
   <include if="$(arg simulate)" file="$(find shape_matching)/launch/static_shape_matcher_demo.launch" />
+
+  <include unless="$(arg simulate)" file="$(find shape_matching)/launch/shape_matcher_demo.launch" >
+    <arg name="camera" value="$(arg camera)" />
+  </include>
   
   <include unless="$(arg simulate)" file="$(find seabee3_driver)/launch/seabee3_driver.launch" >
   </include>
