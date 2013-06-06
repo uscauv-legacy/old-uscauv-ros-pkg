@@ -176,7 +176,6 @@ class TeleopPolicy
   }
 
   // Functions for the user #########################################
-
   bool getButton(std::string const & button_name )
   {
     TELEOPPOLICY_CHECK_ENABLED();
@@ -216,7 +215,7 @@ class TeleopPolicy
   float getAxis(std::string const & axis_name )
   {
     TELEOPPOLICY_CHECK_ENABLED();
-    bool val = 0.0f;
+    float val = 0.0f;
 
     TELEOPPOLICY_LOOKUP_TRYCATCH( val =  last_joystick_message_.axes[ axes_msg_map_[ axes_map_[ axis_name ] ] ]; )
 
@@ -226,7 +225,7 @@ class TeleopPolicy
   float getButtonsAsAxis(std::string const & name1, std::string const & name2)
   {
     TELEOPPOLICY_CHECK_ENABLED();
-    bool val = 0.0f;
+    float val = 0.0f;
 
     TELEOPPOLICY_LOOKUP_TRYCATCH( val =  last_joystick_message_.buttons[ button_msg_map_[ button_map_[ name1 ] ] ] 
 				  - last_joystick_message_.buttons[ button_msg_map_[ button_map_[ name2 ] ]];);
