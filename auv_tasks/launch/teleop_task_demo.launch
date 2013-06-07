@@ -3,7 +3,7 @@
   <arg name="visualize" default="false" />
   <arg name="camera" />
 
-  <node pkg="rqt_reconfigure" type="rqt_reconfigure" name="reconfigure" />
+  <!-- <node pkg="rqt_reconfigure" type="rqt_reconfigure" name="reconfigure" /> -->
 
   <remap from="seabee3/motor_vals" to="teleop_task/motor_vals" />
   <remap from="teleop_task/matched_shapes" to="shape_matcher/matched_shapes" />

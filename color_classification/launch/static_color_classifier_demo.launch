@@ -1,19 +1,32 @@
 <launch>
   <!-- Name of the camera we will be streaming data from -->
   <arg name="image_path" />
-  <arg name="rate" default="10" />
+  <arg name="rate" default="60" />
+  
+  <!-- Color Classifier -->
+  <remap from="color_classifier/image_color" to="static_image_publisher/image_color_scaled" />
+  
+  <include file="$(find color_classification)/launch/color_classifier.launch" >
+    <arg name="rate" value="$(arg rate)" />
+  </include>
+
+  <include ns="model" file="$(find color_model)/launch/upload_colors.launch" />
   
   <include file="$(find uscauv_utilities)/launch/static_image_publisher.launch" >
     <arg name="rate" value="$(arg rate)" />
     <arg name="image_path" value="$(arg image_path)" />
   </include>
+  
+  <node name="static_image_view" type="image_view" pkg="image_view" args="image:=static_image_publisher/image_color" />
+  <node name="color_view" type="image_view" pkg="image_view" args="image:=color_classifier/blaze_orange_classified" />
 
-  <include ns="model" file="$(find color_model)/launch/upload_test_colors.launch" />
-
-  <remap from="color_classifier/image_color" to="/static_image_publisher/image_color" />
-
-  <include file="$(find color_classification)/launch/color_classifier.launch" >
-    <arg name="rate" value="$(arg rate)" />
+  <!-- Downscale input images so that classifer runs faster -->
+  <include file="$(find image_transforms)/launch/image_scaler.launch" >
+    <arg name="image_in" value="static_image_publisher/image_color" />
+    <arg name="image_out" value="static_image_publisher/image_color_scaled" />
+    <arg name="info_in" value="static_image_publisher/camera_info" />
+    <arg name="info_out" value="static_image_publisher/camera_info_scaled" />
+    <arg name="scale" value="0.5" />
   </include>
 
 </launch>

@@ -7,7 +7,7 @@
 
   <remap from="shape_matcher/image_mono" to="color_classifier/$(arg color)_classified" />
 
-  <include ns="model" file="$(find shape_model)/launch/upload_ped_shapes.launch" />
+  <include ns="model" file="$(find shape_model)/launch/upload_shapes.launch" />
 
   <include file="$(find shape_matching)/launch/shape_matcher.launch" />
 
