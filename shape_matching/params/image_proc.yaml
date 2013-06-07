@@ -1,0 +1,1 @@
+{canny_lower: 255, canny_upper: 0, emd_boundary: 0.15, kernel_size: 49, signature_size: 10}

@@ -10,7 +10,7 @@
     <arg name="rate" value="$(arg rate)" />
   </include>
 
-  <include ns="model" file="$(find color_model)/launch/upload_test_colors.launch" />
+  <include ns="model" file="$(find color_model)/launch/upload_ped_colors.launch" />
   
   <!-- Camera -->
   <include file="$(find uscauv_camera)/launch/monocular_camera.launch" >

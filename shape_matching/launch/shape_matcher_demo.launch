@@ -3,6 +3,8 @@
   <arg name="camera" />
   <arg name="color" default="blaze_orange" />
 
+  <rosparam command="load" file="$(find shape_matching)/params/image_proc.yaml" ns="shape_matcher/image_proc" />
+
   <remap from="shape_matcher/image_mono" to="color_classifier/$(arg color)_classified" />
 
   <include ns="model" file="$(find shape_model)/launch/upload_ped_shapes.launch" />

@@ -67,6 +67,8 @@ public:
     callback_ = std::bind( std::forward<__BindArgs>( bind_args )... );
   }
 
+  ~AsynchronousTimer(){ stop(); }
+
   void start(__DurationType countdown_length)
   {
     countdown_ = countdown_length;
@@ -79,6 +81,9 @@ public:
 
   void stop()
   {
+    if ( !countdown_thread_.joinable() )
+      return;
+
     timer_state_mutex_.lock();
     running_ = false;
     timer_state_mutex_.unlock();

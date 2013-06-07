@@ -92,7 +92,7 @@ class TeleopTaskNode: public TaskExecutorNode, public TeleopPolicy
   float first_match_scale_;
   bool follow_pipe_mode_;
   bool lock_to_pipe_;
-  /// TODO: Get rid of this - it works horribly
+  /// TODO: Get rid of this class - It is completely broken
   uscauv::AsynchronousTimer<std::chrono::milliseconds> follow_timer_;
   
  public:
@@ -111,7 +111,7 @@ class TeleopTaskNode: public TaskExecutorNode, public TeleopPolicy
 
     /// TODO: Load this as param
     imu_frame_name_ = "/seabee3/sensors/imu";
-    follow_timeout_ = 10000; // milliseconds
+    follow_timeout_ = 5000; // milliseconds
 
     motor_vals_pub_ = nh_rel_.advertise<_MotorValsMsg>("motor_vals", 1);
 
@@ -156,13 +156,11 @@ class TeleopTaskNode: public TaskExecutorNode, public TeleopPolicy
 	    
       }
 
-    /// TODO: Reset observed x/y/z/theta to zero when not locking to pipe
-    /// TODO: 
-    if( 1 )
+    if( getButton("enable" ) )
       {
 	/// Apply setpoints from joystick
 	
-	if( 1 )
+	if( follow_pipe_mode_ )
 	  {
 	    if( lock_to_pipe_)
 	      {
@@ -240,7 +238,7 @@ class TeleopTaskNode: public TaskExecutorNode, public TeleopPolicy
 	
     publishMotors();
   }
-
+   
   void joyCallback()
   {
     if ( getButtonAcquired("follow_pipe") && getButton( "enable" ))
@@ -280,13 +278,14 @@ class TeleopTaskNode: public TaskExecutorNode, public TeleopPolicy
 	if( lock_to_pipe_)
 	  {
 	    follow_timer_.stop();
-	    follow_timer_.start( std::chrono::seconds( follow_timeout_ ));
-	  }
+	    follow_timer_.start( std::chrono::milliseconds( follow_timeout_ ));
+	  }	
 	else
 	  {
 	    ROS_INFO("Detected new pipe.");
 	    first_match_scale_ = match.scale;
-	    follow_timer_.start( std::chrono::seconds( follow_timeout_ ));
+	    follow_timer_.stop();
+	    follow_timer_.start( std::chrono::milliseconds( follow_timeout_ ));
 	    lock_to_pipe_ = true;
 	  }
       }
@@ -315,10 +314,10 @@ class TeleopTaskNode: public TaskExecutorNode, public TeleopPolicy
   {
     _MotorValsMsg msg;
     
-    ROS_INFO("Speed has pid value: %f", controller_.update<0>());
-    ROS_INFO("Strafe has pid value: %f", controller_.update<1>());
-    ROS_INFO("Depth has pid value: %f", controller_.update<2>());
-    ROS_INFO("Yaw has pid value: %f", controller_.update<3>());
+    /* ROS_INFO("Speed has pid value: %f", controller_.update<0>()); */
+    /* ROS_INFO("Strafe has pid value: %f", controller_.update<1>()); */
+    /* ROS_INFO("Depth has pid value: %f", controller_.update<2>()); */
+    /* ROS_INFO("Yaw has pid value: %f", controller_.update<3>()); */
     
     applyMotors(msg, movement::Axes::SPEED, controller_.update<0>() );
     applyMotors(msg, movement::Axes::STRAFE, controller_.update<1>() );
