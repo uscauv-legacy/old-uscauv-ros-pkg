@@ -222,7 +222,7 @@ QUICKDEV_DECLARE_NODE_CLASS( Seabee3Driver )
             "/seabee3/external_pressure", extl_pressure_msg
         );
 
-        _TfTranceiverPolicy::publishTransform( btTransform( btQuaternion( 0, 0, 0, 1 ), btVector3( 0, 0, -depth ) ), "/world", "/seabee3/sensors/depth" );
+        _TfTranceiverPolicy::publishTransform( tf::Transform( tf::Quaternion( 0, 0, 0, 1 ), tf::Vector3( 0, 0, -depth ) ), "/world", "/seabee3/sensors/depth" );
     }
 
     bool executeFiringDeviceAction( _FiringDeviceActionService::Request &req,
