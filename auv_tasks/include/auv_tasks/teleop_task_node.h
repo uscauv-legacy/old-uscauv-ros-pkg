@@ -180,6 +180,7 @@ class TeleopTaskNode: public TaskExecutorNode, public TeleopPolicy
 	      {
 		/// Go forward at medium speed until we find something
 		controller_.setSetpoint<0>( 60 );
+		controller_.setObserved<0>( 0  );
 	      }
 	  }
 	else
@@ -228,6 +229,11 @@ class TeleopTaskNode: public TaskExecutorNode, public TeleopPolicy
       }
     else
       {
+	controller_.setObserved<0>(0);
+	controller_.setObserved<1>(0);
+	controller_.setObserved<2>(0);
+	controller_.setObserved<3>(0);
+
 	controller_.setSetpoint<0>(0);
 	controller_.setSetpoint<1>(0);
 	controller_.setSetpoint<2>(0);
@@ -244,9 +250,29 @@ class TeleopTaskNode: public TaskExecutorNode, public TeleopPolicy
   {
     if ( getButtonAcquired("follow_pipe") && getButton( "enable" ))
       {
+
+	if( follow_pipe_mode_ )
+	  {
+	    ROS_INFO("Transitioning to manual control state.");
+	    controller_.setObserved<0>(0);
+	    controller_.setObserved<1>(0);
+	    controller_.setObserved<2>(0);
+	    controller_.setObserved<3>(0);
+	    controller_.setSetpoint<0>(0);
+	    controller_.setSetpoint<2>(0);
+	  }
+	else
+	  {
+	    if( lock_to_pipe_ )
+	      {
+		ROS_INFO("Transitioning to follow pipe state.");
+	      }
+	    else
+	      {
+		ROS_INFO("Transitioning to pipe search state");
+	      }
+	  }
 	follow_pipe_mode_ = !follow_pipe_mode_;
-	ROS_INFO("%s pipe following mode.",
-		 ( follow_pipe_mode_ ) ? "Entered" : "Exited");
       }
   }
   
@@ -304,10 +330,16 @@ class TeleopTaskNode: public TaskExecutorNode, public TeleopPolicy
     lock_to_pipe_ = false;
 
     /// Reset XYZ and yaw
-    controller_.setObserved<0>(0);
-    controller_.setObserved<1>(0);
-    controller_.setObserved<2>(0);
-    controller_.setObserved<3>(0);
+    if( getButton("enabled") && follow_pipe_mode_ )
+      {
+	ROS_INFO("Transitioning from follow pipe state to search pipe state.");
+	controller_.setObserved<0>(0);
+	controller_.setObserved<1>(0);
+	controller_.setObserved<2>(0);
+	controller_.setObserved<3>(0);
+	controller_.setSetpoint<2>(0);
+      }
+    
   }
 
  private:
