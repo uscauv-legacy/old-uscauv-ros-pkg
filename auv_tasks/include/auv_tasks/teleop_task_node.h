@@ -326,7 +326,7 @@ class TeleopTaskNode: public TaskExecutorNode, public TeleopPolicy
 
   void followTimeoutCallback()
   {
-    ROS_INFO("Pipe follower timed out.");
+    ROS_INFO("Lost pipe.");
     lock_to_pipe_ = false;
 
     /// Reset XYZ and yaw
