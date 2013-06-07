@@ -245,7 +245,7 @@ class ShapeMatcherNode: public BaseNode, public ImageTransceiver, public MultiRe
 	      {
 		/// Draw 
 		ROS_DEBUG("Match detected.");
-		/* result.contour_ = template_it->second.contour_; */
+		result.contour_ = template_it->second.contour_;
 		drawContour(match_image, result, template_it->first);
 
 		/// Populate match message
@@ -394,7 +394,7 @@ class ShapeMatcherNode: public BaseNode, public ImageTransceiver, public MultiRe
 	theta = theta - (rotation*180/M_PI); 
 	/// Make sure that theta stays in the range [0, 2pi]
 	theta = 
-	  ((theta < 0 ) ? 360 - theta: 
+	  ((theta < 0 ) ? 360 + theta: 
 	   (theta > 360 ) ? -360 + theta: 
 	   theta) * M_PI / 180;
 	float rad = sqrt(pow(row[0], 2) + pow(row[1], 2));
@@ -488,7 +488,7 @@ class ShapeMatcherNode: public BaseNode, public ImageTransceiver, public MultiRe
 	theta += (contour_data.rotation_*180/M_PI); 
 	/// Make sure that theta stays in the range [0, 2pi]
 	theta = 
-	  ((theta < 0 ) ? 360 - theta: 
+	  ((theta < 0 ) ? 360 + theta: 
 	   (theta > 360 ) ? -360 + theta: 
 	   theta) * M_PI / 180;
 	float rad = sqrt(pow(row[0], 2) + pow(row[1], 2)) * contour_data.radius_;
