@@ -165,15 +165,16 @@ class TeleopTaskNode: public TaskExecutorNode, public TeleopPolicy
 	    if( lock_to_pipe_)
 	      {
 		/// FRANCESCA/TURNER: Play around with the signs on these four setsetPoint arguments if you run into direction issues
-		controller_.setSetpoint<0>( last_matched_pipe_.y );
-		controller_.setSetpoint<1>( last_matched_pipe_.x );
+		controller_.setSetpoint<0>( 0 );
+		controller_.setSetpoint<1>( 0 );
 		controller_.setSetpoint<2>(first_match_scale_);
-		controller_.setSetpoint<3>( last_matched_pipe_.theta*180/M_PI );
+		controller_.setSetpoint<3>( 0 );
 
-		controller_.setObserved<0>( 0 );
-		controller_.setObserved<1>( 0 );
+		/// Negation because positive position indicates that seabee has a negative position with respect to the object frame
+		controller_.setObserved<0>( -last_matched_pipe_.y );
+		controller_.setObserved<1>( -last_matched_pipe_.x );
 		controller_.setObserved<2>(last_matched_pipe_.scale); 
-		controller_.setObserved<3>( 0 );
+		controller_.setObserved<3>( -last_matched_pipe_.theta*180/M_PI );
 	      }
 	    else
 	      {
