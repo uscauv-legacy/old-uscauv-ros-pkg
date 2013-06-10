@@ -1,8 +1,0 @@
-<library path="lib/libseabee3_teleop_nodelets">
-
-  <class name="seabee3_teleop/seabee3_teleop" type="seabee3_teleop::Seabee3TeleopNodelet" base_class_type="nodelet::Nodelet">
-    <description>
-      todo: fill this in
-    </description>
-  </class>
-</library>
