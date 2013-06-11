@@ -181,6 +181,8 @@ complete -F _roslaunch roslaunch
 
 ######################################################################
 
+dev_path="/dev/seabee /dev/uscauv"
+
 # Check for device
 function cfd()
 {
@@ -255,7 +257,7 @@ function waitcam()
 
 alias wc="waitcam"
 
-alias lsb="ls -lh /dev/seabee"
+alias lsb="ls -lh $dev_path"
 
 alias get_image_header="grep header -A 10"
 
