@@ -42,6 +42,7 @@
 
 /// uscauv
 #include <uscauv_common/timing.h>
+#include <uscauv_common/pose_integrator.h>
 
 /// transforms
 #include <tf/transform_listener.h>
@@ -53,9 +54,11 @@
 /// Seabee
 /// TODO: Stop using old seabee movement API
 #include <seabee3_msgs/MotorVals.h>
+#include <seabee3_msgs/Depth.h>
 #include <seabee3_common/movement.h>
 
 typedef seabee3_msgs::MotorVals _MotorValsMsg;
+typedef seabee3_msgs::Depth _DepthMsg;
 typedef auv_msgs::MatchedShape _MatchedShape;
 typedef auv_msgs::MatchedShapeArray _MatchedShapeArray;
 
@@ -79,6 +82,7 @@ class TeleopTaskNode: public TaskExecutorNode, public JoystickPolicy
   tf::TransformListener tf_listener_;
   ros::Publisher motor_vals_pub_;
   ros::Subscriber matched_shape_sub_;
+  ros::Subscriber depth_sub_;
 
  private:
   std::string imu_frame_name_;
@@ -86,19 +90,28 @@ class TeleopTaskNode: public TaskExecutorNode, public JoystickPolicy
   
   /// for pitch toggle button
   int pitch_setpoint_;
-
+  
+  /// depth control
+  float ambient_depth_;
+  
   /// for pipe following
   _MatchedShape last_matched_pipe_;
+  _DepthMsg last_depth_msg_;
+  
   float first_match_scale_;
   bool follow_pipe_mode_;
   bool lock_to_pipe_;
   /// TODO: Get rid of this class - It is completely broken
   uscauv::AsynchronousTimer<std::chrono::milliseconds> follow_timer_;
+  uscauv::PoseIntegrator z_pose_;
   
  public:
  TeleopTaskNode(): JoystickPolicy("teleop_task"), nh_rel_("~"),
     pitch_setpoint_(0), follow_pipe_mode_(false), lock_to_pipe_(false),
-    follow_timer_( &TeleopTaskNode::followTimeoutCallback, this) {}
+    follow_timer_( &TeleopTaskNode::followTimeoutCallback, this)
+      {
+	last_depth_msg_.value = 0.0f;
+      }
 
  private:
   void spinFirst()
@@ -112,17 +125,20 @@ class TeleopTaskNode: public TaskExecutorNode, public JoystickPolicy
     /// TODO: Load this as param
     imu_frame_name_ = "/seabee3/sensors/imu";
     follow_timeout_ = 5000; // milliseconds
+    ambient_depth_ = -1;
 
     motor_vals_pub_ = nh_rel_.advertise<_MotorValsMsg>("motor_vals", 1);
 
     matched_shape_sub_ = nh_rel_.subscribe("matched_shapes", 10, 
 					   &TeleopTaskNode::matchedShapeCallback, this);
+    depth_sub_ = nh_rel_.subscribe("/seabee3/depth", 1, 
+					   &TeleopTaskNode::depthCallback, this);
 
   }
 
   void spinOnce()
   {
-    /* pose_integrator_.updatePose(); */
+    z_pose_.updatePose();
 
     if( tf_listener_.canTransform( "/world", imu_frame_name_, ros::Time(0) ))
       {
@@ -155,7 +171,7 @@ class TeleopTaskNode: public TaskExecutorNode, public JoystickPolicy
 	controller_.setObserved<5>(roll);
 	    
       }
-
+    
     if( getButton("enable" ) )
       {
 	/// Apply setpoints from joystick
@@ -167,13 +183,13 @@ class TeleopTaskNode: public TaskExecutorNode, public JoystickPolicy
 		/// FRANCESCA/TURNER: Play around with the signs on these four setsetPoint arguments if you run into direction issues
 		controller_.setSetpoint<0>( 0 );
 		controller_.setSetpoint<1>( 0 );
-		controller_.setSetpoint<2>(first_match_scale_);
+		/* controller_.setSetpoint<2>(first_match_scale_); */
 		controller_.setSetpoint<3>( 0 );
 
 		/// Negation because positive position indicates that seabee has a negative position with respect to the object frame
 		controller_.setObserved<0>( -last_matched_pipe_.y );
-		controller_.setObserved<1>( -last_matched_pipe_.x );
-		controller_.setObserved<2>(last_matched_pipe_.scale); 
+		controller_.setObserved<1>( last_matched_pipe_.x );
+		/* controller_.setObserved<2>(last_matched_pipe_.scale);  */
 		controller_.setObserved<3>( -last_matched_pipe_.theta*180/M_PI );
 	      }
 	    else
@@ -197,7 +213,9 @@ class TeleopTaskNode: public TaskExecutorNode, public JoystickPolicy
 
 	    controller_.setSetpoint<0>( getAxis("linear.x")*100 );
 	    controller_.setSetpoint<1>( getAxis("linear.y")*100 );
-	    controller_.setSetpoint<2>( getAxis("linear.z")*100 );
+	    float const  z = z_pose_.getPose().getOrigin().z();
+	    controller_.setSetpoint<2>( z );
+	    ROS_INFO("Setting z setpoint to %f.", z);
 	
 	    controller_.setSetpoint<3>( getAxis("angular.z")*180 );
 	
@@ -231,12 +249,12 @@ class TeleopTaskNode: public TaskExecutorNode, public JoystickPolicy
       {
 	controller_.setObserved<0>(0);
 	controller_.setObserved<1>(0);
-	controller_.setObserved<2>(0);
+	controller_.setObserved<2>(last_depth_msg_.value);
 	controller_.setObserved<3>(0);
 
 	controller_.setSetpoint<0>(0);
 	controller_.setSetpoint<1>(0);
-	controller_.setSetpoint<2>(0);
+	controller_.setSetpoint<2>(ambient_depth_);
 	controller_.setSetpoint<3>(0);
 	controller_.setSetpoint<4>(0);
 	controller_.setSetpoint<5>(0);
@@ -274,8 +292,21 @@ class TeleopTaskNode: public TaskExecutorNode, public JoystickPolicy
 	  }
 	follow_pipe_mode_ = !follow_pipe_mode_;
       }
+    
+    if( getButton( "enable" ) )
+      {
+	geometry_msgs::Twist vel;
+	vel.linear.z = getAxis("linear.z");
+	z_pose_.setVelocity(vel);
+      }
+    
   }
   
+  void depthCallback( _DepthMsg::ConstPtr const & msg )
+  {
+    last_depth_msg_ = *msg;
+  }
+
   void matchedShapeCallback( _MatchedShapeArray::ConstPtr const & msg )
   {
     /* std::chrono::time_point<std::chrono::system_clock> start, end; */
@@ -413,8 +444,8 @@ class TeleopTaskNode: public TaskExecutorNode, public JoystickPolicy
 	}
       case movement::Axes::DEPTH:
 	{
-	  msg.motors[motor1_id] += -val;
-	  msg.motors[motor2_id] += -val;
+	  msg.motors[motor1_id] += val;
+	  msg.motors[motor2_id] += val;
 	  break;
 	}
       }
