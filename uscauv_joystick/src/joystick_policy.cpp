@@ -1,6 +1,8 @@
 /***************************************************************************
- *  src/teleop_policy.cpp
+ *  src/joystick_policy.cpp
  *  --------------------
+ *
+ *  Software License Agreement (BSD License)
  *
  *  Copyright (c) 2013, Dylan Foster
  *  All rights reserved.
@@ -33,4 +35,5 @@
  *
  **************************************************************************/
 
-#include <auv_tasks/teleop_policy.h>
+
+#include <uscauv_joystick/joystick_policy.h>

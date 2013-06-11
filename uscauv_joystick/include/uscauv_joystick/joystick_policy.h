@@ -1,6 +1,8 @@
 /***************************************************************************
- *  include/auv_tasks/teleop_policy.h
+ *  include/uscauv_joystick/joystick_policy.h
  *  --------------------
+ *
+ *  Software License Agreement (BSD License)
  *
  *  Copyright (c) 2013, Dylan Foster
  *  All rights reserved.
@@ -33,14 +35,18 @@
  *
  **************************************************************************/
 
+
+#ifndef USCAUV_USCAUVJOYSTICK_JOYSTICKPOLICY
+#define USCAUV_USCAUVJOYSTICK_JOYSTICKPOLICY
+
 #include <ros/ros.h>
 #include <sensor_msgs/Joy.h>
 
 
-#define TELEOPPOLICY_CHECK_ENABLED()					\
+#define JOYSTICKPOLICY_CHECK_ENABLED()					\
   if ( !(initialized_ && cached_) ){					\
-    ROS_DEBUG("Teleop policy [ %s ] is not ready.", name_.c_str() ); return false; }
-#define TELEOPPOLICY_LOOKUP_TRYCATCH(__Statement) \
+    ROS_DEBUG("Joystick policy [ %s ] is not ready.", name_.c_str() ); return false; }
+#define JOYSTICKPOLICY_LOOKUP_TRYCATCH(__Statement) \
   try { __Statement; } catch( std::exception const &ex) \
   { ROS_WARN("Joystick mapping lookup failed [ %s ].", ex.what() ); }
 
@@ -49,7 +55,7 @@
 /// TODO: Change init scheme. User shouldn't have to call init manually, but we don't want to initialize until spinFirst has started.
 /// TODO: Change name, 
 /// TODO: MultiJoystick container, addJoystick("topic") function
-class TeleopPolicy
+class JoystickPolicy
 {
  private:
   typedef std::map<std::string, std::string> _ButtonMap;
@@ -78,7 +84,7 @@ class TeleopPolicy
   _CallbackType external_callback_;
 
  public:
-  TeleopPolicy(std::string const & name):
+  JoystickPolicy(std::string const & name):
   nh_rel_("~"),
   name_(name),
   initialized_( false ),
@@ -99,13 +105,13 @@ class TeleopPolicy
     _XmlVal assignments;
 
     /// subscribe to joystick messages
-    joy_sub_ = nh_rel_.subscribe("joy", 1, &TeleopPolicy::joyCallback, this );
+    joy_sub_ = nh_rel_.subscribe("joy", 1, &JoystickPolicy::joyCallback, this );
 
     
     /// load the button mappings ------------------------------------
     if( !nh.getParam( "joystick/assignments", assignments ))
       {
-	ROS_WARN("Teleop policy [ %s ] failed to load joystick assignments.", name_.c_str());
+	ROS_WARN("Joystick policy [ %s ] failed to load joystick assignments.", name_.c_str());
 	return;
       }
 
@@ -178,22 +184,22 @@ class TeleopPolicy
   // Functions for the user #########################################
   bool getButton(std::string const & button_name )
   {
-    TELEOPPOLICY_CHECK_ENABLED();
+    JOYSTICKPOLICY_CHECK_ENABLED();
     bool val = false;
     
-    TELEOPPOLICY_LOOKUP_TRYCATCH( val = last_joystick_message_.buttons[ button_msg_map_ [ button_map_[ button_name ] ] ];);
+    JOYSTICKPOLICY_LOOKUP_TRYCATCH( val = last_joystick_message_.buttons[ button_msg_map_ [ button_map_[ button_name ] ] ];);
     
     return val;
   }
 
   bool getButtonAcquired(std::string const & button_name )
   {
-    TELEOPPOLICY_CHECK_ENABLED();
+    JOYSTICKPOLICY_CHECK_ENABLED();
     bool val = false;    
 
     unsigned int const & button_idx = button_msg_map_ [ button_map_[ button_name ] ];
 
-    TELEOPPOLICY_LOOKUP_TRYCATCH( val = last_joystick_message_.buttons[ button_idx ] 
+    JOYSTICKPOLICY_LOOKUP_TRYCATCH( val = last_joystick_message_.buttons[ button_idx ] 
 				  && !second_last_joystick_message_.buttons[ button_idx ];);
      
      return val;
@@ -201,12 +207,12 @@ class TeleopPolicy
 
   bool getButtonReleased(std::string const & button_name )
   {
-    TELEOPPOLICY_CHECK_ENABLED();
+    JOYSTICKPOLICY_CHECK_ENABLED();
     bool val = false;    
 
     unsigned int const & button_idx = button_msg_map_ [ button_map_[ button_name ] ];
 
-    TELEOPPOLICY_LOOKUP_TRYCATCH( val = !last_joystick_message_.buttons[ button_idx ] &&
+    JOYSTICKPOLICY_LOOKUP_TRYCATCH( val = !last_joystick_message_.buttons[ button_idx ] &&
 				  second_last_joystick_message_.buttons[ button_idx ];);
 
      return val;
@@ -214,20 +220,20 @@ class TeleopPolicy
 
   float getAxis(std::string const & axis_name )
   {
-    TELEOPPOLICY_CHECK_ENABLED();
+    JOYSTICKPOLICY_CHECK_ENABLED();
     float val = 0.0f;
 
-    TELEOPPOLICY_LOOKUP_TRYCATCH( val =  last_joystick_message_.axes[ axes_msg_map_[ axes_map_[ axis_name ] ] ]; )
+    JOYSTICKPOLICY_LOOKUP_TRYCATCH( val =  last_joystick_message_.axes[ axes_msg_map_[ axes_map_[ axis_name ] ] ]; )
 
      return val;
   }
 
   float getButtonsAsAxis(std::string const & name1, std::string const & name2)
   {
-    TELEOPPOLICY_CHECK_ENABLED();
+    JOYSTICKPOLICY_CHECK_ENABLED();
     float val = 0.0f;
 
-    TELEOPPOLICY_LOOKUP_TRYCATCH( val =  last_joystick_message_.buttons[ button_msg_map_[ button_map_[ name1 ] ] ] 
+    JOYSTICKPOLICY_LOOKUP_TRYCATCH( val =  last_joystick_message_.buttons[ button_msg_map_[ button_map_[ name1 ] ] ] 
 				  - last_joystick_message_.buttons[ button_msg_map_[ button_map_[ name2 ] ]];);
     
     return val;
@@ -235,3 +241,4 @@ class TeleopPolicy
 
 };
 
+#endif // USCAUV_USCAUVJOYSTICK_JOYSTICKPOLICY

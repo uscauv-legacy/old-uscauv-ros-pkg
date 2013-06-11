@@ -7,8 +7,6 @@
     <arg name="manager" default="manager" />
     <arg name="nodelet" default="false" />
 
-    <rosparam command="load" param="joystick/assignments" file="$(find teleop_config)/params/joystick_xbox360.yaml" />
-
     <node
         pkg="$(arg pkg)"
         type="$(arg type)"

@@ -38,7 +38,7 @@
 
 /// generic task
 #include <auv_tasks/task_executor.h>
-#include <auv_tasks/teleop_policy.h>
+#include <uscauv_joystick/joystick_policy.h>
 
 /// uscauv
 #include <uscauv_common/timing.h>
@@ -64,14 +64,14 @@ using namespace seabee3_common;
 /**
  * To Implement:
  * Function/Option to normalize the motor vals for an axis
- * Scale for axes (within teleop policy)
+ * Scale for axes (within joystick policy)
  * Axis motor setter function within seabee3 movement
  * Some sort of generic axis assigner that will work with the new robot without changing anything in this project
  * Sensor policy? Get IMU, pressure
  * Pose Integrator
  */
 
-class TeleopTaskNode: public TaskExecutorNode, public TeleopPolicy
+class TeleopTaskNode: public TaskExecutorNode, public JoystickPolicy
 {
  private:
   /// ROS interfaces
@@ -96,7 +96,7 @@ class TeleopTaskNode: public TaskExecutorNode, public TeleopPolicy
   uscauv::AsynchronousTimer<std::chrono::milliseconds> follow_timer_;
   
  public:
- TeleopTaskNode(): TeleopPolicy("teleop_task"), nh_rel_("~"),
+ TeleopTaskNode(): JoystickPolicy("teleop_task"), nh_rel_("~"),
     pitch_setpoint_(0), follow_pipe_mode_(false), lock_to_pipe_(false),
     follow_timer_( &TeleopTaskNode::followTimeoutCallback, this) {}
 

@@ -18,6 +18,7 @@
   <depend package="auv_msgs" />
   <depend package="uscauv_utilities" />  
   <depend package="uscauv_common" />
+  <depend package="uscauv_joystick" />
 
   <depend package="seabee3_common" />
   <depend package="seabee3_msgs" />

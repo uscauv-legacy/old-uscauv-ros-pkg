@@ -10,7 +10,7 @@
 
   <remap from="teleop_task/joy" to="joy" />
 
-  <node pkg="joy" type="joy_node" name="joy" />
+  <include file="$(find uscauv_joystick)/launch/joystick.launch" />
 
   <rosparam command="load" param="teleop_task/pid" file="$(find controls_config)/params/simple_pid.yaml" />
 
