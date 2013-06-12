@@ -125,7 +125,7 @@ class TeleopTaskNode: public TaskExecutorNode, public JoystickPolicy
     /// TODO: Load this as param
     imu_frame_name_ = "/seabee3/sensors/imu";
     follow_timeout_ = 5000; // milliseconds
-    ambient_depth_ = -1;
+    ambient_depth_ = -.1;
 
     motor_vals_pub_ = nh_rel_.advertise<_MotorValsMsg>("motor_vals", 1);
 
@@ -213,7 +213,8 @@ class TeleopTaskNode: public TaskExecutorNode, public JoystickPolicy
 
 	    controller_.setSetpoint<0>( getAxis("linear.x")*100 );
 	    controller_.setSetpoint<1>( getAxis("linear.y")*100 );
-	    float const  z = z_pose_.getPose().getOrigin().z();
+	    float z = z_pose_.getPose().getOrigin().z();
+	    z = ( z > 0 ) ? 0 : z; /// If z > 0, the robot is not in the pool
 	    controller_.setSetpoint<2>( z );
 	    ROS_INFO("Setting z setpoint to %f.", z);
 	
@@ -305,6 +306,7 @@ class TeleopTaskNode: public TaskExecutorNode, public JoystickPolicy
   void depthCallback( _DepthMsg::ConstPtr const & msg )
   {
     last_depth_msg_ = *msg;
+    last_depth_msg_.value = -last_depth_msg_.value;
   }
 
   void matchedShapeCallback( _MatchedShapeArray::ConstPtr const & msg )
@@ -361,7 +363,7 @@ class TeleopTaskNode: public TaskExecutorNode, public JoystickPolicy
     lock_to_pipe_ = false;
 
     /// Reset XYZ and yaw
-    if( getButton("enabled") && follow_pipe_mode_ )
+    if( getButton("enable") && follow_pipe_mode_ )
       {
 	ROS_INFO("Transitioning from follow pipe state to search pipe state.");
 	controller_.setObserved<0>(0);

@@ -187,7 +187,7 @@ class JoystickPolicy
     JOYSTICKPOLICY_CHECK_ENABLED();
     bool val = false;
     
-    JOYSTICKPOLICY_LOOKUP_TRYCATCH( val = last_joystick_message_.buttons[ button_msg_map_ [ button_map_[ button_name ] ] ];);
+    JOYSTICKPOLICY_LOOKUP_TRYCATCH( val = last_joystick_message_.buttons[ button_msg_map_.at(button_map_.at(button_name)) ]; );
     
     return val;
   }
@@ -197,7 +197,7 @@ class JoystickPolicy
     JOYSTICKPOLICY_CHECK_ENABLED();
     bool val = false;    
 
-    unsigned int const & button_idx = button_msg_map_ [ button_map_[ button_name ] ];
+    unsigned int const & button_idx = button_msg_map_.at(button_map_.at(button_name));
 
     JOYSTICKPOLICY_LOOKUP_TRYCATCH( val = last_joystick_message_.buttons[ button_idx ] 
 				  && !second_last_joystick_message_.buttons[ button_idx ];);
@@ -210,7 +210,7 @@ class JoystickPolicy
     JOYSTICKPOLICY_CHECK_ENABLED();
     bool val = false;    
 
-    unsigned int const & button_idx = button_msg_map_ [ button_map_[ button_name ] ];
+    unsigned int const & button_idx = button_msg_map_.at(button_map_.at(button_name));
 
     JOYSTICKPOLICY_LOOKUP_TRYCATCH( val = !last_joystick_message_.buttons[ button_idx ] &&
 				  second_last_joystick_message_.buttons[ button_idx ];);
@@ -223,7 +223,7 @@ class JoystickPolicy
     JOYSTICKPOLICY_CHECK_ENABLED();
     float val = 0.0f;
 
-    JOYSTICKPOLICY_LOOKUP_TRYCATCH( val =  last_joystick_message_.axes[ axes_msg_map_[ axes_map_[ axis_name ] ] ]; )
+    JOYSTICKPOLICY_LOOKUP_TRYCATCH( val =  last_joystick_message_.axes[ axes_msg_map_.at(axes_map_.at(axis_name)) ]; )
 
      return val;
   }
@@ -233,8 +233,8 @@ class JoystickPolicy
     JOYSTICKPOLICY_CHECK_ENABLED();
     float val = 0.0f;
 
-    JOYSTICKPOLICY_LOOKUP_TRYCATCH( val =  last_joystick_message_.buttons[ button_msg_map_[ button_map_[ name1 ] ] ] 
-				  - last_joystick_message_.buttons[ button_msg_map_[ button_map_[ name2 ] ]];);
+    JOYSTICKPOLICY_LOOKUP_TRYCATCH( val =  last_joystick_message_.buttons[ button_msg_map_.at(button_map_.at(name1)) ] 
+				    - last_joystick_message_.buttons[ button_msg_map_.at(button_map_.at(name2))];);
     
     return val;
   }

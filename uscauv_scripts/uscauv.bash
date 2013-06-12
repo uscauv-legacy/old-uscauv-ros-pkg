@@ -261,5 +261,7 @@ alias lsb="ls -lh $dev_path"
 
 alias get_image_header="grep header -A 10"
 
+alias uscauv-calibrate="rosservice call /xsens_driver/calibrate_rpy_ori 100 && rosservice call /seabee3/calibrate_surface_pressure 10"
+
 ## The greatest idea ###########################################
 alias roslaunch="uscauv-print-logo && roslaunch $@"
