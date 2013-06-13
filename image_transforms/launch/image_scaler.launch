@@ -7,13 +7,12 @@
   <arg name="info_out" default="" />
   <arg name="scale" default="0.5" />
   <arg name="debayer" default="false" />
+  <arg name="scale_camera_info" default="true" />
   
   <arg name="publish_static_camera_info" default="false" />
   <!-- The following arguments are only necessary if publish_static_camera_info is true -->
   <arg name="camera_name" default="camera" />
   <arg name="camera_info_url" default="" />
-  <arg name="scale_camera_info" default="false" />
-
 
   <arg name="pkg" value="image_transforms" />
   <arg name="name" default="image_scaler_$(arg camera_name)" />

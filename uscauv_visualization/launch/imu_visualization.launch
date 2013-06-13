@@ -1,16 +1,13 @@
 <launch>
   <arg name="driver" default="true" />
 
-  <include file="$(find uscauv_visualization)/launch/auv_model_visualization.launch" >
+  <include file="$(find uscauv_visualization)/launch/robot_visualization.launch" >
     <arg name="fixed_frame" value="/world" />
-  </include>
-
-  <include file="$(find auv_model)/launch/upload_model.launch" >
-    <arg name="robot" value="seabee3" />
+    <arg name="static" value="false" />
   </include>
 
   <node name="imu_to_robot_tf" pkg="tf" type="static_transform_publisher"
-	args="0 0 0 0 0 0 /seabee3/sensors/imu /cm_link 100" />
+	args="0 0 0 0 0 0 /seabee3/sensors/imu /robot/structures/cm 100" />
 
   <include if="$(arg driver)" file="$(find xsens_driver)/launch/xsens_driver.launch" />
 

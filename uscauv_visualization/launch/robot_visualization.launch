@@ -1,0 +1,20 @@
+<launch>
+
+  <arg name="fixed_frame" default="/world" />
+  <arg name="static" default="false" />
+
+  <include file="$(find uscauv_visualization)/launch/auv_model_visualization.launch" >
+    <arg name="fixed_frame" value="$(arg fixed_frame)" />
+  </include>
+
+  <include file="$(find auv_model)/launch/upload_model.launch" >
+    <arg name="robot" value="seabee3" />
+  </include>
+
+  <group if="$(arg static)" >
+    <node pkg="tf" type="static_transform_publisher" name="world_to_robot_tf" 
+	  args="0 0 0 0 0 0 /world /robot/structures/cm 100" />
+  </group>
+  
+  
+</launch>
