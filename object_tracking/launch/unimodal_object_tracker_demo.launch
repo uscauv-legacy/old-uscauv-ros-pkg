@@ -1,0 +1,21 @@
+
+<launch>
+
+  <arg name="camera" />
+  <arg name="rate" default="60" />
+
+  <include ns="model" file="$(find object_model)/launch/upload_objects.launch" />
+  
+  <remap from="unimodal_object_tracker/matched_shapes" to="shape_matcher/matched_shapes" />
+  <remap from="unimodal_object_tracker/camera_info" to="$(arg camera)/camera_info_scaled" />
+  
+  <include file="$(find object_tracking)/launch/unimodal_object_tracker.launch" >
+    <arg name="rate" value="$(arg rate)" />
+  </include>
+
+  <include file="$(find shape_matching)/launch/shape_matcher_demo.launch">
+    <arg name="rate" value="$(arg rate)" />
+    <arg name="camera" value="$(arg camera)" />
+  </include>
+  
+</launch>

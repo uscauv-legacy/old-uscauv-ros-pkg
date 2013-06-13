@@ -123,19 +123,19 @@ class MultiReconfigure
   typedef std::shared_ptr< BaseReconfigureStorage > _StoragePointerType;
   typedef std::unordered_map< std::string, _StoragePointerType > _NamedRCStorageMap;
 
-  ros::NodeHandle nh_rel_;
+  ros::NodeHandle nh_;
   
   _NamedRCStorageMap reconfigure_storage_;
 
  public:
- MultiReconfigure():
-  nh_rel_( "~" )
+ MultiReconfigure(ros::NodeHandle nh = ros::NodeHandle("~")):
+  nh_(nh)
     {}
   
   template<class __ConfigType>
     void addReconfigureServer( std::string const & ns)
     {
-      ros::NodeHandle nh_rcs( nh_rel_, ns );
+      ros::NodeHandle nh_rcs( nh_, ns );
       std::string const & ns_rcs = nh_rcs.getNamespace();
       
       ROS_INFO("Creating reconfigure server [ %s ]...", ns_rcs.c_str() );
@@ -160,7 +160,7 @@ class MultiReconfigure
   template<class __ConfigType, class... __BindArgs>
     void addReconfigureServer( std::string const & ns, __BindArgs... bind_args)
     {
-      ros::NodeHandle nh_rcs( nh_rel_, ns );
+      ros::NodeHandle nh_rcs( nh_, ns );
       std::string const & ns_rcs = nh_rcs.getNamespace();
       
       ROS_INFO("Creating reconfigure server [ %s ]...", ns_rcs.c_str() );
@@ -185,7 +185,7 @@ class MultiReconfigure
   template<class __ConfigType>
     __ConfigType & getLatestConfig( std::string const & ns ) throw( std::exception )
     {
-      std::string const & ns_rcs = nh_rel_.resolveName( ns, true);
+      std::string const & ns_rcs = nh_.resolveName( ns, true);
       
       _NamedRCStorageMap::const_iterator rcs_it = reconfigure_storage_.find( ns_rcs );
       
@@ -209,7 +209,7 @@ class MultiReconfigure
   template<class __ConfigType>
     __ConfigType const & getLatestConfig( std::string const & ns ) const throw( std::exception )
     {
-      std::string const & ns_rcs = nh_rel_.resolveName( ns, true);
+      std::string const & ns_rcs = nh_.resolveName( ns, true);
       
       _NamedRCStorageMap::const_iterator rcs_it = reconfigure_storage_.find( ns_rcs );
       

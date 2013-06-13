@@ -3,7 +3,7 @@
   <arg name="pkg" value="object_tracking" />
   <arg name="name" value="unimodal_object_tracker" />
   <arg name="type" default="$(arg name)" />
-  <arg name="rate" default="30" />
+  <arg name="rate" default="60" />
   <arg name="args" value="_loop_rate:=$(arg rate)" />
 
   <node

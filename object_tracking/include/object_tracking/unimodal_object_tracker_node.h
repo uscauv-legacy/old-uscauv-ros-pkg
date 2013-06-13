@@ -42,30 +42,157 @@
 // ROS
 #include <ros/ros.h>
 
-// uscauv
+// general uscauv
 #include <uscauv_common/base_node.h>
+#include <uscauv_common/multi_reconfigure.h>
+#include <auv_msgs/MatchedShape.h>
+#include <auv_msgs/MatchedShapeArray.h>
 
+/// object tracking
 #include <object_tracking/kalman_filter.h>
+#include <object_tracking/TrackedObjectConfig.h>
 
-class UnimodalObjectTrackerNode: public BaseNode
+#include <sensor_msgs/CameraInfo.h>
+
+typedef auv_msgs::MatchedShape _MatchedShape;
+typedef auv_msgs::MatchedShapeArray _MatchedShapeArray;
+
+typedef sensor_msgs::CameraInfo _CameraInfo;
+
+typedef std::map<std::string, XmlRpc::XmlRpcValue> _NamedXmlMap;
+typedef XmlRpc::XmlRpcValue _XmlVal;
+
+typedef object_tracking::TrackedObjectConfig _TrackedObjectConfig;
+
+typedef uscauv::LinearKalmanFilter<4, 4, 4> _ObjectKalmanFilter;
+
+struct ObjectTrackerStorage
 {
+  _ObjectKalmanFilter filter_;
+  _ObjectKalmanFilter::ControlMatrix control_cov_;
+  double ideal_radius_;
+  bool tracked_;
+  std::string name_;
+};
+
+typedef std::map<std::string, std::string>          _NamedAttributeMap;
+typedef std::map<std::string, ObjectTrackerStorage> _AttributeTrackerMap;
+
+class UnimodalObjectTrackerNode: public BaseNode, public MultiReconfigure
+{
+ private:
+  /// ros
+  ros::NodeHandle nh_rel_;
+  ros::Subscriber matched_shape_sub_, camera_info_sub_;
+  
+  std::string const & object_ns;
+
+  /// algorithmic
+  _NamedAttributeMap name_size_color_map_;
+  _AttributeTrackerMap trackers_;
+
+  /// other
+  _CameraInfo last_camera_info_;
   
  public:
-  UnimodalObjectTrackerNode(): BaseNode("UnimodalObjectTracker")
+ UnimodalObjectTrackerNode(): BaseNode("UnimodalObjectTracker"), 
+    MultiReconfigure( ros::NodeHandle("model/objects") ), /// resolves below node namespaces
+    nh_rel_("~"), object_ns("model/objects")
    {
    }
+
+
+
+  void matchedShapeCallback( _MatchedShapeArray::ConstPtr const & msg )
+  {
+    ROS_INFO("got shapes");
+    for( std::vector<_MatchedShape>::const_iterator shape_it= msg->shapes.begin();
+	 shape_it != msg->shapes.end(); ++shape_it)
+      {
+	/// TODO: Something interesting here 
+      }
+  }
+
+  /// cache camera info
+  void cameraInfoCallback( _CameraInfo::ConstPtr const & msg )
+  {
+    ROS_INFO("got cam info.");
+    last_camera_info_ = *msg; 
+  }
+
+  void updateTrackerParams(_TrackedObjectConfig const & config, std::string const & name)
+  {
+
+    double const & var = config.predict_variance;
+    _ObjectKalmanFilter::ControlMatrix control_cov;
+    control_cov << 
+      var, 0, 0, 0,
+      0, var, 0, 0, 
+      0, 0, var, 0,
+      0, 0, 0, var;
+    trackers_.at( name_size_color_map_.at( name ) ).control_cov_ = control_cov;
+    ROS_INFO("Updated tracker params [ %s ].", name.c_str() );
+  }
 
  private:
 
   // Running spin() will cause this function to be called before the node begins looping the spinOnce() function.
+  /// TODO: Catch XML exception
   void spinFirst()
      {
-	 
+       ros::NodeHandle nh_base;
+       bool immediate_tracking;
+       _XmlVal xml_objects;
+	      
+       matched_shape_sub_ = nh_rel_.subscribe("matched_shapes", 10, 
+					      &UnimodalObjectTrackerNode::matchedShapeCallback,
+					      this);
+       camera_info_sub_ = nh_rel_.subscribe("camera_info", 1,
+					    &UnimodalObjectTrackerNode::cameraInfoCallback, 
+					    this);
+
+
+       if( !nh_rel_.getParam( "immediate_tracking", immediate_tracking ) )
+	{
+	  ROS_WARN( "Couldn't find param immediate_tracking. Defaulting to false." );
+	  immediate_tracking = false;
+	}
+       
+       // Load objects definitions from parameter server ########
+       if( !nh_base.getParam( object_ns, xml_objects ) )
+	 {
+	   ROS_FATAL( "Invalid object params namespace [ %s ].", object_ns.c_str() );
+	   ros::shutdown();
+	 }
+       
+       for( _NamedXmlMap::iterator object_it = xml_objects.begin(); 
+	    object_it != xml_objects.end(); ++object_it )
+	 {
+	   std::string const attr = std::string(object_it->second["shape"]) + "/" +
+	     std::string(object_it->second["color"]);
+	   name_size_color_map_.at( object_it->first ) = attr;
+	   
+	   ObjectTrackerStorage tracker;
+	   tracker.name_ = object_it->first;
+	   tracker.ideal_radius_ = object_it->second["ideal_radius"];
+	   tracker.tracked_ = (immediate_tracking) ? true : false;
+	   /// Set up reconfigure
+	   addReconfigureServer<_TrackedObjectConfig>
+	     ( object_it->first, std::bind( &UnimodalObjectTrackerNode::updateTrackerParams, this,
+					 std::placeholders::_1, object_it->first ) );
+
+	   trackers_.at( attr ) = tracker;
+	   ROS_INFO("Loaded object [ %s ] with attributes [ %s ].", 
+		    object_it->first.c_str(), attr.c_str() );
+	 }
+       
+       
      }  
 
   // Running spin() will cause this function to get called at the loop rate until this node is killed.
   void spinOnce()
      {
+       /// TODO: Publish tracked objects
 
      }
 

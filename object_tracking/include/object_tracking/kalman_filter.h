@@ -74,6 +74,7 @@ namespace uscauv
     StateMatrix cov_;
 
     /// See LKF definition in Probabilistic Robotics
+    public:
     const StateMatrix        A_;
     const StateControlMatrix B_;
     const UpdateStateMatrix  C_;
@@ -88,6 +89,24 @@ namespace uscauv
     : state_(init_state), cov_(init_cov),
     A_(A), B_(B), C_(C)
     {}
+
+    LinearKalmanFilter(): 
+    state_( StateVector::Zero() ), cov_( StateMatrix::Identity() ),
+    A_( StateMatrix::Identity() ), B_( StateControlMatrix::Identity() ),
+    C_( UpdateStateMatrix::Identity() )
+    {}
+    
+    LinearKalmanFilter( LinearKalmanFilter const &src):
+    state_(src.state_), cov_(src.cov_), A_(src.A_),
+    B_(src.B_), C_(src.C_) {}
+    
+    LinearKalmanFilter & operator=(const LinearKalmanFilter & rhs)
+    {
+      if(this == &rhs) return *this;
+      else {
+	  *this = rhs;
+	  return *this; }
+    }
     
     void reset( StateVector const & init_state, StateMatrix const & init_cov )
     {
