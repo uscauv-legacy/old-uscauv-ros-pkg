@@ -1,0 +1,26 @@
+<package>
+  <description brief="object_tracking">
+
+     object_tracking
+
+  </description>
+  <author>nalyd</author>
+  <license>BSD</license>
+  <review status="unreviewed" notes=""/>
+  <url>http://ros.org/wiki/object_tracking</url>
+
+  <depend package="uscauv_common" />
+  <depend package="auv_msgs" />
+  <depend package="image_geometry" />
+
+  <rosdep name="eigen" />
+
+  <export>
+    <cpp cflags="`pkg-config --cflags eigen3` -I${prefix}/include" 
+	 lflags="-Wl,-rpath,${prefix}/lib -L${prefix}/lib -lobject_tracking"/>
+  </export>
+    
+  
+</package>
+
+
