@@ -45,6 +45,7 @@
 // general uscauv
 #include <uscauv_common/base_node.h>
 #include <uscauv_common/multi_reconfigure.h>
+#include <uscauv_common/param_loader.h>
 #include <auv_msgs/MatchedShape.h>
 #include <auv_msgs/MatchedShapeArray.h>
 
@@ -85,7 +86,7 @@ class UnimodalObjectTrackerNode: public BaseNode, public MultiReconfigure
   ros::NodeHandle nh_rel_;
   ros::Subscriber matched_shape_sub_, camera_info_sub_;
   
-  std::string const & object_ns;
+  std::string const object_ns;
 
   /// algorithmic
   _NamedAttributeMap name_size_color_map_;
@@ -98,14 +99,11 @@ class UnimodalObjectTrackerNode: public BaseNode, public MultiReconfigure
  UnimodalObjectTrackerNode(): BaseNode("UnimodalObjectTracker"), 
     MultiReconfigure( ros::NodeHandle("model/objects") ), /// resolves below node namespaces
     nh_rel_("~"), object_ns("model/objects")
-   {
-   }
-
-
+    {
+    }
 
   void matchedShapeCallback( _MatchedShapeArray::ConstPtr const & msg )
   {
-    ROS_INFO("got shapes");
     for( std::vector<_MatchedShape>::const_iterator shape_it= msg->shapes.begin();
 	 shape_it != msg->shapes.end(); ++shape_it)
       {
@@ -116,18 +114,16 @@ class UnimodalObjectTrackerNode: public BaseNode, public MultiReconfigure
   /// cache camera info
   void cameraInfoCallback( _CameraInfo::ConstPtr const & msg )
   {
-    ROS_INFO("got cam info.");
     last_camera_info_ = *msg; 
   }
 
   void updateTrackerParams(_TrackedObjectConfig const & config, std::string const & name)
   {
-
     double const & var = config.predict_variance;
     _ObjectKalmanFilter::ControlMatrix control_cov;
-    control_cov << 
+    control_cov <<
       var, 0, 0, 0,
-      0, var, 0, 0, 
+      0, var, 0, 0,
       0, 0, var, 0,
       0, 0, 0, var;
     trackers_.at( name_size_color_map_.at( name ) ).control_cov_ = control_cov;
@@ -139,62 +135,58 @@ class UnimodalObjectTrackerNode: public BaseNode, public MultiReconfigure
   // Running spin() will cause this function to be called before the node begins looping the spinOnce() function.
   /// TODO: Catch XML exception
   void spinFirst()
-     {
-       ros::NodeHandle nh_base;
-       bool immediate_tracking;
-       _XmlVal xml_objects;
+  {
+    ros::NodeHandle nh_base;
+    bool immediate_tracking;
+    _XmlVal xml_objects;
 	      
-       matched_shape_sub_ = nh_rel_.subscribe("matched_shapes", 10, 
-					      &UnimodalObjectTrackerNode::matchedShapeCallback,
-					      this);
-       camera_info_sub_ = nh_rel_.subscribe("camera_info", 1,
-					    &UnimodalObjectTrackerNode::cameraInfoCallback, 
-					    this);
+    matched_shape_sub_ = nh_rel_.subscribe("matched_shapes", 10, 
+					   &UnimodalObjectTrackerNode::matchedShapeCallback,
+					   this);
+    camera_info_sub_ = nh_rel_.subscribe("camera_info", 1,
+					 &UnimodalObjectTrackerNode::cameraInfoCallback, 
+					 this);
 
-
-       if( !nh_rel_.getParam( "immediate_tracking", immediate_tracking ) )
-	{
-	  ROS_WARN( "Couldn't find param immediate_tracking. Defaulting to false." );
-	  immediate_tracking = false;
-	}
+    immediate_tracking = uscauv::loadParam<bool>( nh_rel_, "immediate_tracking", false );       
        
-       // Load objects definitions from parameter server ########
-       if( !nh_base.getParam( object_ns, xml_objects ) )
-	 {
-	   ROS_FATAL( "Invalid object params namespace [ %s ].", object_ns.c_str() );
-	   ros::shutdown();
-	 }
+    // ################################################################
+    // Load objects definitions from parameter server #################
+    // ################################################################
+    xml_objects = uscauv::loadParam<uscauv::XmlRpcValue>( nh_base, object_ns );
        
-       for( _NamedXmlMap::iterator object_it = xml_objects.begin(); 
-	    object_it != xml_objects.end(); ++object_it )
-	 {
-	   std::string const attr = std::string(object_it->second["shape"]) + "/" +
-	     std::string(object_it->second["color"]);
-	   name_size_color_map_.at( object_it->first ) = attr;
+    for( _NamedXmlMap::iterator object_it = xml_objects.begin(); 
+	 object_it != xml_objects.end(); ++object_it )
+      {
+	std::string const attr = std::string(object_it->second["shape"]) + "/" +
+	  std::string(object_it->second["color"]);
+	name_size_color_map_[ object_it->first] = attr;
 	   
-	   ObjectTrackerStorage tracker;
-	   tracker.name_ = object_it->first;
-	   tracker.ideal_radius_ = object_it->second["ideal_radius"];
-	   tracker.tracked_ = (immediate_tracking) ? true : false;
-	   /// Set up reconfigure
-	   addReconfigureServer<_TrackedObjectConfig>
-	     ( object_it->first, std::bind( &UnimodalObjectTrackerNode::updateTrackerParams, this,
-					 std::placeholders::_1, object_it->first ) );
-
-	   trackers_.at( attr ) = tracker;
-	   ROS_INFO("Loaded object [ %s ] with attributes [ %s ].", 
-		    object_it->first.c_str(), attr.c_str() );
-	 }
+	ObjectTrackerStorage tracker;
+	tracker.name_ = object_it->first;
+	tracker.ideal_radius_ = object_it->second["ideal_radius"];
+	tracker.tracked_ = (immediate_tracking) ? true : false;
+	
+	/// have to add the new object before or the lookup in the reconfigure callback will fail to find it
+	trackers_[ attr ] = tracker;
+	   
+	/// set up reconfigure
+	addReconfigureServer<_TrackedObjectConfig>
+	  ( object_it->first, std::bind( &UnimodalObjectTrackerNode::updateTrackerParams, this,
+	   				 std::placeholders::_1, object_it->first ) );
+	   
+	ROS_INFO("Loaded object [ %s ] with attributes [ %s ].", 
+		 object_it->first.c_str(), attr.c_str() );
+      }
        
        
-     }  
+  }  
 
   // Running spin() will cause this function to get called at the loop rate until this node is killed.
   void spinOnce()
-     {
-       /// TODO: Publish tracked objects
+  {
+    /// TODO: Publish tracked objects
 
-     }
+  }
 
 };
 

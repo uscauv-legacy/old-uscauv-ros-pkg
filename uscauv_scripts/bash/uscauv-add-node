@@ -88,7 +88,6 @@ while (( "$#" )); do
 done
 
 if [ -z "$project" ]; then project="USC AUV"; fi
-if [ -z "$users" ]; then users=`whoami`; fi
 
 # Process Text #################################################
 

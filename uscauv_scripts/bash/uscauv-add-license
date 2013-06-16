@@ -80,7 +80,14 @@ while [ "$1" != "" ]; do
 done
 
 if [ "$project" == "" ]; then project="USC AUV"; fi
-if [ "$users" == "" ]; then users=`whoami`; fi
+
+if [ "$users" == "" ]; then 
+    if [ -n "$USCAUV_USER" ]; then
+	users="$USCAUV_USER"
+    else
+    	users=`whoami` 
+    fi
+fi
 
 echo ""
 echo "Adding license with authors { $users } and project \"$project\" to files { $targets }"

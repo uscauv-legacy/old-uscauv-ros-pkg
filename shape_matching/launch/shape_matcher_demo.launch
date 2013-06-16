@@ -1,6 +1,7 @@
 <launch>
 
   <arg name="camera" />
+  <arg name="rate" default="60" />
   <arg name="color" default="blaze_orange" />
 
   <rosparam command="load" file="$(find shape_matching)/params/image_proc.yaml" ns="shape_matcher/image_proc" />
@@ -9,9 +10,12 @@
 
   <include ns="model" file="$(find shape_model)/launch/upload_shapes.launch" />
 
-  <include file="$(find shape_matching)/launch/shape_matcher.launch" />
+  <include file="$(find shape_matching)/launch/shape_matcher.launch" >
+    <arg name="rate" value="$(arg rate)" />
+  </include>
 
   <include file="$(find color_classification)/launch/color_classifier_demo.launch">
+    <arg name="rate" value="$(arg rate)" />
     <arg name="camera" value="$(arg camera)" />
   </include>
   

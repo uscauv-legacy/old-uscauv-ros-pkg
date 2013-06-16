@@ -88,7 +88,6 @@ while (( "$#" )); do
 done
 
 if [ -z "$project" ]; then project="USC AUV"; fi
-if [ -z "$users" ]; then users=`whoami`; fi
 
 # Process Text #################################################
 
@@ -102,6 +101,7 @@ PackageName=`echo $package_name | sed 's/[a-z]/\U&/' |sed 's/_[a-z]/\U\0/g' | tr
 PACKAGENAME=`echo $package_name | sed 's/[a-z]/\U&/g' | tr -d _`
 
 PROJECTNAME=`echo $project | tr -d " " | tr -d _ | sed 's/[a-z]/\U&/g'`
+projectname=`echo $PROJECTNAME | sed 's/[A-Z]/\L&/g'`
 
 header_file="$library_name.h"
 cpp_file="$library_name.cpp"
@@ -123,17 +123,21 @@ header_text="
 // ROS
 #include <ros/ros.h>
 
-class "$LibraryName"
+namespace "$projectname"
 {
+
+   class "$LibraryName"
+   {
  
- private:
-
- public:
-  "$LibraryName"()
-   {}
-
-
-};
+    private:
+    
+    public:
+      "$LibraryName"()
+       {}
+        
+    };
+    
+} // "$projectname"
 
 #endif // $IFNDEF_TEXT"
 

@@ -37,7 +37,7 @@
 #define USCAUV_USCAUVCOMMON_BASENODE
 
 #include <ros/ros.h>
-
+#include <uscauv_common/param_loader.h>
 
 class BaseNode
 {
@@ -68,11 +68,7 @@ class BaseNode
   {
     ROS_INFO( "Spinning up %s...", node_name_.c_str() );
     
-    if( !nh_rel_.getParam("loop_rate", loop_rate_hz_) )
-      {
-	ROS_WARN("Parameter [ loop_rate ] not found. Using default.");
-	loop_rate_hz_ = 10.0;
-      }
+    loop_rate_hz_ = uscauv::loadParam<double>( nh_rel_, "loop_rate", double(10) );
 
     ros::Rate loop_rate( loop_rate_hz_ );
 

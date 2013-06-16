@@ -70,15 +70,15 @@ namespace uscauv
     private:
     /// state vector
     StateVector state_;
-    /// state covariance
+     /// state covariance
     StateMatrix cov_;
 
     /// See LKF definition in Probabilistic Robotics
     public:
-    const StateMatrix        A_;
-    const StateControlMatrix B_;
-    const UpdateStateMatrix  C_;
-
+    StateMatrix        A_;
+    StateControlMatrix B_;
+    UpdateStateMatrix  C_;
+    
     public:
     /// Using Identity automatrically even when dims aren't the same is a little iffy
     LinearKalmanFilter(StateVector const & init_state, StateMatrix const &init_cov, 
@@ -87,25 +87,27 @@ namespace uscauv
 		       UpdateStateMatrix  const & C = UpdateStateMatrix::Identity()
 		       )
     : state_(init_state), cov_(init_cov),
-    A_(A), B_(B), C_(C)
-    {}
+    A_(A), B_(B), C_(C){}
 
     LinearKalmanFilter(): 
     state_( StateVector::Zero() ), cov_( StateMatrix::Identity() ),
     A_( StateMatrix::Identity() ), B_( StateControlMatrix::Identity() ),
-    C_( UpdateStateMatrix::Identity() )
-    {}
+    C_( UpdateStateMatrix::Identity() ){}
     
     LinearKalmanFilter( LinearKalmanFilter const &src):
     state_(src.state_), cov_(src.cov_), A_(src.A_),
-    B_(src.B_), C_(src.C_) {}
+    B_(src.B_), C_(src.C_){}
     
-    LinearKalmanFilter & operator=(const LinearKalmanFilter & rhs)
+    
+    LinearKalmanFilter& operator=( LinearKalmanFilter const & rhs)
     {
-      if(this == &rhs) return *this;
-      else {
-	  *this = rhs;
-	  return *this; }
+      state_ = rhs.state_;
+      cov_ = rhs.cov_;
+      A_ = rhs.A_;
+      B_ = rhs.B_;
+      C_ = rhs.C_;
+            
+      return *this;
     }
     
     void reset( StateVector const & init_state, StateMatrix const & init_cov )

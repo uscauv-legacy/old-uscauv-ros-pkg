@@ -1,8 +1,8 @@
-
 <launch>
 
   <arg name="camera" />
   <arg name="rate" default="60" />
+  <arg name="immediate_tracking" default="true" />
 
   <include ns="model" file="$(find object_model)/launch/upload_objects.launch" />
   
@@ -11,6 +11,7 @@
   
   <include file="$(find object_tracking)/launch/unimodal_object_tracker.launch" >
     <arg name="rate" value="$(arg rate)" />
+    <arg name="immediate_tracking" value="$(arg immediate_tracking)" />
   </include>
 
   <include file="$(find shape_matching)/launch/shape_matcher_demo.launch">
