@@ -37,3 +37,11 @@
 
 
 #include <object_tracking/kalman_filter.h>
+
+// std::ostream& operator<< (std::ostream& os, 
+// 			  uscauv::LinearKalmanFilter< & kf )
+// {
+//   os << "State: " << kf.state_ << std::endl;
+//   os << "Covariance: " << kf.cov_ << std::endl;
+//   return os;
+// }

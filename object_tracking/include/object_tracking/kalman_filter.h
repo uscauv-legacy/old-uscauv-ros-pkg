@@ -70,7 +70,7 @@ namespace uscauv
     private:
     /// state vector
     StateVector state_;
-     /// state covariance
+    /// state covariance
     StateMatrix cov_;
 
     /// See LKF definition in Probabilistic Robotics
@@ -110,27 +110,40 @@ namespace uscauv
       return *this;
     }
     
+    public:
     void reset( StateVector const & init_state, StateMatrix const & init_cov )
     {
       state_ = init_state; cov_ = init_cov;
     }
     
-    private:
     void predict( ControlVector const & control, ControlMatrix const & control_cov )
     {
       state_ = A_*state_ + B_*control;
       cov_ = A_* cov_.inverse() * A_.transpose() + control_cov;
     }
-
+    
     void update( UpdateVector const & update, UpdateMatrix const & update_cov )
     {
       UpdateMatrix gain = cov_*C_.transpose() * (C_*cov_*C_.transpose() + update_cov).inverse();
       state_ = state_ + gain*( update - state_ );
       cov_ = ( StateMatrix::Identity() - gain*C_)*cov_;
     }
- 
+
+    /// In case you want to print the entire state 
+    friend std::ostream& operator<< (std::ostream& os, 
+				     LinearKalmanFilter const & kf )
+    {
+      os << std::endl;
+      os << "State: " << std::endl << kf.state_ << std::endl;
+      os << "Covariance: "<< std::endl << kf.cov_ << std::endl;
+      os << "A: "<< std::endl << kf.A_ << std::endl;
+      os << "B: "<< std::endl << kf.B_ << std::endl;
+      os << "C: "<< std::endl << kf.C_ << std::endl;
+      return os;
+    }
+    
     };
-  
+ 
 }
 
 #endif // USCAUV_OBJECTTRACKING_KALMANFILTER

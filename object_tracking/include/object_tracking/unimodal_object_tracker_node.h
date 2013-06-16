@@ -71,6 +71,7 @@ struct ObjectTrackerStorage
 {
   _ObjectKalmanFilter filter_;
   _ObjectKalmanFilter::ControlMatrix control_cov_;
+  _ObjectKalmanFilter::StateMatrix initial_cov_;
   double ideal_radius_;
   bool tracked_;
   std::string name_;
@@ -107,7 +108,39 @@ class UnimodalObjectTrackerNode: public BaseNode, public MultiReconfigure
     for( std::vector<_MatchedShape>::const_iterator shape_it= msg->shapes.begin();
 	 shape_it != msg->shapes.end(); ++shape_it)
       {
-	/// TODO: Something interesting here 
+	std::string const & attr = shape_it->type + "/" + shape_it->color;
+
+	/// Quit if we don't have the object or aren't tracking it
+	_AttributeTrackerMap::iterator tracker = trackers_.find( attr );
+	if( tracker == trackers_.end() || !tracker->second.tracked_ ) continue;
+	
+	ObjectTrackerStorage & storage = tracker->second;
+
+	/// predict no change with covariance from param
+	storage.filter_.predict( _ObjectKalmanFilter::ControlVector::Zero(),
+				 storage.control_cov_ );
+	
+	/// Get measurement update params, then update
+	_ObjectKalmanFilter::UpdateVector update_mean;
+	update_mean << 
+	  shape_it->x, 
+	  shape_it->y, 
+	  shape_it->theta, 
+	  shape_it->scale;
+
+	/// boost::array<double, 16>
+	_MatchedShape::_covariance_type const & c = shape_it->covariance;
+	
+	_ObjectKalmanFilter::UpdateMatrix update_cov;
+	update_cov <<
+	  c[0],  c[1],  c[2],  c[3], 
+	  c[4],  c[5],  c[6],  c[7], 
+	  c[8],  c[9],  c[10], c[11], 
+	  c[12], c[13], c[14], c[15];
+
+	storage.filter_.update( update_mean, update_cov );
+
+	ROS_INFO_STREAM( storage.filter_ );
       }
   }
 
@@ -119,14 +152,26 @@ class UnimodalObjectTrackerNode: public BaseNode, public MultiReconfigure
 
   void updateTrackerParams(_TrackedObjectConfig const & config, std::string const & name)
   {
-    double const & var = config.predict_variance;
+    double const & cvar = config.predict_variance;
+    double const & ivar = config.initial_variance;
     _ObjectKalmanFilter::ControlMatrix control_cov;
+    _ObjectKalmanFilter::StateMatrix initial_cov;
+
+    /// fancy looking
     control_cov <<
-      var, 0, 0, 0,
-      0, var, 0, 0,
-      0, 0, var, 0,
-      0, 0, 0, var;
+      cvar, 0, 0, 0,
+      0, cvar, 0, 0,
+      0, 0, cvar, 0,
+      0, 0, 0, cvar;
+
+    initial_cov <<
+      ivar, 0, 0, 0,
+      0, ivar, 0, 0,
+      0, 0, ivar, 0,
+      0, 0, 0, ivar;
+    
     trackers_.at( name_size_color_map_.at( name ) ).control_cov_ = control_cov;
+    trackers_.at( name_size_color_map_.at( name ) ).initial_cov_ = initial_cov;
     ROS_INFO("Updated tracker params [ %s ].", name.c_str() );
   }
 
@@ -164,30 +209,38 @@ class UnimodalObjectTrackerNode: public BaseNode, public MultiReconfigure
 	ObjectTrackerStorage tracker;
 	tracker.name_ = object_it->first;
 	tracker.ideal_radius_ = object_it->second["ideal_radius"];
-	tracker.tracked_ = (immediate_tracking) ? true : false;
-	
+	tracker.tracked_ = immediate_tracking;
+
 	/// have to add the new object before or the lookup in the reconfigure callback will fail to find it
 	trackers_[ attr ] = tracker;
 	   
-	/// set up reconfigure
+	/// set up reconfigure (loads tracker with control_cov and initial_cov params)
 	addReconfigureServer<_TrackedObjectConfig>
 	  ( object_it->first, std::bind( &UnimodalObjectTrackerNode::updateTrackerParams, this,
 	   				 std::placeholders::_1, object_it->first ) );
-	   
+
+	/// initialize kalman filter at location (0,0,0,0) with diagonal covariance set by reconfigure
+	/// All transforms are set to identity
+	ObjectTrackerStorage & tracker_added = trackers_.at(attr);
+	tracker_added.filter_ = _ObjectKalmanFilter( _ObjectKalmanFilter::StateVector::Zero(),
+						     tracker_added.initial_cov_,
+						     _ObjectKalmanFilter::StateMatrix::Identity(),
+						     _ObjectKalmanFilter::StateControlMatrix::Identity(),
+						     _ObjectKalmanFilter::UpdateStateMatrix::Identity() );
+	
 	ROS_INFO("Loaded object [ %s ] with attributes [ %s ].", 
 		 object_it->first.c_str(), attr.c_str() );
+	/* ROS_INFO_STREAM( tracker_added.filter_ ); */
       }
-       
-       
   }  
 
   // Running spin() will cause this function to get called at the loop rate until this node is killed.
   void spinOnce()
   {
     /// TODO: Publish tracked objects
-
+    
   }
-
+  
 };
 
 #endif // USCAUV_OBJECTTRACKING_UNIMODALOBJECTTRACKER
