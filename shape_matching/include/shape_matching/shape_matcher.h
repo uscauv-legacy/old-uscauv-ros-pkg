@@ -250,12 +250,18 @@ class ShapeMatcherNode: public BaseNode, public ImageTransceiver, public MultiRe
 
 		/// Populate match message
 		_MatchedShape match;
-		/// switch from image coordinates to camera coordinates
-		match.x = (result.mean_.x - msg->image.cols/2);
-		/// negate because the image has a flipped y axis
-		match.y = -(result.mean_.y - msg->image.rows/2);
-		/// same deal as y
-		match.theta = -result.rotation_;
+
+		/// I take of change of coordinates in the object tracker node now
+		/* /// switch from image coordinates to camera coordinates */
+		/* match.x = (result.mean_.x - msg->image.cols/2); */
+		/* /// negate because the image has a flipped y axis */
+		/* match.y = -(result.mean_.y - msg->image.rows/2); */
+		/* /// same deal as y */
+		/* match.theta = -result.rotation_; */
+
+		match.x = result.mean_.x;
+		match.y = result.mean_.y;
+		match.theta = result.rotation_;
 		match.scale = result.radius_;
 		
 		match.color = "blaze_orange"; /// TODO: Refactor color classifier publishing scheme so that this isn't hard-coded
@@ -443,8 +449,6 @@ class ShapeMatcherNode: public BaseNode, public ImageTransceiver, public MultiRe
 	  }
 	float output = (n)? acc/n: 0;
 	output_signature.push_back(output);
-	
-	/* ROS_INFO("%d: Signatured: %f (idx %d) (n %d)", bin, output, idx, n); */
 	
 	++bin;
       }

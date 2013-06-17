@@ -1,10 +1,10 @@
 /***************************************************************************
- *  src/kalman_filter.cpp
+ *  src/image_geometry.cpp
  *  --------------------
  *
  *  Software License Agreement (BSD License)
  *
- *  Copyright (c) 2013, Dylan Foster
+ *  Copyright (c) 2013, Dylan Foster (turtlecannon@gmail.com)
  *  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
@@ -36,4 +36,27 @@
  **************************************************************************/
 
 
-#include <object_tracking/kalman_filter.h>
+#include <uscauv_common/image_geometry.h>
+
+namespace uscauv
+{
+
+  tf::Vector3 reprojectObjectTo3d( image_geometry::PinholeCameraModel const & model,
+				   cv::Point2d const & center, double const &radius_pixels,
+				   double const & radius_meters )
+  {
+    cv::Point2d radius_vec( radius_pixels, 0 );
+    
+    /// (R,0,0), where R is the radius of the object in meters if it were one meter away
+    double radius_unit = model.projectPixelTo3dRay( radius_vec ).x;
+    
+    /// Distance from the camera to the object in meters
+    double distance = radius_meters / radius_unit;
+    
+    /// (X,Y,1)
+    cv::Point3d center_unit = model.projectPixelTo3dRay( center );
+    cv::Point3d center_meters = center_unit * distance;
+    
+    return tf::Vector3( center_meters.x, center_meters.y, center_meters.z );
+  }
+}

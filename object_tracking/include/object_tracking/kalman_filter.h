@@ -67,14 +67,13 @@ namespace uscauv
     typedef Eigen::Matrix<double, __StateDim, __ControlDim>   StateControlMatrix;
     typedef Eigen::Matrix<double, __UpdateDim, __StateDim>    UpdateStateMatrix;
  
-    private:
+    public:
     /// state vector
     StateVector state_;
     /// state covariance
     StateMatrix cov_;
 
     /// See LKF definition in Probabilistic Robotics
-    public:
     StateMatrix        A_;
     StateControlMatrix B_;
     UpdateStateMatrix  C_;

@@ -1,10 +1,10 @@
 /***************************************************************************
- *  src/kalman_filter.cpp
+ *  include/uscauv_common/image_geometry.h
  *  --------------------
  *
  *  Software License Agreement (BSD License)
  *
- *  Copyright (c) 2013, Dylan Foster
+ *  Copyright (c) 2013, Dylan Foster (turtlecannon@gmail.com)
  *  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
@@ -36,4 +36,35 @@
  **************************************************************************/
 
 
-#include <object_tracking/kalman_filter.h>
+#ifndef USCAUV_USCAUVCOMMON_IMAGEGEOMETRY
+#define USCAUV_USCAUVCOMMON_IMAGEGEOMETRY
+
+// ROS
+#include <ros/ros.h>
+
+#include <tf/LinearMath/Transform.h>
+#include <image_geometry/pinhole_camera_model.h>
+#include <opencv2/core/core.hpp>
+
+namespace uscauv
+{
+  
+  /** 
+   * Take a matched object and estimate its 3d position relative to the camera frame
+   * based on a-priori knowledge of the object's physical size
+   * 
+   * @param model Camera model
+   * @param center Coordinates of the matched object's center in the camera image
+   * @param radius_pixels Radius of the matched object in the camera image
+   * @param radius_meters Object's physical radius, in meters
+   * 
+   * @return Vector from the center of the camera to the object's center
+   */
+  tf::Vector3 reprojectObjectTo3d( image_geometry::PinholeCameraModel const & model,
+				   cv::Point2d const & center, double const &radius_pixels,
+				   double const & radius_meters );
+  
+    
+} // uscauv
+
+#endif // USCAUV_USCAUVCOMMON_IMAGEGEOMETRY

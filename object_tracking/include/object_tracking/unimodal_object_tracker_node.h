@@ -46,6 +46,7 @@
 #include <uscauv_common/base_node.h>
 #include <uscauv_common/multi_reconfigure.h>
 #include <uscauv_common/param_loader.h>
+#include <uscauv_common/image_geometry.h>
 #include <auv_msgs/MatchedShape.h>
 #include <auv_msgs/MatchedShapeArray.h>
 
@@ -54,6 +55,8 @@
 #include <object_tracking/TrackedObjectConfig.h>
 
 #include <sensor_msgs/CameraInfo.h>
+#include <image_geometry/pinhole_camera_model.h>
+
 
 typedef auv_msgs::MatchedShape _MatchedShape;
 typedef auv_msgs::MatchedShapeArray _MatchedShapeArray;
@@ -80,6 +83,7 @@ struct ObjectTrackerStorage
 typedef std::map<std::string, std::string>          _NamedAttributeMap;
 typedef std::map<std::string, ObjectTrackerStorage> _AttributeTrackerMap;
 
+/// TODO: Add support for start/stop/reset tracking service
 class UnimodalObjectTrackerNode: public BaseNode, public MultiReconfigure
 {
  private:
@@ -87,7 +91,8 @@ class UnimodalObjectTrackerNode: public BaseNode, public MultiReconfigure
   ros::NodeHandle nh_rel_;
   ros::Subscriber matched_shape_sub_, camera_info_sub_;
   
-  std::string const object_ns;
+  std::string const object_ns_;
+  std::string depth_method_;
 
   /// algorithmic
   _NamedAttributeMap name_size_color_map_;
@@ -95,16 +100,23 @@ class UnimodalObjectTrackerNode: public BaseNode, public MultiReconfigure
 
   /// other
   _CameraInfo last_camera_info_;
+  image_geometry::PinholeCameraModel camera_model_;
   
  public:
  UnimodalObjectTrackerNode(): BaseNode("UnimodalObjectTracker"), 
     MultiReconfigure( ros::NodeHandle("model/objects") ), /// resolves below node namespaces
-    nh_rel_("~"), object_ns("model/objects")
+    nh_rel_("~"), object_ns_("model/objects")
     {
     }
 
   void matchedShapeCallback( _MatchedShapeArray::ConstPtr const & msg )
   {
+    if ( msg->header.frame_id != last_camera_info_.header.frame_id )
+      {
+	ROS_WARN( "Matched shape frame does not match camera frame. Discarding message...");
+	return;
+      }
+    
     for( std::vector<_MatchedShape>::const_iterator shape_it= msg->shapes.begin();
 	 shape_it != msg->shapes.end(); ++shape_it)
       {
@@ -114,7 +126,30 @@ class UnimodalObjectTrackerNode: public BaseNode, public MultiReconfigure
 	_AttributeTrackerMap::iterator tracker = trackers_.find( attr );
 	if( tracker == trackers_.end() || !tracker->second.tracked_ ) continue;
 	
+
+
+	// ################################################################
+	// Project to 3d ##################################################
+	// ################################################################
 	ObjectTrackerStorage & storage = tracker->second;
+	tf::Vector3 camera_to_object;	
+
+	if( !camera_model_.initialized() )
+	  {
+	    ROS_WARN( "Camera model is not ready.");
+	    return;
+	  }
+
+	if( depth_method_ == "monocular" )
+	  {
+	    camera_to_object = 
+	      uscauv::reprojectObjectTo3d( camera_model_, cv::Point2d( shape_it->x, shape_it->y),
+					   shape_it->scale, storage.ideal_radius_ );
+	  }
+	
+	// ################################################################
+	// Update filter ##################################################
+	// ################################################################
 
 	/// predict no change with covariance from param
 	storage.filter_.predict( _ObjectKalmanFilter::ControlVector::Zero(),
@@ -123,11 +158,11 @@ class UnimodalObjectTrackerNode: public BaseNode, public MultiReconfigure
 	/// Get measurement update params, then update
 	_ObjectKalmanFilter::UpdateVector update_mean;
 	update_mean << 
-	  shape_it->x, 
-	  shape_it->y, 
-	  shape_it->theta, 
-	  shape_it->scale;
-
+	  camera_to_object.x(),
+	  camera_to_object.y(), 
+	  camera_to_object.z(),
+	  shape_it->theta;
+	  
 	/// boost::array<double, 16>
 	_MatchedShape::_covariance_type const & c = shape_it->covariance;
 	
@@ -147,7 +182,8 @@ class UnimodalObjectTrackerNode: public BaseNode, public MultiReconfigure
   /// cache camera info
   void cameraInfoCallback( _CameraInfo::ConstPtr const & msg )
   {
-    last_camera_info_ = *msg; 
+    last_camera_info_ = *msg;
+    camera_model_.fromCameraInfo( last_camera_info_ );
   }
 
   void updateTrackerParams(_TrackedObjectConfig const & config, std::string const & name)
@@ -192,12 +228,21 @@ class UnimodalObjectTrackerNode: public BaseNode, public MultiReconfigure
 					 &UnimodalObjectTrackerNode::cameraInfoCallback, 
 					 this);
 
-    immediate_tracking = uscauv::loadParam<bool>( nh_rel_, "immediate_tracking", false );       
+    immediate_tracking = uscauv::loadParam<bool>( nh_rel_, "immediate_tracking", false );
+    depth_method_ = uscauv::loadParam<std::string>( nh_rel_, "depth_method", "monocular" );
+
+    /// TODO: Add more depth methods
+    if( depth_method_ != "monocular" )
+      {
+	ROS_WARN( "Got depth method [ %s ], but only monocular method is supported. Switching...", 
+		  depth_method_.c_str());
+	depth_method_ = "monocular";
+      }
        
     // ################################################################
     // Load objects definitions from parameter server #################
     // ################################################################
-    xml_objects = uscauv::loadParam<uscauv::XmlRpcValue>( nh_base, object_ns );
+    xml_objects = uscauv::loadParam<uscauv::XmlRpcValue>( nh_base, object_ns_ );
        
     for( _NamedXmlMap::iterator object_it = xml_objects.begin(); 
 	 object_it != xml_objects.end(); ++object_it )
@@ -237,7 +282,13 @@ class UnimodalObjectTrackerNode: public BaseNode, public MultiReconfigure
   // Running spin() will cause this function to get called at the loop rate until this node is killed.
   void spinOnce()
   {
-    /// TODO: Publish tracked objects
+    for( _NamedAttributeMap::const_iterator name_it = name_size_color_map_.begin(); 
+	 name_it != name_size_color_map_.end(); ++name_it )
+      {
+	ObjectTrackerStorage const & storage = trackers_.at( name_it->second );
+	/// TODO: Project to 3D, publish
+
+      }
     
   }
   
