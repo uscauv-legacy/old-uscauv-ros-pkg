@@ -25,9 +25,9 @@
   <node pkg="image_view" type="image_view" name="contours_view" 
 	args="image:=shape_matcher/image_contours" />
 
-    <node pkg="image_view" type="image_view" name="match_view" 
+  <node pkg="image_view" type="image_view" name="match_view" 
 	args="image:=shape_matcher/image_matched" />
-
+  
   <!-- <node pkg="rqt_reconfigure" type="rqt_reconfigure" name="reconfigure" /> -->
 
 </launch>

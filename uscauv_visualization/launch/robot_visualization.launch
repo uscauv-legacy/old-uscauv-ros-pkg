@@ -15,6 +15,10 @@
     <node pkg="tf" type="static_transform_publisher" name="world_to_robot_tf" 
 	  args="0 0 0 0 0 0 /world /robot/structures/cm 100" />
   </group>
-  
+
+  <group unless="$(arg static)" >
+    <node name="imu_to_robot_tf" pkg="tf" type="static_transform_publisher"
+	  args="0 0 0 0 0 0 /seabee3/sensors/imu /robot/structures/cm 100" />  
+  </group>
   
 </launch>

@@ -297,6 +297,8 @@ class UnimodalObjectTrackerNode: public BaseNode, public MultiReconfigure
     // ################################################################
     // Publish tf transforms for all objects that are curently tracked
     // ################################################################
+    if( !camera_model_.initialized() )
+      return;
 
     std::vector< tf::StampedTransform > object_transforms;
     

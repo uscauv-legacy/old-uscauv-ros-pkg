@@ -1,0 +1,45 @@
+
+<launch>
+  <!-- Name of the camera we will be streaming data from -->
+  <arg name="camera" />
+  <arg name="camera_name" default="forward/left" />
+  <arg name="full_camera_name" value="robot/cameras/$(arg camera_name)" />
+  <arg name="static" default="true" />
+  <arg name="scale" default="0.5" />
+  <arg name="rate" default="60" />
+
+  <!-- Vision pipeline -->
+  <include file="$(find auv_vision)/launch/vision_pipeline.launch" >
+    <arg name="rate" value="$(arg rate)" />
+    <arg name="camera" value="$(arg full_camera_name)" />
+  </include>
+  
+  <!-- Camera -->
+  <include file="$(find uscauv_camera)/launch/monocular_camera.launch" >
+    <arg name="camera" value="$(arg camera)" />
+    <arg name="name" value="$(arg full_camera_name)" />
+    <arg name="scale" value="$(arg scale)" />
+  </include>
+  
+  <!-- RVIZ (for matched objects) -->
+  <include file="$(find uscauv_visualization)/launch/robot_visualization.launch">
+    <arg name="static" value="$(arg static)" />
+  </include>
+  
+  <!-- Image View -->
+  <node name="$(arg camera)_view" type="image_view" pkg="image_view" 
+	args="image:=$(arg full_camera_name)/image_color" />
+
+  <node name="color_view" type="image_view" pkg="image_view" 
+	args="image:=color_classifier/blaze_orange_classified" />
+
+  <node pkg="image_view" type="image_view" name="denoise_view" 
+args="image:=shape_matcher/image_denoised" />
+
+  <node pkg="image_view" type="image_view" name="contours_view" 
+	args="image:=shape_matcher/image_contours" />
+
+  <node pkg="image_view" type="image_view" name="match_view" 
+	args="image:=shape_matcher/image_matched" />
+
+</launch>

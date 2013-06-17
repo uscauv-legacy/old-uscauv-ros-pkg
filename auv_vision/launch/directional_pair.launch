@@ -1,0 +1,50 @@
+<launch>
+  
+  <arg name="rate" default="60" />
+  
+  <arg name="left" />
+  <arg name="right" />
+  <arg name="ns" />
+  <arg name="enable_left" default="true" />
+  <arg name="enable_right" default="false" />
+  <arg name="pipeline_left" default="$(arg enable_left)" />
+  <arg name="pipeline_right" default="$(arg enable_right)" />
+  <arg name="stereo" default="false" />
+
+  <group ns="robot/cameras/$(arg ns)" >
+    
+    <!-- Left Camera -->
+    <group if="$(arg enable_left)" >
+      <include file="$(find uscauv_camera)/launch/monocular_pipeline_base.launch" 
+	       ns="left" >
+	<arg name="camera" value="$(arg left)" />
+      </include>
+
+      <include if="$(arg pipeline_left)" file="$(find auv_vision)/launch/vision_pipeline.launch">
+	<arg name="camera" value="left" />
+	<arg name="rate" value="$(arg rate)" />
+      </include>
+      
+    </group>
+
+    <!-- Right camera -->
+    <group if="$(arg enable_right)" >
+      <include file="$(find uscauv_camera)/launch/monocular_pipeline_base.launch" 
+	       ns="right" >
+	<arg name="camera" value="$(arg right)" />
+      </include>
+
+      <include if="$(arg pipeline_right)" file="$(find auv_vision)/launch/vision_pipeline.launch">
+	<arg name="camera" value="right" />
+	<arg name="rate" value="$(arg rate)" />
+      </include
+
+    </group>
+    
+    <group if="$(arg stereo)" >
+      <node name="stereo_image_proc" type="stereo_image_proc" pkg="stereo_image_proc" />  
+    </group>
+  
+  </group>
+  
+</launch>

@@ -6,7 +6,9 @@
   
   <rosparam param="driver" command="load" file="$(find camera_model)/driver/$(arg camera)_driver.yaml" />
   
+  <!-- I don't remember what this line accomplishes, but it's important -->
   <remap from="camera/" to="$(arg camera)" />
+
   <remap from="$(arg camera)/image_raw" to="image_raw" />
   <remap from="$(arg camera)/set_camera_info" to="set_camera_info" />
   

@@ -1,12 +1,24 @@
 <launch>
 
   <arg name="camera" />
+  <arg name="name" default="$(arg camera)" />
+  <arg name="scale" default="0.5" />
 
-  <group ns="$(arg camera)" >
+  <group ns="$(arg name)" >
 
     <include file="$(find uscauv_camera)/launch/monocular_pipeline_base.launch" >
       <arg name="camera" value="$(arg camera)" />
     </include>
+
+    <include file="$(find image_transforms)/launch/image_scaler.launch" >
+      <arg name="image_in" value="image_color" />
+      <arg name="image_out" value="image_color_scaled" />
+      <arg name="info_in" value="camera_info" />
+      <arg name="info_out" value="camera_info_scaled" />
+      <arg name="scale" value="$(arg scale)" />
+    </include>
+
+    <param name="driver/frame_id" value="$(arg name)" />
 
   </group>
 

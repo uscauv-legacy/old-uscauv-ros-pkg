@@ -1,0 +1,13 @@
+<launch>
+
+<arg name="camera" />
+
+<include file="$(find uscauv_camera)/launch/monocular_camera.launch" >
+  <arg name="camera" value="$(arg camera)" />
+</include>
+
+<node name="camera_calibration" pkg="camera_calibration" type="cameracalibrator.py" 
+      args="--size 6x9 --square 0.0225 image:=/$(arg camera)/image_color camera:=$(arg camera)" />
+
+
+</launch>

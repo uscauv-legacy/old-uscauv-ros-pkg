@@ -6,9 +6,6 @@
     <arg name="static" value="false" />
   </include>
 
-  <node name="imu_to_robot_tf" pkg="tf" type="static_transform_publisher"
-	args="0 0 0 0 0 0 /seabee3/sensors/imu /robot/structures/cm 100" />
-
   <include if="$(arg driver)" file="$(find xsens_driver)/launch/xsens_driver.launch" />
 
 </launch>
