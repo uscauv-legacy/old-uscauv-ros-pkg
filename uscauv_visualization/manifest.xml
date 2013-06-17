@@ -9,6 +9,10 @@
   <review status="unreviewed" notes=""/>
   <url>http://ros.org/wiki/uscauv_visualization</url>
 
+  <depend package="uscauv_common" />
+  <depend package="visualization_msgs" />
+  <depend package="tf" />
+
 </package>
 
 
