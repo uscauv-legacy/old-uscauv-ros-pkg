@@ -45,7 +45,7 @@ namespace uscauv
 				   cv::Point2d const & center, double const &radius_pixels,
 				   double const & radius_meters )
   {
-    cv::Point2d radius_vec( radius_pixels, 0 );
+    cv::Point2d radius_vec( model.cx() + radius_pixels, model.cy() );
     
     /// (R,0,0), where R is the radius of the object in meters if it were one meter away
     double radius_unit = model.projectPixelTo3dRay( radius_vec ).x;

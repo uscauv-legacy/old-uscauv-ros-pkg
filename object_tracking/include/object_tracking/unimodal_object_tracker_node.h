@@ -42,6 +42,9 @@
 // ROS
 #include <ros/ros.h>
 
+#include <tf/LinearMath/Transform.h>
+#include <tf/transform_broadcaster.h>
+
 // general uscauv
 #include <uscauv_common/base_node.h>
 #include <uscauv_common/multi_reconfigure.h>
@@ -78,6 +81,7 @@ struct ObjectTrackerStorage
   double ideal_radius_;
   bool tracked_;
   std::string name_;
+  ros::Time last_update_time_;
 };
 
 typedef std::map<std::string, std::string>          _NamedAttributeMap;
@@ -90,6 +94,7 @@ class UnimodalObjectTrackerNode: public BaseNode, public MultiReconfigure
   /// ros
   ros::NodeHandle nh_rel_;
   ros::Subscriber matched_shape_sub_, camera_info_sub_;
+  tf::TransformBroadcaster object_broadcaster_;
   
   std::string const object_ns_;
   std::string depth_method_;
@@ -147,6 +152,11 @@ class UnimodalObjectTrackerNode: public BaseNode, public MultiReconfigure
 					   shape_it->scale, storage.ideal_radius_ );
 	  }
 	
+	/* ROS_INFO( "Reproject output: (%f, %f, %f).", */
+	/* 	 camera_to_object.x(), */
+	/* 	 camera_to_object.y(),  */
+	/* 	 camera_to_object.z() ); */
+	
 	// ################################################################
 	// Update filter ##################################################
 	// ################################################################
@@ -174,8 +184,10 @@ class UnimodalObjectTrackerNode: public BaseNode, public MultiReconfigure
 	  c[12], c[13], c[14], c[15];
 
 	storage.filter_.update( update_mean, update_cov );
-
-	ROS_INFO_STREAM( storage.filter_ );
+	
+	/// update time
+	storage.last_update_time_ = msg->header.stamp;
+	/* ROS_INFO_STREAM( storage.filter_ ); */
       }
   }
 
@@ -282,14 +294,38 @@ class UnimodalObjectTrackerNode: public BaseNode, public MultiReconfigure
   // Running spin() will cause this function to get called at the loop rate until this node is killed.
   void spinOnce()
   {
+    // ################################################################
+    // Publish tf transforms for all objects that are curently tracked
+    // ################################################################
+
+    std::vector< tf::StampedTransform > object_transforms;
+    
     for( _NamedAttributeMap::const_iterator name_it = name_size_color_map_.begin(); 
 	 name_it != name_size_color_map_.end(); ++name_it )
       {
 	ObjectTrackerStorage const & storage = trackers_.at( name_it->second );
-	/// TODO: Project to 3D, publish
+	_ObjectKalmanFilter::StateVector const & state = storage.filter_.state_;
 
+	if( !storage.tracked_ )
+	  continue;
+
+	tf::Vector3 camera_to_object_vec = tf::Vector3( state(0), state(1), state(2) );
+	/// setRPY uses R=around X, P=around Y, Y=around Z, so we are rotating around Z
+	tf::Quaternion camera_to_object_quat;
+	camera_to_object_quat.setRPY( 0, 0, state(3));
+
+	tf::Transform camera_to_object_tf = tf::Transform( camera_to_object_quat,
+							   camera_to_object_vec );
+	
+	/// transform from camera to "object/<object name>"
+	tf::StampedTransform output( camera_to_object_tf, storage.last_update_time_,
+				     last_camera_info_.header.frame_id,
+				     std::string( "object/" + storage.name_ ) );
+	
+	object_transforms.push_back( output );
       }
     
+    object_broadcaster_.sendTransform( object_transforms );
   }
   
 };
