@@ -73,7 +73,6 @@ class ObjectVisualizerNode: public BaseNode
   _NamedGraphicsMap object_graphics_;
   _MarkerMsg marker_template_;
 
-  std::string world_frame_name_;
   std::string object_ns_;
   
  public:
@@ -90,9 +89,6 @@ class ObjectVisualizerNode: public BaseNode
        ros::NodeHandle nh_base;
        XmlRpc::XmlRpcValue xml_objects;
        
-       world_frame_name_ =
-	 uscauv::loadParam<std::string>( nh_rel_, "world_frame_name", "/world" );
-
        object_marker_pub_ = nh_rel_.advertise<_MarkerArrayMsg>("markers", 1 );
        
        // ################################################################

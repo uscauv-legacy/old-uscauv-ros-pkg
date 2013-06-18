@@ -126,13 +126,12 @@ class UnimodalObjectTrackerNode: public BaseNode, public MultiReconfigure
     for( std::vector<_MatchedShape>::const_iterator shape_it= msg->shapes.begin();
 	 shape_it != msg->shapes.end(); ++shape_it)
       {
-	std::string const & attr = shape_it->type + "/" + shape_it->color;
 
+	std::string const & attr = shape_it->type + "/" + shape_it->color;
+	
 	/// Quit if we don't have the object or aren't tracking it
 	_AttributeTrackerMap::iterator tracker = trackers_.find( attr );
 	if( tracker == trackers_.end() || !tracker->second.tracked_ ) continue;
-	
-
 
 	// ################################################################
 	// Project to 3d ##################################################
@@ -152,11 +151,6 @@ class UnimodalObjectTrackerNode: public BaseNode, public MultiReconfigure
 	      uscauv::reprojectObjectTo3d( camera_model_, cv::Point2d( shape_it->x, shape_it->y),
 					   shape_it->scale, storage.ideal_radius_ );
 	  }
-	
-	/* ROS_INFO( "Reproject output: (%f, %f, %f).", */
-	/* 	 camera_to_object.x(), */
-	/* 	 camera_to_object.y(),  */
-	/* 	 camera_to_object.z() ); */
 	
 	// ################################################################
 	// Update filter ##################################################
@@ -196,6 +190,12 @@ class UnimodalObjectTrackerNode: public BaseNode, public MultiReconfigure
   /// cache camera info
   void cameraInfoCallback( _CameraInfo::ConstPtr const & msg )
   {
+    /* This is a heuristic */
+    if( msg->distortion_model == "" )
+      {
+	ROS_WARN("Received uninitialized camera info message. Discarding...");
+	return;
+      }
     last_camera_info_ = *msg;
     camera_model_.fromCameraInfo( last_camera_info_ );
   }

@@ -181,13 +181,19 @@ class ShapeMatcherNode: public BaseNode, public ImageTransceiver, public MultiRe
     kernel_size = (kernel_size % 2) ? kernel_size : kernel_size + 1;
     
     cv::GaussianBlur( msg->image, denoised, cv::Size(kernel_size, kernel_size), 0, 0);
-    cv::morphologyEx( denoised, denoised, cv::MORPH_OPEN, 
-		      cv::getStructuringElement( cv::MORPH_ELLIPSE, 
-						 cv::Size( struct_elem_size, 
-							   struct_elem_size ) ) );
-    cv::threshold( denoised, denoised, floor_threshold, 0, cv::THRESH_TOZERO );
+
+    if( config_->use_morph )
+      {
+	cv::morphologyEx( denoised, denoised, cv::MORPH_OPEN, 
+			  cv::getStructuringElement( cv::MORPH_ELLIPSE, 
+						     cv::Size( struct_elem_size, 
+							       struct_elem_size ) ) );
+      }
+    if( config_->use_floor)
+      cv::threshold( denoised, denoised, floor_threshold, 0, cv::THRESH_TOZERO );
+    if( config_->use_otsu )
+      cv::threshold( denoised, denoised, 0, 255, cv::THRESH_BINARY + cv::THRESH_OTSU);
     
-    /* cv::threshold( denoised, denoised, 0, 255, cv::THRESH_BINARY + cv::THRESH_OTSU); */
     /* cv::adaptiveThreshold( msg->image, denoised, 255, cv::ADAPTIVE_THRESH_GAUSSIAN_C,  */
     /* 			   cv::THRESH_BINARY, kernel_size,  */
     /* 			   getLatestConfig<_ShapeMatcherConfig>("image_proc").c ); */

@@ -27,10 +27,10 @@
   </include>
   
   <include file="$(find uscauv_visualization)/launch/object_visualizer.launch"/>
-  
+
   <!-- Image View -->
   <node name="$(arg camera)_view" type="image_view" pkg="image_view" 
-	args="image:=$(arg full_camera_name)/image_color" />
+	args="image:=$(arg full_camera_name)/image_rect_color_scaled" />
 
   <node name="color_view" type="image_view" pkg="image_view" 
 	args="image:=color_classifier/blaze_orange_classified" />
