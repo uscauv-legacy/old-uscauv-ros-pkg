@@ -1,1 +1,5 @@
-{canny_lower: 255, canny_upper: 0, emd_boundary: 0.15, kernel_size: 49, signature_size: 10}
+{ emd_boundary: 0.4, floor_threshold: 30.0, kernel_size: 25,
+  signature_size: 30, struct_elem_size: 6}
+
+# Old one using Otsu
+# {emd_boundary: 0.15, kernel_size: 25, signature_size: 10}

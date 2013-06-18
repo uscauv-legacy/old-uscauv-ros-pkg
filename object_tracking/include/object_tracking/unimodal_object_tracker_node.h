@@ -77,6 +77,7 @@ struct ObjectTrackerStorage
 {
   _ObjectKalmanFilter filter_;
   _ObjectKalmanFilter::ControlMatrix control_cov_;
+  _ObjectKalmanFilter::UpdateMatrix update_cov_;
   _ObjectKalmanFilter::StateMatrix initial_cov_;
   double ideal_radius_;
   bool tracked_;
@@ -162,8 +163,8 @@ class UnimodalObjectTrackerNode: public BaseNode, public MultiReconfigure
 	// ################################################################
 
 	/// predict no change with covariance from param
-	storage.filter_.predict( _ObjectKalmanFilter::ControlVector::Zero(),
-				 storage.control_cov_ );
+	/* storage.filter_.predict( _ObjectKalmanFilter::ControlVector::Zero(), */
+	/* 			 storage.control_cov_ ); */
 	
 	/// Get measurement update params, then update
 	_ObjectKalmanFilter::UpdateVector update_mean;
@@ -174,16 +175,17 @@ class UnimodalObjectTrackerNode: public BaseNode, public MultiReconfigure
 	  shape_it->theta;
 	  
 	/// boost::array<double, 16>
-	_MatchedShape::_covariance_type const & c = shape_it->covariance;
+	/* _MatchedShape::_covariance_type const & c = shape_it->covariance; */
 	
-	_ObjectKalmanFilter::UpdateMatrix update_cov;
-	update_cov <<
-	  c[0],  c[1],  c[2],  c[3], 
-	  c[4],  c[5],  c[6],  c[7], 
-	  c[8],  c[9],  c[10], c[11], 
-	  c[12], c[13], c[14], c[15];
+	/* _ObjectKalmanFilter::UpdateMatrix update_cov; */
+	/* update_cov << */
+	/*   c[0],  c[1],  c[2],  c[3],  */
+	/*   c[4],  c[5],  c[6],  c[7],  */
+	/*   c[8],  c[9],  c[10], c[11],  */
+	/*   c[12], c[13], c[14], c[15]; */
 
-	storage.filter_.update( update_mean, update_cov );
+	/* storage.filter_.update( update_mean, update_cov ); */
+	storage.filter_.update( update_mean, storage.update_cov_ );
 	
 	/// update time
 	storage.last_update_time_ = msg->header.stamp;
@@ -202,8 +204,10 @@ class UnimodalObjectTrackerNode: public BaseNode, public MultiReconfigure
   {
     double const & cvar = config.predict_variance;
     double const & ivar = config.initial_variance;
+    double const & uvar = config.update_variance;
     _ObjectKalmanFilter::ControlMatrix control_cov;
     _ObjectKalmanFilter::StateMatrix initial_cov;
+    _ObjectKalmanFilter::UpdateMatrix update_cov;
 
     /// fancy looking
     control_cov <<
@@ -217,9 +221,18 @@ class UnimodalObjectTrackerNode: public BaseNode, public MultiReconfigure
       0, ivar, 0, 0,
       0, 0, ivar, 0,
       0, 0, 0, ivar;
-    
-    trackers_.at( name_size_color_map_.at( name ) ).control_cov_ = control_cov;
-    trackers_.at( name_size_color_map_.at( name ) ).initial_cov_ = initial_cov;
+
+    update_cov <<
+      uvar, 0, 0, 0,
+      0, uvar, 0, 0,
+      0, 0, uvar, 0,
+      0, 0, 0, uvar;
+
+    ObjectTrackerStorage & tracker = trackers_.at( name_size_color_map_.at( name ) );
+
+    tracker.control_cov_ = control_cov;
+    tracker.initial_cov_ = initial_cov;
+    tracker.update_cov_ = update_cov;
     ROS_INFO("Updated tracker params [ %s ].", name.c_str() );
   }
 
@@ -305,11 +318,15 @@ class UnimodalObjectTrackerNode: public BaseNode, public MultiReconfigure
     for( _NamedAttributeMap::const_iterator name_it = name_size_color_map_.begin(); 
 	 name_it != name_size_color_map_.end(); ++name_it )
       {
-	ObjectTrackerStorage const & storage = trackers_.at( name_it->second );
+	ObjectTrackerStorage & storage = trackers_.at( name_it->second );
 	_ObjectKalmanFilter::StateVector const & state = storage.filter_.state_;
 
 	if( !storage.tracked_ )
 	  continue;
+
+	/// Control input step
+	storage.filter_.predict( _ObjectKalmanFilter::ControlVector::Zero(),
+			 storage.control_cov_ );
 
 	tf::Vector3 camera_to_object_vec = tf::Vector3( state(0), state(1), state(2) );
 	/// setRPY uses R=around X, P=around Y, Y=around Z, so we are rotating around Z
