@@ -7,30 +7,21 @@
   <arg name="color" default="blaze_orange" />
   <arg name="immediate_tracking" default="true" />
 
-  <!-- Stage 1: Downscale-->
-  <!-- <include file="$(find image_transforms)/launch/image_scaler.launch" > -->
-  <!--   <arg name="image_in" value="$(arg camera)/image_color" /> -->
-  <!--   <arg name="image_out" value="$(arg camera)/image_color_scaled" /> -->
-  <!--   <arg name="info_in" value="$(arg camera)/camera_info" /> -->
-  <!--   <arg name="info_out" value="$(arg camera)/camera_info_scaled" /> -->
-  <!--   <arg name="scale" value="0.5" /> -->
-  <!-- </include> -->
-
-  <!-- Stage 2: Color Classifier -->
-  <remap from="color_classifier/image_color" to="$(arg camera)/image_color_scaled" />
+  <!-- Stage 1: Color Classifier -->
+  <remap from="color_classifier/image_color" to="$(arg camera)/image_rect_color_scaled" />
   
   <include file="$(find color_classification)/launch/color_classifier.launch" >
     <arg name="rate" value="$(arg rate)" />
   </include>
 
-  <!-- Stage 3: Shape Matcher -->
+  <!-- Stage 2: Shape Matcher -->
   <remap from="shape_matcher/image_mono" to="color_classifier/$(arg color)_classified" />
 
   <include file="$(find shape_matching)/launch/shape_matcher.launch" >
     <arg name="rate" value="$(arg rate)" />
   </include>
 
-  <!-- Stage 4: Object Tracker -->
+  <!-- Stage 3: Object Tracker -->
   <remap from="unimodal_object_tracker/matched_shapes" to="shape_matcher/matched_shapes" />
   <remap from="unimodal_object_tracker/camera_info" to="$(arg camera)/camera_info_scaled" />
   

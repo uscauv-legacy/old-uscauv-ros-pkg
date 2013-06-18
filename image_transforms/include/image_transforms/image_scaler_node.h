@@ -140,9 +140,10 @@ protected:
             _CameraInfoMsg output_camera_info = *last_camera_info_;
             output_camera_info.header = image_msg->header;
             if( scale_camera_info_ )
-            {
-                output_camera_info.width *= scale_;
-                output_camera_info.height *= scale_;
+	      {
+		/// Both 0 and 1 mean no binning, so we account for this when we apply the scaling transformation
+		output_camera_info.binning_x = (output_camera_info.binning_x) ? output_camera_info.binning_x/scale_ : 1.0/scale_;
+		output_camera_info.binning_y = (output_camera_info.binning_y) ? output_camera_info.binning_y/scale_ : 1.0/scale_;
             }
             multi_pub_.publish( "camera_info_out", output_camera_info );
         }

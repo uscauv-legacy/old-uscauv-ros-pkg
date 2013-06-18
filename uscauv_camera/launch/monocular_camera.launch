@@ -11,8 +11,8 @@
     </include>
 
     <include file="$(find image_transforms)/launch/image_scaler.launch" >
-      <arg name="image_in" value="image_color" />
-      <arg name="image_out" value="image_color_scaled" />
+      <arg name="image_in" value="image_rect_color" />
+      <arg name="image_out" value="image_rect_color_scaled" />
       <arg name="info_in" value="camera_info" />
       <arg name="info_out" value="camera_info_scaled" />
       <arg name="scale" value="$(arg scale)" />
