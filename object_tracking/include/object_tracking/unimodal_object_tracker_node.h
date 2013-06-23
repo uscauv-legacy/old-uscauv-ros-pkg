@@ -71,14 +71,18 @@ typedef XmlRpc::XmlRpcValue _XmlVal;
 
 typedef object_tracking::TrackedObjectConfig _TrackedObjectConfig;
 
-typedef uscauv::LinearKalmanFilter<4, 4, 4> _ObjectKalmanFilter;
+/// template arguments are dims for state/update/control vectors
+typedef uscauv::LinearKalmanFilter<8>   _ObjectKalmanFilter;
+typedef _ObjectKalmanFilter::Control<8> _FullStateControl;
+typedef _ObjectKalmanFilter::Update<4>  _PositionUpdate;
+typedef _ObjectKalmanFilter::Update<2>  _FlowVelocityUpdate;
 
 struct ObjectTrackerStorage
 {
   _ObjectKalmanFilter filter_;
-  _ObjectKalmanFilter::ControlMatrix control_cov_;
-  _ObjectKalmanFilter::UpdateMatrix update_cov_;
-  _ObjectKalmanFilter::StateMatrix initial_cov_;
+  _FullStateControl::CovarianceType control_cov_;
+  _PositionUpdate::CovarianceType   update_cov_;
+  _ObjectKalmanFilter::StateMatrix  initial_cov_;
   double ideal_radius_;
   bool tracked_;
   std::string name_;
@@ -103,6 +107,8 @@ class UnimodalObjectTrackerNode: public BaseNode, public MultiReconfigure
   /// algorithmic
   _NamedAttributeMap name_size_color_map_;
   _AttributeTrackerMap trackers_;
+  _PositionUpdate::TransitionType measurement_transition_;
+  _ObjectKalmanFilter::StateMatrix state_transition_;
 
   /// other
   _CameraInfo last_camera_info_;
@@ -115,6 +121,12 @@ class UnimodalObjectTrackerNode: public BaseNode, public MultiReconfigure
     {
     }
 
+  /** 
+   * For each matched shape corresponding to a tracked object, reproject to 3d and use
+   * as a measurement update for the object's kalman filter
+   * 
+   * @param msg WHat it is
+   */
   void matchedShapeCallback( _MatchedShapeArray::ConstPtr const & msg )
   {
     if ( msg->header.frame_id != last_camera_info_.header.frame_id )
@@ -161,25 +173,17 @@ class UnimodalObjectTrackerNode: public BaseNode, public MultiReconfigure
 	/* 			 storage.control_cov_ ); */
 	
 	/// Get measurement update params, then update
-	_ObjectKalmanFilter::UpdateVector update_mean;
+	_PositionUpdate::VectorType update_mean;
 	update_mean << 
 	  camera_to_object.x(),
 	  camera_to_object.y(), 
 	  camera_to_object.z(),
 	  shape_it->theta;
-	  
-	/// boost::array<double, 16>
-	/* _MatchedShape::_covariance_type const & c = shape_it->covariance; */
-	
-	/* _ObjectKalmanFilter::UpdateMatrix update_cov; */
-	/* update_cov << */
-	/*   c[0],  c[1],  c[2],  c[3],  */
-	/*   c[4],  c[5],  c[6],  c[7],  */
-	/*   c[8],  c[9],  c[10], c[11],  */
-	/*   c[12], c[13], c[14], c[15]; */
 
-	/* storage.filter_.update( update_mean, update_cov ); */
-	storage.filter_.update( update_mean, storage.update_cov_ );
+	/// TODO: Compute modified mahalanobis distance between mean and measurement
+	
+	storage.filter_.update<4>( update_mean, storage.update_cov_,
+				measurement_transition_ );
 	
 	/// update time
 	storage.last_update_time_ = msg->header.stamp;
@@ -205,28 +209,13 @@ class UnimodalObjectTrackerNode: public BaseNode, public MultiReconfigure
     double const & cvar = config.predict_variance;
     double const & ivar = config.initial_variance;
     double const & uvar = config.update_variance;
-    _ObjectKalmanFilter::ControlMatrix control_cov;
-    _ObjectKalmanFilter::StateMatrix initial_cov;
-    _ObjectKalmanFilter::UpdateMatrix update_cov;
+    _FullStateControl::CovarianceType control_cov;
+    _PositionUpdate::CovarianceType   update_cov;
+    _ObjectKalmanFilter::StateMatrix  initial_cov;
 
-    /// fancy looking
-    control_cov <<
-      cvar, 0, 0, 0,
-      0, cvar, 0, 0,
-      0, 0, cvar, 0,
-      0, 0, 0, cvar;
-
-    initial_cov <<
-      ivar, 0, 0, 0,
-      0, ivar, 0, 0,
-      0, 0, ivar, 0,
-      0, 0, 0, ivar;
-
-    update_cov <<
-      uvar, 0, 0, 0,
-      0, uvar, 0, 0,
-      0, 0, uvar, 0,
-      0, 0, 0, uvar;
+    control_cov = _FullStateControl::CovarianceType::Identity() * cvar;
+    update_cov  = _PositionUpdate::CovarianceType::Identity() * uvar;
+    initial_cov = _ObjectKalmanFilter::StateMatrix::Identity() * ivar;
 
     ObjectTrackerStorage & tracker = trackers_.at( name_size_color_map_.at( name ) );
 
@@ -245,7 +234,17 @@ class UnimodalObjectTrackerNode: public BaseNode, public MultiReconfigure
     ros::NodeHandle nh_base;
     bool immediate_tracking;
     _XmlVal xml_objects;
-	      
+
+    measurement_transition_ << 
+      _PositionUpdate::CovarianceType::Identity(),
+      _PositionUpdate::CovarianceType::Zero();
+
+    state_transition_ << 
+      _PositionUpdate::CovarianceType::Identity(),
+      _PositionUpdate::CovarianceType::Identity(),
+      _PositionUpdate::CovarianceType::Zero(),
+      _PositionUpdate::CovarianceType::Identity();
+
     matched_shape_sub_ = nh_rel_.subscribe("matched_shapes", 10, 
 					   &UnimodalObjectTrackerNode::matchedShapeCallback,
 					   this);
@@ -294,13 +293,11 @@ class UnimodalObjectTrackerNode: public BaseNode, public MultiReconfigure
 	ObjectTrackerStorage & tracker_added = trackers_.at(attr);
 	tracker_added.filter_ = _ObjectKalmanFilter( _ObjectKalmanFilter::StateVector::Zero(),
 						     tracker_added.initial_cov_,
-						     _ObjectKalmanFilter::StateMatrix::Identity(),
-						     _ObjectKalmanFilter::StateControlMatrix::Identity(),
-						     _ObjectKalmanFilter::UpdateStateMatrix::Identity() );
+						     state_transition_ );
 	
 	ROS_INFO("Loaded object [ %s ] with attributes [ %s ].", 
 		 object_it->first.c_str(), attr.c_str() );
-	/* ROS_INFO_STREAM( tracker_added.filter_ ); */
+	ROS_INFO_STREAM( tracker_added.filter_ );
       }
   }  
 
@@ -325,7 +322,7 @@ class UnimodalObjectTrackerNode: public BaseNode, public MultiReconfigure
 	  continue;
 
 	/// Control input step
-	storage.filter_.predict( _ObjectKalmanFilter::ControlVector::Zero(),
+	storage.filter_.predict<8>( _FullStateControl::VectorType::Zero(),
 			 storage.control_cov_ );
 
 	tf::Vector3 camera_to_object_vec = tf::Vector3( state(0), state(1), state(2) );

@@ -53,19 +53,32 @@ namespace uscauv
    * Dimensions can also be set to Eigen::Dynamic
    */
 
-  template<unsigned int __StateDim, 
-    unsigned int __ControlDim = __StateDim, unsigned int __UpdateDim = __StateDim>
+  template<unsigned int __StateDim, typename __NumericType = double>
     class LinearKalmanFilter
     {
     public:
-    typedef Eigen::Matrix<double, __StateDim, 1>              StateVector;
-    typedef Eigen::Matrix<double, __ControlDim, 1>            ControlVector;
-    typedef Eigen::Matrix<double, __UpdateDim, 1>             UpdateVector;
-    typedef Eigen::Matrix<double, __StateDim, __StateDim>     StateMatrix;
-    typedef Eigen::Matrix<double, __ControlDim, __ControlDim> ControlMatrix;
-    typedef Eigen::Matrix<double, __StateDim, __StateDim>     UpdateMatrix;
-    typedef Eigen::Matrix<double, __StateDim, __ControlDim>   StateControlMatrix;
-    typedef Eigen::Matrix<double, __UpdateDim, __StateDim>    UpdateStateMatrix;
+    typedef Eigen::Matrix<__NumericType, __StateDim, 1>              StateVector;
+    typedef Eigen::Matrix<__NumericType, __StateDim, __StateDim>     StateMatrix;
+
+    /// TODO: Redo these using type aliases
+    template<unsigned int __ControlDim>
+    struct Control
+    {
+      typedef Eigen::Matrix<__NumericType, __ControlDim, 1>            VectorType;
+      typedef Eigen::Matrix<__NumericType, __ControlDim, __ControlDim> CovarianceType;
+      typedef Eigen::Matrix<__NumericType, __StateDim, __ControlDim>   TransitionType;
+    };
+
+    template<unsigned int __UpdateDim>
+    struct Update
+    {
+      typedef Eigen::Matrix<__NumericType, __UpdateDim, 1>           VectorType;
+      typedef Eigen::Matrix<__NumericType, __UpdateDim, __UpdateDim> CovarianceType;
+      typedef Eigen::Matrix<__NumericType, __UpdateDim, __StateDim>  TransitionType;
+      typedef Eigen::Matrix<__NumericType, __StateDim, __UpdateDim>  GainType;
+    };
+
+
  
     public:
     /// state vector
@@ -75,27 +88,27 @@ namespace uscauv
 
     /// See LKF definition in Probabilistic Robotics
     StateMatrix        A_;
-    StateControlMatrix B_;
-    UpdateStateMatrix  C_;
+    /* StateControlMatrix B_; */
+    /* UpdateStateMatrix  C_; */
     
     public:
     /// Using Identity automatrically even when dims aren't the same is a little iffy
     LinearKalmanFilter(StateVector const & init_state, StateMatrix const &init_cov, 
-		       StateMatrix        const & A = StateMatrix::Identity(), 
-		       StateControlMatrix const & B = StateControlMatrix::Identity(),
-		       UpdateStateMatrix  const & C = UpdateStateMatrix::Identity()
+		       StateMatrix        const & A = StateMatrix::Identity()
+		       /* StateControlMatrix const & B = StateControlMatrix::Identity(), */
+		       /* UpdateStateMatrix  const & C = UpdateStateMatrix::Identity() */
 		       )
     : state_(init_state), cov_(init_cov),
-    A_(A), B_(B), C_(C){}
+    A_(A)/* , B_(B), C_(C) */{}
 
     LinearKalmanFilter(): 
     state_( StateVector::Zero() ), cov_( StateMatrix::Identity() ),
-    A_( StateMatrix::Identity() ), B_( StateControlMatrix::Identity() ),
-    C_( UpdateStateMatrix::Identity() ){}
+    A_( StateMatrix::Identity() )/* , B_( StateControlMatrix::Identity() ), */
+    /* C_( UpdateStateMatrix::Identity() ) */{}
     
     LinearKalmanFilter( LinearKalmanFilter const &src):
-    state_(src.state_), cov_(src.cov_), A_(src.A_),
-    B_(src.B_), C_(src.C_){}
+    state_(src.state_), cov_(src.cov_), A_(src.A_)/* , */
+    /* B_(src.B_), C_(src.C_) */{}
     
     
     LinearKalmanFilter& operator=( LinearKalmanFilter const & rhs)
@@ -103,8 +116,8 @@ namespace uscauv
       state_ = rhs.state_;
       cov_ = rhs.cov_;
       A_ = rhs.A_;
-      B_ = rhs.B_;
-      C_ = rhs.C_;
+      /* B_ = rhs.B_; */
+      /* C_ = rhs.C_; */
             
       return *this;
     }
@@ -115,17 +128,26 @@ namespace uscauv
       state_ = init_state; cov_ = init_cov;
     }
     
-    void predict( ControlVector const & control, ControlMatrix const & control_cov )
+    template< unsigned int __ControlDim >
+    void predict( typename Control<__ControlDim>::VectorType     const & control, 
+		  typename Control<__ControlDim>::CovarianceType const & control_cov,
+		  typename Control<__ControlDim>::TransitionType const & B = 
+		  Control<__ControlDim>::TransitionType::Zero() )
     {
-      state_ = A_*state_ + B_*control;
-      cov_ = A_* cov_.inverse() * A_.transpose() + control_cov;
+      state_ = A_*state_ + B*control;
+      cov_ = A_* cov_ * A_.transpose() + control_cov;
     }
     
-    void update( UpdateVector const & update, UpdateMatrix const & update_cov )
+    template< unsigned int __UpdateDim>
+    void update( typename Update<__UpdateDim>::VectorType const & update,
+		 typename Update<__UpdateDim>::CovarianceType const & update_cov,
+		 typename Update<__UpdateDim>::TransitionType const & C )
     {
-      UpdateMatrix gain = cov_*C_.transpose() * (C_*cov_*C_.transpose() + update_cov).inverse();
-      state_ = state_ + gain*( update - state_ );
-      cov_ = ( StateMatrix::Identity() - gain*C_)*cov_;
+      typename Update<__UpdateDim>::GainType gain = 
+      cov_*C.transpose() * (C*cov_*C.transpose() + update_cov).inverse();
+      
+      state_ = state_ + gain*( update - C*state_ );
+      cov_ = ( StateMatrix::Identity() - gain*C)*cov_;
     }
 
     /// In case you want to print the entire state 
@@ -136,8 +158,8 @@ namespace uscauv
       os << "State: " << std::endl << kf.state_ << std::endl;
       os << "Covariance: "<< std::endl << kf.cov_ << std::endl;
       os << "A: "<< std::endl << kf.A_ << std::endl;
-      os << "B: "<< std::endl << kf.B_ << std::endl;
-      os << "C: "<< std::endl << kf.C_ << std::endl;
+      /* os << "B: "<< std::endl << kf.B_ << std::endl; */
+      /* os << "C: "<< std::endl << kf.C_b << std::endl; */
       return os;
     }
     

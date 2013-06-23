@@ -257,7 +257,18 @@ function waitcam()
 
 alias wc="waitcam"
 
-alias lsb="ls -lh $dev_path"
+# A descendent of ls /dev/seabee
+function lsb()
+{
+    for dir in $dev_path; do
+	echo "Checking $dir:"
+	if [ ! -d "$dir" ]; then
+	    echo "No devices found at $dir."
+	else
+	    ls -lh "$dir"
+	fi
+    done
+}
 
 alias get_image_header="grep header -A 10"
 
