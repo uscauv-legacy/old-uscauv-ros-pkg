@@ -78,46 +78,35 @@ namespace uscauv
       typedef Eigen::Matrix<__NumericType, __StateDim, __UpdateDim>  GainType;
     };
 
-
- 
     public:
     /// state vector
     StateVector state_;
     /// state covariance
     StateMatrix cov_;
 
-    /// See LKF definition in Probabilistic Robotics
-    StateMatrix        A_;
-    /* StateControlMatrix B_; */
-    /* UpdateStateMatrix  C_; */
+    /* /// See LKF definition in Probabilistic Robotics */
+    /* StateMatrix        A_; */
     
     public:
     /// Using Identity automatrically even when dims aren't the same is a little iffy
     LinearKalmanFilter(StateVector const & init_state, StateMatrix const &init_cov, 
 		       StateMatrix        const & A = StateMatrix::Identity()
-		       /* StateControlMatrix const & B = StateControlMatrix::Identity(), */
-		       /* UpdateStateMatrix  const & C = UpdateStateMatrix::Identity() */
 		       )
-    : state_(init_state), cov_(init_cov),
-    A_(A)/* , B_(B), C_(C) */{}
+    : state_(init_state), cov_(init_cov)/* , A_(A) */{}
 
     LinearKalmanFilter(): 
-    state_( StateVector::Zero() ), cov_( StateMatrix::Identity() ),
-    A_( StateMatrix::Identity() )/* , B_( StateControlMatrix::Identity() ), */
-    /* C_( UpdateStateMatrix::Identity() ) */{}
+    state_( StateVector::Zero() ), cov_( StateMatrix::Identity() )/* , */
+    /* A_( StateMatrix::Identity() ) */{}
     
     LinearKalmanFilter( LinearKalmanFilter const &src):
-    state_(src.state_), cov_(src.cov_), A_(src.A_)/* , */
-    /* B_(src.B_), C_(src.C_) */{}
+    state_(src.state_), cov_(src.cov_)/* , A_(src.A_) */{}
     
     
     LinearKalmanFilter& operator=( LinearKalmanFilter const & rhs)
     {
       state_ = rhs.state_;
       cov_ = rhs.cov_;
-      A_ = rhs.A_;
-      /* B_ = rhs.B_; */
-      /* C_ = rhs.C_; */
+      /* A_ = rhs.A_; */
             
       return *this;
     }
@@ -131,11 +120,12 @@ namespace uscauv
     template< unsigned int __ControlDim >
     void predict( typename Control<__ControlDim>::VectorType     const & control, 
 		  typename Control<__ControlDim>::CovarianceType const & control_cov,
+		  StateMatrix const & A,
 		  typename Control<__ControlDim>::TransitionType const & B = 
 		  Control<__ControlDim>::TransitionType::Zero() )
     {
-      state_ = A_*state_ + B*control;
-      cov_ = A_* cov_ * A_.transpose() + control_cov;
+      state_ = A*state_ + B*control;
+      cov_ = A* cov_ * A.transpose() + control_cov;
     }
     
     template< unsigned int __UpdateDim>
@@ -157,9 +147,7 @@ namespace uscauv
       os << std::endl;
       os << "State: " << std::endl << kf.state_ << std::endl;
       os << "Covariance: "<< std::endl << kf.cov_ << std::endl;
-      os << "A: "<< std::endl << kf.A_ << std::endl;
-      /* os << "B: "<< std::endl << kf.B_ << std::endl; */
-      /* os << "C: "<< std::endl << kf.C_b << std::endl; */
+      /* os << "A: "<< std::endl << kf.A_ << std::endl; */
       return os;
     }
     

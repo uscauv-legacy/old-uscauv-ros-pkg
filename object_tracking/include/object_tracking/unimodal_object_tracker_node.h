@@ -50,6 +50,7 @@
 #include <uscauv_common/multi_reconfigure.h>
 #include <uscauv_common/param_loader.h>
 #include <uscauv_common/image_geometry.h>
+#include <uscauv_common/simple_math.h>
 #include <auv_msgs/MatchedShape.h>
 #include <auv_msgs/MatchedShapeArray.h>
 
@@ -87,6 +88,8 @@ struct ObjectTrackerStorage
   bool tracked_;
   std::string name_;
   ros::Time last_update_time_;
+  ros::Time last_predict_time_;
+  double mahalanobis_thresh_pos_;
 };
 
 typedef std::map<std::string, std::string>          _NamedAttributeMap;
@@ -108,7 +111,7 @@ class UnimodalObjectTrackerNode: public BaseNode, public MultiReconfigure
   _NamedAttributeMap name_size_color_map_;
   _AttributeTrackerMap trackers_;
   _PositionUpdate::TransitionType measurement_transition_;
-  _ObjectKalmanFilter::StateMatrix state_transition_;
+  /* _ObjectKalmanFilter::StateMatrix state_transition_; */
 
   /// other
   _CameraInfo last_camera_info_;
@@ -169,9 +172,7 @@ class UnimodalObjectTrackerNode: public BaseNode, public MultiReconfigure
 	// ################################################################
 
 	/// predict no change with covariance from param
-	/* storage.filter_.predict( _ObjectKalmanFilter::ControlVector::Zero(), */
-	/* 			 storage.control_cov_ ); */
-	
+
 	/// Get measurement update params, then update
 	_PositionUpdate::VectorType update_mean;
 	update_mean << 
@@ -181,13 +182,27 @@ class UnimodalObjectTrackerNode: public BaseNode, public MultiReconfigure
 	  shape_it->theta;
 
 	/// TODO: Compute modified mahalanobis distance between mean and measurement
+	_PositionUpdate::VectorType diff_term = 
+	  update_mean - measurement_transition_ * storage.filter_.state_;
+	/// Rotation lives in modular space
+	diff_term(3) = uscauv::ring_distance<double>( diff_term(3), 0, uscauv::TWO_PI );
+
+	_PositionUpdate::CovarianceType state_pos_cov = 
+	  measurement_transition_ * storage.filter_.cov_ * measurement_transition_.transpose();
+
+	double mahalanobis_pos = diff_term.transpose() * state_pos_cov.inverse() * diff_term;
+	
+	if( mahalanobis_pos > storage.mahalanobis_thresh_pos_ )
+	  {
+	    ROS_INFO("Got mahalanobis distance %f. Discarding...", mahalanobis_pos);
+	    continue;
+	  }
 	
 	storage.filter_.update<4>( update_mean, storage.update_cov_,
 				measurement_transition_ );
 	
 	/// update time
 	storage.last_update_time_ = msg->header.stamp;
-	/* ROS_INFO_STREAM( storage.filter_ ); */
       }
   }
 
@@ -222,6 +237,9 @@ class UnimodalObjectTrackerNode: public BaseNode, public MultiReconfigure
     tracker.control_cov_ = control_cov;
     tracker.initial_cov_ = initial_cov;
     tracker.update_cov_ = update_cov;
+
+    tracker.mahalanobis_thresh_pos_ = config.mahalanobis_thresh_pos;
+
     ROS_INFO("Updated tracker params [ %s ].", name.c_str() );
   }
 
@@ -239,11 +257,11 @@ class UnimodalObjectTrackerNode: public BaseNode, public MultiReconfigure
       _PositionUpdate::CovarianceType::Identity(),
       _PositionUpdate::CovarianceType::Zero();
 
-    state_transition_ << 
-      _PositionUpdate::CovarianceType::Identity(),
-      _PositionUpdate::CovarianceType::Identity(),
-      _PositionUpdate::CovarianceType::Zero(),
-      _PositionUpdate::CovarianceType::Identity();
+    /* state_transition_ <<  */
+    /*   _PositionUpdate::CovarianceType::Identity(), */
+    /*   _PositionUpdate::CovarianceType::Identity(), */
+    /*   _PositionUpdate::CovarianceType::Zero(), */
+    /*   _PositionUpdate::CovarianceType::Identity(); */
 
     matched_shape_sub_ = nh_rel_.subscribe("matched_shapes", 10, 
 					   &UnimodalObjectTrackerNode::matchedShapeCallback,
@@ -292,15 +310,18 @@ class UnimodalObjectTrackerNode: public BaseNode, public MultiReconfigure
 	/// All transforms are set to identity
 	ObjectTrackerStorage & tracker_added = trackers_.at(attr);
 	tracker_added.filter_ = _ObjectKalmanFilter( _ObjectKalmanFilter::StateVector::Zero(),
-						     tracker_added.initial_cov_,
-						     state_transition_ );
-	
+						     tracker_added.initial_cov_/* , */
+						     /* state_transition_  */);
+
+	tracker_added.last_predict_time_ = ros::Time::now();	
+
 	ROS_INFO("Loaded object [ %s ] with attributes [ %s ].", 
 		 object_it->first.c_str(), attr.c_str() );
-	ROS_INFO_STREAM( tracker_added.filter_ );
+	/* ROS_INFO_STREAM( tracker_added.filter_ ); */
       }
+    
   }  
-
+  
   // Running spin() will cause this function to get called at the loop rate until this node is killed.
   void spinOnce()
   {
@@ -318,13 +339,27 @@ class UnimodalObjectTrackerNode: public BaseNode, public MultiReconfigure
 	ObjectTrackerStorage & storage = trackers_.at( name_it->second );
 	_ObjectKalmanFilter::StateVector const & state = storage.filter_.state_;
 
+
 	if( !storage.tracked_ )
 	  continue;
 
 	/// Control input step
+	ros::Time now = ros::Time::now();
+	double dt = (now - storage.last_predict_time_).toSec();
+	storage.last_predict_time_ = now;
+	_ObjectKalmanFilter::StateMatrix state_transition;
+	/// The second term is respondible for integrating velocity and adding to pos.
+	state_transition <<
+	  _PositionUpdate::CovarianceType::Identity(),
+	  _PositionUpdate::CovarianceType::Identity() * dt, 
+	  _PositionUpdate::CovarianceType::Zero(),
+	  _PositionUpdate::CovarianceType::Identity();
+	
+	/// TODO: Make it possible to modify A matrix to include DT
 	storage.filter_.predict<8>( _FullStateControl::VectorType::Zero(),
-			 storage.control_cov_ );
-
+				    storage.control_cov_, state_transition );
+	
+	
 	tf::Vector3 camera_to_object_vec = tf::Vector3( state(0), state(1), state(2) );
 	/// setRPY uses R=around X, P=around Y, Y=around Z, so we are rotating around Z
 	tf::Quaternion camera_to_object_quat;
@@ -334,6 +369,8 @@ class UnimodalObjectTrackerNode: public BaseNode, public MultiReconfigure
 							   camera_to_object_vec );
 	
 	/// transform from camera to "object/<object name>"
+	/// TODO: Flesh out tracking timeout logic. 
+	/// Currently, transforms only timeout in rviz due to last_update_time_ being too old
 	tf::StampedTransform output( camera_to_object_tf, storage.last_update_time_,
 				     last_camera_info_.header.frame_id,
 				     std::string( "object/" + storage.name_ ) );
