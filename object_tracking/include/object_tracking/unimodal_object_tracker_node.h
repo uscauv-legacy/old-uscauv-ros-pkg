@@ -51,8 +51,14 @@
 #include <uscauv_common/param_loader.h>
 #include <uscauv_common/image_geometry.h>
 #include <uscauv_common/simple_math.h>
+#include <uscauv_common/tic_toc.h>
 #include <auv_msgs/MatchedShape.h>
 #include <auv_msgs/MatchedShapeArray.h>
+
+#include <cmath>
+
+/// linalg
+#include <Eigen/LU>
 
 /// object tracking
 #include <object_tracking/kalman_filter.h>
@@ -74,26 +80,46 @@ typedef object_tracking::TrackedObjectConfig _TrackedObjectConfig;
 
 /// template arguments are dims for state/update/control vectors
 typedef uscauv::LinearKalmanFilter<8>   _ObjectKalmanFilter;
+typedef std::vector<_ObjectKalmanFilter> _KalmanFilterVector;
 typedef _ObjectKalmanFilter::Control<8> _FullStateControl;
 typedef _ObjectKalmanFilter::Update<4>  _PositionUpdate;
 typedef _ObjectKalmanFilter::Update<2>  _FlowVelocityUpdate;
 
+/// TODO: Sort filters_ based on uncertainty
 struct ObjectTrackerStorage
 {
-  _ObjectKalmanFilter filter_;
+  std::vector<_ObjectKalmanFilter> filters_;
   _FullStateControl::CovarianceType control_cov_;
   _PositionUpdate::CovarianceType   update_cov_;
   _ObjectKalmanFilter::StateMatrix  initial_cov_;
   double ideal_radius_;
   bool tracked_;
   std::string name_;
-  ros::Time last_update_time_;
   ros::Time last_predict_time_;
-  double mahalanobis_thresh_pos_;
+  double uncertainty_radius_;
+  double filter_kill_thresh_;
 };
 
 typedef std::map<std::string, std::string>          _NamedAttributeMap;
 typedef std::map<std::string, ObjectTrackerStorage> _AttributeTrackerMap;
+
+/** 
+ * Gaussian pdf, but we take the modulus of term 4 because it's a rotatation.
+ * We include the determinant because we want to compare probabilities for
+ * different filters with different covariances. The 2pi term is unneccessary
+ */
+static double getGaussianPDFPosition(_PositionUpdate::VectorType x,
+				     _PositionUpdate::VectorType mean, 
+				     _PositionUpdate::CovarianceType cov )
+{
+  _PositionUpdate::VectorType diff_term = x - mean;
+  diff_term(3) = uscauv::ring_distance<double>( diff_term(3), 0, uscauv::TWO_PI );
+
+  double const md = diff_term.transpose() * cov.inverse() * diff_term;
+  double const det = Eigen::PartialPivLU<_PositionUpdate::CovarianceType>(cov).determinant();
+  
+  return exp(-0.5*md) / sqrt( pow(uscauv::TWO_PI, 4)*det );
+}
 
 /// TODO: Add support for start/stop/reset tracking service
 class UnimodalObjectTrackerNode: public BaseNode, public MultiReconfigure
@@ -171,8 +197,6 @@ class UnimodalObjectTrackerNode: public BaseNode, public MultiReconfigure
 	// Update filter ##################################################
 	// ################################################################
 
-	/// predict no change with covariance from param
-
 	/// Get measurement update params, then update
 	_PositionUpdate::VectorType update_mean;
 	update_mean << 
@@ -181,28 +205,62 @@ class UnimodalObjectTrackerNode: public BaseNode, public MultiReconfigure
 	  camera_to_object.z(),
 	  shape_it->theta;
 
-	/// TODO: Compute modified mahalanobis distance between mean and measurement
-	_PositionUpdate::VectorType diff_term = 
-	  update_mean - measurement_transition_ * storage.filter_.state_;
-	/// Rotation lives in modular space
-	diff_term(3) = uscauv::ring_distance<double>( diff_term(3), 0, uscauv::TWO_PI );
-
-	_PositionUpdate::CovarianceType state_pos_cov = 
-	  measurement_transition_ * storage.filter_.cov_ * measurement_transition_.transpose();
-
-	double mahalanobis_pos = diff_term.transpose() * state_pos_cov.inverse() * diff_term;
-	
-	if( mahalanobis_pos > storage.mahalanobis_thresh_pos_ )
+	int idx = 0;
+	int max_idx = -1;
+	double max_prob = 0;
+	_KalmanFilterVector & filters = storage.filters_;
+	int neighbors = 0;
+	for(_KalmanFilterVector::iterator filter_it = filters.begin(); filter_it != filters.end();
+	    ++filter_it, ++idx )
 	  {
-	    ROS_INFO("Got mahalanobis distance %f. Discarding...", mahalanobis_pos);
-	    continue;
+	    double const d = getGaussianPDFPosition( update_mean, measurement_transition_*filter_it->state_, measurement_transition_ * filter_it->cov_ * measurement_transition_.transpose() );
+	    ROS_INFO("PDF val: %f", d);
+
+	    if( d >= storage.uncertainty_radius_ && d > max_prob )
+	      {
+		max_prob = d;
+		max_idx = idx;
+		neighbors++;
+	      }	    
+	  }
+	ROS_INFO("Found %d neighbor filters.", neighbors);
+	/// Spawn a new filter if none of the current filters are a good match for the measurement
+	if( max_idx == -1 )
+	  {
+	    _ObjectKalmanFilter::StateVector initial_state = measurement_transition_.transpose() * update_mean;
+
+	    storage.filters_.push_back( _ObjectKalmanFilter( initial_state, storage.initial_cov_ ) );
+	    ROS_INFO_STREAM("Spawned filter ( " << initial_state.transpose() << " ).");
+	  }
+	else
+	  {
+	    storage.filters_.at(max_idx).update<4>( update_mean, storage.update_cov_, 
+						    measurement_transition_ );
 	  }
 	
-	storage.filter_.update<4>( update_mean, storage.update_cov_,
-				measurement_transition_ );
+
+	/// TODO: Compute modified mahalanobis distance between mean and measurement
+	/* _PositionUpdate::VectorType diff_term =  */
+	/*   update_mean - measurement_transition_ * storage.filter_.state_; */
+	/* /// Rotation lives in modular space */
+	/* diff_term(3) = uscauv::ring_distance<double>( diff_term(3), 0, uscauv::TWO_PI ); */
+
+	/* _PositionUpdate::CovarianceType state_pos_cov =  */
+	/*   measurement_transition_ * storage.filter_.cov_ * measurement_transition_.transpose(); */
+
+	/* double mahalanobis_pos = diff_term.transpose() * state_pos_cov.inverse() * diff_term; */
 	
-	/// update time
-	storage.last_update_time_ = msg->header.stamp;
+	/* if( mahalanobis_pos > storage.mahalanobis_thresh_pos_ ) */
+	/*   { */
+	/*     ROS_INFO("Got mahalanobis distance %f. Discarding...", mahalanobis_pos); */
+	/*     continue; */
+	/*   } */
+	
+	/* storage.filter_.update<4>( update_mean, storage.update_cov_, */
+	/* 			   measurement_transition_ ); */
+	
+	/* /// update time */
+	/* storage.last_update_time_ = msg->header.stamp; */
       }
   }
 
@@ -238,7 +296,8 @@ class UnimodalObjectTrackerNode: public BaseNode, public MultiReconfigure
     tracker.initial_cov_ = initial_cov;
     tracker.update_cov_ = update_cov;
 
-    tracker.mahalanobis_thresh_pos_ = config.mahalanobis_thresh_pos;
+    tracker.uncertainty_radius_ = config.uncertainty_radius;
+    tracker.filter_kill_thresh_ = config.filter_kill_thresh;
 
     ROS_INFO("Updated tracker params [ %s ].", name.c_str() );
   }
@@ -297,6 +356,7 @@ class UnimodalObjectTrackerNode: public BaseNode, public MultiReconfigure
 	tracker.name_ = object_it->first;
 	tracker.ideal_radius_ = object_it->second["ideal_radius"];
 	tracker.tracked_ = immediate_tracking;
+	tracker.last_predict_time_ = ros::Time::now();
 
 	/// have to add the new object before or the lookup in the reconfigure callback will fail to find it
 	trackers_[ attr ] = tracker;
@@ -304,16 +364,15 @@ class UnimodalObjectTrackerNode: public BaseNode, public MultiReconfigure
 	/// set up reconfigure (loads tracker with control_cov and initial_cov params)
 	addReconfigureServer<_TrackedObjectConfig>
 	  ( object_it->first, std::bind( &UnimodalObjectTrackerNode::updateTrackerParams, this,
-	   				 std::placeholders::_1, object_it->first ) );
+					 std::placeholders::_1, object_it->first ) );
 
 	/// initialize kalman filter at location (0,0,0,0) with diagonal covariance set by reconfigure
 	/// All transforms are set to identity
-	ObjectTrackerStorage & tracker_added = trackers_.at(attr);
-	tracker_added.filter_ = _ObjectKalmanFilter( _ObjectKalmanFilter::StateVector::Zero(),
-						     tracker_added.initial_cov_/* , */
-						     /* state_transition_  */);
+	/* ObjectTrackerStorage & tracker_added = trackers_.at(attr); */
+	/* tracker_added.filter_ = _ObjectKalmanFilter( _ObjectKalmanFilter::StateVector::Zero(), */
+	/* 					     tracker_added.initial_cov_ ); */
 
-	tracker_added.last_predict_time_ = ros::Time::now();	
+	/* tracker_added.last_predict_time_ = ros::Time::now();	 */
 
 	ROS_INFO("Loaded object [ %s ] with attributes [ %s ].", 
 		 object_it->first.c_str(), attr.c_str() );
@@ -337,9 +396,8 @@ class UnimodalObjectTrackerNode: public BaseNode, public MultiReconfigure
 	 name_it != name_size_color_map_.end(); ++name_it )
       {
 	ObjectTrackerStorage & storage = trackers_.at( name_it->second );
-	_ObjectKalmanFilter::StateVector const & state = storage.filter_.state_;
-
-
+	/* _ObjectKalmanFilter::StateVector const & state = storage.filter_.state_; */
+	  
 	if( !storage.tracked_ )
 	  continue;
 
@@ -355,32 +413,88 @@ class UnimodalObjectTrackerNode: public BaseNode, public MultiReconfigure
 	  _PositionUpdate::CovarianceType::Zero(),
 	  _PositionUpdate::CovarianceType::Identity();
 	
-	/// TODO: Make it possible to modify A matrix to include DT
-	storage.filter_.predict<8>( _FullStateControl::VectorType::Zero(),
-				    storage.control_cov_, state_transition );
-	
-	
-	tf::Vector3 camera_to_object_vec = tf::Vector3( state(0), state(1), state(2) );
-	/// setRPY uses R=around X, P=around Y, Y=around Z, so we are rotating around Z
-	tf::Quaternion camera_to_object_quat;
-	camera_to_object_quat.setRPY( 0, 0, state(3));
+	// ################################################################
+	// Remove filters whose variance exceeds a threshold ##############
+	// ################################################################
 
-	tf::Transform camera_to_object_tf = tf::Transform( camera_to_object_quat,
-							   camera_to_object_vec );
+	int idx = 0;
+	int min_idx = 0;
+	double min_det = -1;
+	_KalmanFilterVector & filters = storage.filters_;
+	_KalmanFilterVector surviving_filters;
+	for(_KalmanFilterVector::iterator filter_it = filters.begin(); filter_it != filters.end();
+	    ++filter_it, ++idx )
+	  {
+	    /// no control input
+	    filter_it->predict<8>( _FullStateControl::VectorType::Zero(),
+				   storage.control_cov_, state_transition );
+	    
+	    double const det = Eigen::PartialPivLU<_ObjectKalmanFilter::StateMatrix>( filter_it->cov_ ).determinant();
+	    if( det <= storage.filter_kill_thresh_ )
+	      {
+		surviving_filters.push_back( *filter_it );
+		
+		if( det < min_det || min_det < 0 )
+		  {
+		    min_det = det;
+		    min_idx = idx;
+		  }
+		++idx;
+	      }
+	    else
+	      {
+		ROS_INFO_STREAM("Killed filter ( " << filter_it->state_.transpose() << " ) Det: " << det << ".");
+	      }
+	  }
+	storage.filters_ = surviving_filters;
+	    
+	// ################################################################
+	// Publish filter estimates. Lowest variance filter gets primary tf
+	// ################################################################
 	
-	/// transform from camera to "object/<object name>"
-	/// TODO: Flesh out tracking timeout logic. 
-	/// Currently, transforms only timeout in rviz due to last_update_time_ being too old
-	tf::StampedTransform output( camera_to_object_tf, storage.last_update_time_,
-				     last_camera_info_.header.frame_id,
-				     std::string( "object/" + storage.name_ ) );
-	
-	object_transforms.push_back( output );
-      }
+	idx = 0;
+	int aux_idx = 0;    
+	for(_KalmanFilterVector::iterator filter_it = filters.begin(); filter_it != filters.end();
+	    ++filter_it, ++idx)
+	  {
     
-    object_broadcaster_.sendTransform( object_transforms );
-  }
-  
-};
+	    _ObjectKalmanFilter::StateVector const & state = filter_it->state_;
+	    
+	    tf::Vector3 camera_to_object_vec = tf::Vector3( state(0), state(1), state(2) );
+	    /// setRPY uses R=around X, P=around Y, Y=around Z, so we are rotating around Z
+	    tf::Quaternion camera_to_object_quat;
+	    camera_to_object_quat.setRPY( 0, 0, state(3));
+	    
+	    tf::Transform camera_to_object_tf = tf::Transform( camera_to_object_quat,
+							       camera_to_object_vec );
 
+	    std::string frame_name;
+	    
+	    if( idx == min_idx )
+	      frame_name = std::string( "object/" + storage.name_ );
+	    else
+	      {
+		std::stringstream ss;
+		ss << "object/" << storage.name_ << "aux" << aux_idx;
+		frame_name = ss.str();
+		++aux_idx;
+	      }
+	    /// transform from camera to "object/<object name>"
+	    /// TODO: Flesh out tracking timeout logic. 
+	    /// Currently, transforms only timeout in rviz due to last_update_time_ being too old
+	    /// TODO: per above change time to now(), don't let old objects get to this line
+	    tf::StampedTransform output( camera_to_object_tf, storage.last_predict_time_,
+					 last_camera_info_.header.frame_id, frame_name );
+	      
+	    object_transforms.push_back( output ); 
+	  }
+
+      }
+
+    object_broadcaster_.sendTransform( object_transforms );
+    return;
+  }
+    
+};
+    
 #endif // USCAUV_OBJECTTRACKING_UNIMODALOBJECTTRACKER
