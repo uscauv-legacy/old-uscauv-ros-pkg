@@ -96,8 +96,7 @@ struct ObjectTrackerStorage
   bool tracked_;
   std::string name_;
   ros::Time last_predict_time_;
-  double uncertainty_radius_;
-  double filter_kill_thresh_;
+  _TrackedObjectConfig config_;
 };
 
 typedef std::map<std::string, std::string>          _NamedAttributeMap;
@@ -213,10 +212,17 @@ class UnimodalObjectTrackerNode: public BaseNode, public MultiReconfigure
 	for(_KalmanFilterVector::iterator filter_it = filters.begin(); filter_it != filters.end();
 	    ++filter_it, ++idx )
 	  {
-	    double const d = getGaussianPDFPosition( update_mean, measurement_transition_*filter_it->state_, measurement_transition_ * filter_it->cov_ * measurement_transition_.transpose() );
-	    ROS_INFO("PDF val: %f", d);
+	    _PositionUpdate::VectorType state_pos = measurement_transition_*filter_it->state_;
+	    _PositionUpdate::VectorType diff_term = state_pos - update_mean;
 
-	    if( d >= storage.uncertainty_radius_ && d > max_prob )
+	    double const d = getGaussianPDFPosition( update_mean, state_pos, measurement_transition_ * filter_it->cov_ * measurement_transition_.transpose() );
+	    double const dist_euclidian = diff_term.block(0,0,3,1).norm();
+	    double const dist_angular = uscauv::ring_distance<double>( diff_term(3), 0, uscauv::TWO_PI );
+	    ROS_INFO("PDF val: %0.20f, dist: %f, angle %f", d, dist_euclidian, dist_angular);
+
+	    if( dist_euclidian <= storage.config_.exclude_distance
+		&& dist_angular <= storage.config_.exclude_angle
+		&& d > max_prob )
 	      {
 		max_prob = d;
 		max_idx = idx;
@@ -296,8 +302,7 @@ class UnimodalObjectTrackerNode: public BaseNode, public MultiReconfigure
     tracker.initial_cov_ = initial_cov;
     tracker.update_cov_ = update_cov;
 
-    tracker.uncertainty_radius_ = config.uncertainty_radius;
-    tracker.filter_kill_thresh_ = config.filter_kill_thresh;
+    tracker.config_ = config;
 
     ROS_INFO("Updated tracker params [ %s ].", name.c_str() );
   }
@@ -423,14 +428,14 @@ class UnimodalObjectTrackerNode: public BaseNode, public MultiReconfigure
 	_KalmanFilterVector & filters = storage.filters_;
 	_KalmanFilterVector surviving_filters;
 	for(_KalmanFilterVector::iterator filter_it = filters.begin(); filter_it != filters.end();
-	    ++filter_it, ++idx )
+	    ++filter_it )
 	  {
 	    /// no control input
 	    filter_it->predict<8>( _FullStateControl::VectorType::Zero(),
 				   storage.control_cov_, state_transition );
 	    
 	    double const det = Eigen::PartialPivLU<_ObjectKalmanFilter::StateMatrix>( filter_it->cov_ ).determinant();
-	    if( det <= storage.filter_kill_thresh_ )
+	    if( det <= storage.config_.filter_kill_thresh )
 	      {
 		surviving_filters.push_back( *filter_it );
 		
@@ -457,7 +462,6 @@ class UnimodalObjectTrackerNode: public BaseNode, public MultiReconfigure
 	for(_KalmanFilterVector::iterator filter_it = filters.begin(); filter_it != filters.end();
 	    ++filter_it, ++idx)
 	  {
-    
 	    _ObjectKalmanFilter::StateVector const & state = filter_it->state_;
 	    
 	    tf::Vector3 camera_to_object_vec = tf::Vector3( state(0), state(1), state(2) );
@@ -475,7 +479,7 @@ class UnimodalObjectTrackerNode: public BaseNode, public MultiReconfigure
 	    else
 	      {
 		std::stringstream ss;
-		ss << "object/" << storage.name_ << "aux" << aux_idx;
+		ss << "object/" << storage.name_ << "_hyp" << aux_idx;
 		frame_name = ss.str();
 		++aux_idx;
 	      }
