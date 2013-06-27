@@ -1,8 +1,10 @@
 /***************************************************************************
- *  nodes/physics_simulator_node.cpp
+ *  src/thruster_axis_model.cpp
  *  --------------------
  *
- *  Copyright (c) 2012, Dylan Foster, Francesca Nannizzi
+ *  Software License Agreement (BSD License)
+ *
+ *  Copyright (c) 2013, Dylan Foster (turtlecannon@gmail.com)
  *  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
@@ -33,30 +35,5 @@
  *
  **************************************************************************/
 
-/// where just about all of the source code for this project is
-#include <auv_physics/physics_simulator_node.h>
 
-#include <ros/ros.h>
-
-
-/// Instantiate our physics simulator and initialize the ROS node
-int main( int argc, char * argv[] )
-{
-  ros::init(argc, argv, "physics_simulator");
-
-  SimpleAUVPhysicsSimulatorNode physics_sim;
-  
-  dynamic_reconfigure::Server<auv_physics::PhysicsSimulatorConfig> reconfigure_server;
-
-  dynamic_reconfigure::Server<auv_physics::PhysicsSimulatorConfig>::CallbackType rc;
-
-  rc = boost::bind(&SimpleAUVPhysicsSimulatorNode::reconfigureCallback,
-		   &physics_sim, _1, _2);
-
-  reconfigure_server.setCallback( rc );
-
-  physics_sim.spin();
-  
-
-  return 0;
-}
+#include <auv_physics/thruster_axis_model.h>

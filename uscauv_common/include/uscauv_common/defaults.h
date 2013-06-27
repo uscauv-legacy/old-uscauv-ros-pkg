@@ -1,8 +1,10 @@
 /***************************************************************************
- *  nodes/physics_simulator_node.cpp
+ *  include/uscauv_common/defaults.h
  *  --------------------
  *
- *  Copyright (c) 2012, Dylan Foster, Francesca Nannizzi
+ *  Software License Agreement (BSD License)
+ *
+ *  Copyright (c) 2013, Dylan Foster (turtlecannon@gmail.com)
  *  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
@@ -33,30 +35,24 @@
  *
  **************************************************************************/
 
-/// where just about all of the source code for this project is
-#include <auv_physics/physics_simulator_node.h>
 
+#ifndef USCAUV_USCAUVCOMMON_DEFAULTS
+#define USCAUV_USCAUVCOMMON_DEFAULTS
+
+// ROS
 #include <ros/ros.h>
 
-
-/// Instantiate our physics simulator and initialize the ROS node
-int main( int argc, char * argv[] )
+namespace uscauv
 {
-  ros::init(argc, argv, "physics_simulator");
-
-  SimpleAUVPhysicsSimulatorNode physics_sim;
   
-  dynamic_reconfigure::Server<auv_physics::PhysicsSimulatorConfig> reconfigure_server;
+  namespace defaults
+  {
+    static char const * const CM_LINK = "robot/structures/cm";
+    
+    
 
-  dynamic_reconfigure::Server<auv_physics::PhysicsSimulatorConfig>::CallbackType rc;
+  }
+    
+} // uscauv
 
-  rc = boost::bind(&SimpleAUVPhysicsSimulatorNode::reconfigureCallback,
-		   &physics_sim, _1, _2);
-
-  reconfigure_server.setCallback( rc );
-
-  physics_sim.spin();
-  
-
-  return 0;
-}
+#endif // USCAUV_USCAUVCOMMON_DEFAULTS

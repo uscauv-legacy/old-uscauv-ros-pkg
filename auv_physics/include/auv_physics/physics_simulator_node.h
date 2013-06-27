@@ -1,5 +1,5 @@
 /***************************************************************************
- *  include/physics_simulator/physics_simulator_node.h
+ *  include/auv_physics/physics_simulator_node.h
  *  --------------------
  *
  *  Copyright (c) 2012, Dylan Foster, Francesca Nannizzi

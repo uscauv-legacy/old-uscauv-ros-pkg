@@ -38,6 +38,7 @@
 
 #include <ros/ros.h>
 #include <uscauv_common/param_loader.h>
+#include <uscauv_common/defaults.h>
 
 class BaseNode
 {
