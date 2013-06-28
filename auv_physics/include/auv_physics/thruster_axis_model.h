@@ -50,6 +50,7 @@
 
 #include <uscauv_common/param_loader.h>
 #include <uscauv_common/defaults.h>
+#include <auv_msgs/MotorPowerArray.h>
 
 namespace uscauv
 {
@@ -182,7 +183,7 @@ namespace uscauv
 
 	  col << thrust_dir_unit, torque;
 	  ROS_DEBUG_STREAM("Thruster [ " << thruster_it->first << " ] (" << col.transpose() <<
-			  ")");
+			   ")");
 	  
 	  thruster_to_axis_.col( col_idx) = col;
 	  ++col_idx;
@@ -201,11 +202,35 @@ namespace uscauv
     /// Find a thruster combination to achieve the desired axis vals using least squares
     ThrusterVector AxisToThruster( AxisVector const & axis_vals)
     {
-      return thruster_to_axis_.colPivHouseholderQr().solve(axis_vals);
-    }
+      ThrusterVector const thrust =  thruster_to_axis_.colPivHouseholderQr().solve(axis_vals);
+      if( !(thruster_to_axis_*thrust).isApprox( axis_vals ))
+	ROS_ERROR("Requested axis values have no solution!");
 
-    static uscauv::ThrusterAxisModel::AxisVector constructAxisVector(double x, double y, double z,
-							    double t1, double t2, double t3)
+      return thrust;
+    }
+    
+    /// This function implicitly assumes that thruster_models_ is sorted as it was when load() was called.
+    auv_msgs::MotorPowerArray AxisToMotorArray( AxisVector const & axis_vals )
+      {
+	ThrusterVector const thruster_vals = AxisToThruster( axis_vals );
+
+	auv_msgs::MotorPowerArray motors;
+	
+	int row_idx = 0;
+	for(_NamedThrusterMap::const_iterator thruster_it = thruster_models_.begin();
+	    thruster_it != thruster_models_.end(); ++thruster_it, ++row_idx)
+	  {
+	    auv_msgs::MotorPower mp;
+	    mp.name = thruster_it->first;
+	    mp.power = thruster_vals(row_idx, 0);
+	    motors.motors.push_back(mp);
+	  }
+	return motors;
+      }
+
+    static uscauv::ThrusterAxisModel::AxisVector constructAxisVector(double const & x, double const & y, 
+								     double const & z, double const & t1, 
+								     double const & t2, double const & t3)
     {
       uscauv::ThrusterAxisModel::AxisVector vec;
       vec << x, y, z, t1, t2, t3;

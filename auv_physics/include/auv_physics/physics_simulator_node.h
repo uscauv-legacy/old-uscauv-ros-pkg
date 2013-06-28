@@ -673,7 +673,7 @@ class SimpleAUVPhysicsSimulatorNode
     if ( !sim_running_ )
       return;
 
-    for(std::vector<_MotorPowerMsg>::const_iterator power_it = msg->powers.begin(); power_it != msg->powers.end(); ++power_it)
+    for(std::vector<_MotorPowerMsg>::const_iterator power_it = msg->motors.begin(); power_it != msg->motors.end(); ++power_it)
       {
     	std::map<std::string, ThrusterModel>::iterator model_it = thruster_models_.find( power_it->name ) ;
     	if ( model_it == thruster_models_.end() )

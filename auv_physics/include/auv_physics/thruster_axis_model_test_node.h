@@ -56,13 +56,6 @@ class ThrusterAxisModelTestNode: public BaseNode
    }
 
  private:
-  uscauv::ThrusterAxisModel::AxisVector constructAxisVector(double x, double y, double z,
-							    double t1, double t2, double t3)
-    {
-      uscauv::ThrusterAxisModel::AxisVector vec;
-      vec << x, y, z, t1, t2, t3;
-      return vec;
-    }
 
   // Running spin() will cause this function to be called before the node begins looping the spinOnce() function.
   void spinFirst()
@@ -74,18 +67,18 @@ class ThrusterAxisModelTestNode: public BaseNode
        model.load("model/thrusters", "robot/thrusters");
 
        _NamedScrewMap test_input = {
-	 {"forward", constructAxisVector(1,0,0,0,0,0)},
-	 {"backward", constructAxisVector(-1,0,0,0,0,0)},
-	 {"left", constructAxisVector(0,1,0,0,0,0)},
-	 {"right", constructAxisVector(0,-1,0,0,0,0)},
-	 {"up", constructAxisVector(0,0,1,0,0,0)},
-	 {"down", constructAxisVector(0,0,-1,0,0,0)},
-	 {"yaw+", constructAxisVector(0,0,0,0,0,1)},
-	 {"yaw-", constructAxisVector(0,0,0,0,0,-1)},
-	 {"roll+", constructAxisVector(0,0,0,1,0,0)},
-	 {"roll-", constructAxisVector(0,0,0,-1,0,0)},
-	 {"pitch+", constructAxisVector(0,0,0,0,1,0)},
-	 {"pitch-", constructAxisVector(0,0,0,0,-1,0)}
+	 {"forward", uscauv::ThrusterAxisModel::constructAxisVector(1,0,0,0,0,0)},
+	 {"backward", uscauv::ThrusterAxisModel::constructAxisVector(-1,0,0,0,0,0)},
+	 {"left", uscauv::ThrusterAxisModel::constructAxisVector(0,1,0,0,0,0)},
+	 {"right", uscauv::ThrusterAxisModel::constructAxisVector(0,-1,0,0,0,0)},
+	 {"up", uscauv::ThrusterAxisModel::constructAxisVector(0,0,1,0,0,0)},
+	 {"down", uscauv::ThrusterAxisModel::constructAxisVector(0,0,-1,0,0,0)},
+	 {"yaw+", uscauv::ThrusterAxisModel::constructAxisVector(0,0,0,0,0,1)},
+	 {"yaw-", uscauv::ThrusterAxisModel::constructAxisVector(0,0,0,0,0,-1)},
+	 {"roll+", uscauv::ThrusterAxisModel::constructAxisVector(0,0,0,1,0,0)},
+	 {"roll-", uscauv::ThrusterAxisModel::constructAxisVector(0,0,0,-1,0,0)},
+	 {"pitch+", uscauv::ThrusterAxisModel::constructAxisVector(0,0,0,0,1,0)},
+	 {"pitch-", uscauv::ThrusterAxisModel::constructAxisVector(0,0,0,0,-1,0)}
        };
 
        for( _NamedScrewMap::const_iterator screw_it = test_input.begin();
