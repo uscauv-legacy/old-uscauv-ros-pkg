@@ -1,0 +1,27 @@
+<launch>
+  
+  <arg name="left" />
+  <arg name="right" />
+  <arg name="stereo_ns" default="stereo_pair" />
+  
+
+
+  <group ns="$(arg stereo_ns)" >
+    
+    <include file="$(find uscauv_camera)/launch/monocular_pipeline_base.launch" 
+	     ns="left" >
+      <arg name="camera" value="$(arg left)" />
+    </include>
+
+    <include file="$(find uscauv_camera)/launch/monocular_pipeline_base.launch" 
+	     ns="right" >
+      <arg name="camera" value="$(arg right)" />
+    
+    </include>
+    
+  <node name="stereo_image_proc" type="stereo_image_proc" pkg="stereo_image_proc" args="_approximate_sync:=True"/>
+	
+
+  </group>
+  
+</launch>
