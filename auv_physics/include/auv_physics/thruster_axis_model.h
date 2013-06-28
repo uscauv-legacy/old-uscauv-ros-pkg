@@ -96,7 +96,8 @@ namespace uscauv
       cm_to_thruster_ = cm_to_thruster_tf.getOrigin();
     
       /// Unit vector in the direction of thrust, with respect to the auv's center of mass
-      thrust_dir_ = cm_to_thruster_tf * tf::Vector3(1.0, 0.0, 0.0);
+      /// All we are doing is applying a rotation matrix to the unity vector
+      thrust_dir_ = cm_to_thruster_tf.getBasis() * tf::Vector3(1.0, 0.0, 0.0);
 
       ROS_INFO("Loaded thruster [ %s ] with direction ( %f, %f, %f ), location ( %f, %f, %f ),",
 	       thruster_link.c_str(), thrust_dir_.getX(), thrust_dir_.getY(), thrust_dir_.getZ(),
@@ -128,25 +129,27 @@ namespace uscauv
     ThrusterAxisModel()
       {}
     
-    void load(std::string const & ns = "model/thrusters", 
+    void load(std::string const & param_ns = "model/thrusters",
+	      std::string const & tf_prefix = "robot/thrusters",
 	      std::string const & cm_link = uscauv::defaults::CM_LINK)
     {
       /// shutdown if we can't find the param
-      _XmlVal base_node = uscauv::loadParam<_XmlVal>(nh_base_, ns);
+      _XmlVal base_node = uscauv::loadParam<_XmlVal>(nh_base_, param_ns);
 
       for(std::map<std::string, _XmlVal>::iterator thruster_it = base_node.begin(); 
 	  thruster_it != base_node.end(); ++thruster_it)
 	{
 	  ThrusterModel thruster;
-	
-	  if( thruster.load(thruster_it->first) )
+	  std::string thruster_tf_name = tf_prefix + "/" + std::string(thruster_it->first);
+
+	  if( thruster.load(thruster_tf_name) )
 	    {
 	      ROS_WARN( "Failed to load thruster model [ %s ].", thruster_it->first.c_str() );
 	      continue;
 	    }
 	  else
 	    {
-	      ROS_INFO( "Load thruster model [ %s ] success.", thruster_it->first.c_str() );
+	      ROS_DEBUG( "Load thruster model [ %s ] success.", thruster_it->first.c_str() );
 	    }	
 	
 	  if ( thruster_models_.insert( std::pair<std::string, ThrusterModel>(thruster_it->first, thruster) ).second == false )
@@ -158,6 +161,7 @@ namespace uscauv
       if( !thruster_models_.size() )
 	{
 	  ROS_FATAL( "No thruster models could be loaded." );
+	  ros::shutdown();
 	  return;
 	}
 
@@ -172,15 +176,16 @@ namespace uscauv
 	  tf::vectorTFToEigen( thruster_it->second.cm_to_thruster_, cm_to_thruster );
 	  tf::vectorTFToEigen( thruster_it->second.thrust_dir_, thrust_dir_unit );
 	  
-	  /// not actually torque unless we thrust_dir_unit is some unit of force
+	  /// not actually torque unless thrust_dir_unit is some unit of force
 	  /// could also be something like linear velocity -> angular velocity
 	  torque = cm_to_thruster.cross(thrust_dir_unit);
 
 	  col << thrust_dir_unit, torque;
-	  ROS_INFO_STREAM("Thruster [ " << thruster_it->first << " ] (" << col.transpose() <<
+	  ROS_DEBUG_STREAM("Thruster [ " << thruster_it->first << " ] (" << col.transpose() <<
 			  ")");
 	  
 	  thruster_to_axis_.col( col_idx) = col;
+	  ++col_idx;
 	}
       ROS_INFO_STREAM("Thruster to axis:" << std::endl << thruster_to_axis_);
 
@@ -197,6 +202,14 @@ namespace uscauv
     ThrusterVector AxisToThruster( AxisVector const & axis_vals)
     {
       return thruster_to_axis_.colPivHouseholderQr().solve(axis_vals);
+    }
+
+    static uscauv::ThrusterAxisModel::AxisVector constructAxisVector(double x, double y, double z,
+							    double t1, double t2, double t3)
+    {
+      uscauv::ThrusterAxisModel::AxisVector vec;
+      vec << x, y, z, t1, t2, t3;
+      return vec;
     }
 
   };

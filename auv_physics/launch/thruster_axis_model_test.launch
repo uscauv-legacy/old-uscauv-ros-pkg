@@ -1,0 +1,21 @@
+
+<launch>
+  <!-- Main node -->
+  <arg name="pkg" value="auv_physics" />
+  <arg name="name" value="thruster_axis_model_test" />
+  <arg name="type" default="$(arg name)" />
+  <arg name="rate" default="30" />
+  <arg name="args" value="_loop_rate:=$(arg rate)" />
+
+  <include file="$(find auv_model)/launch/upload_model.launch" >
+    <arg name="robot" value="seabee3" />
+  </include>
+
+  <node
+      pkg="$(arg pkg)"
+      type="$(arg type)"
+      name="$(arg name)"
+      args="$(arg args)"
+      output="screen" />
+  
+</launch>
