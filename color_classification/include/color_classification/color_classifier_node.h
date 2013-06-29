@@ -55,8 +55,10 @@
 /// Color Classifier
 #include <color_classification/svm_color_classifier.h>
 
+/// uscauv
+#include <uscauv_common/color_codec.h>
+#include <uscauv_common/param_loader.h>
 
-/* typedef std::vector<image_transport::Publisher> _ImgPublisherArray; */
 typedef std::map<std::string, image_transport::Publisher> _ColorPublisherMap;
 
 
@@ -65,9 +67,10 @@ class ColorClassifierNode
  private:
   /// publishers and subscribers
   ros::NodeHandle nh_rel_;
-  image_transport::ImageTransport img_transport_;
+  image_transport::ImageTransport image_transport_;
   image_transport::Subscriber image_sub_;
   _ColorPublisherMap classified_image_pub_;
+  uscauv::EncodedColorPublisher encoded_image_pub_;  
 
   /// parameters
   double loop_rate_hz_;
@@ -85,7 +88,7 @@ class ColorClassifierNode
   ColorClassifierNode()
     :
     nh_rel_("~"),
-    img_transport_( nh_rel_ )
+    image_transport_( nh_rel_ )
     {}
     
  private:
@@ -95,15 +98,10 @@ class ColorClassifierNode
   {
     /// Get ROS ready ------------------------------------
     ros::NodeHandle nh;
-    img_transport_ = image_transport::ImageTransport( nh_rel_ );
+    image_transport_ = image_transport::ImageTransport( nh_rel_ );
     
     /// Load SVMs ------------------------------------
-    XmlRpc::XmlRpcValue xml_colors;
-    if( !nh.getParam( "model/colors", xml_colors ) )
-      {
-	ROS_FATAL( "Couldn't find parameter [colors]." );
-	ros::shutdown();
-      }
+    XmlRpc::XmlRpcValue xml_colors = uscauv::loadParam<XmlRpc::XmlRpcValue>( nh, "model/colors" );
     
     /// TODO: check for errors
     color_classifier_.fromXmlRpc( xml_colors );
@@ -118,15 +116,17 @@ class ColorClassifierNode
 	image_transport::Publisher color_pub;
 
 	/// We will publish each color classified image to a topic called <color_name>_classified.
-	color_pub = img_transport_.advertise( *color_it + "_classified", 1);
+	color_pub = image_transport_.advertise( *color_it + "_classified", 1);
 	
 	classified_image_pub_[ *color_it ] = color_pub;
 	
 	ROS_INFO( "Created publisher successfully." );
       }
+
+    encoded_image_pub_.advertise( nh_rel_, "encoded", 1 );
 	  
     /// Subscribe to input image topic ------------------------------------
-    image_sub_ = img_transport_.subscribe( "image_color", 1, &ColorClassifierNode::imageCallback, this);
+    image_sub_ = image_transport_.subscribe( "image_color", 1, &ColorClassifierNode::imageCallback, this);
 
     
     ROS_INFO( "Finished spinning up." );
@@ -176,6 +176,7 @@ class ColorClassifierNode
   void imageCallback(const sensor_msgs::ImageConstPtr & msg)
   {
     cv_bridge::CvImagePtr cv_ptr;
+    uscauv::ColorEncoder encoder;
 
     try
       {
@@ -199,10 +200,11 @@ class ColorClassifierNode
 	    continue;
 	  }
 	
+	encoder.addImage( classified_image.image, color_it->first );
 	color_it->second.publish( classified_image.toImageMsg() );
-	
       }
 
+    encoded_image_pub_.publish( encoder, msg->header );
     return;
   }
 
