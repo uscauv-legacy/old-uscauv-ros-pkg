@@ -1,0 +1,10 @@
+<launch>
+
+  <arg name="rate" default="60" />
+
+  <include file="$(find auv_vision)/launch/bin_differentiator.launch" />
+
+  <node pkg="image_view" type="image_view" name="debug_view" 
+	args="image:=/static_image_publisher/image_color" />
+
+</launch>
