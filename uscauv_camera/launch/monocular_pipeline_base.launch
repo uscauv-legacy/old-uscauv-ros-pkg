@@ -21,6 +21,7 @@
     <!-- Path to the camera calibration file -->
     <!-- It seems to be necessary to use the "package://camera_model" syntax instead of "$(find camera_model)" -->
     <param name="camera_info_url" value="package://camera_model/model/$(arg camera)_model.yaml" />  
+    <param name="frame_id" value="camera3" />
   </node>
   
   <!-- Bayer color decoding -->
