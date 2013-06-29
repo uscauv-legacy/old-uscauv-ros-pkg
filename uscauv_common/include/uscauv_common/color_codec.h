@@ -55,6 +55,8 @@ namespace uscauv
   static char const * const COLOR_CODEC_IMAGE_TYPE = "mono16";
 
   typedef std::map<std::string, cv::Mat> ColorImageMap;
+  typedef std::shared_ptr<ColorImageMap> ColorImageMapPtr;
+  typedef std::shared_ptr<ColorImageMap const> ColorImageMapConstPtr;
   
   class ColorEncoder
   {
@@ -107,7 +109,8 @@ namespace uscauv
   class EncodedColorSubscriber
   {
   private:
-    typedef std::shared_ptr<ColorImageMap> ColorImageMapPtr;
+
+    
     
     ros::Subscriber sub_;
     std::function< void( ColorImageMapPtr const &, std_msgs::Header const &)> external_callback;
