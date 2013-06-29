@@ -3,8 +3,6 @@
   <!-- Name of the camera we will be streaming data from -->
   <arg name="camera" />
   <arg name="rate" default="60" />
-  <!-- Color that will be proccesed. TODO: Use all colors -->
-  <arg name="color" default="blaze_orange" />
   <arg name="immediate_tracking" default="true" />
 
   <!-- Stage 1: Color Classifier -->
@@ -15,7 +13,7 @@
   </include>
 
   <!-- Stage 2: Shape Matcher -->
-  <remap from="shape_matcher/image_mono" to="color_classifier/$(arg color)_classified" />
+  <remap from="shape_matcher/encoded" to="color_classifier/encoded" />
 
   <include file="$(find shape_matching)/launch/shape_matcher.launch" >
     <arg name="rate" value="$(arg rate)" />

@@ -6,7 +6,8 @@
 
   <rosparam command="load" file="$(find shape_matching)/params/image_proc.yaml" ns="shape_matcher/image_proc" />
 
-  <remap from="shape_matcher/image_mono" to="color_classifier/$(arg color)_classified" />
+  <!-- <remap from="shape_matcher/image_mono" to="color_classifier/$(arg color)_classified" /> -->
+  <remap from="shape_matcher/encoded" to="color_classifier/encoded" />
 
   <include ns="model" file="$(find shape_model)/launch/upload_shapes.launch" />
 

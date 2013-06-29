@@ -46,6 +46,7 @@
 #include <uscauv_common/multi_reconfigure.h>
 #include <uscauv_common/image_loader.h>
 #include <uscauv_common/graphics.h>
+#include <uscauv_common/color_codec.h>
 
 /// opencv
 #include <opencv2/imgproc/imgproc.hpp>
@@ -67,7 +68,7 @@ typedef std::vector<cv::Point2i> _Contour;
 typedef std::vector<cv::Point2f> _Contour2f;
 typedef cv::Mat                  _Signature;
 
-#define DEBUG_SIZE(X, __String)			\
+#define DEBUG_SIZE(X, __String)						\
   ROS_INFO("%s has rows: %d, cols: %d, channels: %d", __String, (X).rows, (X).cols, (X).channels() );
 
 struct ContourData
@@ -94,6 +95,8 @@ class ShapeMatcherNode: public BaseNode, public ImageTransceiver, public MultiRe
   _NamedContourMap template_contours_;
   _ImageLoader template_images_;
   _ShapeMatcherConfig* config_;
+  uscauv::EncodedColorSubscriber encoded_image_sub_;
+  
   
   /// ros interfaces
   ros::Publisher match_pub_;
@@ -112,20 +115,20 @@ class ShapeMatcherNode: public BaseNode, public ImageTransceiver, public MultiRe
 
   // Running spin() will cause this function to be called before the node begins looping the spinOnce() function.
   void spinFirst()
-     {
-       addImagePublisher( "image_denoised", 1);
-       addImagePublisher( "image_contours", 1);
-       addImagePublisher( "image_matched", 1);
+  {
+    addImagePublisher( "image_denoised", 1);
+    addImagePublisher( "image_contours", 1);
+    addImagePublisher( "image_matched", 1);
        
-       addImageSubscriber( "image_mono", 1, "mono8", &ShapeMatcherNode::imageCallback, this);
+    encoded_image_sub_.subscribe( nh_rel_, "encoded", 1, &ShapeMatcherNode::encodedImageCallback, this );
        
-       /// TODO: Make a MultiPublisher class to make this a little nice
-       match_pub_ = nh_rel_.advertise<_MatchedShapeArray>("matched_shapes", 10);
+    /// TODO: Make a MultiPublisher class to make this a little nice
+    match_pub_ = nh_rel_.advertise<_MatchedShapeArray>("matched_shapes", 10);
 
        
-       /// relative to global namespace, not node namespace
-       if(template_images_.loadImagesAt("model/shapes", CV_LOAD_IMAGE_GRAYSCALE ))
-	 ROS_ERROR("Failed to load shape templates.");
+    /// relative to global namespace, not node namespace
+    if(template_images_.loadImagesAt("model/shapes", CV_LOAD_IMAGE_GRAYSCALE ))
+      ROS_ERROR("Failed to load shape templates.");
 
     for(_ImageLoader::const_iterator template_it = template_images_.begin();
 	template_it != template_images_.end(); ++template_it)
@@ -157,169 +160,175 @@ class ShapeMatcherNode: public BaseNode, public ImageTransceiver, public MultiRe
     addReconfigureServer<_ShapeMatcherConfig>("image_proc", &ShapeMatcherNode::reconfigureCallback, this);
     config_ = &getLatestConfig<_ShapeMatcherConfig>("image_proc");
 
-     }  
+  }  
 
   // Running spin() will cause this function to get called at the loop rate until this node is killed.
   void spinOnce()
-     {
+  {
 
-     }
+  }
 
  public:
-  
-  void imageCallback( cv_bridge::CvImage::ConstPtr const & msg )
+
+  void encodedImageCallback( uscauv::ColorImageMapPtr const & msg, std_msgs::Header const & header )
   {
-    
-    // ################################################################
-    // Apply a gaussian blur and threshold ############################
-    // ################################################################
-    cv::Mat denoised;
-    
-    const int struct_elem_size = config_->struct_elem_size;
-    int kernel_size = config_->kernel_size;
-    double const  floor_threshold = config_->floor_threshold;
-    kernel_size = (kernel_size % 2) ? kernel_size : kernel_size + 1;
-    
-    cv::GaussianBlur( msg->image, denoised, cv::Size(kernel_size, kernel_size), 0, 0);
-
-    if( config_->use_morph )
-      {
-	cv::morphologyEx( denoised, denoised, cv::MORPH_OPEN, 
-			  cv::getStructuringElement( cv::MORPH_ELLIPSE, 
-						     cv::Size( struct_elem_size, 
-							       struct_elem_size ) ) );
-      }
-    if( config_->use_floor)
-      cv::threshold( denoised, denoised, floor_threshold, 0, cv::THRESH_TOZERO );
-    if( config_->use_otsu )
-      cv::threshold( denoised, denoised, 0, 255, cv::THRESH_BINARY + cv::THRESH_OTSU);
-    
-    /* cv::adaptiveThreshold( msg->image, denoised, 255, cv::ADAPTIVE_THRESH_GAUSSIAN_C,  */
-    /* 			   cv::THRESH_BINARY, kernel_size,  */
-    /* 			   getLatestConfig<_ShapeMatcherConfig>("image_proc").c ); */
-
-    // ################################################################
-    // Segment out contours ############################################
-    // ################################################################
-        
-    cv::Mat contour_image;
-    denoised.copyTo(contour_image);
-    
-    std::vector<std::vector<cv::Point2i> > contours;
-    std::vector<cv::Vec4i> hierarchy;
-
-    cv::findContours( contour_image, contours, hierarchy, 
-		      CV_RETR_TREE, CV_CHAIN_APPROX_NONE );
-    
-    cv::cvtColor( contour_image, contour_image, CV_GRAY2BGR );    
-
-
-    for(unsigned int idx = 0; idx < contours.size(); ++idx)
-      {
-	/// If the contour has a parent; it is a child
-	if( hierarchy[idx][3] != -1 )
-	  {
-	    cv::drawContours(contour_image, contours, idx, uscauv::CV_PINK_BGR,
-			     2, 8, hierarchy);
-	  }
-	else
-	  cv::drawContours(contour_image, contours, idx, uscauv::CV_GREEN_BGR,
-			   2, 8, hierarchy);
-      }
-
-    // ################################################################
-    // Analyze contours and match shapes ##############################
-    // ################################################################
-
     /// TODO: Populate this with hierarchy
     _MatchedShapeArray matches;
     /// so that time and frame data is preserved
-    matches.header = msg->header;
-    matches.image_rows = msg->image.rows;
-    matches.image_cols = msg->image.cols;
-
-    cv::Mat match_image;
-    contour_image.copyTo(match_image);
+    matches.header = header;
+    matches.image_rows = msg->begin()->second.rows; /// all images should have same size
+    matches.image_cols = msg->begin()->second.cols;
     
-    for(unsigned int idx = 0; idx < contours.size(); ++idx )
+    for(uscauv::ColorImageMap::const_iterator color_it = msg->begin(); color_it != msg->end(); ++color_it )
       {
-	ContourData result;
-	if(analyzeContour( contours[ idx ], result, config_->signature_size ))
-	  continue;
-	
-	for(_NamedContourData::const_iterator template_it = templates_.begin();
-	    template_it != templates_.end(); ++template_it )
+	// ################################################################
+	// Apply a gaussian blur and threshold ############################
+	// ################################################################
+	cv::Mat denoised;
+    
+	const int struct_elem_size = config_->struct_elem_size;
+	int kernel_size = config_->kernel_size;
+	double const  floor_threshold = config_->floor_threshold;
+	kernel_size = (kernel_size % 2) ? kernel_size : kernel_size + 1;
+    
+	cv::GaussianBlur( color_it->second, denoised, cv::Size(kernel_size, kernel_size), 0, 0);
+
+	if( config_->use_morph )
 	  {
-	    /// calculate EMD using our custom cost matrix
-	    double emd = cv::EMD( result.signature_, template_it->second.signature_,
-				  CV_DIST_USER, emd_cost_ );
-	    ROS_DEBUG("[ %s ] EMD: %f", template_it->first.c_str(), emd );
-	    
-	    if( emd < config_->emd_boundary )
-	      {
-		/// Draw 
-		ROS_DEBUG("Match detected.");
-		result.contour_ = template_it->second.contour_;
-		drawContour(match_image, result, template_it->first);
-
-		/// Populate match message
-		_MatchedShape match;
-
-		/// I take of change of coordinates in the object tracker node now
-		/* /// switch from image coordinates to camera coordinates */
-		/* match.x = (result.mean_.x - msg->image.cols/2); */
-		/* /// negate because the image has a flipped y axis */
-		/* match.y = -(result.mean_.y - msg->image.rows/2); */
-		/* /// same deal as y */
-		/* match.theta = -result.rotation_; */
-
-		match.x = result.mean_.x;
-		match.y = result.mean_.y;
-		match.theta = result.rotation_;
-		match.scale = result.radius_;
-		
-		match.color = "blaze_orange"; /// TODO: Refactor color classifier publishing scheme so that this isn't hard-coded
-		match.type = template_it->first;
-
-		/// Arbitrary measure of confidence. Covariance matrix is diagonal to reflect uncorrelatedness of parameters.
-		/// TODO: Analyze this a further
-		match.covariance = { {emd, 0, 0, 0,
-				      0, emd, 0, 0,
-				      0, 0, emd, 0,
-				      0, 0, 0, emd} };
-
-		matches.shapes.push_back( match );
-	      }
+	    cv::morphologyEx( denoised, denoised, cv::MORPH_OPEN, 
+			      cv::getStructuringElement( cv::MORPH_ELLIPSE, 
+							 cv::Size( struct_elem_size, 
+								   struct_elem_size ) ) );
 	  }
-	
-	/// finish analyzing, draw
-	/* cv::Point2f const & mean = result.mean_; */
+	if( config_->use_floor)
+	  cv::threshold( denoised, denoised, floor_threshold, 0, cv::THRESH_TOZERO );
+	if( config_->use_otsu )
+	  cv::threshold( denoised, denoised, 0, 255, cv::THRESH_BINARY + cv::THRESH_OTSU);
+    
+	/* cv::adaptiveThreshold( msg->image, denoised, 255, cv::ADAPTIVE_THRESH_GAUSSIAN_C,  */
+	/* 			   cv::THRESH_BINARY, kernel_size,  */
+	/* 			   getLatestConfig<_ShapeMatcherConfig>("image_proc").c ); */
 
-	/* ROS_INFO("Got mean %f, %f", mean.x, mean.y ); */
-	/* ROS_INFO("Got rotation %f.", result.rotation_ * 180 / M_PI); */
-	/* ROS_INFO("Got bounding circle radius: %f", result.radius_ ); */
-	/* cv::circle(match_image, mean, result.radius_, uscauv::CV_RED_BGR, 2); */
+	// ################################################################
+	// Segment out contours ############################################
+	// ################################################################
+        
+	cv::Mat contour_image;
+	denoised.copyTo(contour_image);
+    
+	std::vector<std::vector<cv::Point2i> > contours;
+	std::vector<cv::Vec4i> hierarchy;
+
+	cv::findContours( contour_image, contours, hierarchy, 
+			  CV_RETR_TREE, CV_CHAIN_APPROX_NONE );
+    
+	cv::cvtColor( contour_image, contour_image, CV_GRAY2BGR );    
+
+
+	for(unsigned int idx = 0; idx < contours.size(); ++idx)
+	  {
+	    /// If the contour has a parent; it is a child
+	    if( hierarchy[idx][3] != -1 )
+	      {
+		cv::drawContours(contour_image, contours, idx, uscauv::CV_PINK_BGR,
+				 2, 8, hierarchy);
+	      }
+	    else
+	      cv::drawContours(contour_image, contours, idx, uscauv::CV_GREEN_BGR,
+			       2, 8, hierarchy);
+	  }
+
+	// ################################################################
+	// Analyze contours and match shapes ##############################
+	// ################################################################
+
+	cv::Mat match_image;
+	contour_image.copyTo(match_image);
+    
+	for(unsigned int idx = 0; idx < contours.size(); ++idx )
+	  {
+	    ContourData result;
+	    if(analyzeContour( contours[ idx ], result, config_->signature_size ))
+	      continue;
 	
-      }
+	    for(_NamedContourData::const_iterator template_it = templates_.begin();
+		template_it != templates_.end(); ++template_it )
+	      {
+		/// calculate EMD using our custom cost matrix
+		double emd = cv::EMD( result.signature_, template_it->second.signature_,
+				      CV_DIST_USER, emd_cost_ );
+		ROS_DEBUG("[ %s ] EMD: %f", template_it->first.c_str(), emd );
+	    
+		if( emd < config_->emd_boundary )
+		  {
+		    /// Draw 
+		    ROS_DEBUG("Match detected.");
+		    result.contour_ = template_it->second.contour_;
+		    drawContour(match_image, result, template_it->first);
+
+		    /// Populate match message
+		    _MatchedShape match;
+
+		    /// I take of change of coordinates in the object tracker node now
+		    /* /// switch from image coordinates to camera coordinates */
+		    /* match.x = (result.mean_.x - msg->image.cols/2); */
+		    /* /// negate because the image has a flipped y axis */
+		    /* match.y = -(result.mean_.y - msg->image.rows/2); */
+		    /* /// same deal as y */
+		    /* match.theta = -result.rotation_; */
+
+		    match.x = result.mean_.x;
+		    match.y = result.mean_.y;
+		    match.theta = result.rotation_;
+		    match.scale = result.radius_;
+		
+		    match.color = "blaze_orange"; /// TODO: Refactor color classifier publishing scheme so that this isn't hard-coded
+		    match.type = template_it->first;
+
+		    /// Arbitrary measure of confidence. Covariance matrix is diagonal to reflect uncorrelatedness of parameters.
+		    /// TODO: Analyze this a further
+		    match.covariance = { {emd, 0, 0, 0,
+					  0, emd, 0, 0,
+					  0, 0, emd, 0,
+					  0, 0, 0, emd} };
+
+		    matches.shapes.push_back( match );
+		  }
+	      }
+	
+	    /// finish analyzing, draw
+	    /* cv::Point2f const & mean = result.mean_; */
+
+	    /* ROS_INFO("Got mean %f, %f", mean.x, mean.y ); */
+	    /* ROS_INFO("Got rotation %f.", result.rotation_ * 180 / M_PI); */
+	    /* ROS_INFO("Got bounding circle radius: %f", result.radius_ ); */
+	    /* cv::circle(match_image, mean, result.radius_, uscauv::CV_RED_BGR, 2); */
+	
+	  }
     
 
-    // ################################################################
-    // Publish results ################################################
-    // ################################################################
+	// ################################################################
+	// Publish results ################################################
+	// ################################################################
        
-    /// sensor_msgs::image_encodings::MONO8 = "mono8", for reference
-    cv_bridge::CvImage::Ptr denoised_output = boost::make_shared<cv_bridge::CvImage>
-      ( msg->header, sensor_msgs::image_encodings::MONO8, denoised );
-    cv_bridge::CvImage::Ptr contour_output = boost::make_shared<cv_bridge::CvImage>
-      ( msg->header, sensor_msgs::image_encodings::BGR8, contour_image );
-    cv_bridge::CvImage::Ptr match_output = boost::make_shared<cv_bridge::CvImage>
-      ( msg->header, sensor_msgs::image_encodings::BGR8, match_image );
+	if( color_it->first == config_->debug_color )
+	  {
+	    /// sensor_msgs::image_encodings::MONO8 = "mono8", for reference
+	    cv_bridge::CvImage::Ptr denoised_output = boost::make_shared<cv_bridge::CvImage>
+	      ( header, sensor_msgs::image_encodings::MONO8, denoised );
+	    cv_bridge::CvImage::Ptr contour_output = boost::make_shared<cv_bridge::CvImage>
+	      ( header, sensor_msgs::image_encodings::BGR8, contour_image );
+	    cv_bridge::CvImage::Ptr match_output = boost::make_shared<cv_bridge::CvImage>
+	      ( header, sensor_msgs::image_encodings::BGR8, match_image );
 
-    publishImage(
-		 "image_contours", contour_output, 
-		 "image_denoised", denoised_output,
-		 "image_matched", match_output 
-		 );
+	    publishImage(
+			 "image_contours", contour_output, 
+			 "image_denoised", denoised_output,
+			 "image_matched", match_output 
+			 );
+	  }
+
+      }
 
     /// publish matched shapes
     if (matches.shapes.size() > 0 )
