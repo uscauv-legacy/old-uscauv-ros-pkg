@@ -148,7 +148,7 @@ class SvmColorClassifier
     return 0;
   }
   
-  int classify(std::string const & color_name, cv::Mat & input_image,
+  int classify(std::string const & color_name, cv::Mat & input,
 		cv::Mat & classified_image)
   {
     unsigned int match_count = 0;
@@ -162,6 +162,8 @@ class SvmColorClassifier
 	ROS_WARN( "Received a color classification request for color [ %s ], but the SVM is not loaded.", color_name.c_str() );
 	return -1;
       }
+
+    cv::Mat input_image; input.copyTo(input_image);
 
     /// convert to HSV
     cv::cvtColor(input_image, input_image, CV_BGR2HSV);

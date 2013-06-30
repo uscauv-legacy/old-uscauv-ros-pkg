@@ -71,14 +71,17 @@ namespace uscauv
     void addImage( cv::Mat const & input, std::string const & name)
     {
       if( image_.empty())
-	image_ = cv::Mat( input.size(), cv_bridge::getCvType( COLOR_CODEC_IMAGE_TYPE ));
-      
+	{
+	  image_ = cv::Mat( input.size(), cv_bridge::getCvType( COLOR_CODEC_IMAGE_TYPE ));
+	  image_.setTo(0);
+	}
       cv::Mat encoded; input.copyTo(encoded); 
       /// convert to mono16 before encoding so that mono8 images don't clip when image count exceeds 8
       encoded.convertTo(encoded, CV_8UC1);
       /// Set the pixels where encoded is non-zero to 2^color_idx
-      cv::add(image_, pow(2, color_idx_), image_, encoded);
+      cv::add(image_, (1 << color_idx_), image_, encoded);
       names_.push_back(name);
+      ++color_idx_;
     }
 
     friend class EncodedColorPublisher;
@@ -91,9 +94,9 @@ namespace uscauv
 
   public:
     void advertise( ros::NodeHandle nh, std::string const & topic, int const & queue_size = 1)
-      {
-	pub_ = nh.advertise<auv_msgs::ColorEncodedImage>(topic, queue_size );
-      }
+    {
+      pub_ = nh.advertise<auv_msgs::ColorEncodedImage>(topic, queue_size );
+    }
     
     void publish( ColorEncoder const & encoder,  std_msgs::Header const & header)
     {
@@ -102,6 +105,7 @@ namespace uscauv
       image_out.toImageMsg(msg.image);
       msg.encoding = encoder.names_;
       pub_.publish( msg );
+
     }
     
   };
@@ -109,8 +113,6 @@ namespace uscauv
   class EncodedColorSubscriber
   {
   private:
-
-    
     
     ros::Subscriber sub_;
     std::function< void( ColorImageMapPtr const &, std_msgs::Header const &)> external_callback;
@@ -121,7 +123,8 @@ namespace uscauv
       {
 	sub_ = nh.subscribe<auv_msgs::ColorEncodedImage>(topic, queue_size,
 							 &EncodedColorSubscriber::decode, this);
-	external_callback = std::bind( std::forward<__BoundArgs>(bound_args)... );
+	external_callback = std::bind( std::forward<__BoundArgs>(bound_args)...,
+				       std::placeholders::_1, std::placeholders::_2);
       }
     
   private:
@@ -134,10 +137,11 @@ namespace uscauv
 	  name_it != msg->encoding.end(); ++name_it, ++color_idx)
 	{
 	  cv::Mat output = cv_bridge::toCvCopy( msg->image, COLOR_CODEC_IMAGE_TYPE )->image;
-	  cv::bitwise_and(output, pow(2, color_idx), output);
-	  output.setTo( 1, output );
+	  cv::bitwise_and(output, (1 << color_idx) , output);
+	  /* ROS_DEBUG("Decoding with key %d", (1 << color_idx)); */
+	  output.convertTo( output, CV_8UC1 );
+	  output.setTo( 255, output );
 	  decoded->insert( std::pair<std::string, cv::Mat>( *name_it, output ));
-	  ++color_idx;
 	}
       
       if( external_callback )

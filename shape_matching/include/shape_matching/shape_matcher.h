@@ -184,15 +184,18 @@ class ShapeMatcherNode: public BaseNode, public ImageTransceiver, public MultiRe
 	// ################################################################
 	// Apply a gaussian blur and threshold ############################
 	// ################################################################
-	cv::Mat denoised;
+	cv::Mat denoised; color_it->second.copyTo(denoised);
     
 	const int struct_elem_size = config_->struct_elem_size;
 	int kernel_size = config_->kernel_size;
 	double const  floor_threshold = config_->floor_threshold;
 	kernel_size = (kernel_size % 2) ? kernel_size : kernel_size + 1;
     
-	cv::GaussianBlur( color_it->second, denoised, cv::Size(kernel_size, kernel_size), 0, 0);
-
+	if( config_->use_blur )
+	  {
+	    cv::GaussianBlur( denoised, denoised, cv::Size(kernel_size, kernel_size), 0, 0);
+	  }
+	
 	if( config_->use_morph )
 	  {
 	    cv::morphologyEx( denoised, denoised, cv::MORPH_OPEN, 
@@ -269,24 +272,15 @@ class ShapeMatcherNode: public BaseNode, public ImageTransceiver, public MultiRe
 		    /// Populate match message
 		    _MatchedShape match;
 
-		    /// I take of change of coordinates in the object tracker node now
-		    /* /// switch from image coordinates to camera coordinates */
-		    /* match.x = (result.mean_.x - msg->image.cols/2); */
-		    /* /// negate because the image has a flipped y axis */
-		    /* match.y = -(result.mean_.y - msg->image.rows/2); */
-		    /* /// same deal as y */
-		    /* match.theta = -result.rotation_; */
-
 		    match.x = result.mean_.x;
 		    match.y = result.mean_.y;
 		    match.theta = result.rotation_;
 		    match.scale = result.radius_;
 		
-		    match.color = "blaze_orange"; /// TODO: Refactor color classifier publishing scheme so that this isn't hard-coded
+		    match.color = color_it->first;
 		    match.type = template_it->first;
 
 		    /// Arbitrary measure of confidence. Covariance matrix is diagonal to reflect uncorrelatedness of parameters.
-		    /// TODO: Analyze this a further
 		    match.covariance = { {emd, 0, 0, 0,
 					  0, emd, 0, 0,
 					  0, 0, emd, 0,
@@ -313,6 +307,8 @@ class ShapeMatcherNode: public BaseNode, public ImageTransceiver, public MultiRe
        
 	if( color_it->first == config_->debug_color )
 	  {
+	    ROS_INFO("publishing debug for %s", color_it->first.c_str() );
+	    
 	    /// sensor_msgs::image_encodings::MONO8 = "mono8", for reference
 	    cv_bridge::CvImage::Ptr denoised_output = boost::make_shared<cv_bridge::CvImage>
 	      ( header, sensor_msgs::image_encodings::MONO8, denoised );
