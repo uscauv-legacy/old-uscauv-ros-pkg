@@ -58,6 +58,7 @@
 /// uscauv
 #include <uscauv_common/color_codec.h>
 #include <uscauv_common/param_loader.h>
+#include <uscauv_common/tic_toc.h>
 
 typedef std::map<std::string, image_transport::Publisher> _ColorPublisherMap;
 
@@ -187,23 +188,28 @@ class ColorClassifierNode
 	ROS_ERROR("cv_bridge exception: %s", e.what());
 	return;
       }
+
+    tic;
     
     for ( _ColorPublisherMap::iterator color_it = classified_image_pub_.begin(); color_it != classified_image_pub_.end(); ++color_it )
       {
 	/// New image with the same header as the input image
 	cv_bridge::CvImage classified_image( cv_ptr->header, 
 					     sensor_msgs::image_encodings::MONO8 );
-	
+	tic;
 	if ( color_classifier_.classify( color_it->first, cv_ptr->image, classified_image.image) )
 	  {
 	    ROS_WARN("Failed to classify color [ %s ].", color_it->first.c_str() );
 	    continue;
 	  }
-	
+	toc_info_stream( std::chrono::milliseconds, "Classify " << color_it->first );
+
 	encoder.addImage( classified_image.image, color_it->first );
 	color_it->second.publish( classified_image.toImageMsg() );
       }
 
+    toc_info_stream( std::chrono::milliseconds, "Classify all");
+    
     encoded_image_pub_.publish( encoder, msg->header );
     return;
   }

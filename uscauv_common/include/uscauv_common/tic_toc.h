@@ -72,13 +72,13 @@ USCAUV_DECLARE_DURATION_TRAITS( std::chrono::hours,        "hours"        );
   std::chrono::duration_cast<__DurationType>				\
   (std::chrono::system_clock::now() - __tic_toc_start_time).count()  
 
-#define make_toc_stream(__DurationType) \
-  "Duration: " << toc(__DurationType) << " " << uscauv::duration_traits<__DurationType>::name << "."
+#define make_toc_stream(__DurationType, __Args)				\
+  __Args << " duration: " << toc(__DurationType) << " " << uscauv::duration_traits<__DurationType>::name << "."
 
-#define toc_print(__DurationType) \
-  std::cout << make_toc_stream(__DurationType) << std::endl;
+#define toc_stream(__DurationType, __Args)				\
+  std::cout << make_toc_stream(__DurationType, __Args) << std::endl;
 
-#define toc_info(__DurationType) \
-  ROS_INFO_STREAM( make_toc_stream(__DurationType) );
+#define toc_info_stream(__DurationType, __Args)		\
+  ROS_INFO_STREAM( make_toc_stream(__DurationType, __Args) );
 
 #endif // USCAUV_USCAUVCOMMON_TICTOC
