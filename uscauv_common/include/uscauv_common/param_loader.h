@@ -42,108 +42,251 @@
 // ROS
 #include <ros/ros.h>
 
+#include <XmlRpcValue.h>
+#include <XmlRpcException.h>
+
+// ################################################################
+// ################################################################
+
 namespace uscauv
 {
-  typedef XmlRpc::XmlRpcValue XmlRpcValue;
-
-  // ################################################################
-  // ################################################################
-
-  template<typename __ParamType> 
-    static typename std::enable_if< !std::is_arithmetic<__ParamType>::value, __ParamType>::type
-    fromXmlRpcValue(XmlRpcValue & param);
+  namespace param
+  {
   
-  template <typename __ParamType>
-    static typename std::enable_if< std::is_arithmetic<__ParamType>::value, __ParamType>::type
-    fromXmlRpcValue(XmlRpcValue & param)
-    {
-      if( param.getType() == XmlRpcValue::TypeBoolean ) return bool(param);
-      else if ( param.getType() == XmlRpcValue::TypeInt ) return int(param);
-      else if ( param.getType() == XmlRpcValue::TypeDouble ) return double(param);
-      else return __ParamType(); /// TODO: Assert or something - this shouldn't happen
-    }
+    typedef XmlRpc::XmlRpcValue XmlRpcValue;
 
-  template<>
-    std::string fromXmlRpcValue<std::string>(XmlRpcValue & param)
-    {
-      return std::string(param);
-    }
+    // ################################################################
+    // ################################################################
 
-  template<>
-    XmlRpcValue fromXmlRpcValue<XmlRpcValue>(XmlRpcValue & param)
+    template<typename __ParamType, typename Enable = void>
+      struct XmlRpcValueConverter;
+
+    template<typename __ParamType>
+      struct XmlRpcValueConverter<__ParamType, typename std::enable_if< std::is_arithmetic<__ParamType>::value, void>::type>
     {
-      return param;
-    }
+      static __ParamType convert(XmlRpcValue & param)
+      {
+	if( param.getType() == XmlRpcValue::TypeBoolean ) return bool(param);
+	else if ( param.getType() == XmlRpcValue::TypeInt ) return int(param);
+	else if ( param.getType() == XmlRpcValue::TypeDouble ) return double(param);
+	else return __ParamType(param); /// TODO: Assert or something - this shouldn't happen
+      }
+    };
   
-  // ################################################################
-  // ################################################################
+    template<typename __NestedParamType>
+      struct XmlRpcValueConverter< std::vector<__NestedParamType> >
+      {
 
-  template <typename __ParamType>
-    static typename std::enable_if< std::is_arithmetic<__ParamType>::value, std::string>::type
-    toString(__ParamType const & param)
-    {
-      std::stringstream ss;
-      ss << std::boolalpha << param;
-      return ss.str();
-    }
+	static std::vector<__NestedParamType> convert(XmlRpcValue & param)
+	{
+	  std::vector<__NestedParamType> output;
+
+	  for(int idx = 0; idx < param.size(); ++idx )
+	    {
+	      __NestedParamType p;
+	      XmlRpcValue & val = param[idx];
+		
+	      try
+		{
+		  p = XmlRpcValueConverter<__NestedParamType>::convert( val );
+		}
+	      catch(typename XmlRpc::XmlRpcException & ex)
+		{
+		  ROS_WARN("Caught XmlRpc exception [ %s ] loading element at idx [ %d ]. Skipping...", ex.getMessage().c_str(), idx);
+		  continue;
+		}
+		
+	      output.push_back ( p );
+	    }
+	  return output;
+	}
+	
+      };
+
+
+    template<typename __NestedParamType>
+      struct XmlRpcValueConverter< std::map<std::string, __NestedParamType> >
+      {
+	static std::map<std::string, __NestedParamType> 
+	  convert(XmlRpcValue & param)
+	  {
+	    std::map<std::string, __NestedParamType> output;
+
+	    for( XmlRpcValue::ValueStruct::value_type & elem : param )
+	      {
+		std::pair<std::string, __NestedParamType> p;
+
+		try
+		  {
+		    p = std::make_pair( elem.first, XmlRpcValueConverter<__NestedParamType>::convert( elem.second ) );
+		  }
+		catch( typename XmlRpc::XmlRpcException & ex)
+		  {
+		    ROS_WARN("Caught XmlRpc exception [ %s ] loading element [ %s ]. Skipping...", ex.getMessage().c_str(), elem.first.c_str());
+		    continue;
+		  }
+	    
+		ROS_INFO("Loaded map param element [ %s ].", elem.first.c_str() );
+		output.insert( p );
+	      }
+	
+	    return output;
+	  }
+      };
+
+    /// Only works if the target object has a copy constructor
+    template<typename __NestedParamType>
+      struct XmlRpcValueConverter< std::shared_ptr<__NestedParamType> >
+      {
+	static std::shared_ptr<__NestedParamType> convert(XmlRpcValue & param)
+	{
+	  return std::make_shared<__NestedParamType>( XmlRpcValueConverter<__NestedParamType>::convert( param ) );
+	}
+      };
+
+    // ################################################################
+    // ################################################################
+
+    template <typename __ParamType>
+      static typename std::enable_if< !std::is_arithmetic<__ParamType>::value, std::string>::type
+      toString(__ParamType const & param)
+      {
+	return "Aggregate Type";
+      }
+
+    template <typename __ParamType>
+      static typename std::enable_if< std::is_arithmetic<__ParamType>::value, std::string>::type
+      toString(__ParamType const & param)
+      {
+	std::stringstream ss;
+	ss << std::boolalpha << param;
+	return ss.str();
+      }
   
-  /// Defined in param_loader.cpp to make that sure linkage works out and there is no -Wunused-function)
-  std::string toString(std::string const & param);
-  std::string toString(XmlRpcValue const & param);
+    /// Defined in param_loader.cpp to make that sure linkage works out and there is no -Wunused-function)
+    std::string toString(std::string const & param);
+    std::string toString(XmlRpcValue const & param);
 
-  // ################################################################
-  // ################################################################
+    // ################################################################
+    // ################################################################
 
-  template <typename __ParamType>
-    static __ParamType loadParam( ros::NodeHandle const & nh, std::string const & name, __ParamType default_value)
-    {
-      XmlRpcValue value;
-      std::string const & resolved_name = nh.resolveName(name, true);
-      bool const param_found = nh.getParam( name, value );
+    template<typename __ParamType>
+      static __ParamType lookup( XmlRpcValue & base_param, std::string const & param_name, __ParamType default_value)
+      {
+	if( base_param.hasMember( param_name ) )
+	  return XmlRpcValueConverter<__ParamType>::convert(base_param[ param_name ]);
+	
+	ROS_WARN_STREAM("Couldn't find param [ " << param_name << " ]. Using default value [ " <<
+			toString(default_value) << " ]." );
+	
+	return default_value;
+      }
 
-      if( param_found )
-	{
-	  __ParamType return_value = fromXmlRpcValue<__ParamType>(value);
+    /// Intended to be wrapped in try/catch blocks
+    template<typename __ParamType>
+      static __ParamType lookup( XmlRpcValue & base_param, std::string const & param_name)
+      {
+	return XmlRpcValueConverter<__ParamType>::convert(base_param[ param_name ]);
+      }
+
+    // ################################################################
+    // ################################################################
+    
+    template <typename __ParamType>
+      static __ParamType load( ros::NodeHandle const & nh, std::string const & name, __ParamType const & default_value)
+      {
+	XmlRpcValue value;
+	std::string const & resolved_name = nh.resolveName(name, true);
+	bool const param_found = nh.getParam( name, value );
+
+	if( param_found )
+	  {
+	    __ParamType return_value;
+
+	    try
+	      {
+		return_value = XmlRpcValueConverter<__ParamType>::convert(value);
+	      }
+	    catch( XmlRpc::XmlRpcException & ex )
+	      {
+		ROS_WARN("Caught XmlRpc exception [ %s ] while loading param [ %s ]. Using default [ %s ].",
+			 ex.getMessage().c_str(), resolved_name.c_str(), toString(default_value).c_str());
+		
+		return default_value;
+	      }
+	    ROS_INFO("Loaded param [ %s ] with value [ %s ].", 
+		     resolved_name.c_str(), toString(return_value).c_str());
 	  
-	  ROS_INFO("Loaded param [ %s ] with value [ %s ].", 
-		   resolved_name.c_str(), toString(return_value).c_str());
+	    return return_value;
+	  }
+
+	ROS_WARN("Failed to load param [ %s ]. Using default [ %s ].",
+		 resolved_name.c_str(), toString(default_value).c_str());
+
+	return default_value;
+
+      }
+    
+    /// Load param successfully or kill node
+    template <typename __ParamType>
+      static __ParamType load( ros::NodeHandle const & nh, std::string const & name)
+      {
+	XmlRpcValue value;
+	std::string const & resolved_name = nh.resolveName(name, true);
+	bool const param_found = nh.getParam( name, value );
+
+	if( param_found )
+	  {
+	    __ParamType return_value;
+
+	    try
+	      {
+		return_value = XmlRpcValueConverter<__ParamType>::convert(value);
+	      }
+	    catch( XmlRpc::XmlRpcException & ex)
+	      {	
+		ROS_FATAL("Caught XmlRpc exception [ %s ] loading param [ %s ].  Shutting down...",
+			  ex.getMessage().c_str(), resolved_name.c_str());
+		ros::shutdown();
+		return __ParamType();
+	      }
+	    
+	    ROS_INFO("Loaded param [ %s ] with value [ %s ].", 
+		     resolved_name.c_str(), toString(return_value).c_str());
 	  
-	  return return_value;
-	}
-      else
-	{
-	  ROS_WARN("Failed to load param [ %s ]. Using default [ %s ].",
-		   resolved_name.c_str(), toString(default_value).c_str());
-
-	  return default_value;
-	}
-    }
-
-  template <typename __ParamType>
-    __ParamType loadParam( ros::NodeHandle const & nh, std::string const & name)
-    {
-      XmlRpcValue value;
-      std::string const & resolved_name = nh.resolveName(name, true);
-      bool const param_found = nh.getParam( name, value );
-
-      if( param_found )
-	{
-	  __ParamType return_value = fromXmlRpcValue<__ParamType>(value);
-	  
-	  ROS_INFO("Loaded param [ %s ] with value [ %s ].", 
-		   resolved_name.c_str(), toString(return_value).c_str());
-	  
-	  return return_value;
-	}
-      else
-	{
-	  ROS_FATAL("Failed to load param [ %s ].  Shutting down...",
-		   resolved_name.c_str());
-	  ros::shutdown();
-	  return __ParamType();
-	}
-    }
-
+	    return return_value;
+	  }
+	
+	ROS_FATAL("Failed to load param [ %s ].  Shutting down...",
+		  resolved_name.c_str());
+	ros::shutdown();
+	return __ParamType();
+	
+      }
+  } // param
 } // uscauv
+
+// ################################################################
+// ################################################################
+
+#define USCAUV_DECLARE_PARAM_LOADER_CONVERSION(__ParamType, var_name, conversion ) \
+  namespace uscauv							\
+  {									\
+    namespace param							\
+    {									\
+      template<>							\
+	struct XmlRpcValueConverter<__ParamType>			\
+	{								\
+	  static __ParamType convert( XmlRpcValue & var_name )		\
+	  {								\
+	    conversion;							\
+	  }								\
+	};								\
+    }									\
+  }									\
+
+
+USCAUV_DECLARE_PARAM_LOADER_CONVERSION( XmlRpc::XmlRpcValue, param, return param; )
+USCAUV_DECLARE_PARAM_LOADER_CONVERSION( std::string, param, return std::string( param ); )
 
 #endif // USCAUV_USCAUVCOMMON_PARAMLOADER

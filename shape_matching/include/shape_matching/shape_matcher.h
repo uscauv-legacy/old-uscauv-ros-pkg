@@ -307,8 +307,6 @@ class ShapeMatcherNode: public BaseNode, public ImageTransceiver, public MultiRe
        
 	if( color_it->first == config_->debug_color )
 	  {
-	    ROS_INFO("publishing debug for %s", color_it->first.c_str() );
-	    
 	    /// sensor_msgs::image_encodings::MONO8 = "mono8", for reference
 	    cv_bridge::CvImage::Ptr denoised_output = boost::make_shared<cv_bridge::CvImage>
 	      ( header, sensor_msgs::image_encodings::MONO8, denoised );

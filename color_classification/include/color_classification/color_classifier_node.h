@@ -52,9 +52,6 @@
 /// xmlrpcpp
 #include <XmlRpcValue.h>
 
-/// Color Classifier
-/* #include <color_classification/svm_color_classifier.h> */
-
 /// cpp11
 #include <thread>
 #include <functional>
@@ -64,10 +61,17 @@
 #include <uscauv_common/param_loader.h>
 #include <uscauv_common/tic_toc.h>
 
+std::string const COLOR_NS = "model/colors";
+std::string const COMPOSITES_NAME = "composites";
+std::string const COMPOSITES_NS = COLOR_NS + "/" + COMPOSITES_NAME;
+
 typedef std::map<std::string, image_transport::Publisher> _ColorPublisherMap;
 
 struct ClassifyThreadStorage
 {
+  typedef std::shared_ptr<ClassifyThreadStorage> Ptr;
+  typedef std::shared_ptr<ClassifyThreadStorage const> ConstPtr;
+  
   enum class State{ READY, PROCESSED };
   State state_;
 
@@ -76,13 +80,15 @@ struct ClassifyThreadStorage
 
   cv::Mat input_, output_;
 
-  /// cv::SVM doesn't have proper copy assignment so we do this to avoid copying
-  std::shared_ptr<cv::SVM> svm_;
+  /// cv::SVM doesn't have proper copy assignment
+  cv::SVM svm_;
   
   ClassifyThreadStorage(){ state_ = State::PROCESSED; }
 };
 
-typedef std::map<std::string, std::shared_ptr<ClassifyThreadStorage> > _ColorThreadMap;
+typedef std::map<std::string, ClassifyThreadStorage::Ptr > _ColorThreadMap;
+typedef std::vector< std::string > _CompositeColor;
+typedef std::map<std::string, _CompositeColor> _CompositeColorMap;
 
 class ColorClassifierNode
 {
@@ -93,6 +99,7 @@ class ColorClassifierNode
   image_transport::Subscriber image_sub_;
   _ColorPublisherMap classified_image_pub_;
   _ColorThreadMap thread_storage_;
+  _CompositeColorMap composite_colors_;
   uscauv::EncodedColorPublisher encoded_image_pub_;  
 
   /// parameters
@@ -107,79 +114,79 @@ class ColorClassifierNode
    * Default Constructor
    * 
    */
-  ColorClassifierNode()
-    :
-    nh_rel_("~"),
+ ColorClassifierNode()
+   :
+  nh_rel_("~"),
     image_transport_( nh_rel_ )
     {}
     
  private:
     
-    /// Spawn one thread that runs this function per color definition
-    void classifyThread(std::shared_ptr<ClassifyThreadStorage> storage)
-    {
-      while(true)
-	{
+  /// Spawn one thread that runs this function per color definition
+  void classifyThread(ClassifyThreadStorage::Ptr storage)
+  {
+    while(true)
+      {
       
-	  /// Wait for the main thread to signal that the image is ready for processing
-	  {
-	    std::unique_lock<std::mutex> lock( storage->m_ );
-	    storage->cv_.wait( lock, [&]{ return storage->state_ == ClassifyThreadStorage::State::READY; });
-	  }
-	  
-	  unsigned int match_count = 0;
-
-	  cv::Mat input_image = storage->input_;
-
-	  /// convert to HSV
-	  cv::cvtColor(input_image, input_image, CV_BGR2HSV);
-    
-	  cv::Mat input_hs( input_image.rows, input_image.cols, CV_8UC2 ), input_v( input_image.rows, input_image.cols, CV_8UC1 );
-	  cv::Mat mix_out[] { input_hs, input_v };
-	  int from_to[] = { 0,0, 1,1, 2,2 };
-	  cv::mixChannels( &input_image, 1, mix_out, 2, from_to, 3);
-    
-	  cv::Mat input_float;
-	  input_hs.convertTo( input_float, CV_32F );
-    
-	  cv::Mat classified_image = cv::Mat( input_image.size(), CV_8UC1 );
-    
-	  /// Classify the input image.
-	  cv::MatIterator_<unsigned char> cl_it = classified_image.begin<unsigned char>();
-	  cv::MatConstIterator_<cv::Vec2f> in_it = input_float.begin<cv::Vec2f>();
-  
-	  for(; in_it != input_float.end<cv::Vec2f>(); ++in_it, ++cl_it)
-	    {
-	      float response = storage->svm_->predict( cv::Mat(*in_it) );
-	      
-	      if ( response == -1.0)
-	  	*cl_it = 0;
-	      else if ( response == 1.0 )
-	  	{
-	  	  *cl_it = 255;
-	  	  ++match_count;
-	  	}
-	      else
-	  	{
-	  	  ROS_WARN( "SVM has incorrect output format. Image will not be classifed. Valid output: {-1, 1}");
-	  	  /* return -1; */
-	  	}
-	    }
-
-	  storage->output_ = classified_image;
-	  
-	  /* ROS_DEBUG("[ %s ] SVM matched %d pixels. ", color_name.c_str(),match_count); */
-	  
-	  /// Notify the main thread that processing is complete
-	  {
-	    std::lock_guard<std::mutex> lock( storage->m_ );
-	    storage->state_ = ClassifyThreadStorage::State::PROCESSED;
-	  }
-	  storage->cv_.notify_one();
-
+	/// Wait for the main thread to signal that the image is ready for processing
+	{
+	  std::unique_lock<std::mutex> lock( storage->m_ );
+	  storage->cv_.wait( lock, [&]{ return storage->state_ == ClassifyThreadStorage::State::READY; });
 	}
-      return;
-    }
+	  
+	unsigned int match_count = 0;
+
+	cv::Mat input_image = storage->input_;
+
+	/// convert to HSV
+	cv::cvtColor(input_image, input_image, CV_BGR2HSV);
+    
+	cv::Mat input_hs( input_image.rows, input_image.cols, CV_8UC2 ), input_v( input_image.rows, input_image.cols, CV_8UC1 );
+	cv::Mat mix_out[] { input_hs, input_v };
+	int from_to[] = { 0,0, 1,1, 2,2 };
+	cv::mixChannels( &input_image, 1, mix_out, 2, from_to, 3);
+    
+	cv::Mat input_float;
+	input_hs.convertTo( input_float, CV_32F );
+    
+	cv::Mat classified_image = cv::Mat( input_image.size(), CV_8UC1 );
+    
+	/// Classify the input image.
+	cv::MatIterator_<unsigned char> cl_it = classified_image.begin<unsigned char>();
+	cv::MatConstIterator_<cv::Vec2f> in_it = input_float.begin<cv::Vec2f>();
+  
+	for(; in_it != input_float.end<cv::Vec2f>(); ++in_it, ++cl_it)
+	  {
+	    float response = storage->svm_.predict( cv::Mat(*in_it) );
+	      
+	    if ( response == -1.0)
+	      *cl_it = 0;
+	    else if ( response == 1.0 )
+	      {
+		*cl_it = 255;
+		++match_count;
+	      }
+	    else
+	      {
+		ROS_WARN( "SVM has incorrect output format. Image will not be classifed. Valid output: {-1, 1}");
+		/* return -1; */
+	      }
+	  }
+
+	storage->output_ = classified_image;
+	  
+	/* ROS_DEBUG("[ %s ] SVM matched %d pixels. ", color_name.c_str(),match_count); */
+	  
+	/// Notify the main thread that processing is complete
+	{
+	  std::lock_guard<std::mutex> lock( storage->m_ );
+	  storage->state_ = ClassifyThreadStorage::State::PROCESSED;
+	}
+	storage->cv_.notify_one();
+
+      }
+    return;
+  }
   
   /// Running spin() will cause this function to be called before the node begins looping the spingOnce() function.
   void spinFirst()
@@ -189,23 +196,35 @@ class ColorClassifierNode
     image_transport_ = image_transport::ImageTransport( nh_rel_ );
     
     /// Load SVMs ------------------------------------
-    XmlRpc::XmlRpcValue xml_colors = uscauv::loadParam<XmlRpc::XmlRpcValue>( nh, "model/colors" );
+    XmlRpc::XmlRpcValue xml_colors = uscauv::param::load<XmlRpc::XmlRpcValue>( nh, COLOR_NS );
 
     unsigned int color_count = 0;
     for(std::map<std::string, XmlRpc::XmlRpcValue>::iterator color_it = xml_colors.begin(); color_it != xml_colors.end(); ++color_it)
       {
-	/// TODO: Catch XMLRPC errors
-
-	std::shared_ptr<ClassifyThreadStorage> storage = std::make_shared<ClassifyThreadStorage>();
+	if( color_it->first == COMPOSITES_NAME )
+	  continue;
 	
+	ClassifyThreadStorage::Ptr storage = std::make_shared<ClassifyThreadStorage>();
+	
+	std::string color_name, color_path;
+	
+	try
+	  {
 	/// name of the color
-	std::string const & color_name = color_it->first;
+	color_name = color_it->first;
 
 	/// Path to yaml file containing svm params
-	std::string const & color_path = color_it->second;
+	color_path = std::string( color_it->second );
 	
+	  }
+	catch( XmlRpc::XmlRpcException & ex)
+	  {
+	    ROS_WARN("Caught XmlRpc exception [ %s ] loading color definition [ %s ]. Skipping...", ex.getMessage().c_str(), color_name.c_str() );
+	    continue;
+	  }
+		
 	/// File I/O datatypes
-	std::shared_ptr<cv::SVM> color_svm = std::make_shared<cv::SVM>();
+	/* std::shared_ptr<cv::SVM> color_svm = std::make_shared<cv::SVM>(); */
 	CvFileStorage * svm_storage = NULL;
 	CvFileNode * svm_node =       NULL;
 	
@@ -226,14 +245,10 @@ class ColorClassifierNode
 	  }
 	
 	/// populate the fields the the cv::SVM
-	color_svm->read( svm_storage, svm_node );
+	storage->svm_.read( svm_storage, svm_node );
 	
-	/// Add to the map
-	/* color_svm_map_[ color_name ] = color_svm; */
-	/// TODO: Add to thread map
 	cvReleaseFileStorage( &svm_storage );
 
-	storage->svm_ = color_svm;
 	thread_storage_[ color_name ] = storage;
 	std::thread classify_thread( &ColorClassifierNode::classifyThread, this, 
 				     thread_storage_[ color_name ] );
@@ -245,27 +260,57 @@ class ColorClassifierNode
     	ROS_INFO( "Creating publisher... [ %s ]", color_name.c_str() );
 	
     	image_transport::Publisher color_pub;
-
+	
     	/// We will publish each color classified image to a topic called <color_name>_classified.
     	color_pub = image_transport_.advertise( color_name + "_classified", 1);
 	
     	classified_image_pub_[ color_name ] = color_pub;
 	
     	ROS_INFO( "Created publisher successfully." );
-
-
+	
+	
       }
-
+	
     if( !color_count )
       {
 	ROS_FATAL( "No SVMs were loaded." );
 	ros::shutdown();
 	return;
       }
+	
+    // Load composite colors ##########################################
+	
+    /// Since this is a map<string, vector< string > >, it can be expanded from param_loader builtin types
+    composite_colors_ = uscauv::param::load<_CompositeColorMap>( nh, COMPOSITES_NS, _CompositeColorMap() );
 
+    _CompositeColorMap verified_composite_colors;
+    for( _CompositeColorMap::value_type const & composite : composite_colors_ )
+      {
+	std::string bad_color;
+	for( _CompositeColor::value_type const & color : composite.second )
+	  {
+	    if( thread_storage_.find( color ) == thread_storage_.end() )
+	      {
+		bad_color = color;
+		break;
+	      }
+	  }
+	if( bad_color == "" )
+	  {
+	    verified_composite_colors.insert( std::make_pair(composite.first, composite.second) );
+	  }
+	else
+	  {
+	    ROS_WARN("Composite color [ %s ] includes color [ %s ], but this color is not loaded. Discarding...", composite.first.c_str(), bad_color.c_str() );
+	  }
+      }
+
+    composite_colors_ = verified_composite_colors;
+
+    // Start IO #######################################################
+    
     encoded_image_pub_.advertise( nh_rel_, "encoded", 1 );
 	  
-    /// Subscribe to input image topic ------------------------------------
     image_sub_ = image_transport_.subscribe( "image_color", 1, &ColorClassifierNode::imageCallback, this);
 
     ROS_INFO( "Finished spinning up." );
@@ -332,7 +377,7 @@ class ColorClassifierNode
     for( _ColorThreadMap::iterator thread_it = thread_storage_.begin(); thread_it != thread_storage_.end(); ++thread_it )
       {
 
-	std::shared_ptr<ClassifyThreadStorage> storage = thread_it->second;
+	ClassifyThreadStorage::Ptr storage = thread_it->second;
 	
 	/// Copy image into buffer, signal thread to process
 	{
@@ -343,10 +388,11 @@ class ColorClassifierNode
 	storage->cv_.notify_one();
       }
 
-    for( _ColorThreadMap::iterator thread_it = thread_storage_.begin(); thread_it != thread_storage_.end(); ++thread_it )
+    /// I wanted to play around with this
+    for( _ColorThreadMap::value_type & thread_it : thread_storage_ )
       {	
 
-	std::shared_ptr<ClassifyThreadStorage> storage = thread_it->second;
+	ClassifyThreadStorage::Ptr storage = thread_it.second;
 
 	cv_bridge::CvImage classified_image( cv_ptr->header,
     					     sensor_msgs::image_encodings::MONO8 );
@@ -355,15 +401,37 @@ class ColorClassifierNode
 	{
 	  std::unique_lock<std::mutex> lock( storage->m_ );
 	  storage->cv_.wait( lock, [&]{return storage->state_ == ClassifyThreadStorage::State::PROCESSED;} );
-	  encoder.addImage( storage->output_, thread_it->first );
+	  encoder.addImage( storage->output_, thread_it.first );
 	  classified_image.image = storage->output_;
 	}
 	
-	classified_image_pub_[ thread_it->first ].publish ( classified_image.toImageMsg() );
+	classified_image_pub_[ thread_it.first ].publish ( classified_image.toImageMsg() );
       }
 
+    /// TODO: Publish debug images for composite colors
+    for( _CompositeColorMap::value_type const & composite : composite_colors_ )
+      {
+	cv::Mat composite_image;
+	
+	for( _CompositeColor::value_type const & color : composite.second )
+	  {
+	    ClassifyThreadStorage::Ptr storage = thread_storage_[ color ];
 
-
+	    if( composite_image.empty() )
+	      {
+		storage->output_.copyTo(composite_image);
+	      }
+	    else
+	      {
+		ROS_ASSERT( storage->output_.type() == composite_image.type() && 
+			    storage->output_.size() == composite_image.size() );
+		
+		cv::bitwise_or( storage->output_, composite_image, composite_image );
+	      }
+	  }
+	encoder.addImage( composite_image, composite.first );
+      }
+    
     /* toc_info_stream( std::chrono::milliseconds, "Classify all"); */
     
     encoded_image_pub_.publish( encoder, msg->header );

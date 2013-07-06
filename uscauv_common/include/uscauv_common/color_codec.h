@@ -70,6 +70,9 @@ namespace uscauv
 
     void addImage( cv::Mat const & input, std::string const & name)
     {
+      /// Using 1 bit per color at a depth of 16 bits limits us to 16 colors
+      ROS_ASSERT( color_idx_ < 16 );
+      
       if( image_.empty())
 	{
 	  image_ = cv::Mat( input.size(), cv_bridge::getCvType( COLOR_CODEC_IMAGE_TYPE ));

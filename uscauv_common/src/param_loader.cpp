@@ -43,13 +43,18 @@
 
 namespace uscauv
 {
-  std::string toString(std::string const & param)
+  namespace param
   {
-    return param;
-  }
+  
+    std::string toString(std::string const & param)
+    {
+      return param;
+    }
 
-  std::string toString(XmlRpcValue const & param)
-  {
-    return "XmlRpcValue";
+    std::string toString(XmlRpcValue const & param)
+    {
+      return "XmlRpcValue";
+    }
+
   }
 }

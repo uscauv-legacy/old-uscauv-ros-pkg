@@ -334,8 +334,8 @@ class UnimodalObjectTrackerNode: public BaseNode, public MultiReconfigure
 					 &UnimodalObjectTrackerNode::cameraInfoCallback, 
 					 this);
 
-    immediate_tracking = uscauv::loadParam<bool>( nh_rel_, "immediate_tracking", false );
-    depth_method_ = uscauv::loadParam<std::string>( nh_rel_, "depth_method", "monocular" );
+    immediate_tracking = uscauv::param::load<bool>( nh_rel_, "immediate_tracking", false );
+    depth_method_ = uscauv::param::load<std::string>( nh_rel_, "depth_method", "monocular" );
 
     /// TODO: Add more depth methods
     if( depth_method_ != "monocular" )
@@ -348,7 +348,7 @@ class UnimodalObjectTrackerNode: public BaseNode, public MultiReconfigure
     // ################################################################
     // Load objects definitions from parameter server #################
     // ################################################################
-    xml_objects = uscauv::loadParam<uscauv::XmlRpcValue>( nh_base, object_ns_ );
+    xml_objects = uscauv::param::load<XmlRpc::XmlRpcValue>( nh_base, object_ns_ );
        
     for( _NamedXmlMap::iterator object_it = xml_objects.begin(); 
 	 object_it != xml_objects.end(); ++object_it )

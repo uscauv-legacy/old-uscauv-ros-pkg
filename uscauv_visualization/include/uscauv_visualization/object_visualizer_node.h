@@ -54,12 +54,42 @@
 typedef visualization_msgs::Marker _MarkerMsg;
 typedef visualization_msgs::MarkerArray _MarkerArrayMsg;
 
+
 struct ObjectGraphicsStorage
 {
   std::string stl_url_;
   std_msgs::ColorRGBA color_;
   geometry_msgs::Pose transform_;
 };
+
+/// This was a lot cooler looking in my head
+USCAUV_DECLARE_PARAM_LOADER_CONVERSION( ObjectGraphicsStorage, param, 
+					
+					ObjectGraphicsStorage graphics;
+					
+					XmlRpc::XmlRpcValue xml_graphics = uscauv::param::lookup<XmlRpc::XmlRpcValue>(param, "graphics");
+					XmlRpc::XmlRpcValue color = uscauv::param::lookup<XmlRpc::XmlRpcValue>(xml_graphics, "color");	   
+					XmlRpc::XmlRpcValue  transform = uscauv::param::lookup<XmlRpc::XmlRpcValue>(xml_graphics, "transform");
+					graphics.stl_url_ = uscauv::param::lookup<std::string>(xml_graphics, "stl_url");
+					/// xmlrpc is finnicky and will throw an exception if we directly cast
+					/// these xmlrpcvalues to doubles if their internal type is int
+					double const & scale = uscauv::param::lookup<double>(color, "scale");
+					graphics.color_.r = uscauv::param::lookup<double>(color, "r")/scale;
+					graphics.color_.g = uscauv::param::lookup<double>(color, "g")/scale;
+					graphics.color_.b = uscauv::param::lookup<double>(color, "b")/scale;
+					graphics.color_.a = uscauv::param::lookup<double>(color, "a")/scale;
+					
+					tf::Quaternion object_to_graphics_quat;
+					object_to_graphics_quat.setRPY( uscauv::param::lookup<double>(transform, "roll"),
+									uscauv::param::lookup<double>(transform, "pitch"),
+									uscauv::param::lookup<double>(transform, "yaw") );
+					tf::Vector3 object_to_graphics_vec(uscauv::param::lookup<double>(transform, "x"),
+									   uscauv::param::lookup<double>(transform, "y"),
+									   uscauv::param::lookup<double>(transform, "z"));
+					tf::poseTFToMsg( tf::Transform( object_to_graphics_quat, object_to_graphics_vec ),
+							 graphics.transform_ );
+					return graphics;
+					)
 
 typedef std::map<std::string, ObjectGraphicsStorage> _NamedGraphicsMap;
 typedef std::map<std::string, XmlRpc::XmlRpcValue> _NamedXmlMap;
@@ -87,7 +117,7 @@ class ObjectVisualizerNode: public BaseNode
   void spinFirst()
      {
        ros::NodeHandle nh_base;
-       XmlRpc::XmlRpcValue xml_objects;
+       /* XmlRpc::XmlRpcValue xml_objects; */
        
        object_marker_pub_ = nh_rel_.advertise<_MarkerArrayMsg>("markers", 1 );
        
@@ -95,44 +125,9 @@ class ObjectVisualizerNode: public BaseNode
        // Load objects definitions from parameter server #################
        // ################################################################
        
-       xml_objects = uscauv::loadParam<uscauv::XmlRpcValue>( nh_base, object_ns_ );
-    
-       for( _NamedXmlMap::iterator object_it = xml_objects.begin(); 
-	    object_it != xml_objects.end(); ++object_it )
-	 {
-	   if( !object_it->second.hasMember("graphics") )
-	     continue;
-	   
-	   ObjectGraphicsStorage graphics;
-	   
-	   XmlRpc::XmlRpcValue & xml_graphics = object_it->second["graphics"];
-	   XmlRpc::XmlRpcValue & color = xml_graphics["color"];	   
-	   XmlRpc::XmlRpcValue & transform = xml_graphics["transform"];
-	   graphics.stl_url_ = std::string(xml_graphics["stl_url"]);
-	   /// xmlrpc is finnicky and will throw an exception if we directly cast
-	   /// these xmlrpcvalues to doubles if their internal type is int
-	   /// fromXmlRpcValue takes care of this for us
-	   double const & scale = uscauv::fromXmlRpcValue<double>(color["scale"]);
-	   graphics.color_.r = uscauv::fromXmlRpcValue<double>(color["r"])/scale;
-	   graphics.color_.g = uscauv::fromXmlRpcValue<double>(color["g"])/scale;
-	   graphics.color_.b = uscauv::fromXmlRpcValue<double>(color["b"])/scale;
-	   graphics.color_.a = uscauv::fromXmlRpcValue<double>(color["a"])/scale;
-
-	   tf::Quaternion object_to_graphics_quat;
-	   object_to_graphics_quat.setRPY( uscauv::fromXmlRpcValue<double>(transform["roll"]),
-					   uscauv::fromXmlRpcValue<double>(transform["pitch"]),
-					   uscauv::fromXmlRpcValue<double>(transform["yaw"]) );
-	   tf::Vector3 object_to_graphics_vec(uscauv::fromXmlRpcValue<double>(transform["x"]),
-					      uscauv::fromXmlRpcValue<double>(transform["y"]),
-					      uscauv::fromXmlRpcValue<double>(transform["z"]));
-	   tf::poseTFToMsg( tf::Transform( object_to_graphics_quat, object_to_graphics_vec ),
-			    graphics.transform_ );
-	   
-	   object_graphics_[ object_it->first ] = graphics;
-
-	   ROS_INFO("Loaded object [ %s ].", object_it->first.c_str() );
-	 }
-
+       /// fancy one liner thanks to tons of code in param_loader.h
+       object_graphics_ = uscauv::param::load<_NamedGraphicsMap>( nh_base, object_ns_ );
+       
        /// Init params that will be used across all markers
        marker_template_.type = visualization_msgs::Marker::MESH_RESOURCE;
        marker_template_.action = visualization_msgs::Marker::ADD;

@@ -135,7 +135,7 @@ namespace uscauv
 	      std::string const & cm_link = uscauv::defaults::CM_LINK)
     {
       /// shutdown if we can't find the param
-      _XmlVal base_node = uscauv::loadParam<_XmlVal>(nh_base_, param_ns);
+      _XmlVal base_node = uscauv::param::load<_XmlVal>(nh_base_, param_ns);
 
       for(std::map<std::string, _XmlVal>::iterator thruster_it = base_node.begin(); 
 	  thruster_it != base_node.end(); ++thruster_it)

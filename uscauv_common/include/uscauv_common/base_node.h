@@ -69,7 +69,7 @@ class BaseNode
   {
     ROS_INFO( "Spinning up %s...", node_name_.c_str() );
     
-    loop_rate_hz_ = uscauv::loadParam<double>( nh_rel_, "loop_rate", double(10) );
+    loop_rate_hz_ = uscauv::param::load<double>( nh_rel_, "loop_rate", double(10) );
 
     ros::Rate loop_rate( loop_rate_hz_ );
 
