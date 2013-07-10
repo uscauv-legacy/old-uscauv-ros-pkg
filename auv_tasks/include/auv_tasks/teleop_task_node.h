@@ -57,6 +57,8 @@
 #include <seabee3_msgs/Depth.h>
 #include <seabee3_common/movement.h>
 
+#include<algorithm>
+
 typedef seabee3_msgs::MotorVals _MotorValsMsg;
 typedef seabee3_msgs::Depth _DepthMsg;
 typedef auv_msgs::MatchedShape _MatchedShape;
@@ -394,18 +396,36 @@ class TeleopTaskNode: public TaskExecutorNode, public JoystickPolicy
     
     /// TODO: THrottle down to 100 here so that the sum is < 100
     /// TODO: Should really normalize instead of clipping
+    normalizeMotors( msg );
     motor_vals_pub_.publish( msg );
     
+  }
+  
+  void normalizeMotors(_MotorValsMsg & msg )
+  {
+    normalizeAxis(msg, movement::Axes::SPEED );
+    normalizeAxis(msg, movement::Axes::STRAFE);
+    normalizeAxis(msg, movement::Axes::DEPTH );
+  }
+
+  void normalizeAxis(_MotorValsMsg & msg, int const & axis)
+  {
+    int motor1_id = movement::ThrusterPairs::values[axis][0];
+    int motor2_id = movement::ThrusterPairs::values[axis][1];
+
+    double max = std::max( abs(msg.motors[motor1_id]), abs(msg.motors[motor2_id]) );
+    
+    if(max <= 100 )
+      return;
+    
+    msg.motors[motor1_id] *= 100/max;
+    msg.motors[motor2_id] *= 100/max;
   }
 
   /// TODO:Redo this entire function
   void applyMotors(_MotorValsMsg & msg, int const & axis, double val)
   {
-    if( val > 100)
-      val = 100;
-    else if( val < -100)
-      val = -100;
-
+    
     int motor1_id = movement::ThrusterPairs::values[axis][0];
     int motor2_id = movement::ThrusterPairs::values[axis][1];
 

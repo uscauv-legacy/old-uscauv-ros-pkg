@@ -26,7 +26,7 @@
     <arg name="image_out" value="$(arg camera)/image_color_scaled" />
     <arg name="info_in" value="$(arg camera)/camera_info" />
     <arg name="info_out" value="$(arg camera)/camera_info_scaled" />
-    <arg name="scale" value="0.5" />
+    <arg name="scale" value="0.25" />
   </include>
 
 </launch>

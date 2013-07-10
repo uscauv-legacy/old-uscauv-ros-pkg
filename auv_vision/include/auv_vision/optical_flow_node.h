@@ -212,7 +212,7 @@ class OpticalFlowNode: public BaseNode, public ImageTransceiver, public MultiRec
     
     if( RANSAC( velocity_vectors, ransac_vectors, ransac_mse, ransac_velocity ))
       {
-	ROS_WARN("RANSAC failed.");
+	ROS_DEBUG("RANSAC failed.");
 	cv::putText( output->image, "Failure", text_origin + cv::Point( status_size.width, 0), 
 		     font, font_scale, uscauv::CV_RED_BGR,
 		     font_thickness );
@@ -224,8 +224,8 @@ class OpticalFlowNode: public BaseNode, public ImageTransceiver, public MultiRec
 	vel << "Velocity: (" << ransac_velocity.x << ", " << ransac_velocity.y << ")";
 	mse << "MSE: " << ransac_mse;
 
-	ROS_INFO("RANSAC: ( %.4f, %.4f ) with MSE %.4f. In: %lu, Out: %lu.",
-		 ransac_velocity.x, ransac_velocity.y, ransac_mse, 
+	ROS_DEBUG("RANSAC: ( %.4f, %.4f ) with MSE %.4f. In: %lu, Out: %lu.",
+		 ransac_velocity.x, ransac_velocity.y, ransac_mse,
 		 velocity_vectors.size(), ransac_vectors.size() );
 	cv::putText( output->image, "Good", text_origin + cv::Point( status_size.width, 0), 
 		     font, font_scale, uscauv::CV_GREEN_BGR,
@@ -265,7 +265,7 @@ class OpticalFlowNode: public BaseNode, public ImageTransceiver, public MultiRec
 
     if( in.size() < n )
       {
-	ROS_WARN("RANSAC input is smaller than sample size. Quitting...");
+	ROS_DEBUG("RANSAC input is smaller than sample size. Quitting...");
 	return -1;
       }
     

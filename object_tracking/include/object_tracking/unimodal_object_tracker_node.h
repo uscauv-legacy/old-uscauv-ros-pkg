@@ -218,7 +218,7 @@ class UnimodalObjectTrackerNode: public BaseNode, public MultiReconfigure
 	    double const d = getGaussianPDFPosition( update_mean, state_pos, measurement_transition_ * filter_it->cov_ * measurement_transition_.transpose() );
 	    double const dist_euclidian = diff_term.block(0,0,3,1).norm();
 	    double const dist_angular = uscauv::ring_distance<double>( diff_term(3), 0, uscauv::TWO_PI );
-	    ROS_INFO("PDF val: %0.20f, dist: %f, angle %f", d, dist_euclidian, dist_angular);
+	    ROS_DEBUG("PDF val: %0.20f, dist: %f, angle %f", d, dist_euclidian, dist_angular);
 
 	    if( dist_euclidian <= storage.config_.exclude_distance
 		&& dist_angular <= storage.config_.exclude_angle
@@ -229,14 +229,14 @@ class UnimodalObjectTrackerNode: public BaseNode, public MultiReconfigure
 		neighbors++;
 	      }	    
 	  }
-	ROS_INFO("Found %d neighbor filters.", neighbors);
+	ROS_DEBUG("Found %d neighbor filters.", neighbors);
 	/// Spawn a new filter if none of the current filters are a good match for the measurement
 	if( max_idx == -1 )
 	  {
 	    _ObjectKalmanFilter::StateVector initial_state = measurement_transition_.transpose() * update_mean;
 
 	    storage.filters_.push_back( _ObjectKalmanFilter( initial_state, storage.initial_cov_ ) );
-	    ROS_INFO_STREAM("Spawned filter ( " << initial_state.transpose() << " ).");
+	    ROS_DEBUG_STREAM("Spawned filter ( " << initial_state.transpose() << " ).");
 	  }
 	else
 	  {
@@ -448,7 +448,7 @@ class UnimodalObjectTrackerNode: public BaseNode, public MultiReconfigure
 	      }
 	    else
 	      {
-		ROS_INFO_STREAM("Killed filter ( " << filter_it->state_.transpose() << " ) Det: " << det << ".");
+		ROS_DEBUG_STREAM("Killed filter ( " << filter_it->state_.transpose() << " ) Det: " << det << ".");
 	      }
 	  }
 	storage.filters_ = surviving_filters;

@@ -1,7 +1,8 @@
 <launch>
   <arg name="simulate"  default="false" />
-  <arg name="visualize" default="false" />
+  <!-- <arg name="visualize" default="false" /> -->
   <arg name="camera" />
+  <arg name="camera_name" />
 
   <!-- <node pkg="rqt_reconfigure" type="rqt_reconfigure" name="reconfigure" /> -->
 
@@ -14,10 +15,11 @@
 
   <rosparam command="load" param="teleop_task/pid" file="$(find controls_config)/params/simple_pid.yaml" />
 
-  <include if="$(arg simulate)" file="$(find shape_matching)/launch/static_shape_matcher_demo.launch" />
-
-  <include unless="$(arg simulate)" file="$(find shape_matching)/launch/shape_matcher_demo.launch" >
+  <include file="$(find auv_vision)/launch/vision_pipeline_demo.launch" >
     <arg name="camera" value="$(arg camera)" />
+    <arg name="camera_name" value="$(arg camera_name)" />
+    <!-- Don't lock the cm frame to world -->
+    <arg name="static" value="false" />
   </include>
   
   <include unless="$(arg simulate)" file="$(find seabee3_driver)/launch/seabee3_driver.launch" >
@@ -29,7 +31,7 @@
   <include file="$(find auv_tasks)/launch/teleop_task.launch" >
   </include>
   
-  <include if="$(arg visualize)" file="$(find uscauv_visualization)/launch/imu_visualization.launch" >
-    <arg name="driver" value="false" />
-  </include>
+  <!-- <include if="$(arg visualize)" file="$(find uscauv_visualization)/launch/imu_visualization.launch" > -->
+  <!--   <arg name="driver" value="false" /> -->
+  <!-- </include> -->
 </launch>
