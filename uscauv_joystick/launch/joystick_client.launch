@@ -1,0 +1,24 @@
+<launch>
+  
+  <arg name="joystick" default="xbox360" />
+
+  <remap from="joystick_client/joy" to="/joy" />  
+
+  <include file="$(find uscauv_joystick)/launch/joystick_driver.launch" >
+    <arg name="type" value="$(arg joystick)" />
+  </include>
+
+  <arg name="pkg" value="uscauv_joystick" />
+  <arg name="name" value="joystick_client" />
+  <arg name="type" default="$(arg name)" />
+  <arg name="rate" default="60" />
+  <arg name="args" value="_loop_rate:=$(arg rate)" />
+
+  <node
+      pkg="$(arg pkg)"
+      type="$(arg type)"
+      name="$(arg name)"
+      args="$(arg args)"
+      output="screen" />
+  
+</launch>

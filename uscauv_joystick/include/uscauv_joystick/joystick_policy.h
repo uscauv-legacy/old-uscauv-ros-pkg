@@ -45,9 +45,9 @@
 
 #define JOYSTICKPOLICY_CHECK_ENABLED()					\
   if ( !(initialized_ && cached_) ){					\
-    ROS_DEBUG("Joystick policy [ %s ] is not ready.", name_.c_str() ); return false; }
-#define JOYSTICKPOLICY_LOOKUP_TRYCATCH(__Statement) \
-  try { __Statement; } catch( std::exception const &ex) \
+    ROS_DEBUG("Joystick policy is not ready."); return false; }
+#define JOYSTICKPOLICY_LOOKUP_TRYCATCH(__Statement)			\
+  try { __Statement; } catch( std::exception const &ex)			\
   { ROS_WARN("Joystick mapping lookup failed [ %s ].", ex.what() ); }
 
 
@@ -69,8 +69,6 @@ class JoystickPolicy
   ros::Subscriber joy_sub_;
 
   /// variables
-  std::string name_;
-
   bool initialized_, cached_;
   long unsigned int msg_count_;
 
@@ -84,9 +82,8 @@ class JoystickPolicy
   _CallbackType external_callback_;
 
  public:
-  JoystickPolicy(std::string const & name):
+  JoystickPolicy():
   nh_rel_("~"),
-  name_(name),
   initialized_( false ),
   cached_( false ),
   msg_count_( 0 )
@@ -111,7 +108,7 @@ class JoystickPolicy
     /// load the button mappings ------------------------------------
     if( !nh.getParam( "joystick/assignments", assignments ))
       {
-	ROS_WARN("Joystick policy [ %s ] failed to load joystick assignments.", name_.c_str());
+	ROS_WARN("Joystick policy failed to load joystick assignments." );
 	return;
       }
 
@@ -147,7 +144,6 @@ class JoystickPolicy
     return;
   }
   
-  /// TODO: Fix cached criteria
   void joyCallback(const _JoyMsg::ConstPtr & msg )
   {
     if( msg->axes.size() != axes_msg_map_.size() || msg->buttons.size() != button_msg_map_.size() )
