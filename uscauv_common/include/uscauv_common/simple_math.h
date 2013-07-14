@@ -49,47 +49,13 @@ namespace uscauv
   static double const PI_TWO = 1.5707963267948965579989817342720925807952880859375;
   
   /// Integer case
-  int algebraic_mod(int const & a, int const & b = 0)
-  {
-    if( b == 0 )
-      return a;
-    
-    return (a%b+b)%b;
-  }
+  int algebraic_mod(int const & a, int const & b = 0);
   
   /// Floating point case
-  double algebraic_mod(double  const & a, double const & b = 0)
-    {
-      if( b == 0.0 )
-	return a;
-
-      double m = a - b*floor(a/b);
-
-      if( b > 0)
-	{
-	  if( m < 0 )
-	    {
-	      if( b+m >= b)
-		return 0.0;
-	      else return b+m;
-	    }
-	}
-      else
-	{
-	  if( m <= b)
-	    return 0;
-	  if( m > 0 )
-	    {
-	      if(b + m == b)
-		return 0;
-	      else return b+m;
-	    }
-	}
-      return m;
-    }
+  double algebraic_mod(double  const & a, double const & b = 0);
   
   template<typename __NumericType>
-    __NumericType ring_difference(__NumericType const & a, __NumericType const & b = 0, __NumericType const & range = TWO_PI)
+    static __NumericType ring_difference(__NumericType const & a, __NumericType const & b = 0, __NumericType const & range = TWO_PI)
   {
     __NumericType const x = algebraic_mod(a - b, range);
     __NumericType const y = algebraic_mod(b - a, range);
@@ -98,13 +64,13 @@ namespace uscauv
   }
 
   template<typename __NumericType>
-    __NumericType ring_distance(__NumericType const & a, __NumericType const & b = 0, __NumericType const & range = TWO_PI)
+    static __NumericType ring_distance(__NumericType const & a, __NumericType const & b = 0, __NumericType const & range = TWO_PI)
   {
     return std::min( algebraic_mod(a - b, range), algebraic_mod(b - a, range) );
   }
 
   template<typename __NumericType>
-    __NumericType clamp(__NumericType const & value, __NumericType const & upper, __NumericType const & lower )
+    static __NumericType clamp(__NumericType const & value, __NumericType const & upper, __NumericType const & lower )
     {
       return ( value > upper ) ? upper : ( value < lower ) ? lower : value;
     }

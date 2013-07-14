@@ -43,21 +43,24 @@
 #include <dynamic_reconfigure/server.h>
 #include <auv_controls/PIDConfig.h>
 
-/// generic controller array
-#include <auv_controls/controller.h>
-
 #include <auv_controls/FeedbackLoop.h>
 
+#include <uscauv_common/simple_math.h>
+
+namespace uscauv
+{
 
 class ReconfigurablePIDSettings
 {
- public:
-  double p_, i_, d_;
-  std::string name_;
-
  private:
   typedef auv_controls::PIDConfig _PIDConfig;
   typedef dynamic_reconfigure::Server<_PIDConfig> _PIDReconfigureServer;
+
+ public:
+  _PIDConfig config_;
+  std::string name_;
+
+ private:
   
   ros::NodeHandle nh_rel_, nh_pid_;
   std::shared_ptr<_PIDReconfigureServer> reconfigure_server_;
@@ -66,10 +69,7 @@ class ReconfigurablePIDSettings
   
  public:
   /// TODO: Modify so that ROS doesn't need to be running when the class is constructed
- ReconfigurablePIDSettings(double const & p = 1.0f, double const & i = 0.0f, double const & d = 0.0f):
-  p_( p ),
-  i_( i ),
-  d_( d ),
+ ReconfigurablePIDSettings():
   nh_rel_( "~" )
   {
   }
@@ -95,9 +95,7 @@ class ReconfigurablePIDSettings
 
   void reconfigureCallback( _PIDConfig & config, uint32_t level )
   {
-    p_ = config.p_gain;
-    i_ = config.i_gain;
-    d_ = config.d_gain;
+    config_ = config;
 
     if ( settings_changed_callback_ )
       {
@@ -188,19 +186,25 @@ class PID1D
   
   double update()
   {
+    auv_controls::PIDConfig const & config = settings_.config_;
+    
     ros::Time now = ros::Time::now();
     
     double dt = (now - last_update_time_).toSec();
 
     /// error terms
-    double error = setpoint_ - observed_value_;
+    double error;
+    if( config.use_mod )
+      error = uscauv::ring_difference( setpoint_, observed_value_, config.mod_val );
+    else
+      error = setpoint_ - observed_value_;
     double dedt = (error - last_error_) / dt;
     integral_term_ += error * dt;
     last_error_ = error;
     
-    double const & p = settings_.p_;
-    double const & i = settings_.i_;
-    double const & d = settings_.d_;
+    double const & p = config.p_gain;
+    double const & i = config.i_gain;
+    double const & d = config.d_gain;
 
     double output = p*error + i*integral_term_ + d*dedt;
         
@@ -232,4 +236,4 @@ class PID1D
    
 };
 
-typedef ControllerND<PID1D, 6> PID6D;
+} //uscauv

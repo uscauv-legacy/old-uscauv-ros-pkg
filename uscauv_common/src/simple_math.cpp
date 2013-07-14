@@ -37,3 +37,46 @@
 
 
 #include <uscauv_common/simple_math.h>
+
+namespace uscauv
+{
+  
+int algebraic_mod(int const & a, int const & b)
+  {
+    if( b == 0 )
+      return a;
+    
+    return (a%b+b)%b;
+  }
+
+  double algebraic_mod(double  const & a, double const & b)
+    {
+      if( b == 0.0 )
+	return a;
+
+      double m = a - b*floor(a/b);
+
+      if( b > 0)
+	{
+	  if( m < 0 )
+	    {
+	      if( b+m >= b)
+		return 0.0;
+	      else return b+m;
+	    }
+	}
+      else
+	{
+	  if( m <= b)
+	    return 0;
+	  if( m > 0 )
+	    {
+	      if(b + m == b)
+		return 0;
+	      else return b+m;
+	    }
+	}
+      return m;
+    }
+  
+}
