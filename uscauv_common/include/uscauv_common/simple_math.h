@@ -103,6 +103,12 @@ namespace uscauv
     return std::min( algebraic_mod(a - b, range), algebraic_mod(b - a, range) );
   }
 
-}
+  template<typename __NumericType>
+    __NumericType clamp(__NumericType const & value, __NumericType const & upper, __NumericType const & lower )
+    {
+      return ( value > upper ) ? upper : ( value < lower ) ? lower : value;
+    }
+
+} // uscauv
 
 #endif // USCAUV_USCAUVCOMMON_SIMPLEMATH
