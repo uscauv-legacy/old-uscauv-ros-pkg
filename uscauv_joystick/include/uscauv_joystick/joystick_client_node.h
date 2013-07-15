@@ -68,7 +68,9 @@ class JoystickClientNode: public BaseNode, public JoystickPolicy
   // Running spin() will cause this function to be called before the node begins looping the spinOnce() function.
   void spinFirst()
   {
-    axis_command_pub_ = nh_rel_.advertise<_MaskedTwistMsg>("axis_cmd", 10);
+    ros::NodeHandle nh;
+    
+    axis_command_pub_ = nh.advertise<_MaskedTwistMsg>("control_server/axis_cmd", 10);
     
     /// joystickCallback() will be called everytime we get a new joystick message
     initJoystick( &JoystickClientNode::joystickCallback, this );

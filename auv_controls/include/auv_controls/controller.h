@@ -133,7 +133,7 @@ namespace uscauv
 
       enum Axes
       { SURGE = 0, SWAY = 1, HEAVE = 2,
-	YAW = 3,   PITCH = 4,  ROLL = 5   };
+	YAW = 3,   PITCH = 4,  ROLL = 5 };
 
       void loadController()
       {

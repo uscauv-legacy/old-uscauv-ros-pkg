@@ -1,0 +1,7 @@
+<launch>
+
+  <include file="$(find uscauv_visualization)/launch/object_visualizer.launch" />
+
+  <include ns="model" file="$(find object_model)/launch/upload_objects.launch" />
+  
+</launch>
