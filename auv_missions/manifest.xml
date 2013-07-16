@@ -1,0 +1,33 @@
+<package>
+  <description brief="auv_missions">
+
+     auv_missions
+
+  </description>
+  <author>nalyd</author>
+  <license>BSD</license>
+  <review status="unreviewed" notes=""/>
+  <url>http://ros.org/wiki/auv_missions</url>
+
+  <depend package="roscpp" />
+  <depend package="cpp11" />
+
+  <depend package="uscauv_common" />
+  <depend package="seabee3_common" />
+
+  <depend package="auv_physics" />
+  <depend package="auv_controls" />
+  
+  <depend package="auv_msgs" />
+  <depend package="seabee3_msgs" />
+
+  <depend package="tf" />
+  <depend package="eigen_conversions" />
+  
+  <export>
+    <cpp cflags="-I${prefix}/include -I${prefix}/cfg/cpp" lflags="-L${prefix}/lib -Wl,-rpath,${prefix}/lib -lauv_missions"/>
+  </export>
+
+</package>
+
+

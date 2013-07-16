@@ -149,10 +149,10 @@ QUICKDEV_DECLARE_NODE_CLASS( Seabee3Driver )
         (
             nh_rel,
             {
-                "/seabee3/depth",
-                "/seabee3/kill_switch",
-                "/seabee3/internal_pressure",
-                "/seabee3/external_pressure"
+                "/robot/sensors/depth",
+                "/robot/sensors/kill_switch",
+                "/robot/sensors/internal_pressure",
+                "/robot/sensors/external_pressure"
             }
         );
 /*

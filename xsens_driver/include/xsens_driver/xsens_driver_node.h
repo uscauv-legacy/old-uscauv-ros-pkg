@@ -299,7 +299,7 @@ private:
         _SeabeeImuMsg seabee_imu_msg;
 
         imu_msg.header.stamp = now;
-        imu_msg.header.frame_id = "/seabee3/sensors/imu";
+        imu_msg.header.frame_id = "/robot/sensors/imu";
 
         // our rotation vector from the IMU; convert from degrees to radians
         tf::Vector3 const orientation_rpy = toRad( unit::convert<tf::Vector3>( imu_driver_ptr_->ori_ ) );
@@ -365,7 +365,7 @@ private:
         seabee_imu_msg.ori = unit::implicit_convert( temp );
 */
 
-        _TfTranceiverPolicy::publishTransform( tf::Transform( orientation_with_offset, tf::Vector3( 0, 0, 0 ) ), "/world", "/seabee3/sensors/imu", now );
+        _TfTranceiverPolicy::publishTransform( tf::Transform( orientation_with_offset, tf::Vector3( 0, 0, 0 ) ), "/world", "/robot/sensors/imu", now );
         multi_pub_.publish( "imu", imu_msg, "rot_comp_imu", rot_comp_imu_msg, "seabee_imu", seabee_imu_msg );
         //imu_pub_raw_.publish( msg_raw );
     }

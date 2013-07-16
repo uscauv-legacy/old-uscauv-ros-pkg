@@ -1,8 +1,10 @@
 /***************************************************************************
- *  include/uscauv_common/base_node.h
+ *  src/mission_control_policy.cpp
  *  --------------------
  *
- *  Copyright (c) 2013, Dylan Foster
+ *  Software License Agreement (BSD License)
+ *
+ *  Copyright (c) 2013, Dylan Foster (turtlecannon@gmail.com)
  *  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
@@ -33,80 +35,5 @@
  *
  **************************************************************************/
 
-#ifndef USCAUV_USCAUVCOMMON_BASENODE
-#define USCAUV_USCAUVCOMMON_BASENODE
 
-#include <ros/ros.h>
-#include <uscauv_common/param_loader.h>
-#include <uscauv_common/defaults.h>
-
-class BaseNode
-{
- private:
-  /// ROS interfaces
-  ros::NodeHandle nh_rel_;
-
-  const std::string node_name_;
-  
-  double loop_rate_hz_;
-
-  bool running_;
-
- protected:
-
-  /// Running spin() will cause this function to be called before the node begins looping the spinOnce() function.
-  virtual void spinFirst() = 0;
-
-  /// Running spin() will cause this function to get called at the loop rate until this node is killed.
-  virtual void spinOnce() = 0;
-
- public:
-
- BaseNode(std::string const & node_name):
-  nh_rel_("~"),
-  node_name_(node_name),
-  running_(false)
-  {}
-
-  void spin()
-  {
-    ROS_INFO( "Spinning up %s...", node_name_.c_str() );
-    
-    loop_rate_hz_ = uscauv::param::load<double>( nh_rel_, "loop_rate", double(10) );
-
-    ros::Rate loop_rate( loop_rate_hz_ );
-
-    spinFirst();
-
-    ROS_INFO( "%s is spinning at %.2f Hz.", node_name_.c_str(), loop_rate_hz_ ); 
-    
-    running_ = true;
-
-    while( ros::ok() )
-      {
-	spinOnce();
-	ros::spinOnce();
-	loop_rate.sleep();
-      }
-    
-    return;
-  }
-
-  std::string const & getNodeName()
-    {
-      return node_name_;
-    }
-
-  double const & getLoopRate()
-  {
-    return loop_rate_hz_;
-  }
-
-  bool const & running()
-  {
-    return running_;
-  }
-
-};
-
-#endif // USCAUV_USCAUVCOMMON_BASENODE
+#include <auv_missions/mission_control_policy.h>
