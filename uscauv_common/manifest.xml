@@ -12,6 +12,7 @@
   <depend package="roscpp" />
   <depend package="tf" />
   <depend package="cpp11" />
+  <depend package="dynamic_reconfigure" />
 
   <!-- Image processing -->
   <depend package="sensor_msgs" />

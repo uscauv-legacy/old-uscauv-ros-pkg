@@ -42,7 +42,8 @@
 // ROS
 #include <ros/ros.h>
 
-#include <tf/LinearMath/Transform.h>
+#include <tf/transform_datatypes.h>
+
 #include <image_geometry/pinhole_camera_model.h>
 #include <opencv2/core/core.hpp>
 

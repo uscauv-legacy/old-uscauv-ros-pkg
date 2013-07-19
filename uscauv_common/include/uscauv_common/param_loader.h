@@ -112,21 +112,21 @@ namespace uscauv
 	  {
 	    std::map<std::string, __NestedParamType> output;
 
-	    for( XmlRpcValue::ValueStruct::value_type & elem : param )
+	    for( XmlRpcValue::iterator xml_it = param.begin(); xml_it != param.end(); ++xml_it )
 	      {
 		std::pair<std::string, __NestedParamType> p;
 
 		try
 		  {
-		    p = std::make_pair( elem.first, XmlRpcValueConverter<__NestedParamType>::convert( elem.second ) );
+		    p = std::make_pair( xml_it->first, XmlRpcValueConverter<__NestedParamType>::convert( xml_it->second ) );
 		  }
 		catch( typename XmlRpc::XmlRpcException & ex)
 		  {
-		    ROS_WARN("Caught XmlRpc exception [ %s ] loading element [ %s ]. Skipping...", ex.getMessage().c_str(), elem.first.c_str());
+		    ROS_WARN("Caught XmlRpc exception [ %s ] loading element [ %s ]. Skipping...", ex.getMessage().c_str(), xml_it->first.c_str());
 		    continue;
 		  }
 	    
-		ROS_INFO("Loaded map param element [ %s ].", elem.first.c_str() );
+		ROS_INFO("Loaded map param element [ %s ].", xml_it->first.c_str() );
 		output.insert( p );
 	      }
 	
