@@ -97,7 +97,7 @@ namespace uscauv
     std::vector< quickdev::SimpleActionToken > active_tokens_;
 
     /// other
-    double mission_loop_rate_hz_;
+    double action_loop_rate_hz_;
     double control_loop_rate_hz_;
     bool auto_start_;
      
@@ -113,7 +113,7 @@ namespace uscauv
       {
 	ros::NodeHandle nh;
 
-	mission_loop_rate_hz_ = uscauv::param::load<double>( nh_rel_, "mission_loop_rate", 60 );
+	action_loop_rate_hz_ = uscauv::param::load<double>( nh_rel_, "action_loop_rate", 60 );
 	control_loop_rate_hz_ = uscauv::param::load<double>( nh_rel_, "control_loop_rate", 60 );
 
 	/**
@@ -131,7 +131,6 @@ namespace uscauv
 
 	/// Start external main loop thread
 	boost::thread main_loop_thread( &MissionControlPolicy::missionControlThread, this, boost::protect( boost::bind( std::forward<__BoundArgs>( bound_args )...) ) );
-
 	main_loop_thread.detach();
 
 	boost::thread control_loop_thread( &MissionControlPolicy::updateTransformsThread, this );
@@ -145,7 +144,59 @@ namespace uscauv
     // ################################################################
 
   public:
+    
+    /// Assumes positive Z axis pointing toward the bottom of the pool
+    quickdev::SimpleActionToken diveTo( double const & depth )
+      {
+	quickdev::SimpleActionToken token;
+	token.start( &MissionControlPolicy::diveTo_impl, this, token, depth );
+	
+	return token;
+      }
+    
+  private:
+    
+    void diveTo_impl( quickdev::SimpleActionToken token, double const & depth )
+    {
+      ros::Rate loop_rate( action_loop_rate_hz_ );
 
+      while( ros::ok() && token() )
+	{
+	  
+	  /// Lock the depth message
+	  {
+	    std::unique_lock< std::mutex > depth_lock( last_depth_msg_mutex_ );
+
+	    if( !last_depth_msg_ ) continue;
+	    
+
+	    /// Lock the transforms
+	    {
+	      std::unique_lock<std::mutex> tf_lock( control_tf_mutex_ );
+
+	      /// Depth outside this function is expressed with Z axis pointing out of pool
+	      world_to_desired_tf_.getOrigin().setZ( -1.0 * depth );
+	      
+	      
+	      /// TODO: Change depth delta to something that's not a guess
+	      if( std::abs( world_to_desired_tf_.getOrigin().getZ() -
+			    world_to_measurement_tf_.getOrigin().getZ() ) < 0.05 && !token.success() )
+		{
+		  ROS_INFO("Reached target depth [ %f ]. ", depth );
+		  token.succeed();		  
+		}
+	      
+	      
+	      world_to_measurement_tf_.getOrigin().setZ( last_depth_msg_->value );
+	    }
+	    
+	  }
+	  
+	  loop_rate.sleep();
+	}
+      
+      token.complete();
+    }
     
 
     // ################################################################
@@ -156,11 +207,9 @@ namespace uscauv
 
     void depthCallback( _DepthMsg::ConstPtr const & msg )
     {
-      std::unique_lock< std::mutex > lock( last_depth_msg_mutex_, std::try_to_lock );
-      if( lock )
-	{
-	  last_depth_msg_ = msg;
-	}
+      std::unique_lock< std::mutex > lock( last_depth_msg_mutex_ );
+
+      last_depth_msg_ = msg;
     }
 
     void killswitchCallback( _KillswitchMsg::ConstPtr const & msg )

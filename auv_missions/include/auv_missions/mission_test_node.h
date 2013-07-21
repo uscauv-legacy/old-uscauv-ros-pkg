@@ -48,6 +48,8 @@
 
 #include <boost/thread/thread.hpp>
 
+using namespace quickdev;
+
 class MissionTestNode: public BaseNode, public uscauv::MissionControlPolicy
 {
   
@@ -63,15 +65,21 @@ class MissionTestNode: public BaseNode, public uscauv::MissionControlPolicy
      {
        startMissionControl( &MissionTestNode::missionPlan, this );
      }  
-
+  
   void missionPlan()
   {
     
+    SimpleActionToken dive_token = diveTo( 0.5 );
+    
+    dive_token.wait();
+
     /// Good to know:
-    quickdev::SimpleActionToken bad_token;
-    bad_token.start( [&](){ bad_token.complete(true); } );
-    if( bad_token.wait(5) )
-      ROS_INFO("Great job!");
+    /* quickdev::SimpleActionToken bad_token; */
+    /* bad_token.start( [&](){ return; } ); */
+    /* if( bad_token.wait(5) ) */
+    /*   ROS_INFO("Great job!"); */
+    /* else */
+    /*   ROS_INFO("You fucked up"); */
     
     /* ROS_INFO("Worker thread is entering sleep."); */
     /* boost::this_thread::sleep( boost::posix_time::milliseconds(100000) ); */

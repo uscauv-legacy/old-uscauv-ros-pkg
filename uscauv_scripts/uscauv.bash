@@ -275,5 +275,15 @@ alias get_image_header="grep header -A 10"
 alias uscauv-calibrate="rosservice call /xsens_driver/calibrate_rpy_ori 100 && rosservice call /seabee3/calibrate_surface_pressure 10"
 alias uscauv-reconfigure="rosrun rqt_reconfigure rqt_reconfigure"
 
+function uscauv-publish-depth()
+{
+    rostopic pub /robot/sensors/depth seabee3_msgs/Depth $@
+}
+
+function uscauv-publish-killswitch()
+{
+    rostopic pub /robot/sensors/kill_switch seabee3_msgs/KillSwitch $@
+}
+
 ## The greatest idea ###########################################
 alias roslaunch="uscauv-print-logo && roslaunch $@"

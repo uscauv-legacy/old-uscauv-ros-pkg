@@ -110,6 +110,9 @@ class ControlServerNode: public BaseNode, public uscauv::PID6D
   // Running spin() will cause this function to get called at the loop rate until this node is killed.
   void spinOnce()
   {
+    /// get latest transforms
+    updatePoseCommand();
+
     AxisValueVector axis_control = updateAllPID();
 
     auv_msgs::MotorPowerArray motor_control = thruster_axis_model_.AxisToMotorArray( axis_control );
