@@ -66,10 +66,16 @@ class MissionTestNode: public BaseNode, public uscauv::MissionControlPolicy
 
   void missionPlan()
   {
-    /* boost::this_thread::interruption_point(); */
-    ROS_INFO("Worker thread is entering sleep.");
-    boost::this_thread::sleep( boost::posix_time::milliseconds(100000) );
-    ROS_INFO("Worker thread finished sleeping..");
+    
+    /// Good to know:
+    quickdev::SimpleActionToken bad_token;
+    bad_token.start( [&](){ bad_token.complete(true); } );
+    if( bad_token.wait(5) )
+      ROS_INFO("Great job!");
+    
+    /* ROS_INFO("Worker thread is entering sleep."); */
+    /* boost::this_thread::sleep( boost::posix_time::milliseconds(100000) ); */
+    /* ROS_INFO("Worker thread finished sleeping.."); */
 			       
   }
 

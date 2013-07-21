@@ -4,7 +4,7 @@
   <arg name="name" value="mission_test" />
   <arg name="type" default="$(arg name)" />
   <arg name="rate" default="60" />
-  <arg name="args" value="_loop_rate:=$(arg rate)" />
+  <arg name="args" value="_loop_rate:=$(arg rate) _auto_start:=true" />
 
   <node
       pkg="$(arg pkg)"

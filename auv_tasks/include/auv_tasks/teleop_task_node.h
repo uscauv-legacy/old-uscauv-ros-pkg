@@ -57,7 +57,7 @@
 #include <seabee3_msgs/Depth.h>
 #include <seabee3_common/movement.h>
 
-#include<algorithm>
+#include <algorithm>
 
 typedef seabee3_msgs::MotorVals _MotorValsMsg;
 typedef seabee3_msgs::Depth _DepthMsg;
@@ -127,7 +127,7 @@ class TeleopTaskNode: public TaskExecutorNode, public JoystickPolicy
     /// TODO: Load this as param
     imu_frame_name_ = "/seabee3/sensors/imu";
     follow_timeout_ = 5000; // milliseconds
-    ambient_depth_ = -.1;
+    ambient_depth_ = -1;
 
     motor_vals_pub_ = nh_rel_.advertise<_MotorValsMsg>("motor_vals", 1);
 
@@ -173,6 +173,8 @@ class TeleopTaskNode: public TaskExecutorNode, public JoystickPolicy
 	controller_.setObserved<5>(roll);
 	    
       }
+    controller_.setObserved<2>(last_depth_msg_.value);
+    controller_.setSetpoint<2>(ambient_depth_);
     
     if( getButton("enable" ) )
       {
@@ -217,8 +219,8 @@ class TeleopTaskNode: public TaskExecutorNode, public JoystickPolicy
 	    controller_.setSetpoint<1>( getAxis("linear.y")*100 );
 	    float z = z_pose_.getPose().getOrigin().z();
 	    z = ( z > 0 ) ? 0 : z; /// If z > 0, the robot is not in the pool
-	    controller_.setSetpoint<2>( z );
-	    ROS_INFO("Setting z setpoint to %f.", z);
+	    /* controller_.setSetpoint<2>( z ); */
+	    /* ROS_INFO("Setting z setpoint to %f.", z); */
 	
 	    controller_.setSetpoint<3>( getAxis("angular.z")*180 );
 	
@@ -252,12 +254,12 @@ class TeleopTaskNode: public TaskExecutorNode, public JoystickPolicy
       {
 	controller_.setObserved<0>(0);
 	controller_.setObserved<1>(0);
-	controller_.setObserved<2>(last_depth_msg_.value);
+	/* controller_.setObserved<2>(last_depth_msg_.value); */
 	controller_.setObserved<3>(0);
 
 	controller_.setSetpoint<0>(0);
 	controller_.setSetpoint<1>(0);
-	controller_.setSetpoint<2>(ambient_depth_);
+	/* controller_.setSetpoint<2>(ambient_depth_); */
 	controller_.setSetpoint<3>(0);
 	controller_.setSetpoint<4>(0);
 	controller_.setSetpoint<5>(0);

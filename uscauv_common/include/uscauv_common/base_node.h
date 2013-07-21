@@ -55,10 +55,10 @@ class BaseNode
  protected:
 
   /// Running spin() will cause this function to be called before the node begins looping the spinOnce() function.
-  virtual void spinFirst() = 0;
+  virtual void spinFirst() {};
 
   /// Running spin() will cause this function to get called at the loop rate until this node is killed.
-  virtual void spinOnce() = 0;
+  virtual void spinOnce() {};
 
  public:
 

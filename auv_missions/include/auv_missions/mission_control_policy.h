@@ -56,7 +56,10 @@
 #include <seabee3_msgs/KillSwitch.h>
 
 /// quickdev
-#include <quickdev/action_token.h>
+#include <uscauv_common/action_token.h>
+
+/// uscauv
+#include <uscauv_common/param_loader.h>
 
 namespace uscauv
 {
@@ -92,6 +95,11 @@ namespace uscauv
 
     /// actions
     std::vector< quickdev::SimpleActionToken > active_tokens_;
+
+    /// other
+    double mission_loop_rate_hz_;
+    double control_loop_rate_hz_;
+    bool auto_start_;
      
   public:
   MissionControlPolicy(): nh_rel_( "~" ), 
@@ -103,17 +111,32 @@ namespace uscauv
     template<class... __BoundArgs>
       void startMissionControl( __BoundArgs&&... bound_args )
       {
-	/// Start ros interfaces
-	depth_sub_ = nh_rel_.subscribe("robot/sensors/depth", 10,
-				       &MissionControlPolicy::depthCallback, this );
+	ros::NodeHandle nh;
 
-	killswitch_sub_ = nh_rel_.subscribe("robot/sensors/kill_switch", 10,
+	mission_loop_rate_hz_ = uscauv::param::load<double>( nh_rel_, "mission_loop_rate", 60 );
+	control_loop_rate_hz_ = uscauv::param::load<double>( nh_rel_, "control_loop_rate", 60 );
+
+	/**
+	 * Note: Killswitch condition logic gets a little messed up when this param is used. 
+	 * Don't set while using the real robot
+	 */
+	auto_start_ = uscauv::param::load<bool>( nh_rel_, "auto_start", false );
+	
+	/// Start ros interfaces
+	depth_sub_ = nh.subscribe("robot/sensors/depth", 10,
+				  &MissionControlPolicy::depthCallback, this );
+
+	killswitch_sub_ = nh.subscribe("robot/sensors/kill_switch", 10,
 				       &MissionControlPolicy::killswitchCallback, this );
 
 	/// Start external main loop thread
 	boost::thread main_loop_thread( &MissionControlPolicy::missionControlThread, this, boost::protect( boost::bind( std::forward<__BoundArgs>( bound_args )...) ) );
 
 	main_loop_thread.detach();
+
+	boost::thread control_loop_thread( &MissionControlPolicy::updateTransformsThread, this );
+	control_loop_thread.detach();
+	
 	return;
       }
     
@@ -131,27 +154,6 @@ namespace uscauv
 
   private:
 
-    /// Broadcast the current value of world_to_desired and world_to_measurement
-    void updateTransforms()
-    {
-      std::unique_lock< std::mutex > lock( control_tf_mutex_, std::try_to_lock );
-      if( lock )
-	{
-	  ros::Time now = ros::Time::now();
-	  
-	  std::vector< tf::StampedTransform > controls;
-
-	  tf::StampedTransform desired( world_to_desired_tf_, now,
-					"/world", "robot/controls/desired" );
-	  tf::StampedTransform measurement( world_to_measurement_tf_, now,
-					"/world", "robot/controls/measurement" );
-
-	  controls.push_back( desired ); controls.push_back( measurement );
-
-	  control_tf_broadcaster_.sendTransform( controls );
-	}
-    }
-
     void depthCallback( _DepthMsg::ConstPtr const & msg )
     {
       std::unique_lock< std::mutex > lock( last_depth_msg_mutex_, std::try_to_lock );
@@ -163,19 +165,16 @@ namespace uscauv
 
     void killswitchCallback( _KillswitchMsg::ConstPtr const & msg )
     {
-      /// TODO: Figure out if I should try to lock or really lock here
-      std::unique_lock< std::mutex > lock( last_killswitch_msg_mutex_, std::try_to_lock );
-      if( lock )
+      std::unique_lock< std::mutex > lock( last_killswitch_msg_mutex_ );
+
+      if( last_killswitch_msg_ )
 	{
-	  if( last_killswitch_msg_ )
-	    {
-	      if( !last_killswitch_msg_->is_killed && msg->is_killed )
-		killswitch_disabled_condition_.notify_all();
-	      else if( last_killswitch_msg_->is_killed && !msg->is_killed )
-		killswitch_enabled_condition_.notify_all();
-	    }
-	  last_killswitch_msg_ = msg;
+	  if( !last_killswitch_msg_->is_killed && msg->is_killed )
+	    killswitch_disabled_condition_.notify_all();
+	  else if( last_killswitch_msg_->is_killed && !msg->is_killed )
+	    killswitch_enabled_condition_.notify_all();
 	}
+      last_killswitch_msg_ = msg;
     }
     
     // ################################################################
@@ -193,38 +192,41 @@ namespace uscauv
       while( ros::ok() )
 	{
 	  /// Wait until killswitch is enabled
-	  {
-	    ROS_INFO("Waiting for killswitch enable.");
-
-	    std::unique_lock<std::mutex> killswitch_enabled_lock( killswitch_enabled_mutex_ );
+	  if( !auto_start_ )
+	    {
+	      std::unique_lock<std::mutex> killswitch_enabled_lock( killswitch_enabled_mutex_ );
 	    
-	    killswitch_enabled_condition_.wait( killswitch_enabled_lock );
-	  }
+	      ROS_INFO("Waiting for killswitch enable.");
+
+	      killswitch_enabled_condition_.wait( killswitch_enabled_lock );
+	    }
+	  else
+	    auto_start_ = false;
 	  
 	  ROS_INFO("Killswitch enabled. Launching Mission Plan thread..." );
-
-	   boost::thread external_loop_thread( &MissionControlPolicy::missionPlanThread, this, mission_plan_function );
-
-	   /// Wait for killswitch to be disabled
-	   {
-	     std::unique_lock<std::mutex> killswitch_disabled_lock( killswitch_disabled_mutex_ );
-
-	     killswitch_disabled_condition_.wait( killswitch_disabled_lock );
-	   }
-
-	   ROS_INFO("Killswitch disabled. Cancelling all active action tokens...");
-	   
-	   /// Cancel all tokens
-	   for( quickdev::SimpleActionToken & action : active_tokens_ )
-	     {
-	       action.cancel();
-	     }
-	   active_tokens_.clear();
-	   
-	   ROS_INFO("Killing Mission Plan thread...");
-	   external_loop_thread.interrupt();
 	  
-	   ROS_INFO("Restarting Mission Control loop...");
+	  boost::thread external_loop_thread( &MissionControlPolicy::missionPlanThread, this, mission_plan_function );
+	  
+	  /// Wait for killswitch to be disabled
+	  {
+	    std::unique_lock<std::mutex> killswitch_disabled_lock( killswitch_disabled_mutex_ );
+	    
+	    killswitch_disabled_condition_.wait( killswitch_disabled_lock );
+	  }
+	  
+	  ROS_INFO("Killswitch disabled. Cancelling all active action tokens...");
+	  
+	  /// Cancel all tokens
+	  for( quickdev::SimpleActionToken & action : active_tokens_ )
+	    {
+	      action.complete();
+	    }
+	  active_tokens_.clear();
+	  
+	  ROS_DEBUG("Killing Mission Plan thread...");
+	  external_loop_thread.interrupt();
+	  
+	  ROS_DEBUG("Restarting Mission Control loop...");
 	}
       
       ros::shutdown();
@@ -240,11 +242,42 @@ namespace uscauv
       catch( std::exception const & ex)
 	{
 	  ROS_ERROR("Caught exception [ %s ] while trying to run Mission Plan",
-		   ex.what() );
+		    ex.what() );
 	}
       
       ROS_INFO("Mission Plan exited cleanly.");
       return;
+    }
+
+    /// Broadcast the current value of world_to_desired and world_to_measurement
+    void updateTransformsThread()
+    {
+      ros::Rate loop_rate( control_loop_rate_hz_ );
+
+      while( ros::ok() )
+	{
+	  /// Try to lock the coordinate frame transforms
+	  {
+	    std::unique_lock< std::mutex > lock( control_tf_mutex_, std::try_to_lock );
+	    if( lock )
+	      {
+		ros::Time now = ros::Time::now();
+	      
+		std::vector< tf::StampedTransform > controls;
+		
+		tf::StampedTransform desired( world_to_desired_tf_, now,
+					      "/world", "robot/controls/desired" );
+		tf::StampedTransform measurement( world_to_measurement_tf_, now,
+						  "/world", "robot/controls/measurement" );
+		
+		controls.push_back( desired ); controls.push_back( measurement );
+		
+		control_tf_broadcaster_.sendTransform( controls );
+	      }
+	  }
+	  
+	  loop_rate.sleep();
+	}
     }
     
   };
