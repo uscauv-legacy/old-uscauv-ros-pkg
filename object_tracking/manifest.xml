@@ -13,6 +13,9 @@
   <depend package="auv_msgs" />
   <depend package="image_geometry" />
   <depend package="dynamic_reconfigure" />
+  
+  <depend package="shape_matching" />
+  <depend package="color_classification" />
 
   <rosdep name="eigen" />
 

@@ -44,7 +44,9 @@
 
 // uscauv
 #include <uscauv_common/base_node.h>
+#include <uscauv_common/multi_reconfigure.h>
 
+#include <auv_controls/ControlServerConfig.h>
 #include <auv_controls/controller.h>
 #include <auv_physics/thruster_axis_model.h>
 
@@ -56,7 +58,9 @@
 static std::string const DESIRED_FRAME_NAME = "robot/controls/desired";
 static std::string const MEASUREMENT_FRAME_NAME = "robot/controls/measurement";
 
-class ControlServerNode: public BaseNode, public uscauv::PID6D
+typedef auv_controls::ControlServerConfig _ControlServerConfig;
+
+class ControlServerNode: public BaseNode, public uscauv::PID6D, MultiReconfigure
 {
  public:
   typedef Eigen::Matrix<double, 6, 1> AxisValueVector;
@@ -67,6 +71,8 @@ class ControlServerNode: public BaseNode, public uscauv::PID6D
  private:
 
   uscauv::ReconfigurableThrusterAxisModel thruster_axis_model_;
+
+  _ControlServerConfig * config_;
   
   AxisValueVector axis_command_value_, pose_command_value_;
   AxisMaskVector axis_command_mask_;
@@ -92,6 +98,9 @@ class ControlServerNode: public BaseNode, public uscauv::PID6D
 
     motor_pub_ = nh_rel_.advertise<auv_msgs::MotorPowerArray>( "motor_levels", 10 );
        
+    addReconfigureServer<_ControlServerConfig>( "scale" );
+    config_ = &getLatestConfig<_ControlServerConfig>("scale");
+
     /// Load thruster models
     thruster_axis_model_.load("robot/thrusters");
 
@@ -131,6 +140,9 @@ class ControlServerNode: public BaseNode, public uscauv::PID6D
     tf::twistMsgToEigen( msg->twist, input_value );
     tf::twistMsgToEigen( msg->mask, input_mask_float );
     input_mask_bool = input_mask_float.cast<bool>();
+
+    input_value.block(0,0,3,1) *= config_->axis_scale_linear;
+    input_value.block(3,0,3,1) *= config_->axis_scale_angular;
 
     /// TODO: Check for collisions with current pose command
     for(unsigned int idx = 0; idx < 6; ++idx)
@@ -213,6 +225,9 @@ class ControlServerNode: public BaseNode, public uscauv::PID6D
 
     AxisValueVector error_pose_value;
     error_pose_value << error_vec.x(), error_vec.y(), error_vec.z(), roll, pitch, yaw;
+
+    error_pose_value.block(0,0,3,1) *= config_->pose_scale_linear;
+    error_pose_value.block(3,0,3,1) *= config_->pose_scale_angular;
     
     pose_command_value_ = error_pose_value;
   }

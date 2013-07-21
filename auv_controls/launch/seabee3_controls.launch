@@ -16,6 +16,4 @@
     <arg name="robot" value="seabee3" />
   </include>
 
-  
-
 </launch>

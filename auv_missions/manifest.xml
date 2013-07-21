@@ -17,6 +17,7 @@
 
   <depend package="auv_physics" />
   <depend package="auv_controls" />
+  <depend package="auv_vision" />
   
   <depend package="auv_msgs" />
   <depend package="seabee3_msgs" />

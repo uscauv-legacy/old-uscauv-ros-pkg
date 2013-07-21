@@ -293,8 +293,11 @@ namespace uscauv
 	  ROS_ERROR("Caught exception [ %s ] while trying to run Mission Plan",
 		    ex.what() );
 	}
-      
-      ROS_INFO("Mission Plan exited cleanly.");
+      ROS_INFO("Mission Plan finished cleanly.");
+
+      /// Hang around until the parent thread interrupts or the program is killed
+      while(1){ boost::this_thread::interruption_point(); }
+
       return;
     }
 
