@@ -1,0 +1,12 @@
+<launch>
+
+  <!-- Convenience file for starting mission nodes and starting the robot -->
+
+  <arg name="robot" default="seabee3" />
+  <arg name="mission" default="test" />
+
+  <include file="$(find auv_missions)/launch/$(arg robot)_bringup.launch" />
+
+  <include file="$(find auv_missions)/launch/$(arg mission)_mission.launch" />
+  
+</launch>

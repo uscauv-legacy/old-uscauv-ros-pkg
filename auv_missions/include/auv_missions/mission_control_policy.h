@@ -44,6 +44,7 @@
 
 #include <tf/LinearMath/Transform.h>
 #include <tf/transform_broadcaster.h>
+#include <tf/transform_listener.h>
 
 /// cpp11
 #include <functional>
@@ -55,11 +56,10 @@
 #include <seabee3_msgs/Depth.h>
 #include <seabee3_msgs/KillSwitch.h>
 
-/// quickdev
-#include <uscauv_common/action_token.h>
-
 /// uscauv
 #include <uscauv_common/param_loader.h>
+#include <uscauv_common/action_token.h>
+#include <uscauv_common/simple_math.h>
 
 namespace uscauv
 {
@@ -76,6 +76,9 @@ namespace uscauv
     ros::Subscriber depth_sub_, killswitch_sub_;
     ros::NodeHandle nh_rel_;
     tf::TransformBroadcaster control_tf_broadcaster_;
+    /// TODO: Make sure it's alright to use this from multiple threads without synchronizing. 
+    /// Should be alright since lookupTransform and canTransform are const
+    tf::TransformListener tf_listener_;
      
     /// Sensing
     _DepthMsg::ConstPtr last_depth_msg_;
@@ -154,6 +157,17 @@ namespace uscauv
 	return token;
       }
     
+    quickdev::SimpleActionToken faceTo( double const & heading )
+      {
+	quickdev::SimpleActionToken token;
+	token.start( &MissionControlPolicy::faceTo_impl, this, token, heading );
+	return token;
+      }
+
+    // ################################################################
+    // Main API function implementation ###############################
+    // ################################################################
+
   private:
     
     void diveTo_impl( quickdev::SimpleActionToken token, double const & depth )
@@ -198,6 +212,42 @@ namespace uscauv
       token.complete();
     }
     
+    void faceTo_impl( quickdev::SimpleActionToken token, double const & heading )
+    {
+      ros::Rate loop_rate( action_loop_rate_hz_ );
+      
+      double const  normalized_heading = uscauv::algebraic_mod( heading, uscauv::TWO_PI );
+
+      while( ros::ok() && token() )
+	{
+	  tf::StampedTransform world_to_imu_tf;
+
+	  if( getTransform( "robot/sensors/imu", world_to_imu_tf ) )
+	    continue;
+
+	  double roll, pitch, yaw;
+	  world_to_imu_tf.getBasis().getRPY( roll, pitch, yaw );
+	  
+	  {
+	    std::unique_lock<std::mutex> lock( control_tf_mutex_ );
+	    
+	    setTransformYaw( world_to_desired_tf_, normalized_heading );
+	    
+	    if( uscauv::ring_distance( yaw, heading, uscauv::TWO_PI ) < uscauv::PI / 18.0 )
+	      {
+		ROS_INFO("Reached target heading [ %f ].", heading );
+		token.succeed();
+	      }   
+	    
+	    setTransformYaw( world_to_desired_tf_, yaw );
+	  }
+
+	  
+	  loop_rate.sleep();
+	}
+      
+      token.complete();
+    }
 
     // ################################################################
     // Callback functions #############################################
@@ -330,6 +380,38 @@ namespace uscauv
 	  
 	  loop_rate.sleep();
 	}
+    }
+    
+    // ################################################################
+    // Misc. ##########################################################
+    // ################################################################
+    
+    int getTransform( std::string const & target_frame, tf::StampedTransform & output )
+    {
+      if( tf_listener_.canTransform( "/world", target_frame, ros::Time(0) ))
+      {
+	try
+	  {
+	    tf_listener_.lookupTransform( "/world", target_frame, ros::Time(0), output );
+
+	  }
+	catch(tf::TransformException & ex)
+	  {
+	    ROS_ERROR( "Caught exception [ %s ] looking up transform", ex.what() );
+	    return -1;
+	  }
+	return 0;
+      }
+      else 
+	return -1;
+    }
+    
+    void setTransformYaw( tf::Transform transform, double const & yaw )
+    {
+      double roll, pitch, old_yaw;
+      transform.getBasis().getRPY( roll, pitch, old_yaw );
+      transform.getBasis().setRPY( roll, pitch, yaw );
+      return;
     }
     
   };

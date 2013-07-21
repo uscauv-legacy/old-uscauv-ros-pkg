@@ -199,7 +199,7 @@ class ControlServerNode: public BaseNode, public uscauv::PID6D, MultiReconfigure
 	    return;
 	  }
       }
-    else return;
+    else return;0
     
     if( tf_listener_.canTransform( "/world", DESIRED_FRAME_NAME, ros::Time(0) ))
       {
