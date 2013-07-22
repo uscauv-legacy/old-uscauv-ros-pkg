@@ -58,17 +58,22 @@
 
 /// uscauv
 #include <uscauv_common/param_loader.h>
+#include <uscauv_common/multi_reconfigure.h>
 #include <uscauv_common/action_token.h>
 #include <uscauv_common/simple_math.h>
+
+#include <auv_missions/MissionControlConfig.h>
 
 namespace uscauv
 {
 
-  class MissionControlPolicy
+  class MissionControlPolicy, public MultiReconfigure
   {
   private:
     typedef seabee3_msgs::Depth _DepthMsg;
     typedef seabee3_msgs::KillSwitch _KillswitchMsg;
+
+    typedef auv_missions::MissionControlConfig _MissionControlConfig;
      
   private:
    
@@ -153,7 +158,6 @@ namespace uscauv
       {
 	quickdev::SimpleActionToken token;
 	token.start( &MissionControlPolicy::diveTo_impl, this, token, depth );
-	
 	return token;
       }
     
@@ -161,6 +165,13 @@ namespace uscauv
       {
 	quickdev::SimpleActionToken token;
 	token.start( &MissionControlPolicy::faceTo_impl, this, token, heading );
+	return token;
+      }
+
+    quickdev::SimpleActionToken zeroPitchRoll()
+      {
+	quickdev::SimpleActionToken token;
+	token.start( &MissionControlPolicy::zeroPitchRoll_impl, this, token );
 	return token;
       }
 
@@ -216,7 +227,7 @@ namespace uscauv
     {
       ros::Rate loop_rate( action_loop_rate_hz_ );
       
-      double const  normalized_heading = uscauv::algebraic_mod( heading, uscauv::TWO_PI );
+      double const normalized_heading = uscauv::algebraic_mod( heading, uscauv::TWO_PI );
 
       while( ros::ok() && token() )
 	{
@@ -232,22 +243,60 @@ namespace uscauv
 	    std::unique_lock<std::mutex> lock( control_tf_mutex_ );
 	    
 	    setTransformYaw( world_to_desired_tf_, normalized_heading );
+	    setTransformYaw( world_to_measurement_tf_, yaw );
 	    
-	    if( uscauv::ring_distance( yaw, heading, uscauv::TWO_PI ) < uscauv::PI / 18.0 )
+	    /// TODO: criteria from param
+	    if( uscauv::ring_distance( yaw, heading, uscauv::TWO_PI ) < uscauv::PI / 18.0 &&
+		!token.success() )
 	      {
 		ROS_INFO("Reached target heading [ %f ].", heading );
 		token.succeed();
 	      }   
-	    
-	    setTransformYaw( world_to_desired_tf_, yaw );
-	  }
 
+	  }
 	  
 	  loop_rate.sleep();
 	}
       
       token.complete();
     }
+
+    zeroPitchRoll_impl( quickdev::SimpleActionToken token )
+      {
+	ros::Rate loop_rate( action_loop_rate_hz_ );
+      
+	while( ros::ok() && token() )
+	  {
+	    tf::StampedTransform world_to_imu_tf;
+
+	    if( getTransform( "robot/sensors/imu", world_to_imu_tf ) )
+	      continue;
+
+	    double roll, pitch, yaw;
+	    world_to_imu_tf.getBasis().getRPY( roll, pitch, yaw );
+	  
+	    {
+	      std::unique_lock<std::mutex> lock( control_tf_mutex_ );
+	      
+	      /// Set desired pitch and roll to zero, leave yaw alone
+	      setRotationMask( world_to_desired_tf_, 0, 0, 0, false, true, true );
+	      /// Set measured pitch and roll to IMU, leave yaw alone
+	      setRotationMask( world_to_measurement_tf_, 0, pitch, roll, false, true, true );
+
+	      if(  uscauv::ring_distance( pitch, 0, uscauv::TWO_PI ) < uscauv::PI / 18.0 &&
+		   uscauv::ring_distance( roll,  0, uscauv::TWO_PI ) < uscauv::PI / 18.0 &&
+		   !token.success()
+		{
+		  ROS_INFO("Zeroed out pitch and roll." );
+		  token.succeed();
+		}
+	    }
+	  
+	    loop_rate.sleep();
+	  }
+      
+	token.complete();
+      }
 
     // ################################################################
     // Callback functions #############################################
@@ -406,16 +455,72 @@ namespace uscauv
 	return -1;
     }
     
-    void setTransformYaw( tf::Transform transform, double const & yaw )
+    void setTransformYaw( tf::Transform & transform, double const & yaw )
     {
       double roll, pitch, old_yaw;
       transform.getBasis().getRPY( roll, pitch, old_yaw );
       transform.getBasis().setRPY( roll, pitch, yaw );
       return;
     }
+
+    void setRotationMask( tf::Transform & transform, double const & yaw,  double const & pitch,  double const & roll,
+			  bool const & yaw_mask = false,  bool const & pitch_mask = false,  bool const & roll_mask = false )
+    {
+      double old_roll, old_pitch, old_yaw;
+      transform.getBasis().getRPY( old_roll, old_pitch, old_yaw );
+      unsigned char mask = ( yaw_mask << 2 ) + ( pitch_mask << 1) + roll_mask;
+
+      switch (mask)
+	{
+	case 0:
+	  break
+	case 1:
+	  {
+	    transform.getBasis().getOrigin().setRPY( roll, old_pitch, old_yaw );
+	    break;
+	  }
+	case 1:
+	  {
+	    transform.getBasis().getOrigin().setRPY( roll, old_pitch, old_yaw );
+	    break;
+	  }
+	case 2:
+	  {
+	    transform.getBasis().getOrigin().setRPY( old_roll, pitch, old_yaw );
+	    break;
+	  }
+	case 3:
+	  {
+	    transform.getBasis().getOrigin().setRPY( roll, pitch, old_yaw );
+	    break;
+	  }
+	case 4:
+	  {
+	    transform.getBasis().getOrigin().setRPY( old_roll, old_pitch, yaw );
+	    break;
+	  }
+	case 5:
+	  {
+	    transform.getBasis().getOrigin().setRPY( roll, old_pitch, yaw );
+	    break;
+	  }
+	case 6:
+	  {
+	    transform.getBasis().getOrigin().setRPY( old_roll, pitch, yaw );
+	    break;
+	  }
+	case 7:
+	  {
+	    transform.getBasis().getOrigin().setRPY( roll, pitch, yaw );
+	    break;
+	  }
+	}
+
+    return;
+  }
     
   };
-    
+  
 } // uscauv
 
 #endif // USCAUV_AUVMISSIONS_MISSIONCONTROLPOLICY
