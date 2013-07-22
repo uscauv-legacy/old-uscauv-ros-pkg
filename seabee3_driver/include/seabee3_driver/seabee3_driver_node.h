@@ -216,13 +216,13 @@ QUICKDEV_DECLARE_NODE_CLASS( Seabee3Driver )
         depth_msg.value = depth;
 
         multi_pub_.publish(
-            "/seabee3/depth", depth_msg,
-            "/seabee3/kill_switch", kill_switch_msg,
-            "/seabee3/internal_pressure", intl_pressure_msg,
-            "/seabee3/external_pressure", extl_pressure_msg
+            "/robot/sensors/depth", depth_msg,
+            "/robot/sensors/kill_switch", kill_switch_msg,
+            "/robot/sensors/internal_pressure", intl_pressure_msg,
+            "/robot/sensors/external_pressure", extl_pressure_msg
         );
 
-        _TfTranceiverPolicy::publishTransform( tf::Transform( tf::Quaternion( 0, 0, 0, 1 ), tf::Vector3( 0, 0, -depth ) ), "/world", "/seabee3/sensors/depth" );
+        _TfTranceiverPolicy::publishTransform( tf::Transform( tf::Quaternion( 0, 0, 0, 1 ), tf::Vector3( 0, 0, -depth ) ), "/world", "/robot/sensors/depth" );
     }
 
     bool executeFiringDeviceAction( _FiringDeviceActionService::Request &req,

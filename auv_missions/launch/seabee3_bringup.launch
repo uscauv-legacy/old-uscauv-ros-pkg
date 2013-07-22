@@ -1,9 +1,22 @@
 <launch>
   <!-- Launch all necessary resources for mission control nodes to do their thing -->
-  
+  <arg name="simulate" default="false" />
+    
   <!-- Controls -->
   <include file="$(find auv_controls)/launch/seabee3_controls.launch" />
 
+  <!-- Seabee3 and Xsens Drivers -->
+  <group unless="$(arg simulate)" >
+
+    <remap from="seabee3/motor_vals" to="seabee3_adapter/motor_vals" />
+
+    <include file="$(find seabee3_driver)/launch/seabee3_driver.launch" >
+    </include>
+    
+    <include file="$(find xsens_driver)/launch/xsens_driver.launch" >
+    </include>
+
+  </group>
 
 
 </launch>
