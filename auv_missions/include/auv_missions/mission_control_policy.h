@@ -62,16 +62,18 @@
 #include <uscauv_common/action_token.h>
 #include <uscauv_common/simple_math.h>
 
+#include <auv_msgs/MaskedTwist.h>
 #include <auv_missions/MissionControlConfig.h>
 
 namespace uscauv
 {
 
-  class MissionControlPolicy: public MultiReconfigure
+  class MissionControlPolicy
   {
   private:
     typedef seabee3_msgs::Depth _DepthMsg;
     typedef seabee3_msgs::KillSwitch _KillswitchMsg;
+    typedef auv_msgs::MaskedTwist _MaskedTwistMsg;
 
     typedef auv_missions::MissionControlConfig _MissionControlConfig;
      
@@ -84,6 +86,8 @@ namespace uscauv
     /// TODO: Make sure it's alright to use this from multiple threads without synchronizing. 
     /// Should be alright since lookupTransform and canTransform are const
     tf::TransformListener tf_listener_;
+
+    ros::Publisher axis_command_pub_;
      
     /// Sensing
     _DepthMsg::ConstPtr last_depth_msg_;
@@ -137,6 +141,8 @@ namespace uscauv
 	killswitch_sub_ = nh.subscribe("robot/sensors/kill_switch", 10,
 				       &MissionControlPolicy::killswitchCallback, this );
 
+	axis_command_pub_ = nh.advertise<_MaskedTwistMsg>( "control_server/axis_cmd", 10 );
+
 	/// Start external main loop thread
 	boost::thread main_loop_thread( &MissionControlPolicy::missionControlThread, this, boost::protect( boost::bind( std::forward<__BoundArgs>( bound_args )...) ) );
 	main_loop_thread.detach();
@@ -182,6 +188,14 @@ namespace uscauv
 	return token;
       }
 
+    /// Move in the direction of a unit vector expressed relative to the robot's CM frame
+    quickdev::SimpleActionToken moveToward( double const & x, double const & y, double const & scale = 1 )
+      {
+	quickdev::SimpleActionToken token;
+	token.start( &MissionControlPolicy::moveToward_impl, this, token, x, y, scale );
+	return token;	
+      }
+
     // ################################################################
     // Main API function implementation ###############################
     // ################################################################
@@ -208,7 +222,7 @@ namespace uscauv
 
 	      /// Depth outside this function is expressed with Z axis pointing out of pool
 	      world_to_desired_tf_.getOrigin().setZ( -1.0 * depth );
-	      
+	      world_to_measurement_tf_.getOrigin().setZ( last_depth_msg_->value );
 	      
 	      /// TODO: Change depth delta to something that's not a guess
 	      if( std::abs( world_to_desired_tf_.getOrigin().getZ() -
@@ -217,15 +231,19 @@ namespace uscauv
 		  ROS_INFO("Reached target depth [ %f ]. ", depth );
 		  token.succeed();		  
 		}
-	      
-	      
-	      world_to_measurement_tf_.getOrigin().setZ( last_depth_msg_->value );
 	    }
 	    
 	  }
 	  
 	  loop_rate.sleep();
 	}
+      
+      /// Cancel depth trajectory
+      {
+	std::unique_lock<std::mutex> lock( control_tf_mutex_ );
+	world_to_desired_tf_.getOrigin().setZ( 0 );
+	world_to_measurement_tf_.getOrigin().setZ( 0 );
+      }
       
       token.complete();
     }
@@ -264,6 +282,13 @@ namespace uscauv
 	  
 	  loop_rate.sleep();
 	}
+
+      /// Cancel yaw trajectory
+      {
+	std::unique_lock<std::mutex> lock( control_tf_mutex_ );
+	setRotationMask( world_to_desired_tf_, 0, 0, 0, true, false, false );
+	setRotationMask( world_to_measurement_tf_, 0, 0, 0, true, false, false );
+      }
       
       token.complete();
     }
@@ -301,6 +326,13 @@ namespace uscauv
 	      
 	    loop_rate.sleep();
 	  }
+
+      /// Cancel trajectory
+      {
+	std::unique_lock<std::mutex> lock( control_tf_mutex_ );
+	setRotationMask( world_to_desired_tf_, 0, 0, 0, false, true, true );
+	setRotationMask( world_to_measurement_tf_, 0, 0, 0, false, true, true );
+      }
 	
 	token.complete();
       }
@@ -352,10 +384,50 @@ namespace uscauv
 	  
 	  loop_rate.sleep();
 	}
+
+      /// Cancel yaw trajectory
+      {
+	std::unique_lock<std::mutex> lock( control_tf_mutex_ );
+	setRotationMask( world_to_desired_tf_, 0, 0, 0, true, false, false );
+	setRotationMask( world_to_measurement_tf_, 0, 0, 0, true, false, false );
+      }
       
       token.complete();
     }
 
+    void moveToward_impl( quickdev::SimpleActionToken token, double const & x, double const & y, double const & scale )
+    {
+      	ros::Rate loop_rate( action_loop_rate_hz_ );
+      
+	double const mag = sqrt( pow(x, 2) + pow(y, 2) );
+
+	_MaskedTwistMsg axis_command;
+	axis_command.mask.linear.x  = true;
+	axis_command.mask.linear.y  = true;
+	axis_command.mask.linear.z  = false;
+	axis_command.mask.angular.x = false;
+	axis_command.mask.angular.y = false;
+	axis_command.mask.angular.z = false;
+	axis_command.twist.linear.x = x / mag * scale;
+	axis_command.twist.linear.y = y / mag * scale;
+	
+	while( ros::ok() && token() )
+	  {
+	    axis_command_pub_.publish( axis_command );
+	      
+	    loop_rate.sleep();
+	  }
+	
+	/// Cancel trajectory
+	{
+	  axis_command.twist.linear.x = 0;
+	  axis_command.twist.linear.y = 0;
+	  
+	  axis_command_pub_.publish( axis_command );
+	}
+	
+	token.complete();
+    }
   
     // ################################################################
     // Callback functions #############################################
@@ -392,7 +464,6 @@ namespace uscauv
     void missionControlThread( std::function< void() > const & mission_plan_function )
     {
       /// TODO: Wait for dervied class's spinFirst to complete
-      /* while( !running() ); */
       
       ROS_INFO( "Welcome to USC AUV Mission Control." );
       
@@ -424,6 +495,7 @@ namespace uscauv
 	  ROS_INFO("Killswitch disabled. Cancelling all active action tokens...");
 	  
 	  /// Cancel all tokens
+	  /// TODO: Find a way to ensure that all threads return before clear() is called, so that trajectories are guaranteed to be cancelled
 	  for( quickdev::SimpleActionToken & action : active_tokens_ )
 	    {
 	      action.complete();
