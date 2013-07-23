@@ -63,6 +63,7 @@
 /// object tracking
 #include <object_tracking/kalman_filter.h>
 #include <object_tracking/TrackedObjectConfig.h>
+#include <object_tracking/ObjectTrackerConfig.h>
 
 #include <sensor_msgs/CameraInfo.h>
 #include <image_geometry/pinhole_camera_model.h>
@@ -77,21 +78,21 @@ typedef std::map<std::string, XmlRpc::XmlRpcValue> _NamedXmlMap;
 typedef XmlRpc::XmlRpcValue _XmlVal;
 
 typedef object_tracking::TrackedObjectConfig _TrackedObjectConfig;
+typedef object_tracking::ObjectTrackerConfig _ObjectTrackerConfig;
 
 /// template arguments are dims for state/update/control vectors
 typedef uscauv::LinearKalmanFilter<8>   _ObjectKalmanFilter;
 typedef std::vector<_ObjectKalmanFilter> _KalmanFilterVector;
 typedef _ObjectKalmanFilter::Control<8> _FullStateControl;
 typedef _ObjectKalmanFilter::Update<4>  _PositionUpdate;
+
+/// For using estimates from optical flow - not implemented yet
 typedef _ObjectKalmanFilter::Update<2>  _FlowVelocityUpdate;
 
 /// TODO: Sort filters_ based on uncertainty
 struct ObjectTrackerStorage
 {
   std::vector<_ObjectKalmanFilter> filters_;
-  _FullStateControl::CovarianceType control_cov_;
-  _PositionUpdate::CovarianceType   update_cov_;
-  _ObjectKalmanFilter::StateMatrix  initial_cov_;
   double ideal_radius_;
   bool tracked_;
   std::string name_;
@@ -114,6 +115,7 @@ static double getGaussianPDFPosition(_PositionUpdate::VectorType x,
   _PositionUpdate::VectorType diff_term = x - mean;
   diff_term(3) = uscauv::ring_distance<double>( diff_term(3), 0, uscauv::TWO_PI );
 
+  /// mahalanobis distance
   double const md = diff_term.transpose() * cov.inverse() * diff_term;
   double const det = Eigen::PartialPivLU<_PositionUpdate::CovarianceType>(cov).determinant();
   
@@ -132,11 +134,16 @@ class UnimodalObjectTrackerNode: public BaseNode, public MultiReconfigure
   std::string const object_ns_;
   std::string depth_method_;
 
-  /// algorithmic
+  _ObjectTrackerConfig config_;
+
+  _FullStateControl::CovarianceType control_cov_;
+  _PositionUpdate::CovarianceType   update_cov_;
+  _ObjectKalmanFilter::StateMatrix  initial_cov_;
+
+  /// algorithm
   _NamedAttributeMap name_size_color_map_;
   _AttributeTrackerMap trackers_;
   _PositionUpdate::TransitionType measurement_transition_;
-  /* _ObjectKalmanFilter::StateMatrix state_transition_; */
 
   /// other
   _CameraInfo last_camera_info_;
@@ -191,6 +198,11 @@ class UnimodalObjectTrackerNode: public BaseNode, public MultiReconfigure
 	      uscauv::reprojectObjectTo3d( camera_model_, cv::Point2d( shape_it->x, shape_it->y),
 					   shape_it->scale, storage.ideal_radius_ );
 	  }
+	else
+	  {
+	    ROS_ERROR("Bad depth method.");
+	    return;
+	  }
 	
 	// ################################################################
 	// Update filter ##################################################
@@ -235,12 +247,12 @@ class UnimodalObjectTrackerNode: public BaseNode, public MultiReconfigure
 	  {
 	    _ObjectKalmanFilter::StateVector initial_state = measurement_transition_.transpose() * update_mean;
 
-	    storage.filters_.push_back( _ObjectKalmanFilter( initial_state, storage.initial_cov_ ) );
+	    storage.filters_.push_back( _ObjectKalmanFilter( initial_state, initial_cov_ ) );
 	    ROS_DEBUG_STREAM("Spawned filter ( " << initial_state.transpose() << " ).");
 	  }
 	else
 	  {
-	    storage.filters_.at(max_idx).update<4>( update_mean, storage.update_cov_, 
+	    storage.filters_.at(max_idx).update<4>( update_mean, update_cov_, 
 						    measurement_transition_ );
 	  }
 	
@@ -285,26 +297,24 @@ class UnimodalObjectTrackerNode: public BaseNode, public MultiReconfigure
 
   void updateTrackerParams(_TrackedObjectConfig const & config, std::string const & name)
   {
-    double const & cvar = config.predict_variance;
-    double const & ivar = config.initial_variance;
-    double const & uvar = config.update_variance;
-    _FullStateControl::CovarianceType control_cov;
-    _PositionUpdate::CovarianceType   update_cov;
-    _ObjectKalmanFilter::StateMatrix  initial_cov;
-
-    control_cov = _FullStateControl::CovarianceType::Identity() * cvar;
-    update_cov  = _PositionUpdate::CovarianceType::Identity() * uvar;
-    initial_cov = _ObjectKalmanFilter::StateMatrix::Identity() * ivar;
-
     ObjectTrackerStorage & tracker = trackers_.at( name_size_color_map_.at( name ) );
-
-    tracker.control_cov_ = control_cov;
-    tracker.initial_cov_ = initial_cov;
-    tracker.update_cov_ = update_cov;
 
     tracker.config_ = config;
 
     ROS_INFO("Updated tracker params [ %s ].", name.c_str() );
+  }
+
+  void reconfigureCallback( _ObjectTrackerConfig const & config )
+  {
+    double const & cvar = config.predict_variance;
+    double const & ivar = config.initial_variance;
+    double const & uvar = config.update_variance;
+
+    control_cov_ = _FullStateControl::CovarianceType::Identity() * cvar;
+    update_cov_  = _PositionUpdate::CovarianceType::Identity() * uvar;
+    initial_cov_ = _ObjectKalmanFilter::StateMatrix::Identity() * ivar;
+    
+    config_ = config;
   }
 
  private:
@@ -353,6 +363,10 @@ class UnimodalObjectTrackerNode: public BaseNode, public MultiReconfigure
     for( _NamedXmlMap::iterator object_it = xml_objects.begin(); 
 	 object_it != xml_objects.end(); ++object_it )
       {
+	/// hack
+	if( object_it->first == "global" )
+	  continue;
+	
 	std::string const attr = std::string(object_it->second["shape"]) + "/" +
 	  std::string(object_it->second["color"]);
 	name_size_color_map_[ object_it->first] = attr;
@@ -383,7 +397,10 @@ class UnimodalObjectTrackerNode: public BaseNode, public MultiReconfigure
 		 object_it->first.c_str(), attr.c_str() );
 	/* ROS_INFO_STREAM( tracker_added.filter_ ); */
       }
-    
+   
+    /// global object tracker settings ( model/objects/global )
+    addReconfigureServer<_ObjectTrackerConfig>("global", &UnimodalObjectTrackerNode::reconfigureCallback, this );
+
   }  
   
   // Running spin() will cause this function to get called at the loop rate until this node is killed.
@@ -432,10 +449,10 @@ class UnimodalObjectTrackerNode: public BaseNode, public MultiReconfigure
 	  {
 	    /// no control input
 	    filter_it->predict<8>( _FullStateControl::VectorType::Zero(),
-				   storage.control_cov_, state_transition );
+				   control_cov_, state_transition );
 	    
 	    double const det = Eigen::PartialPivLU<_ObjectKalmanFilter::StateMatrix>( filter_it->cov_ ).determinant();
-	    if( det <= storage.config_.filter_kill_thresh )
+	    if( det <= config_.kill_var )
 	      {
 		surviving_filters.push_back( *filter_it );
 		

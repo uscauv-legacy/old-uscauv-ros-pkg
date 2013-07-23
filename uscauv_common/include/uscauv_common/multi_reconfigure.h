@@ -157,6 +157,7 @@ class MultiReconfigure
       return;
     }
 
+  /// Note: Implicitly inserts placeholder for callback config arg
   template<class __ConfigType, class... __BindArgs>
     void addReconfigureServer( std::string const & ns, __BindArgs... bind_args)
     {
