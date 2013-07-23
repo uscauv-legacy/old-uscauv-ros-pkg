@@ -54,6 +54,8 @@
 
 /// cpp11
 #include <thread>
+#include <mutex>
+#include <condition_variable>
 #include <functional>
 
 /// uscauv
