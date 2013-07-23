@@ -44,6 +44,7 @@
 
 #include <tf/LinearMath/Transform.h>
 #include <tf/transform_broadcaster.h>
+#include <tf/transform_listener.h>
 
 // general uscauv
 #include <uscauv_common/base_node.h>
@@ -51,6 +52,7 @@
 #include <uscauv_common/param_loader.h>
 #include <uscauv_common/image_geometry.h>
 #include <uscauv_common/simple_math.h>
+#include <uscauv_common/defaults.h>
 #include <uscauv_common/tic_toc.h>
 #include <auv_msgs/MatchedShape.h>
 #include <auv_msgs/MatchedShapeArray.h>
@@ -130,9 +132,11 @@ class UnimodalObjectTrackerNode: public BaseNode, public MultiReconfigure
   ros::NodeHandle nh_rel_;
   ros::Subscriber matched_shape_sub_, camera_info_sub_;
   tf::TransformBroadcaster object_broadcaster_;
+  tf::TransformListener tf_listener_;
   
   std::string const object_ns_;
   std::string depth_method_;
+  std::string motion_frame_;
 
   _ObjectTrackerConfig config_;
 
@@ -169,7 +173,8 @@ class UnimodalObjectTrackerNode: public BaseNode, public MultiReconfigure
 	ROS_WARN( "Matched shape frame does not match camera frame. Discarding message...");
 	return;
       }
-    
+
+        
     for( std::vector<_MatchedShape>::const_iterator shape_it= msg->shapes.begin();
 	 shape_it != msg->shapes.end(); ++shape_it)
       {
@@ -184,7 +189,7 @@ class UnimodalObjectTrackerNode: public BaseNode, public MultiReconfigure
 	// Project to 3d ##################################################
 	// ################################################################
 	ObjectTrackerStorage & storage = tracker->second;
-	tf::Vector3 camera_to_object;	
+	tf::Vector3 camera_to_object_vec;	
 
 	if( !camera_model_.initialized() )
 	  {
@@ -194,7 +199,7 @@ class UnimodalObjectTrackerNode: public BaseNode, public MultiReconfigure
 
 	if( depth_method_ == "monocular" )
 	  {
-	    camera_to_object = 
+	    camera_to_object_vec = 
 	      uscauv::reprojectObjectTo3d( camera_model_, cv::Point2d( shape_it->x, shape_it->y),
 					   shape_it->scale, storage.ideal_radius_ );
 	  }
@@ -211,9 +216,9 @@ class UnimodalObjectTrackerNode: public BaseNode, public MultiReconfigure
 	/// Get measurement update params, then update
 	_PositionUpdate::VectorType update_mean;
 	update_mean << 
-	  camera_to_object.x(),
-	  camera_to_object.y(), 
-	  camera_to_object.z(),
+	  camera_to_object_vec.x(),
+	  camera_to_object_vec.y(), 
+	  camera_to_object_vec.z(),
 	  shape_it->theta;
 
 	int idx = 0;
@@ -331,11 +336,6 @@ class UnimodalObjectTrackerNode: public BaseNode, public MultiReconfigure
       _PositionUpdate::CovarianceType::Identity(),
       _PositionUpdate::CovarianceType::Zero();
 
-    /* state_transition_ <<  */
-    /*   _PositionUpdate::CovarianceType::Identity(), */
-    /*   _PositionUpdate::CovarianceType::Identity(), */
-    /*   _PositionUpdate::CovarianceType::Zero(), */
-    /*   _PositionUpdate::CovarianceType::Identity(); */
 
     matched_shape_sub_ = nh_rel_.subscribe("matched_shapes", 10, 
 					   &UnimodalObjectTrackerNode::matchedShapeCallback,
@@ -346,7 +346,8 @@ class UnimodalObjectTrackerNode: public BaseNode, public MultiReconfigure
 
     immediate_tracking = uscauv::param::load<bool>( nh_rel_, "immediate_tracking", false );
     depth_method_ = uscauv::param::load<std::string>( nh_rel_, "depth_method", "monocular" );
-
+    motion_frame_ = uscauv::param::load<std::string>( nh_rel_, "motion_frame", uscauv::defaults::CM_LINK );
+    
     /// TODO: Add more depth methods
     if( depth_method_ != "monocular" )
       {
@@ -481,13 +482,33 @@ class UnimodalObjectTrackerNode: public BaseNode, public MultiReconfigure
 	  {
 	    _ObjectKalmanFilter::StateVector const & state = filter_it->state_;
 	    
-	    tf::Vector3 camera_to_object_vec = tf::Vector3( state(0), state(1), state(2) );
+	    tf::Vector3 observer_to_object_vec = tf::Vector3( state(0), state(1), state(2) );
 	    /// setRPY uses R=around X, P=around Y, Y=around Z, so we are rotating around Z
-	    tf::Quaternion camera_to_object_quat;
-	    camera_to_object_quat.setRPY( 0, 0, state(3));
+	    tf::Quaternion observer_to_object_quat;
+	    observer_to_object_quat.setRPY( 0, 0, state(3));
 	    
-	    tf::Transform camera_to_object_tf = tf::Transform( camera_to_object_quat,
-							       camera_to_object_vec );
+	    tf::Transform observer_to_object_tf = tf::Transform( observer_to_object_quat,
+								 observer_to_object_vec );
+	    
+	    tf::StampedTransform motion_to_observer_tf;
+
+	    /// get the transform from the motion frame (CM on the physical robot) to the camera frame
+	    if( tf_listener_.canTransform( motion_frame_, last_camera_info_.header.frame_id, ros::Time(0) ))
+	      {
+		try
+		  {
+		    tf_listener_.lookupTransform( motion_frame_, last_camera_info_.header.frame_id, ros::Time(0), motion_to_observer_tf );
+		  }
+		catch(tf::TransformException & ex)
+		  {
+		    ROS_ERROR( "Caught exception [ %s ] looking up transform", ex.what() );
+		    return;
+		  }
+	      }
+	    else 
+	      return;
+
+	    tf::Transform motion_to_object_tf = motion_to_observer_tf * observer_to_object_tf;
 
 	    std::string frame_name;
 	    
@@ -504,8 +525,8 @@ class UnimodalObjectTrackerNode: public BaseNode, public MultiReconfigure
 	    /// TODO: Flesh out tracking timeout logic. 
 	    /// Currently, transforms only timeout in rviz due to last_update_time_ being too old
 	    /// TODO: per above change time to now(), don't let old objects get to this line
-	    tf::StampedTransform output( camera_to_object_tf, storage.last_predict_time_,
-					 last_camera_info_.header.frame_id, frame_name );
+	    tf::StampedTransform output( motion_to_object_tf, storage.last_predict_time_,
+					 motion_frame_, frame_name );
 	      
 	    object_transforms.push_back( output ); 
 	  }
