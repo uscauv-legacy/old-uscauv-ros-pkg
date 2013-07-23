@@ -184,9 +184,17 @@ namespace uscauv
 
     /// Intended to be wrapped in try/catch blocks
     template<typename __ParamType>
-      static __ParamType lookup( XmlRpcValue & base_param, std::string const & param_name)
+      static __ParamType lookup( XmlRpcValue & base_param, std::string const & param_name) throw( XmlRpc::XmlRpcException )
       {
-	return XmlRpcValueConverter<__ParamType>::convert(base_param[ param_name ]);
+	if( !base_param.hasMember( param_name ) )
+	  {
+	    std::stringstream ss; ss << "Couldn't find param [ " << param_name << " ].";
+
+	    XmlRpc::XmlRpcException ex( ss.str() );
+	    throw ex;
+	  }
+	
+	return XmlRpcValueConverter<__ParamType>::convert( base_param[ param_name ] );
       }
 
     // ################################################################
