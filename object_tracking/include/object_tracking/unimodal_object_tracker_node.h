@@ -56,6 +56,8 @@
 #include <uscauv_common/tic_toc.h>
 #include <auv_msgs/MatchedShape.h>
 #include <auv_msgs/MatchedShapeArray.h>
+#include <auv_msgs/TrackedObject.h>
+#include <auv_msgs/TrackedObjectArray.h>
 
 #include <cmath>
 
@@ -73,6 +75,9 @@
 
 typedef auv_msgs::MatchedShape _MatchedShape;
 typedef auv_msgs::MatchedShapeArray _MatchedShapeArray;
+
+typedef auv_msgs::TrackedObject _TrackedObjectMsg;
+typedef auv_msgs::TrackedObjectArray _TrackedObjectArrayMsg;
 
 typedef sensor_msgs::CameraInfo _CameraInfo;
 

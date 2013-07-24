@@ -8,7 +8,7 @@
   <license>BSD</license>
   <review status="unreviewed" notes=""/>
   <url>http://ros.org/wiki/color_classification</url>
-
+  
   <depend package="roscpp" />
   <depend package="opencv2" />
   <depend package="sensor_msgs" />
