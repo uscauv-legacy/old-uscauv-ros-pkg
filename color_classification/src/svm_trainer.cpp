@@ -413,9 +413,21 @@ int main(int argc, const char ** argv)
 
   std::stringstream date_string;
   date_string << "Generated: " << asctime( timeinfo );
-
-  /// Write date string
+  
+   /// Write date string
   cvWriteComment( svm_storage, date_string.str().c_str(), 0 );
+  
+  std::stringstream input_string;
+  input_string << "Input: ";
+  for (int i= 0; i < argc; i++)
+  {
+    input_string << argv[i] << " ";
+  }
+  
+  
+  /// Write input string
+  cvWriteComment( svm_storage, input_string.str().c_str(), 0 );
+ 
 
   /// Write the image paths
   std::stringstream training_comment, mask_comment;
