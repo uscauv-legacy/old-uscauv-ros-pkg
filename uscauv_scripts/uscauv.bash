@@ -287,3 +287,10 @@ function uscauv-publish-killswitch()
 
 ## The greatest idea ###########################################
 alias roslaunch="uscauv-print-logo && roslaunch $@"
+
+################################################################
+alias uscauv-master-local="export ROS_MASTER_URI=http://localhost:11311"
+alias uscauv-master-seabee="export ROS_MASTER_URI=http://seabee:11311"
+
+alias uscauv-ssh-seabee="ssh -Xv janetkim@seabee"
+alias uscauv-arp-scan="sudo arp-scan --interface=eth0 --localnet"

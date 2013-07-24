@@ -1,0 +1,8 @@
+<launch>
+
+  <!-- RVIZ (for matched objects) -->
+  <include file="$(find uscauv_visualization)/launch/robot_visualization.launch">
+    <arg name="static" value="false" />
+  </include>
+
+</launch>

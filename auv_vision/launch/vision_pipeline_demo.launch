@@ -1,4 +1,3 @@
-
 <launch>
   <!-- Name of the camera we will be streaming data from -->
   <arg name="camera" />
