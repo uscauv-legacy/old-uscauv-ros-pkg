@@ -164,6 +164,7 @@ namespace uscauv
       {
 	quickdev::SimpleActionToken token;
 	token.start( &MissionControlPolicy::diveTo_impl, this, token, depth );
+	active_tokens_.push_back( token );
 	return token;
       }
     
@@ -171,13 +172,15 @@ namespace uscauv
       {
 	quickdev::SimpleActionToken token;
 	token.start( &MissionControlPolicy::faceTo_impl, this, token, heading );
+	active_tokens_.push_back( token );
 	return token;
       }
 
     quickdev::SimpleActionToken zeroPitchRoll()
       {
 	quickdev::SimpleActionToken token;
-	token.start( &MissionControlPolicy::zeroPitchRoll_impl, this, token );
+	token.start( &MissionControlPolicy::zeroPitchRoll_impl, this, token );	
+	active_tokens_.push_back( token );
 	return token;
       }
 
@@ -185,6 +188,7 @@ namespace uscauv
       {
 	quickdev::SimpleActionToken token;
 	token.start( &MissionControlPolicy::maintainHeading_impl, this, token );
+	active_tokens_.push_back( token );	
 	return token;
       }
 
@@ -193,6 +197,7 @@ namespace uscauv
       {
 	quickdev::SimpleActionToken token;
 	token.start( &MissionControlPolicy::moveToward_impl, this, token, x, y, scale );
+	active_tokens_.push_back( token );	
 	return token;	
       }
 
@@ -419,14 +424,18 @@ namespace uscauv
 	  }
 	
 	/// Cancel trajectory
+	ROS_INFO("Canceling axis command");
 	{
 	  axis_command.twist.linear.x = 0;
 	  axis_command.twist.linear.y = 0;
 	  
 	  axis_command_pub_.publish( axis_command );
 	}
+	ROS_INFO("Cancelled");
 	
 	token.complete();
+	
+	ROS_INFO("returning");
     }
   
     // ################################################################
@@ -528,6 +537,8 @@ namespace uscauv
       /// Hang around until the parent thread interrupts or the program is killed
       while(1){ boost::this_thread::interruption_point(); }
 
+      ROS_INFO("was interrupted");
+      
       return;
     }
 

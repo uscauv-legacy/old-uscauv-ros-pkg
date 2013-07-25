@@ -11,6 +11,7 @@
       type="$(arg type)"
       name="$(arg name)"
       args="$(arg args)"
+      launch-prefix="xterm -e gdb --args"
       output="screen" />
   
 </launch>

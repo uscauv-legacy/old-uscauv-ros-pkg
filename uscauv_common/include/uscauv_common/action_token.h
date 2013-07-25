@@ -132,7 +132,10 @@ private:
 	{
 	  ROS_ERROR( "Caught exception [ %s ] executing action.", ex.what() );
 	}
+      ROS_INFO("returned in wrapcall");
+      /// TODO: Figure out why assert px != 0 fails here
       getStorage()->wait_condition_.notify_all();
+      ROS_INFO("notified all in wrapcall");
     }
 
 public:
@@ -172,12 +175,13 @@ public:
     void create( __Args&&... args )
     {
       storage_ptr_->data_storage_ptr_ = boost::make_shared<__Caller>( boost::bind( &ActionTokenBase::wrapCall, this, boost::protect( boost::bind<void>(std::forward<__Args>(args)...) )) );
+      storage_ptr_->data_storage_ptr_->detach();
       storage_ptr_->data_ptr_ = storage_ptr_->data_storage_ptr_.get();
     }
 
     boost::shared_ptr<_Storage> getStorage()
     {
-        return storage_ptr_;
+      return storage_ptr_;
     }
 
     boost::shared_ptr<_Storage> const getStorage() const
