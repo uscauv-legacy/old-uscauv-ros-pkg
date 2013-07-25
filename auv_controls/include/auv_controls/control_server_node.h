@@ -74,7 +74,7 @@ class ControlServerNode: public BaseNode, public uscauv::PID6D, MultiReconfigure
 
   _ControlServerConfig * config_;
   
-  AxisValueVector axis_command_value_, pose_command_value_;
+  AxisValueVector axis_command_value_; /* pose_command_value_; */
   AxisMaskVector axis_command_mask_;
 
   /// ROS
@@ -85,7 +85,7 @@ class ControlServerNode: public BaseNode, public uscauv::PID6D, MultiReconfigure
   
  public:
  ControlServerNode(): BaseNode("ControlServer"), thruster_axis_model_("model/thrusters"), 
-    axis_command_value_( AxisValueVector::Zero() ), pose_command_value_( AxisValueVector::Zero() ),
+    axis_command_value_( AxisValueVector::Zero() ), /* pose_command_value_( AxisValueVector::Zero() ), */
     axis_command_mask_( AxisMaskVector::Zero() ),
     nh_rel_("~") {}
 
@@ -124,7 +124,7 @@ class ControlServerNode: public BaseNode, public uscauv::PID6D, MultiReconfigure
 
     AxisValueVector axis_control = updateAllPID();
 
-    auv_msgs::MotorPowerArray motor_control = thruster_axis_model_.AxisToMotorArray( axis_control );
+    auv_msgs::MotorPowerArray motor_control = thruster_axis_model_.AxisToMotorArray( axis_control + axis_command_value_ );
     
     motor_pub_.publish( motor_control );
   }
@@ -144,7 +144,6 @@ class ControlServerNode: public BaseNode, public uscauv::PID6D, MultiReconfigure
     input_value.block(0,0,3,1) *= config_->axis_scale_linear;
     input_value.block(3,0,3,1) *= config_->axis_scale_angular;
 
-    /// TODO: Check for collisions with current pose command
     for(unsigned int idx = 0; idx < 6; ++idx)
       {
 	if( input_mask_bool( idx ) )
@@ -154,33 +153,33 @@ class ControlServerNode: public BaseNode, public uscauv::PID6D, MultiReconfigure
 	  }
       }
     
-    updateSetpoints();
+    /* updateSetpoints(); */
   }
 
-  void updateSetpoints()
-  {
-    AxisValueVector setpoint = pose_command_value_ + axis_command_value_;
+  /* void updateSetpoints() */
+  /* { */
+  /*   AxisValueVector setpoint = pose_command_value_ /\* + axis_command_value_ *\/; */
     
-    setSetpoint<PID6D::Axes::SURGE>( setpoint(0) );
-    setSetpoint<PID6D::Axes::SWAY> ( setpoint(1) );
-    setSetpoint<PID6D::Axes::HEAVE>( setpoint(2) );
-    setSetpoint<PID6D::Axes::ROLL> ( setpoint(3) );
-    setSetpoint<PID6D::Axes::PITCH>( setpoint(4) );
-    setSetpoint<PID6D::Axes::YAW>  ( setpoint(5) );
+  /*   setSetpoint<PID6D::Axes::SURGE>( setpoint(0) ); */
+  /*   setSetpoint<PID6D::Axes::SWAY> ( setpoint(1) ); */
+  /*   setSetpoint<PID6D::Axes::HEAVE>( setpoint(2) ); */
+  /*   setSetpoint<PID6D::Axes::ROLL> ( setpoint(3) ); */
+  /*   setSetpoint<PID6D::Axes::PITCH>( setpoint(4) ); */
+  /*   setSetpoint<PID6D::Axes::YAW>  ( setpoint(5) ); */
 
-    /* if( axis_command_mask_(0) ) */
-    /*   setSetpoint<PID6D::Axes::SURGE>( axis_command_value_(0) ); */
-    /* if( axis_command_mask_(1) ) */
-    /*   setSetpoint<PID6D::Axes::SWAY>( axis_command_value_(1) ); */
-    /* if( axis_command_mask_(2) ) */
-    /*   setSetpoint<PID6D::Axes::HEAVE>( axis_command_value_(2) ); */
-    /* if( axis_command_mask_(3) ) */
-    /*   setSetpoint<PID6D::Axes::ROLL>( axis_command_value_(3) ); */
-    /* if( axis_command_mask_(4) ) */
-    /*   setSetpoint<PID6D::Axes::PITCH>( axis_command_value_(4) ); */
-    /* if( axis_command_mask_(5) ) */
-    /*   setSetpoint<PID6D::Axes::YAW>( axis_command_value_(5) ); */
-  }
+  /*   /\* if( axis_command_mask_(0) ) *\/ */
+  /*   /\*   setSetpoint<PID6D::Axes::SURGE>( axis_command_value_(0) ); *\/ */
+  /*   /\* if( axis_command_mask_(1) ) *\/ */
+  /*   /\*   setSetpoint<PID6D::Axes::SWAY>( axis_command_value_(1) ); *\/ */
+  /*   /\* if( axis_command_mask_(2) ) *\/ */
+  /*   /\*   setSetpoint<PID6D::Axes::HEAVE>( axis_command_value_(2) ); *\/ */
+  /*   /\* if( axis_command_mask_(3) ) *\/ */
+  /*   /\*   setSetpoint<PID6D::Axes::ROLL>( axis_command_value_(3) ); *\/ */
+  /*   /\* if( axis_command_mask_(4) ) *\/ */
+  /*   /\*   setSetpoint<PID6D::Axes::PITCH>( axis_command_value_(4) ); *\/ */
+  /*   /\* if( axis_command_mask_(5) ) *\/ */
+  /*   /\*   setSetpoint<PID6D::Axes::YAW>( axis_command_value_(5) ); *\/ */
+  /* } */
 
   void updatePoseCommand()
   {
@@ -229,7 +228,12 @@ class ControlServerNode: public BaseNode, public uscauv::PID6D, MultiReconfigure
     error_pose_value.block(0,0,3,1) *= config_->pose_scale_linear;
     error_pose_value.block(3,0,3,1) *= config_->pose_scale_angular;
     
-    pose_command_value_ = error_pose_value;
+    setSetpoint<PID6D::Axes::SURGE>( error_pose_value(0) );
+    setSetpoint<PID6D::Axes::SWAY> ( error_pose_value(1) );
+    setSetpoint<PID6D::Axes::HEAVE>( error_pose_value(2) );
+    setSetpoint<PID6D::Axes::ROLL> ( error_pose_value(3) );
+    setSetpoint<PID6D::Axes::PITCH>( error_pose_value(4) );
+    setSetpoint<PID6D::Axes::YAW>  ( error_pose_value(5) );
   }
   
 };
