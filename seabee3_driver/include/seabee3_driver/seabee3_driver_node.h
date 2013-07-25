@@ -189,7 +189,7 @@ QUICKDEV_DECLARE_NODE_CLASS( Seabee3Driver )
     inline double getDepthFromPressure( int const & observed_pressure ) const
     {
       /* return ( observed_pressure - config_.surface_pressure ) / config_.montalbos_per_meter; */
-      return ( observed_pressure - surface_pressure_ ) / config_.montalbos_per_meter;
+      return -( observed_pressure - surface_pressure_ ) / config_.montalbos_per_meter;
     }
 
     QUICKDEV_SPIN_ONCE()
@@ -222,7 +222,7 @@ QUICKDEV_DECLARE_NODE_CLASS( Seabee3Driver )
             "/robot/sensors/external_pressure", extl_pressure_msg
         );
 
-        _TfTranceiverPolicy::publishTransform( tf::Transform( tf::Quaternion( 0, 0, 0, 1 ), tf::Vector3( 0, 0, -depth ) ), "/world", "/robot/sensors/depth" );
+        _TfTranceiverPolicy::publishTransform( tf::Transform( tf::Quaternion( 0, 0, 0, 1 ), tf::Vector3( 0, 0, depth ) ), "/world", "/robot/sensors/depth" );
     }
 
     bool executeFiringDeviceAction( _FiringDeviceActionService::Request &req,
