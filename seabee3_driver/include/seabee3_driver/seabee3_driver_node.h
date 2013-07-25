@@ -213,7 +213,7 @@ QUICKDEV_DECLARE_NODE_CLASS( Seabee3Driver )
 
         auto const depth = getDepthFromPressure( extl_pressure_msg.value );
 
-        depth_msg.value = depth;
+        depth_msg.value = -depth;
 
         multi_pub_.publish(
             "/robot/sensors/depth", depth_msg,
@@ -222,7 +222,7 @@ QUICKDEV_DECLARE_NODE_CLASS( Seabee3Driver )
             "/robot/sensors/external_pressure", extl_pressure_msg
         );
 
-        _TfTranceiverPolicy::publishTransform( tf::Transform( tf::Quaternion( 0, 0, 0, 1 ), tf::Vector3( 0, 0, -depth ) ), "/world", "/robot/sensors/depth" );
+        _TfTranceiverPolicy::publishTransform( tf::Transform( tf::Quaternion( 0, 0, 0, 1 ), tf::Vector3( 0, 0, depth ) ), "/world", "/robot/sensors/depth" );
     }
 
     bool executeFiringDeviceAction( _FiringDeviceActionService::Request &req,
