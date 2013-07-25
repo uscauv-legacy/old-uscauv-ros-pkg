@@ -73,15 +73,23 @@ class BowlingMissionNode: public BaseNode, public uscauv::MissionControlPolicy
   void missionPlan()
   {
     SimpleActionToken ori_token = zeroPitchRoll();
-    SimpleActionToken heading_token = maintainHeading();
+    /* SimpleActionToken heading_token = maintainHeading(); */
+
+    /* heading_token.wait(); */
 
     /* Dive to 1 meter */
+    /* SimpleActionToken dive_token = diveTo( depth_ ); */
+    /* ROS_INFO("Diving..."); */
+    /* dive_token.wait( ); */
+
     SimpleActionToken dive_token = diveTo( depth_ );
     ROS_INFO("Diving...");
-    dive_token.wait( 10 );
+    dive_token.wait(10.0 );
+
+
    
     
-    /// Go forward
+    /* /// Go forward */
     SimpleActionToken motion_token = moveToward( 1, 0 );
     ROS_INFO("Bowling...");
     motion_token.wait();
