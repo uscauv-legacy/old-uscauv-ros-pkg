@@ -1,10 +1,10 @@
 /***************************************************************************
- *  include/auv_missions/bowling_mission_node.h
+ *  include/auv_missions/pitch_roll_mission_node.h
  *  --------------------
  *
  *  Software License Agreement (BSD License)
  *
- *  Copyright (c) 2013, Dylan Foster (turtlecannon@gmail.com)
+ *  Copyright (c) 2013, janetkim
  *  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
@@ -36,61 +36,46 @@
  **************************************************************************/
 
 
-#ifndef USCAUV_AUVMISSIONS_BOWLINGMISSION
-#define USCAUV_AUVMISSIONS_BOWLINGMISSION
+#ifndef USCAUV_AUVMISSIONS_PITCHROLLMISSION
+#define USCAUV_AUVMISSIONS_PITCHROLLMISSION
 
 // ROS
 #include <ros/ros.h>
 
 // uscauv
 #include <uscauv_common/base_node.h>
-
 #include <auv_missions/mission_control_policy.h>
 
 using namespace quickdev;
 
-class BowlingMissionNode: public BaseNode, public uscauv::MissionControlPolicy
+class PitchRollMissionNode: public BaseNode, public uscauv::MissionControlPolicy
 {
   
  public:
- BowlingMissionNode(): BaseNode("BowlingMission")
-    {
-    }
+  PitchRollMissionNode(): BaseNode("PitchRollMission")
+   {
+   }
 
  private:
 
   // Running spin() will cause this function to be called before the node begins looping the spinOnce() function.
   void spinFirst()
-  {
-    startMissionControl( &BowlingMissionNode::missionPlan, this );
-  }  
-
+     {
+       startMissionControl( &PitchRollMissionNode::missionPlan, this );
+     }  
+	 
   void missionPlan()
   {
     SimpleActionToken ori_token = zeroPitchRoll();
-    SimpleActionToken heading_token = maintainHeading();
-
-    /* Dive to 1 meter */
-    SimpleActionToken dive_token = diveTo( 0.5 );
-    ROS_INFO("Diving...");
-    dive_token.wait( 5.0 );
-   
-    
-    /// Go forward
-    SimpleActionToken motion_token = moveToward( 1, 0 );
-    ROS_INFO("Bowling...");
-    motion_token.wait();
-    /* motion_token.wait(5); */
-    /* motion_token.complete(); */
-    /* while(1){ boost::this_thread::interruption_point();} */
+    ori_token.wait();
   }
-  
+
   // Running spin() will cause this function to get called at the loop rate until this node is killed.
   void spinOnce()
-  {
+     {
 
-  }
+     }
 
 };
 
-#endif // USCAUV_AUVMISSIONS_BOWLINGMISSION
+#endif // USCAUV_AUVMISSIONS_PITCHROLLMISSION

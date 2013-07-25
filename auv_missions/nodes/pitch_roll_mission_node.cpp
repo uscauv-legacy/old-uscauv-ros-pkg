@@ -1,10 +1,10 @@
 /***************************************************************************
- *  include/auv_missions/bowling_mission_node.h
+ *  nodes/pitch_roll_mission_node.cpp
  *  --------------------
  *
  *  Software License Agreement (BSD License)
  *
- *  Copyright (c) 2013, Dylan Foster (turtlecannon@gmail.com)
+ *  Copyright (c) 2013, janetkim
  *  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
@@ -36,61 +36,16 @@
  **************************************************************************/
 
 
-#ifndef USCAUV_AUVMISSIONS_BOWLINGMISSION
-#define USCAUV_AUVMISSIONS_BOWLINGMISSION
+#include <auv_missions/pitch_roll_mission_node.h>
 
-// ROS
-#include <ros/ros.h>
-
-// uscauv
-#include <uscauv_common/base_node.h>
-
-#include <auv_missions/mission_control_policy.h>
-
-using namespace quickdev;
-
-class BowlingMissionNode: public BaseNode, public uscauv::MissionControlPolicy
+// Initialize PitchRollMissionNode and begin looping.
+int main(int argc, char ** argv)
 {
-  
- public:
- BowlingMissionNode(): BaseNode("BowlingMission")
-    {
-    }
+  ros::init(argc, argv, "pitch_roll_mission");
 
- private:
+  PitchRollMissionNode pitch_roll_mission;
 
-  // Running spin() will cause this function to be called before the node begins looping the spinOnce() function.
-  void spinFirst()
-  {
-    startMissionControl( &BowlingMissionNode::missionPlan, this );
-  }  
+  pitch_roll_mission.spin();
 
-  void missionPlan()
-  {
-    SimpleActionToken ori_token = zeroPitchRoll();
-    SimpleActionToken heading_token = maintainHeading();
-
-    /* Dive to 1 meter */
-    SimpleActionToken dive_token = diveTo( 0.5 );
-    ROS_INFO("Diving...");
-    dive_token.wait( 5.0 );
-   
-    
-    /// Go forward
-    SimpleActionToken motion_token = moveToward( 1, 0 );
-    ROS_INFO("Bowling...");
-    motion_token.wait();
-    /* motion_token.wait(5); */
-    /* motion_token.complete(); */
-    /* while(1){ boost::this_thread::interruption_point();} */
-  }
-  
-  // Running spin() will cause this function to get called at the loop rate until this node is killed.
-  void spinOnce()
-  {
-
-  }
-
-};
-
-#endif // USCAUV_AUVMISSIONS_BOWLINGMISSION
+  return 0;
+}

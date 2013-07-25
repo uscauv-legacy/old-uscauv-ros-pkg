@@ -49,6 +49,10 @@
 #include <auv_physics/thruster_axis_model.h>
 #include <auv_msgs/MaskedTwist.h>
 
+#define EIGEN_DONT_VECTORIZE
+#define EIGEN_DISABLE_UNALIGNED_ARRAY_ASSERT
+#define EIGEN_DONT_ALIGN_STATICALLY
+
 class AxisCommandTestNode: public BaseNode, public JoystickPolicy
 {
   typedef std::map<std::string, uscauv::StaticThrusterAxisModel::AxisVector> _NamedScrewMap;

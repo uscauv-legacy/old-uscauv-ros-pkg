@@ -1,6 +1,6 @@
 <launch>
   <!-- Launch all necessary resources for mission control nodes to do their thing -->
-  <arg name="simulate" default="true" />
+  <arg name="simulate" default="false" />
     
   <!-- Controls -->
   <include file="$(find auv_controls)/launch/seabee3_controls.launch" />
