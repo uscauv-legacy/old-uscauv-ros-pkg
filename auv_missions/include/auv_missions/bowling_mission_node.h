@@ -52,6 +52,8 @@ using namespace quickdev;
 class BowlingMissionNode: public BaseNode, public uscauv::MissionControlPolicy
 {
   
+  double depth_;
+  
  public:
  BowlingMissionNode(): BaseNode("BowlingMission")
     {
@@ -62,6 +64,9 @@ class BowlingMissionNode: public BaseNode, public uscauv::MissionControlPolicy
   // Running spin() will cause this function to be called before the node begins looping the spinOnce() function.
   void spinFirst()
   {
+    ros::NodeHandle nh_rel("~");
+
+    depth_ = uscauv::param::load<double>( nh_rel, "depth", 0.5);
     startMissionControl( &BowlingMissionNode::missionPlan, this );
   }  
 
@@ -71,9 +76,9 @@ class BowlingMissionNode: public BaseNode, public uscauv::MissionControlPolicy
     SimpleActionToken heading_token = maintainHeading();
 
     /* Dive to 1 meter */
-    SimpleActionToken dive_token = diveTo( 0.5 );
+    SimpleActionToken dive_token = diveTo( depth_ );
     ROS_INFO("Diving...");
-    dive_token.wait( 5.0 );
+    dive_token.wait( 10 );
    
     
     /// Go forward
