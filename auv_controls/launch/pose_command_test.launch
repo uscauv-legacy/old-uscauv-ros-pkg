@@ -9,7 +9,7 @@
     <arg name="type" value="$(arg joystick)" />
   </include>
 
-  <include file="$(find auv_controls)/launch/$(arg robot)_controls.launch" />
+  <include file="$(find auv_missions)/launch/$(arg robot)_bringup.launch" />
   <arg name="pkg" value="auv_controls" />
   <arg name="name" value="pose_command_test" />
   <arg name="type" default="$(arg name)" />
