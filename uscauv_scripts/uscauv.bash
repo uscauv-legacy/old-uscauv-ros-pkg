@@ -272,8 +272,10 @@ function lsb()
 
 alias get_image_header="grep header -A 10"
 
-alias uscauv-calibrate="rosservice call /xsens_driver/calibrate_rpy_ori 100 && rosservice call /seabee3/calibrate_surface_pressure 10"
+alias uscauv-calibrate-depth="rosservice call /seabee3/calibrate_surface_pressure 10"
 alias uscauv-calibrate-ori="rosservice call /xsens_driver/calibrate_rpy_ori 100"
+alias uscauv-calibrate-all="uscauv-calibrate-ori && uscauv-calibrate-depth"
+alias uscauv-joy="rosrun joy joy_node"
 alias uscauv-reconfigure="rosrun rqt_reconfigure rqt_reconfigure"
 
 function uscauv-publish-depth()

@@ -51,11 +51,11 @@
 
 #define EIGEN_DONT_VECTORIZE
 #define EIGEN_DISABLE_UNALIGNED_ARRAY_ASSERT
-#define EIGEN_DONT_ALIGN_STATICALLY
 
 class AxisCommandTestNode: public BaseNode, public JoystickPolicy
 {
-  typedef std::map<std::string, uscauv::StaticThrusterAxisModel::AxisVector> _NamedScrewMap;
+  typedef std::map<std::string, uscauv::StaticThrusterAxisModel::AxisVector, std::less<std::string>, 
+    Eigen::aligned_allocator< std::pair<const std::string, uscauv::StaticThrusterAxisModel::AxisVector> > > _NamedScrewMap;
   typedef auv_msgs::MaskedTwist _MaskedTwistMsg;
   _NamedScrewMap test_input_;
   _NamedScrewMap::iterator current_input_;

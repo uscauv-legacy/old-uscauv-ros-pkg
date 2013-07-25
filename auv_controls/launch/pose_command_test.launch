@@ -1,15 +1,10 @@
 <launch>
 
-  <arg name="joystick" default="xbox360" />
   <arg name="robot" default="seabee3" />
 
-  <remap from="pose_command_test/joy" to="/joy" />  
-
-  <include file="$(find uscauv_joystick)/launch/joystick_driver.launch" >
-    <arg name="type" value="$(arg joystick)" />
-  </include>
-
   <include file="$(find auv_missions)/launch/$(arg robot)_bringup.launch" />
+  <include file="$(find joystick_config)/launch/upload_joystick_assignments.launch" />
+  
   <arg name="pkg" value="auv_controls" />
   <arg name="name" value="pose_command_test" />
   <arg name="type" default="$(arg name)" />

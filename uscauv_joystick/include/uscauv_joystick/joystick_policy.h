@@ -102,7 +102,7 @@ class JoystickPolicy
     _XmlVal assignments;
 
     /// subscribe to joystick messages
-    joy_sub_ = nh_rel_.subscribe("joy", 1, &JoystickPolicy::joyCallback, this );
+    joy_sub_ = nh.subscribe("joy", 1, &JoystickPolicy::joyCallback, this );
 
     
     /// load the button mappings ------------------------------------
