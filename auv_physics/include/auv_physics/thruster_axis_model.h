@@ -145,7 +145,9 @@ namespace uscauv
     {
       double total = value + config_.trim;
       if ( std::fabs(total) < config_.floor_mag ) return 0;
-      else return uscauv::clamp( total, config_.clamp_upper, config_.clamp_lower );
+      if( config_.use_clamp )
+	uscauv::clamp( total, config_.clamp_upper, config_.clamp_lower );
+      return total;
     }
 
     bool getEnabled() const
@@ -204,9 +206,13 @@ namespace uscauv
     ThrusterVector AxisToThruster( AxisVector const & axis_vals)
     {
       ThrusterVector const thrust =  thruster_to_axis_.colPivHouseholderQr().solve(axis_vals);
+      
+     
       if( !(thruster_to_axis_*thrust).isApprox( axis_vals ))
-	ROS_ERROR("Requested axis values have no solution!");
-
+	{
+	  double const mse = ( thruster_to_axis_ * thrust - axis_vals ).norm() / axis_vals.norm();
+	  ROS_ERROR("Requested axis values have no solution [ error %f ]!", mse );
+	}
       return thrust;
     }
     

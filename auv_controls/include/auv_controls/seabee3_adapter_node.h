@@ -54,7 +54,7 @@ typedef seabee3_msgs::MotorVals _MotorValsMsg;
 typedef auv_msgs::MotorPower _MotorPowerMsg;
 typedef auv_msgs::MotorPowerArray _MotorPowerArrayMsg;
 
-static const unsigned int MAX_MOTOR_VAL = 100;
+static const double MAX_MOTOR_VAL = 100;
 
 static const std::map< std::string, int> thruster_map =
   {
@@ -139,7 +139,7 @@ class Seabee3AdapterNode: public BaseNode
     int motor2_id = seabee3_common::movement::ThrusterPairs::values[axis][1];
 
     double max = std::max( abs(msg.motors[motor1_id]), abs(msg.motors[motor2_id]) );
-    
+
     if(max <= MAX_MOTOR_VAL )
       return;
     

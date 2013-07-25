@@ -62,7 +62,11 @@ class ThrusterAxisModelTestNode: public BaseNode
   void spinFirst()
      {
        typedef std::map<std::string, uscauv::StaticThrusterAxisModel::AxisVector> _NamedScrewMap;
+
+       ros::NodeHandle nh_rel("~");
        
+       double scale = uscauv::param::load<double>( nh_rel, "scale", 100 );
+
        model.load("robot/thrusters");
 
        _NamedScrewMap test_input = {
@@ -85,7 +89,7 @@ class ThrusterAxisModelTestNode: public BaseNode
 	 {
 	   ROS_INFO_STREAM("[ " << screw_it->first << " ] axis input: " << screw_it->second.transpose());
 	   ROS_INFO_STREAM("[ " << screw_it->first << " ] thrust output: " <<
-			   model.AxisToThruster( screw_it->second ).transpose() );
+			   model.AxisToThruster( screw_it->second * scale ).transpose() );
 	 }
        
        

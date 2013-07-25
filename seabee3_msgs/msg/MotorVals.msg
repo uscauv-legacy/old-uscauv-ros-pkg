@@ -1,2 +1,2 @@
 int8[9] mask
-int8[9] motors
+int64[9] motors
