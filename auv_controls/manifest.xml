@@ -12,6 +12,7 @@
   <depend package="roscpp" />
   <depend package="cpp11" />
 
+  <depend package="uscauv_joystick" />
   <depend package="uscauv_common" />
   <depend package="seabee3_common" />
   <depend package="auv_physics" />

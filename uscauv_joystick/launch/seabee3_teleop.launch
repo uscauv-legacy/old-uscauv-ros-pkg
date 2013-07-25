@@ -1,0 +1,8 @@
+<launch>
+  <arg name="joystick" default="xbox360" />
+
+  <include file="$(find uscauv_joystick)/launch/joystick_client.launch" >
+    <arg name="joystick" value="$(arg joystick)" />
+  </include>
+
+</launch>
