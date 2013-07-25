@@ -9,7 +9,7 @@
   <include file="$(find auv_controls)/launch/seabee3_adapter.launch" />
 
   <!-- Params -->
-  <include ns="control_server" file="$(find controls_config)/launch/upload_config.launch" />
+  <include file="$(find controls_config)/launch/upload_config.launch" />
 
   <!-- Thruster transforms and params -->
   <include file="$(find auv_model)/launch/upload_model.launch" >

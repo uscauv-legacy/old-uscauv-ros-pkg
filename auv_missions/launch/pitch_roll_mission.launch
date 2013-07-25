@@ -1,7 +1,7 @@
 
 <launch>
   <arg name="pkg" value="auv_missions" />
-  <arg name="name" value="bowling_mission" />
+  <arg name="name" value="pitch_roll_mission" />
   <arg name="type" default="$(arg name)" />
   <arg name="rate" default="60" />
   <arg name="args" value="_loop_rate:=$(arg rate)" />
