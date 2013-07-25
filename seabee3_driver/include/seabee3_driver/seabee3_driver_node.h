@@ -189,7 +189,7 @@ QUICKDEV_DECLARE_NODE_CLASS( Seabee3Driver )
     inline double getDepthFromPressure( int const & observed_pressure ) const
     {
       /* return ( observed_pressure - config_.surface_pressure ) / config_.montalbos_per_meter; */
-      return ( observed_pressure - surface_pressure_ ) / config_.montalbos_per_meter;
+      return -( observed_pressure - surface_pressure_ ) / config_.montalbos_per_meter;
     }
 
     QUICKDEV_SPIN_ONCE()
@@ -213,7 +213,7 @@ QUICKDEV_DECLARE_NODE_CLASS( Seabee3Driver )
 
         auto const depth = getDepthFromPressure( extl_pressure_msg.value );
 
-        depth_msg.value = -depth;
+        depth_msg.value = depth;
 
         multi_pub_.publish(
             "/robot/sensors/depth", depth_msg,
