@@ -122,9 +122,13 @@ class ControlServerNode: public BaseNode, public uscauv::PID6D, MultiReconfigure
     /// get latest transforms
     updatePoseCommand();
 
-    AxisValueVector axis_control = updateAllPID();
+    AxisValueVector pose_control = updateAllPID();
 
-    auv_msgs::MotorPowerArray motor_control = thruster_axis_model_.AxisToMotorArray( axis_control + axis_command_value_ );
+    /// apply scaling
+    pose_control.block(0,0,3,1) *= config_->pose_scale_linear;
+    pose_control.block(3,0,3,1) *= config_->pose_scale_angular;
+
+    auv_msgs::MotorPowerArray motor_control = thruster_axis_model_.AxisToMotorArray( pose_control + axis_command_value_ );
     
     motor_pub_.publish( motor_control );
   }
@@ -225,8 +229,8 @@ class ControlServerNode: public BaseNode, public uscauv::PID6D, MultiReconfigure
     AxisValueVector error_pose_value;
     error_pose_value << error_vec.x(), error_vec.y(), error_vec.z(), roll, pitch, yaw;
 
-    error_pose_value.block(0,0,3,1) *= config_->pose_scale_linear;
-    error_pose_value.block(3,0,3,1) *= config_->pose_scale_angular;
+    /* error_pose_value.block(0,0,3,1) *= config_->pose_scale_linear; */
+    /* error_pose_value.block(3,0,3,1) *= config_->pose_scale_angular; */
     
     setSetpoint<PID6D::Axes::SURGE>( error_pose_value(0) );
     setSetpoint<PID6D::Axes::SWAY> ( error_pose_value(1) );
