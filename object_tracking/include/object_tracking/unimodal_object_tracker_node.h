@@ -543,16 +543,18 @@ class UnimodalObjectTrackerNode: public BaseNode, public MultiReconfigure
 		object.type = storage.name_;
 		tf::poseTFToMsg( motion_to_object_tf, object.pose.pose );
 		tracked_objects.objects.push_back( object );
+		
+		/// transform from camera to "object/<object name>"
+		/// TODO: Flesh out tracking timeout logic. 
+		/// Currently, transforms only timeout in rviz due to last_update_time_ being too old
+		/// TODO: per above change time to now(), don't let old objects get to this line
+		tf::StampedTransform output( motion_to_object_tf, storage.last_predict_time_,
+					     motion_frame_, frame_name );
+		
+		object_transforms.push_back( output ); 
+		
 	      }
-	    
-	    /// transform from camera to "object/<object name>"
-	    /// TODO: Flesh out tracking timeout logic. 
-	    /// Currently, transforms only timeout in rviz due to last_update_time_ being too old
-	    /// TODO: per above change time to now(), don't let old objects get to this line
-	    tf::StampedTransform output( motion_to_object_tf, storage.last_predict_time_,
-					 motion_frame_, frame_name );
-	      
-	    object_transforms.push_back( output ); 
+	    	    
 	  }
 
       }
