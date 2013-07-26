@@ -277,6 +277,12 @@ alias uscauv-calibrate-ori="rosservice call /xsens_driver/calibrate_rpy_ori 100"
 alias uscauv-calibrate-all="uscauv-calibrate-ori && uscauv-calibrate-depth"
 alias uscauv-joy="rosrun joy joy_node"
 alias uscauv-reconfigure="rosrun rqt_reconfigure rqt_reconfigure"
+
+function uscauv-plot-pid()
+{
+    rqt_plot /control_server/pid/angular/$1/feedback:x:y:z
+}
+
 function uscauv-run-motors()
 {
     rostopic pub /seabee3/motor_vals seabee3_msgs/MotorVals '{motors: [50, 50, 50, 50, 50, 50, 0, 0, 0], mask: [1, 1, 1, 1, 1, 1, 0, 0, 0] }' -r 10
