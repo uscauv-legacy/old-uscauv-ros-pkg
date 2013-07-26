@@ -15,10 +15,11 @@
     
     <include file="$(find xsens_driver)/launch/xsens_driver.launch" >
     </include>
-    
+        
     <!-- <node pkg="rosbag" type="record" name="rosbag_record" -->
-    <!-- 	  args="record -O $(find auv_missions)/bag /robot/cameras/downward/right/image_rect_color /robot/cameras/downward/right/camera_info /rosout /robot/sensors/depth -->
-    <!-- 		/tf"/>    -->
+    <!-- 	  args="record -o $(find auv_missions)/bag  -->
+    <!-- 		/robot/cameras/forward/left/image_rect_color /robot/cameras/forward/left/camera_info /rosout /robot/sensors/depth -->
+    <!-- 		/tf"/> -->
 
     <!-- <group ns="robot/cameras" > -->
     <!--   <include file="$(find uscauv_camera)/launch/monocular_camera.launch" > -->

@@ -89,7 +89,7 @@ class FindObjectMissionNode: public BaseNode, public uscauv::MissionControlPolic
     /* dive_token.complete(); */
 
     ROS_INFO("Facing to object...");
-    SimpleActionToken faceto_token = faceToObject( object_name_ );
+    SimpleActionToken faceto_token = moveToObject( object_name_, 1 );
     faceto_token.wait( );
     /* ROS_INFO("Moving to object..."); */
     /* SimpleActionToken moveto_token = moveToObject( object_name_, 1.0 ); */

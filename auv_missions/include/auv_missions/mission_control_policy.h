@@ -527,15 +527,15 @@ namespace uscauv
 
 	    _TrackedObjectMsg object;
 
-	    world_to_desired_tf_.getOrigin().setZ( 0 );
-	    world_to_desired_tf_.getOrigin().setY( 0 );
+	    world_to_measurement_tf_.getOrigin().setZ( 0 );
+	    world_to_measurement_tf_.getOrigin().setY( 0 );
 	    
 	    /// Blocks until the tracked object message can be locked
 	    if( getMostConfidentObject( name, object ) )
 	      {
-		ROS_INFO("[ faceToObject ]: Object [ %s ] not in sight.", name.c_str() );
-		world_to_measurement_tf_.getOrigin().setZ( 0 );
-		world_to_measurement_tf_.getOrigin().setY( 0 );
+		ROS_DEBUG("[ faceToObject ]: Object [ %s ] not in sight.", name.c_str() );
+		world_to_desired_tf_.getOrigin().setZ( 0 );
+		world_to_desired_tf_.getOrigin().setY( 0 );
 	      }
 	    else
 	      {
@@ -543,8 +543,8 @@ namespace uscauv
 		tf::poseMsgToTF( object.pose.pose, motion_to_object_tf );
 
 		/// Depth outside this function is expressed with Z axis pointing out of pool
-		world_to_measurement_tf_.getOrigin().setZ( motion_to_object_tf.getOrigin().getZ() );
-		world_to_measurement_tf_.getOrigin().setY( motion_to_object_tf.getOrigin().getY() );
+		world_to_desired_tf_.getOrigin().setZ( motion_to_object_tf.getOrigin().getZ() );
+		world_to_desired_tf_.getOrigin().setY( motion_to_object_tf.getOrigin().getY() );
 	      
 		/// TODO: Change depth delta to something that's not a guess
 		if( std::abs( world_to_desired_tf_.getOrigin().getZ() -
@@ -591,8 +591,8 @@ namespace uscauv
 	    std::unique_lock<std::mutex> tf_lock( control_tf_mutex_ );
 
 	    /// Depth outside this function is expressed with Z axis pointing out of pool
-	    world_to_desired_tf_.getOrigin().setX( distance );
-	    world_to_measurement_tf_.getOrigin().setX( motion_to_object_tf.getOrigin().getX() );
+	    world_to_desired_tf_.getOrigin().setX( motion_to_object_tf.getOrigin().getX() );
+	    world_to_measurement_tf_.getOrigin().setX( distance );
 	      
 	    /// TODO: Change depth delta to something that's not a guess
 	    if( std::abs( world_to_desired_tf_.getOrigin().getZ() -
