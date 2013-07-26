@@ -196,13 +196,13 @@ namespace uscauv
 	return token;
       }
 
-    quickdev::SimpleActionToken maintainHeading()
-      {
-	quickdev::SimpleActionToken token;
-	token.start( &MissionControlPolicy::maintainHeading_impl, this, token );
-	active_tokens_.push_back( token );	
-	return token;
-      }
+    quickdev::SimpleActionToken maintainHeading(double const & offset = 0 )
+    {
+      quickdev::SimpleActionToken token;
+      token.start( &MissionControlPolicy::maintainHeading_impl, this, token, offset);
+      active_tokens_.push_back( token );	
+      return token;
+    }
 
     /// Move in the direction of a unit vector expressed relative to the robot's CM frame
     quickdev::SimpleActionToken moveToward( double const & x, double const & y, double const & scale = 1, _TermCrit term_crit = _TermCrit() )
@@ -378,7 +378,7 @@ namespace uscauv
       token.complete();
     }
 
-    void maintainHeading_impl( quickdev::SimpleActionToken token )
+    void maintainHeading_impl( quickdev::SimpleActionToken token, double const & offset )
     {
       ros::Rate loop_rate( action_loop_rate_hz_ );
       
@@ -413,7 +413,7 @@ namespace uscauv
 	  {
 	    std::unique_lock<std::mutex> lock( control_tf_mutex_ );
 	    
-	    setTransformYaw( world_to_desired_tf_, target_heading );
+	    setTransformYaw( world_to_desired_tf_, target_heading + offset);
 	    setTransformYaw( world_to_measurement_tf_, yaw );
 	    
 	    /// TODO: criteria from param

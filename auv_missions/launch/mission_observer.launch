@@ -5,4 +5,9 @@
     <arg name="static" value="false" />
   </include>
 
+  <include file="$(find uscauv_visualization)/launch/object_visualizer.launch"/>
+
+  <node pkg="image_view" type="image_view" name="match_view" 
+	args="image:=shape_matcher/image_matched" />
+  
 </launch>
