@@ -1,7 +1,7 @@
 <launch>
   <!-- Launch all necessary resources for mission control nodes to do their thing -->
   <arg name="simulate" default="false" />
-    
+  
   <!-- Controls -->
   <include file="$(find auv_controls)/launch/seabee3_controls.launch" />
 
@@ -18,5 +18,15 @@
 
   </group>
 
+  <group ns="robot/cameras" >
+    <include file="$(find uscauv_camera)/launch/monocular_camera.launch" >
+      <arg name="camera" value="camera1" />
+      <arg name="name" value="downward/right" />
+    </include>
+  </group>
 
+  <node pkg="rosbag" type="record" name="rosbag_record"
+	args="record -O $(find auv_missions)/bag /robot/cameras/downward/right/image_rect_color /robot/cameras/downward/right/camera_info /rosout /robot/sensors/depth
+	      /tf"/>   
+  
 </launch>

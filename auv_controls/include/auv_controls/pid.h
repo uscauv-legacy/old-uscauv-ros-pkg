@@ -195,7 +195,7 @@ class PID1D
     /// error terms
     double error;
     if( config.use_mod )
-      error = uscauv::ring_difference( setpoint_, observed_value_, config.mod_val );
+      error = -uscauv::ring_difference( setpoint_, observed_value_, config.mod_val );
     else
       error = setpoint_ - observed_value_;
     double dedt = (error - last_error_) / dt;

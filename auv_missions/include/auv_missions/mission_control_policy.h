@@ -362,6 +362,8 @@ namespace uscauv
 	    }
 	}
       
+      ROS_INFO("Target heading is %f", target_heading );
+      
       while( ros::ok() && token() )
 	{
 	  tf::StampedTransform world_to_imu_tf;
