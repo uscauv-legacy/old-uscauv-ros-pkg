@@ -1,3 +1,4 @@
+
 /***************************************************************************
  *  include/auv_missions/find_object_mission_node.h
  *  --------------------
@@ -76,23 +77,23 @@ class FindObjectMissionNode: public BaseNode, public uscauv::MissionControlPolic
     SimpleActionToken ori_token = zeroPitchRoll();
     ori_token.wait(2.0);
     
-    SimpleActionToken dive_token = diveTo( depth_ );
-    ROS_INFO("Diving...");
-    dive_token.wait(10.0 );
+    /* SimpleActionToken dive_token = diveTo( depth_ ); */
+    /* ROS_INFO("Diving..."); */
+    /* dive_token.wait(10.0 ); */
     
-    SimpleActionToken find_object_token = findObject( object_name_ );
+    /* SimpleActionToken find_object_token = findObject( object_name_ ); */
     
-    SimpleActionToken motion_token = moveToward( 1, 0, 0.5, action_token::make_term_criteria( find_object_token ) );
-    motion_token.wait();
-    ROS_INFO("Found object, canceling dive.");
-    dive_token.complete();
+    /* SimpleActionToken motion_token = moveToward( 1, 0, 0.5, action_token::make_term_criteria( find_object_token ) ); */
+    /* motion_token.wait(); */
+    /* ROS_INFO("Found object."); */
+    /* dive_token.complete(); */
 
     ROS_INFO("Facing to object...");
     SimpleActionToken faceto_token = faceToObject( object_name_ );
-    faceto_token.wait( 10.0 );
-    ROS_INFO("Moving to object...");
-    SimpleActionToken moveto_token = moveToObject( object_name_, 1.0 );
-    moveto_token.wait();
+    faceto_token.wait( );
+    /* ROS_INFO("Moving to object..."); */
+    /* SimpleActionToken moveto_token = moveToObject( object_name_, 1.0 ); */
+    /* moveto_token.wait(); */
     
     
   }
