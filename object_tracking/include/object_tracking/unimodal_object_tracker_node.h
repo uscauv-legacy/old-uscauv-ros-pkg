@@ -117,10 +117,11 @@ typedef std::map<std::string, ObjectTrackerStorage> _AttributeTrackerMap;
  */
 static double getGaussianPDFPosition(_PositionUpdate::VectorType x,
 				     _PositionUpdate::VectorType mean, 
-				     _PositionUpdate::CovarianceType cov )
+				     _PositionUpdate::CovarianceType cov,
+				     double const & yaw_symmetry )
 {
   _PositionUpdate::VectorType diff_term = x - mean;
-  diff_term(3) = uscauv::ring_distance<double>( diff_term(3), 0, uscauv::TWO_PI );
+  diff_term(3) = uscauv::ring_distance<double>( diff_term(3), 0, yaw_symmetry );
 
   /// mahalanobis distance
   double const md = diff_term.transpose() * cov.inverse() * diff_term;
@@ -237,9 +238,9 @@ class UnimodalObjectTrackerNode: public BaseNode, public MultiReconfigure
 	    _PositionUpdate::VectorType state_pos = measurement_transition_*filter_it->state_;
 	    _PositionUpdate::VectorType diff_term = state_pos - update_mean;
 
-	    double const d = getGaussianPDFPosition( update_mean, state_pos, measurement_transition_ * filter_it->cov_ * measurement_transition_.transpose() );
+	    double const d = getGaussianPDFPosition( update_mean, state_pos, measurement_transition_ * filter_it->cov_ * measurement_transition_.transpose(), storage.config_.symmetry );
 	    double const dist_euclidian = diff_term.block(0,0,3,1).norm();
-	    double const dist_angular = uscauv::ring_distance<double>( diff_term(3), 0, uscauv::TWO_PI );
+	    double const dist_angular = uscauv::ring_distance<double>( diff_term(3), 0, storage.config_.symmetry );
 	    ROS_DEBUG("PDF val: %0.20f, dist: %f, angle %f", d, dist_euclidian, dist_angular);
 
 	    if( dist_euclidian <= storage.config_.exclude_distance

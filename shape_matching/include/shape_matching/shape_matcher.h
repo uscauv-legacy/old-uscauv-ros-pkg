@@ -47,6 +47,7 @@
 #include <uscauv_common/image_loader.h>
 #include <uscauv_common/graphics.h>
 #include <uscauv_common/color_codec.h>
+#include <uscauv_common/simple_math.h>
 
 /// opencv
 #include <opencv2/imgproc/imgproc.hpp>
@@ -399,6 +400,10 @@ class ShapeMatcherNode: public BaseNode, public ImageTransceiver, public MultiRe
     /// atan is on the interval [-pi/2, pi/2]
     float* ev1 = eigenvec.ptr<float>(0);
     rotation = atan(ev1[1]/ev1[0]);
+    rotation = rotation - uscauv::PI_TWO;
+    if( rotation < -uscauv::PI_TWO )
+      rotation = uscauv::PI + rotation;
+    /// rotation is on [-pi/2, pi/2], with a rotation of zero indicating that biggest principal component is aligned with the y axis
 
     /// center contour at zero
     float* mean_ptr = mean.ptr<float>(0);

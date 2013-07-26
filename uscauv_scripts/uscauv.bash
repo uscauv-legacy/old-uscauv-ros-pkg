@@ -280,7 +280,7 @@ alias uscauv-reconfigure="rosrun rqt_reconfigure rqt_reconfigure"
 
 function uscauv-plot-pid()
 {
-    rqt_plot /control_server/pid/angular/$1/feedback:x:y:z
+    rqt_plot /control_server/pid/angular/$1/feedback/x:y:e
 }
 
 function uscauv-run-motors()
