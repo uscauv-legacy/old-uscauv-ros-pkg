@@ -71,8 +71,20 @@ class FindObjectMissionNode: public BaseNode, public uscauv::MissionControlPolic
 
   void missionPlan()
   {
+    SimpleActionToken ori_token = zeroPitchRoll();
+    ori_token.wait(2.0);
+    
     SimpleActionToken find_object_token = findObject( object_name_ );
-    find_object_token.wait();
+    
+    SimpleActionToken motion_token = moveToward( 1, 0, 1, action_token::make_term_criteria( find_object_token ) );
+    motion_token.wait();
+
+    SimpleActionToken faceto_token = faceToObject( object_name_ );
+    faceto_token.wait( 5.0 );
+    SimpleActionToken moveto_token = moveToObject( object_name_, 1.0 );
+    moveto_token.wait();
+    
+    
   }
 
   // Running spin() will cause this function to get called at the loop rate until this node is killed.

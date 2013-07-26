@@ -43,7 +43,7 @@ args="image:=shape_matcher/image_denoised" />
   <node pkg="image_view" type="image_view" name="match_view" 
 	args="image:=shape_matcher/image_matched" />
 
-  <node pkg="image_view" type="image_view" name="flow_view" 
-	args="image:=optical_flow/image_debug" />
+  <!-- <node pkg="image_view" type="image_view" name="flow_view"  -->
+  <!-- 	args="image:=optical_flow/image_debug" /> -->
 
 </launch>

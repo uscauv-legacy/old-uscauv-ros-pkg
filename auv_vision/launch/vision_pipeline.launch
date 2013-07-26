@@ -29,11 +29,11 @@
   </include>
 
   <!-- Optical Flow - Auxiliary -->
-  <remap from="optical_flow/image_mono" to="$(arg camera)/image_rect" />
+  <!-- <remap from="optical_flow/image_mono" to="$(arg camera)/image_rect" /> -->
   
-  <include file="$(find auv_vision)/launch/optical_flow.launch" >
-    <arg name="rate" value="$(arg rate)" />
-  </include>
+  <!-- <include file="$(find auv_vision)/launch/optical_flow.launch" > -->
+  <!--   <arg name="rate" value="$(arg rate)" /> -->
+  <!-- </include> -->
   
 
   <!-- Params -->

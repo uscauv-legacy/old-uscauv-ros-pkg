@@ -79,6 +79,8 @@ namespace uscauv
     typedef auv_msgs::TrackedObjectArray _TrackedObjectArrayMsg;
 
     typedef auv_missions::MissionControlConfig _MissionControlConfig;
+
+    typedef std::function< bool() > _TermCrit;
      
   private:
    
@@ -190,6 +192,7 @@ namespace uscauv
 	quickdev::SimpleActionToken token;
 	token.start( &MissionControlPolicy::zeroPitchRoll_impl, this, token );	
 	active_tokens_.push_back( token );
+
 	return token;
       }
 
@@ -202,10 +205,10 @@ namespace uscauv
       }
 
     /// Move in the direction of a unit vector expressed relative to the robot's CM frame
-    quickdev::SimpleActionToken moveToward( double const & x, double const & y, double const & scale = 1 )
+    quickdev::SimpleActionToken moveToward( double const & x, double const & y, double const & scale = 1, _TermCrit term_crit = _TermCrit() )
       {
 	quickdev::SimpleActionToken token;
-	token.start( &MissionControlPolicy::moveToward_impl, this, token, x, y, scale );
+	token.start( &MissionControlPolicy::moveToward_impl, this, token, x, y, scale, term_crit );
 	active_tokens_.push_back( token );	
 	return token;	
       }
@@ -214,6 +217,22 @@ namespace uscauv
       {
 	quickdev::SimpleActionToken token;
 	token.start( &MissionControlPolicy::findObject_impl, this, token, name );
+	active_tokens_.push_back( token );
+	return token;
+      }
+
+    quickdev::SimpleActionToken faceToObject( std::string const & name )
+      {
+	quickdev::SimpleActionToken token;
+	token.start( &MissionControlPolicy::faceToObject_impl, this, token, name );
+	active_tokens_.push_back( token );
+	return token;
+      }
+
+    quickdev::SimpleActionToken moveToObject( std::string const & name, double const & distance )
+      {
+	quickdev::SimpleActionToken token;
+	token.start( &MissionControlPolicy::moveToObject_impl, this, token, name, distance );
 	active_tokens_.push_back( token );
 	return token;
       }
@@ -419,7 +438,7 @@ namespace uscauv
       token.complete();
     }
 
-    void moveToward_impl( quickdev::SimpleActionToken token, double const & x, double const & y, double const & scale )
+    void moveToward_impl( quickdev::SimpleActionToken token, double const & x, double const & y, double const & scale, _TermCrit term_crit )
     {
       ros::Rate loop_rate( action_loop_rate_hz_ );
       
@@ -434,8 +453,12 @@ namespace uscauv
       axis_command.mask.angular.z = false;
       axis_command.twist.linear.x = x / mag * scale;
       axis_command.twist.linear.y = y / mag * scale;
+
+      ROS_INFO("tc %d", bool(term_crit) );
+      if( term_crit )
+	ROS_INFO("tf() %d", term_crit() );
 	
-      while( ros::ok() && token() )
+      while( !( term_crit && term_crit() ) && ros::ok() && token() )
 	{
 	  axis_command_pub_.publish( axis_command );
 	      
@@ -483,6 +506,102 @@ namespace uscauv
 	      }
 	    
 	  }
+	  loop_rate.sleep();
+	}
+      
+      token.complete();	  
+    }
+
+    void faceToObject_impl( quickdev::SimpleActionToken token, std::string const & name )
+    {
+      ros::Rate loop_rate( action_loop_rate_hz_ );
+
+      ROS_INFO( "Facing to object [ %s ].", name.c_str() );
+
+      while( ros::ok() && token() )
+	{
+	    
+	  _TrackedObjectMsg object;
+	  
+	  /// Blocks until the tracked object message can be locked
+	  if( getMostConfidentObject( name, object ) )
+	    {
+	      ROS_INFO("[ faceToObject ]: Object [ %s ] not in sight.", name.c_str() );
+	      continue;
+	    }
+	  
+	  tf::Transform motion_to_object_tf;
+	  tf::poseMsgToTF( object.pose.pose, motion_to_object_tf );
+
+	  /// Lock the transforms
+	    {
+	      std::unique_lock<std::mutex> tf_lock( control_tf_mutex_ );
+
+	      /// Depth outside this function is expressed with Z axis pointing out of pool
+	      world_to_desired_tf_.getOrigin().setZ( 0 );
+	      world_to_desired_tf_.getOrigin().setY( 0 );
+	      world_to_measurement_tf_.getOrigin().setZ( motion_to_object_tf.getOrigin().getZ() );
+	      world_to_measurement_tf_.getOrigin().setY( motion_to_object_tf.getOrigin().getY() );
+	      
+	      /// TODO: Change depth delta to something that's not a guess
+	      if( std::abs( world_to_desired_tf_.getOrigin().getZ() -
+			    world_to_measurement_tf_.getOrigin().getZ() ) < 0.05 &&
+		  std::abs( world_to_desired_tf_.getOrigin().getY() -
+			    world_to_measurement_tf_.getOrigin().getY() ) < 0.05 &&
+		  !token.success() )
+		{
+		  ROS_INFO("Faced object [ %s ]. ", name.c_str() );
+		  token.succeed();		  
+		}
+	    }
+	    
+	  loop_rate.sleep();
+	}
+      
+      token.complete();	  
+    }
+    
+    void moveToObject_impl( quickdev::SimpleActionToken token, std::string const & name,
+			    double const & distance)
+    {
+      ros::Rate loop_rate( action_loop_rate_hz_ );
+
+      ROS_INFO( "Moving to object [ %s ].", name.c_str() );
+
+      while( ros::ok() && token() )
+	{
+	  _TrackedObjectMsg object;
+	  
+	  /// Blocks until the tracked object message can be locked
+	  if( getMostConfidentObject( name, object ) )
+	    {
+	      ROS_INFO("[ moveToObject ]: Object [ %s ] not in sight.", name.c_str() );
+	      continue;
+	    }
+	  
+	  tf::Transform motion_to_object_tf;
+	  tf::poseMsgToTF( object.pose.pose, motion_to_object_tf );
+
+	  /// Lock the transforms
+	    {
+	      std::unique_lock<std::mutex> tf_lock( control_tf_mutex_ );
+
+	      /// Depth outside this function is expressed with Z axis pointing out of pool
+	      world_to_desired_tf_.getOrigin().setX( distance );
+	      world_to_measurement_tf_.getOrigin().setX( motion_to_object_tf.getOrigin().getX() );
+	      
+	      /// TODO: Change depth delta to something that's not a guess
+	      if( std::abs( world_to_desired_tf_.getOrigin().getZ() -
+			    world_to_measurement_tf_.getOrigin().getZ() ) < 0.05 &&
+		  std::abs( world_to_desired_tf_.getOrigin().getY() -
+			    world_to_measurement_tf_.getOrigin().getY() ) < 0.05 &&
+		  !token.success() )
+		{
+		  ROS_INFO("Move to object object [ %s ]. ", name.c_str() );
+		  token.succeed();		  
+		}
+	    }
+	    
 	  loop_rate.sleep();
 	}
       
@@ -634,6 +753,38 @@ namespace uscauv
   // ################################################################
   // Misc. ##########################################################
   // ################################################################
+
+  int getMostConfidentObject( std::string const & name, _TrackedObjectMsg & msg )
+  {
+    std::unique_lock<std::mutex> lock( last_tracked_object_msg_mutex_ );
+
+    if( !last_tracked_object_msg_ )
+      return -1;
+
+    int idx = 0;
+    int min_idx = -1;
+    double min_var = -1;
+    for( _TrackedObjectMsg const & object: last_tracked_object_msg_->objects )
+      {
+	if( object.type == name )
+	  {
+	    if( min_var < 0 || object.variance < min_var )
+	      {
+		min_idx = idx;
+		min_var = object.variance;
+	      }
+	  }
+	++idx;
+      }
+    
+    if( min_idx < 0 )
+      return -1;
+    else
+      {
+	msg = last_tracked_object_msg_->objects[ min_idx ];
+	return 0;
+      }
+  }
     
   int getTransform( std::string const & target_frame, tf::StampedTransform & output )
   {
