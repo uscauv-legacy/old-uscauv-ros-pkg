@@ -350,7 +350,7 @@ class UnimodalObjectTrackerNode: public BaseNode, public MultiReconfigure
 					 &UnimodalObjectTrackerNode::cameraInfoCallback, 
 					 this);
 
-    tracked_object_pub_ = nh_rel_.advertise<_TrackedObjectArrayMsg>("tracked_objects", 10);
+    tracked_object_pub_ = nh_base.advertise<_TrackedObjectArrayMsg>("/robot/sensors/tracked_objects", 10);
 
     depth_method_ = uscauv::param::load<std::string>( nh_rel_, "depth_method", "monocular" );
     motion_frame_ = uscauv::param::load<std::string>( nh_rel_, "motion_frame", uscauv::defaults::CM_LINK );

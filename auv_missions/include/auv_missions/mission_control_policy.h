@@ -63,6 +63,7 @@
 #include <uscauv_common/simple_math.h>
 
 #include <auv_msgs/MaskedTwist.h>
+#include <auv_msgs/TrackedObjectArray.h>
 #include <auv_missions/MissionControlConfig.h>
 
 namespace uscauv
@@ -74,6 +75,8 @@ namespace uscauv
     typedef seabee3_msgs::Depth _DepthMsg;
     typedef seabee3_msgs::KillSwitch _KillswitchMsg;
     typedef auv_msgs::MaskedTwist _MaskedTwistMsg;
+    typedef auv_msgs::TrackedObject _TrackedObjectMsg;
+    typedef auv_msgs::TrackedObjectArray _TrackedObjectArrayMsg;
 
     typedef auv_missions::MissionControlConfig _MissionControlConfig;
      
@@ -81,6 +84,7 @@ namespace uscauv
    
     /// ROS
     ros::Subscriber depth_sub_, killswitch_sub_;
+    ros::Subscriber tracked_object_sub_;
     ros::NodeHandle nh_rel_;
     tf::TransformBroadcaster control_tf_broadcaster_;
     /// TODO: Make sure it's alright to use this from multiple threads without synchronizing. 
@@ -92,11 +96,13 @@ namespace uscauv
     /// Sensing
     _DepthMsg::ConstPtr last_depth_msg_;
     _KillswitchMsg::ConstPtr last_killswitch_msg_;
+    _TrackedObjectArrayMsg::ConstPtr last_tracked_object_msg_;
     tf::Transform world_to_desired_tf_, world_to_measurement_tf_;
 
     /// threading
     std::mutex last_depth_msg_mutex_;
     std::mutex last_killswitch_msg_mutex_;
+    std::mutex last_tracked_object_msg_mutex_;
     std::mutex control_tf_mutex_;
 
     std::mutex killswitch_enabled_mutex_;
@@ -140,6 +146,9 @@ namespace uscauv
 
 	killswitch_sub_ = nh.subscribe("robot/sensors/kill_switch", 10,
 				       &MissionControlPolicy::killswitchCallback, this );
+
+	tracked_object_sub_ = nh.subscribe("robot/sensors/tracked_objects", 10,
+					   &MissionControlPolicy::trackedObjectArrayCallback, this );
 
 	axis_command_pub_ = nh.advertise<_MaskedTwistMsg>( "control_server/axis_cmd", 10 );
 
@@ -199,6 +208,14 @@ namespace uscauv
 	token.start( &MissionControlPolicy::moveToward_impl, this, token, x, y, scale );
 	active_tokens_.push_back( token );	
 	return token;	
+      }
+
+    quickdev::SimpleActionToken findObject( std::string const & name )
+      {
+	quickdev::SimpleActionToken token;
+	token.start( &MissionControlPolicy::findObject_impl, this, token, name );
+	active_tokens_.push_back( token );
+	return token;
       }
 
     // ################################################################
@@ -299,38 +316,38 @@ namespace uscauv
     }
 
     void zeroPitchRoll_impl( quickdev::SimpleActionToken token )
-      {
-	ros::Rate loop_rate( action_loop_rate_hz_ );
+    {
+      ros::Rate loop_rate( action_loop_rate_hz_ );
       
-	while( ros::ok() && token() )
-	  {
-	    tf::StampedTransform world_to_imu_tf;
+      while( ros::ok() && token() )
+	{
+	  tf::StampedTransform world_to_imu_tf;
 
-	    if( getTransform( "robot/sensors/imu", world_to_imu_tf ) )
-	      continue;
+	  if( getTransform( "robot/sensors/imu", world_to_imu_tf ) )
+	    continue;
 
-	    double roll, pitch, yaw;
-	    world_to_imu_tf.getBasis().getRPY( roll, pitch, yaw );
+	  double roll, pitch, yaw;
+	  world_to_imu_tf.getBasis().getRPY( roll, pitch, yaw );
 	  
-	    {
-	      std::unique_lock<std::mutex> lock( control_tf_mutex_ );
+	  {
+	    std::unique_lock<std::mutex> lock( control_tf_mutex_ );
 	      
-	      /// Set desired pitch and roll to zero, leave yaw alone
-	      setRotationMask( world_to_desired_tf_, 0, 0, 0, false, true, true );
-	      /// Set measured pitch and roll to IMU, leave yaw alone
-	      setRotationMask( world_to_measurement_tf_, 0, pitch, roll, false, true, true );
+	    /// Set desired pitch and roll to zero, leave yaw alone
+	    setRotationMask( world_to_desired_tf_, 0, 0, 0, false, true, true );
+	    /// Set measured pitch and roll to IMU, leave yaw alone
+	    setRotationMask( world_to_measurement_tf_, 0, pitch, roll, false, true, true );
 
-	      if(  uscauv::ring_distance( pitch, 0.0, uscauv::TWO_PI ) < uscauv::PI / 18.0 &&
-		   uscauv::ring_distance( roll,  0.0, uscauv::TWO_PI ) < uscauv::PI / 18.0 &&
-		   !token.success() )
-		{
-		  ROS_INFO("Zeroed out pitch and roll." );
-		  token.succeed();
-		}
-	    }
-	      
-	    loop_rate.sleep();
+	    if(  uscauv::ring_distance( pitch, 0.0, uscauv::TWO_PI ) < uscauv::PI / 18.0 &&
+		 uscauv::ring_distance( roll,  0.0, uscauv::TWO_PI ) < uscauv::PI / 18.0 &&
+		 !token.success() )
+	      {
+		ROS_INFO("Zeroed out pitch and roll." );
+		token.succeed();
+	      }
 	  }
+	      
+	  loop_rate.sleep();
+	}
 
       /// Cancel trajectory
       {
@@ -339,8 +356,8 @@ namespace uscauv
 	setRotationMask( world_to_measurement_tf_, 0, 0, 0, false, true, true );
       }
 	
-	token.complete();
-      }
+      token.complete();
+    }
 
     void maintainHeading_impl( quickdev::SimpleActionToken token )
     {
@@ -404,261 +421,300 @@ namespace uscauv
 
     void moveToward_impl( quickdev::SimpleActionToken token, double const & x, double const & y, double const & scale )
     {
-      	ros::Rate loop_rate( action_loop_rate_hz_ );
+      ros::Rate loop_rate( action_loop_rate_hz_ );
       
-	double const mag = sqrt( pow(x, 2) + pow(y, 2) );
+      double const mag = sqrt( pow(x, 2) + pow(y, 2) );
 
-	_MaskedTwistMsg axis_command;
-	axis_command.mask.linear.x  = true;
-	axis_command.mask.linear.y  = true;
-	axis_command.mask.linear.z  = false;
-	axis_command.mask.angular.x = false;
-	axis_command.mask.angular.y = false;
-	axis_command.mask.angular.z = false;
-	axis_command.twist.linear.x = x / mag * scale;
-	axis_command.twist.linear.y = y / mag * scale;
+      _MaskedTwistMsg axis_command;
+      axis_command.mask.linear.x  = true;
+      axis_command.mask.linear.y  = true;
+      axis_command.mask.linear.z  = false;
+      axis_command.mask.angular.x = false;
+      axis_command.mask.angular.y = false;
+      axis_command.mask.angular.z = false;
+      axis_command.twist.linear.x = x / mag * scale;
+      axis_command.twist.linear.y = y / mag * scale;
 	
-	while( ros::ok() && token() )
-	  {
-	    axis_command_pub_.publish( axis_command );
-	      
-	    loop_rate.sleep();
-	  }
-	
-	/// Cancel trajectory
-	ROS_INFO("Canceling axis command");
+      while( ros::ok() && token() )
 	{
-	  axis_command.twist.linear.x = 0;
-	  axis_command.twist.linear.y = 0;
-	  
 	  axis_command_pub_.publish( axis_command );
-	}
-	ROS_INFO("Cancelled");
-	
-	token.complete();
-	
-	ROS_INFO("returning");
-    }
-  
-    // ################################################################
-    // Callback functions #############################################
-    // ################################################################
-
-  private:
-
-    void depthCallback( _DepthMsg::ConstPtr const & msg )
-    {
-      std::unique_lock< std::mutex > lock( last_depth_msg_mutex_ );
-
-      last_depth_msg_ = msg;
-    }
-
-    void killswitchCallback( _KillswitchMsg::ConstPtr const & msg )
-    {
-      std::unique_lock< std::mutex > lock( last_killswitch_msg_mutex_ );
-
-      if( last_killswitch_msg_ )
-	{
-	  if( !last_killswitch_msg_->is_killed && msg->is_killed )
-	    killswitch_disabled_condition_.notify_all();
-	  else if( last_killswitch_msg_->is_killed && !msg->is_killed )
-	    killswitch_enabled_condition_.notify_all();
-	}
-      last_killswitch_msg_ = msg;
-    }
-    
-    // ################################################################
-    // Misc. ##########################################################
-    // ################################################################
-
-  private:
-    void missionControlThread( std::function< void() > const & mission_plan_function )
-    {
-      /// TODO: Wait for dervied class's spinFirst to complete
-      
-      ROS_INFO( "Welcome to USC AUV Mission Control." );
-      
-      while( ros::ok() )
-	{
-	  /// Wait until killswitch is enabled
-	  if( !auto_start_ )
-	    {
-	      std::unique_lock<std::mutex> killswitch_enabled_lock( killswitch_enabled_mutex_ );
-	    
-	      ROS_INFO("Waiting for killswitch enable.");
-
-	      killswitch_enabled_condition_.wait( killswitch_enabled_lock );
-	    }
-	  else
-	    auto_start_ = false;
-	  
-	  ROS_INFO("Killswitch enabled. Launching Mission Plan thread..." );
-	  
-	  boost::thread external_loop_thread( &MissionControlPolicy::missionPlanThread, this, mission_plan_function );
-	  
-	  /// Wait for killswitch to be disabled
-	  {
-	    std::unique_lock<std::mutex> killswitch_disabled_lock( killswitch_disabled_mutex_ );
-	    
-	    killswitch_disabled_condition_.wait( killswitch_disabled_lock );
-	  }
-	  
-	  ROS_INFO("Killswitch disabled. Cancelling all active action tokens...");
-	  
-	  /// Cancel all tokens
-	  /// TODO: Find a way to ensure that all threads return before clear() is called, so that trajectories are guaranteed to be cancelled
-	  for( quickdev::SimpleActionToken & action : active_tokens_ )
-	    {
-	      action.complete();
-	    }
-	  active_tokens_.clear();
-	  
-	  ROS_DEBUG("Killing Mission Plan thread...");
-	  external_loop_thread.interrupt();
-	  
-	  ROS_DEBUG("Restarting Mission Control loop...");
-	}
-      
-      ros::shutdown();
-      return;
-    }
-
-    void missionPlanThread( std::function< void() > const & mission_plan_function )
-    {
-      try
-	{
-	  mission_plan_function();
-	}
-      catch( std::exception const & ex)
-	{
-	  ROS_ERROR("Caught exception [ %s ] while trying to run Mission Plan",
-		    ex.what() );
-	}
-      ROS_INFO("Mission Plan finished cleanly.");
-
-      /// Hang around until the parent thread interrupts or the program is killed
-      while(1){ boost::this_thread::interruption_point(); }
-
-      ROS_INFO("was interrupted");
-      
-      return;
-    }
-
-    /// Broadcast the current value of world_to_desired and world_to_measurement
-    void updateTransformsThread()
-    {
-      ros::Rate loop_rate( control_loop_rate_hz_ );
-
-      while( ros::ok() )
-	{
-	  /// Try to lock the coordinate frame transforms
-	  {
-	    std::unique_lock< std::mutex > lock( control_tf_mutex_, std::try_to_lock );
-	    if( lock )
-	      {
-		ros::Time now = ros::Time::now();
 	      
-		std::vector< tf::StampedTransform > controls;
-		
-		tf::StampedTransform desired( world_to_desired_tf_, now,
-					      "/world", "robot/controls/desired" );
-		tf::StampedTransform measurement( world_to_measurement_tf_, now,
-						  "/world", "robot/controls/measurement" );
-		
-		controls.push_back( desired ); controls.push_back( measurement );
-		
-		control_tf_broadcaster_.sendTransform( controls );
-	      }
-	  }
-	  
 	  loop_rate.sleep();
 	}
+	
+      /// Cancel trajectory
+      ROS_INFO("Canceling axis command");
+      {
+	axis_command.twist.linear.x = 0;
+	axis_command.twist.linear.y = 0;
+	  
+	axis_command_pub_.publish( axis_command );
+      }
+      ROS_INFO("Cancelled");
+	
+      token.complete();
+	
+      ROS_INFO("returning");
     }
-    
-    // ################################################################
-    // Misc. ##########################################################
-    // ################################################################
-    
-    int getTransform( std::string const & target_frame, tf::StampedTransform & output )
-    {
-      if( tf_listener_.canTransform( "/world", target_frame, ros::Time(0) ))
-	{
-	  try
-	    {
-	      tf_listener_.lookupTransform( "/world", target_frame, ros::Time(0), output );
 
-	    }
-	  catch(tf::TransformException & ex)
-	    {
-	      ROS_ERROR( "Caught exception [ %s ] looking up transform", ex.what() );
-	      return -1;
-	    }
-	  return 0;
+    void findObject_impl( quickdev::SimpleActionToken token, std::string const & name )
+    {
+      ros::Rate loop_rate( action_loop_rate_hz_ );
+
+      ROS_INFO( "Watching for object [ %s ].", name.c_str() );
+
+      while( ros::ok() && token() )
+	{
+
+	  /// Lock the message
+	  {
+	    std::unique_lock< std::mutex > lock( last_tracked_object_msg_mutex_ );
+	    
+	    if( !last_tracked_object_msg_ ) continue;
+	    
+	    for( _TrackedObjectMsg const & object: last_tracked_object_msg_->objects )
+	      {
+		if( object.type == name )
+		  {
+		    ROS_INFO("Found object [ %s ].", name.c_str() );
+		    token.complete( true );
+		    return ;
+		  }
+	      }
+	    
+	  }
+	  loop_rate.sleep();
 	}
-      else 
-	return -1;
+      
+      token.complete();	  
     }
-    
-    void setTransformYaw( tf::Transform & transform, double const & yaw )
-    {
-      double roll, pitch, old_yaw;
-      transform.getBasis().getRPY( roll, pitch, old_yaw );
-      transform.getBasis().setRPY( roll, pitch, yaw );
-      return;
-    }
+  
+  // ################################################################
+  // Callback functions #############################################
+  // ################################################################
 
-    void setRotationMask( tf::Transform & transform, double const & yaw,  double const & pitch,  double const & roll,
-			  bool const & yaw_mask = false,  bool const & pitch_mask = false,  bool const & roll_mask = false )
-    {
-      double old_roll, old_pitch, old_yaw;
-      transform.getBasis().getRPY( old_roll, old_pitch, old_yaw );
-      unsigned char mask = ( yaw_mask << 2 ) + ( pitch_mask << 1) + roll_mask;
+ private:
 
-      switch (mask)
+  void depthCallback( _DepthMsg::ConstPtr const & msg )
+  {
+    std::unique_lock< std::mutex > lock( last_depth_msg_mutex_ );
+
+    last_depth_msg_ = msg;
+  }
+
+  void killswitchCallback( _KillswitchMsg::ConstPtr const & msg )
+  {
+    std::unique_lock< std::mutex > lock( last_killswitch_msg_mutex_ );
+
+    if( last_killswitch_msg_ )
+      {
+	if( !last_killswitch_msg_->is_killed && msg->is_killed )
+	  killswitch_disabled_condition_.notify_all();
+	else if( last_killswitch_msg_->is_killed && !msg->is_killed )
+	  killswitch_enabled_condition_.notify_all();
+      }
+    last_killswitch_msg_ = msg;
+  }
+
+  void trackedObjectArrayCallback( _TrackedObjectArrayMsg::ConstPtr const & msg )
+  {
+    std::unique_lock<std::mutex> lock( last_tracked_object_msg_mutex_ );
+
+    last_tracked_object_msg_ = msg;
+  }
+
+  // ################################################################
+  // Misc. ##########################################################
+  // ################################################################
+
+ private:
+  void missionControlThread( std::function< void() > const & mission_plan_function )
+  {
+    /// TODO: Wait for dervied class's spinFirst to complete
+      
+    ROS_INFO( "Welcome to USC AUV Mission Control." );
+      
+    while( ros::ok() )
+      {
+	/// Wait until killswitch is enabled
+	if( !auto_start_ )
+	  {
+	    std::unique_lock<std::mutex> killswitch_enabled_lock( killswitch_enabled_mutex_ );
+	    
+	    ROS_INFO("Waiting for killswitch enable.");
+
+	    killswitch_enabled_condition_.wait( killswitch_enabled_lock );
+	  }
+	else
+	  auto_start_ = false;
+	  
+	ROS_INFO("Killswitch enabled. Launching Mission Plan thread..." );
+	  
+	boost::thread external_loop_thread( &MissionControlPolicy::missionPlanThread, this, mission_plan_function );
+	  
+	/// Wait for killswitch to be disabled
 	{
-	case 0:
+	  std::unique_lock<std::mutex> killswitch_disabled_lock( killswitch_disabled_mutex_ );
+	    
+	  killswitch_disabled_condition_.wait( killswitch_disabled_lock );
+	}
+	  
+	ROS_INFO("Killswitch disabled. Cancelling all active action tokens...");
+	  
+	/// Cancel all tokens
+	/// TODO: Find a way to ensure that all threads return before clear() is called, so that trajectories are guaranteed to be cancelled
+	for( quickdev::SimpleActionToken & action : active_tokens_ )
+	  {
+	    action.complete();
+	  }
+	active_tokens_.clear();
+	  
+	ROS_DEBUG("Killing Mission Plan thread...");
+	external_loop_thread.interrupt();
+	  
+	ROS_DEBUG("Restarting Mission Control loop...");
+      }
+      
+    ros::shutdown();
+    return;
+  }
+
+  void missionPlanThread( std::function< void() > const & mission_plan_function )
+  {
+    try
+      {
+	mission_plan_function();
+      }
+    catch( std::exception const & ex)
+      {
+	ROS_ERROR("Caught exception [ %s ] while trying to run Mission Plan",
+		  ex.what() );
+      }
+    ROS_INFO("Mission Plan finished cleanly.");
+
+    /// Hang around until the parent thread interrupts or the program is killed
+    while(1){ boost::this_thread::interruption_point(); }
+
+    ROS_INFO("was interrupted");
+      
+    return;
+  }
+
+  /// Broadcast the current value of world_to_desired and world_to_measurement
+  void updateTransformsThread()
+  {
+    ros::Rate loop_rate( control_loop_rate_hz_ );
+
+    while( ros::ok() )
+      {
+	/// Try to lock the coordinate frame transforms
+	{
+	  std::unique_lock< std::mutex > lock( control_tf_mutex_, std::try_to_lock );
+	  if( lock )
+	    {
+	      ros::Time now = ros::Time::now();
+	      
+	      std::vector< tf::StampedTransform > controls;
+		
+	      tf::StampedTransform desired( world_to_desired_tf_, now,
+					    "/world", "robot/controls/desired" );
+	      tf::StampedTransform measurement( world_to_measurement_tf_, now,
+						"/world", "robot/controls/measurement" );
+		
+	      controls.push_back( desired ); controls.push_back( measurement );
+		
+	      control_tf_broadcaster_.sendTransform( controls );
+	    }
+	}
+	  
+	loop_rate.sleep();
+      }
+  }
+    
+  // ################################################################
+  // Misc. ##########################################################
+  // ################################################################
+    
+  int getTransform( std::string const & target_frame, tf::StampedTransform & output )
+  {
+    if( tf_listener_.canTransform( "/world", target_frame, ros::Time(0) ))
+      {
+	try
+	  {
+	    tf_listener_.lookupTransform( "/world", target_frame, ros::Time(0), output );
+
+	  }
+	catch(tf::TransformException & ex)
+	  {
+	    ROS_ERROR( "Caught exception [ %s ] looking up transform", ex.what() );
+	    return -1;
+	  }
+	return 0;
+      }
+    else 
+      return -1;
+  }
+    
+  void setTransformYaw( tf::Transform & transform, double const & yaw )
+  {
+    double roll, pitch, old_yaw;
+    transform.getBasis().getRPY( roll, pitch, old_yaw );
+    transform.getBasis().setRPY( roll, pitch, yaw );
+    return;
+  }
+
+  void setRotationMask( tf::Transform & transform, double const & yaw,  double const & pitch,  double const & roll,
+			bool const & yaw_mask = false,  bool const & pitch_mask = false,  bool const & roll_mask = false )
+  {
+    double old_roll, old_pitch, old_yaw;
+    transform.getBasis().getRPY( old_roll, old_pitch, old_yaw );
+    unsigned char mask = ( yaw_mask << 2 ) + ( pitch_mask << 1) + roll_mask;
+
+    switch (mask)
+      {
+      case 0:
+	break;
+      case 1:
+	{
+	  transform.getBasis().setRPY( roll, old_pitch, old_yaw );
 	  break;
-	case 1:
-	  {
-	    transform.getBasis().setRPY( roll, old_pitch, old_yaw );
-	    break;
-	  }
-	case 2:
-	  {
-	    transform.getBasis().setRPY( old_roll, pitch, old_yaw );
-	    break;
-	  }
-	case 3:
-	  {
-	    transform.getBasis().setRPY( roll, pitch, old_yaw );
-	    break;
-	  }
-	case 4:
-	  {
-	    transform.getBasis().setRPY( old_roll, old_pitch, yaw );
-	    break;
-	  }
-	case 5:
-	  {
-	    transform.getBasis().setRPY( roll, old_pitch, yaw );
-	    break;
-	  }
-	case 6:
-	  {
-	    transform.getBasis().setRPY( old_roll, pitch, yaw );
-	    break;
-	  }
-	case 7:
-	  {
-	    transform.getBasis().setRPY( roll, pitch, yaw );
-	    break;
-	  }
 	}
+      case 2:
+	{
+	  transform.getBasis().setRPY( old_roll, pitch, old_yaw );
+	  break;
+	}
+      case 3:
+	{
+	  transform.getBasis().setRPY( roll, pitch, old_yaw );
+	  break;
+	}
+      case 4:
+	{
+	  transform.getBasis().setRPY( old_roll, old_pitch, yaw );
+	  break;
+	}
+      case 5:
+	{
+	  transform.getBasis().setRPY( roll, old_pitch, yaw );
+	  break;
+	}
+      case 6:
+	{
+	  transform.getBasis().setRPY( old_roll, pitch, yaw );
+	  break;
+	}
+      case 7:
+	{
+	  transform.getBasis().setRPY( roll, pitch, yaw );
+	  break;
+	}
+      }
 
-      return;
-    }
+    return;
+  }
     
-  };
+};
     
 } // uscauv
 
