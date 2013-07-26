@@ -137,6 +137,7 @@ class UnimodalObjectTrackerNode: public BaseNode, public MultiReconfigure
   /// ros
   ros::NodeHandle nh_rel_;
   ros::Subscriber matched_shape_sub_, camera_info_sub_;
+  ros::Publisher tracked_object_pub_;
   tf::TransformBroadcaster object_broadcaster_;
   tf::TransformListener tf_listener_;
   
@@ -189,7 +190,7 @@ class UnimodalObjectTrackerNode: public BaseNode, public MultiReconfigure
 	
 	/// Quit if we don't have the object or aren't tracking it
 	_AttributeTrackerMap::iterator tracker = trackers_.find( attr );
-	if( tracker == trackers_.end() || !tracker->second.tracked_ ) continue;
+	if( tracker == trackers_.end() /* || !tracker->second.tracked_ */ ) continue;
 
 	// ################################################################
 	// Project to 3d ##################################################
@@ -335,7 +336,6 @@ class UnimodalObjectTrackerNode: public BaseNode, public MultiReconfigure
   void spinFirst()
   {
     ros::NodeHandle nh_base;
-    bool immediate_tracking;
     _XmlVal xml_objects;
 
     measurement_transition_ << 
@@ -350,7 +350,8 @@ class UnimodalObjectTrackerNode: public BaseNode, public MultiReconfigure
 					 &UnimodalObjectTrackerNode::cameraInfoCallback, 
 					 this);
 
-    immediate_tracking = uscauv::param::load<bool>( nh_rel_, "immediate_tracking", false );
+    tracked_object_pub_ = nh_rel_.advertise<_TrackedObjectArrayMsg>("tracked_objects", 10);
+
     depth_method_ = uscauv::param::load<std::string>( nh_rel_, "depth_method", "monocular" );
     motion_frame_ = uscauv::param::load<std::string>( nh_rel_, "motion_frame", uscauv::defaults::CM_LINK );
     
@@ -381,7 +382,7 @@ class UnimodalObjectTrackerNode: public BaseNode, public MultiReconfigure
 	ObjectTrackerStorage tracker;
 	tracker.name_ = object_it->first;
 	tracker.ideal_radius_ = object_it->second["ideal_radius"];
-	tracker.tracked_ = immediate_tracking;
+	tracker.tracked_ = false;
 	tracker.last_predict_time_ = ros::Time::now();
 
 	/// have to add the new object before or the lookup in the reconfigure callback will fail to find it
@@ -420,6 +421,7 @@ class UnimodalObjectTrackerNode: public BaseNode, public MultiReconfigure
       return;
 
     std::vector< tf::StampedTransform > object_transforms;
+    _TrackedObjectArrayMsg tracked_objects;
     
     for( _NamedAttributeMap::const_iterator name_it = name_size_color_map_.begin(); 
 	 name_it != name_size_color_map_.end(); ++name_it )
@@ -427,8 +429,8 @@ class UnimodalObjectTrackerNode: public BaseNode, public MultiReconfigure
 	ObjectTrackerStorage & storage = trackers_.at( name_it->second );
 	/* _ObjectKalmanFilter::StateVector const & state = storage.filter_.state_; */
 	  
-	if( !storage.tracked_ )
-	  continue;
+	/* if( !storage.tracked_ ) */
+	/*   continue; */
 
 	/// Control input step
 	ros::Time now = ros::Time::now();
@@ -461,6 +463,7 @@ class UnimodalObjectTrackerNode: public BaseNode, public MultiReconfigure
 	    double const det = Eigen::PartialPivLU<_ObjectKalmanFilter::StateMatrix>( filter_it->cov_ ).determinant();
 	    if( det <= config_.kill_var )
 	      {
+	
 		surviving_filters.push_back( *filter_it );
 		
 		if( det < min_det || min_det < 0 )
@@ -527,6 +530,21 @@ class UnimodalObjectTrackerNode: public BaseNode, public MultiReconfigure
 		frame_name = ss.str();
 		++aux_idx;
 	      }
+
+	    /// Add TrackedObject msg for object
+	    /// TODO: Don't recalulate det, add color, add children, add covariance for pose
+	    double const det = Eigen::PartialPivLU<_ObjectKalmanFilter::StateMatrix>( filter_it->cov_ ).determinant();
+	    if( det <= config_.pass_var )
+	      {
+		_TrackedObjectMsg object;
+		object.variance = det;
+		object.symmetry = storage.config_.symmetry;
+		object.color = "NOT IMPLEMENTED";
+		object.type = storage.name_;
+		tf::poseTFToMsg( motion_to_object_tf, object.pose.pose );
+		tracked_objects.objects.push_back( object );
+	      }
+	    
 	    /// transform from camera to "object/<object name>"
 	    /// TODO: Flesh out tracking timeout logic. 
 	    /// Currently, transforms only timeout in rviz due to last_update_time_ being too old
@@ -539,6 +557,7 @@ class UnimodalObjectTrackerNode: public BaseNode, public MultiReconfigure
 
       }
 
+    tracked_object_pub_.publish( tracked_objects );
     object_broadcaster_.sendTransform( object_transforms );
     return;
   }

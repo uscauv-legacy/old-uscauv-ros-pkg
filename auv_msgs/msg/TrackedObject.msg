@@ -5,6 +5,8 @@ string color
 
 geometry_msgs/PoseWithCovariance pose
 
-float64 confidence
+float64 variance
+
+float64 symmetry
 
 int64[] child_idx
