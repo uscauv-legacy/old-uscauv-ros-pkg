@@ -1,3 +1,4 @@
+
 /***************************************************************************
  *  include/auv_missions/bowling_mission_node.h
  *  --------------------
@@ -73,9 +74,10 @@ class BowlingMissionNode: public BaseNode, public uscauv::MissionControlPolicy
   void missionPlan()
   {
     SimpleActionToken ori_token = zeroPitchRoll();
-    /* SimpleActionToken heading_token = maintainHeading(); */
-
-    /* heading_token.wait(); */
+    ori_token.wait(5);
+    
+    SimpleActionToken heading_token = maintainHeading();
+    heading_token.wait(1);
 
     /* Dive to 1 meter */
     /* SimpleActionToken dive_token = diveTo( depth_ ); */
@@ -85,9 +87,6 @@ class BowlingMissionNode: public BaseNode, public uscauv::MissionControlPolicy
     SimpleActionToken dive_token = diveTo( depth_ );
     ROS_INFO("Diving...");
     dive_token.wait(10.0 );
-
-
-   
     
     /* /// Go forward */
     SimpleActionToken motion_token = moveToward( 1, 0 );
