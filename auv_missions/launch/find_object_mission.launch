@@ -4,7 +4,7 @@
   <arg name="name" value="find_object_mission" />
   <arg name="type" default="$(arg name)" />
   <arg name="rate" default="60" />
-  <arg name="args" value="_loop_rate:=$(arg rate)" />
+  <arg name="args" value="_loop_rate:=$(arg rate) _distance:=2" />
 
   <node
       pkg="$(arg pkg)"

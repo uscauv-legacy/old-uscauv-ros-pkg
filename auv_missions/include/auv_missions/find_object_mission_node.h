@@ -53,7 +53,7 @@ class FindObjectMissionNode: public BaseNode, public uscauv::MissionControlPolic
 {
 
   std::string object_name_;
-  double depth_;
+  double depth_, distance_;
   
  public:
   FindObjectMissionNode(): BaseNode("FindObjectMission")
@@ -69,6 +69,7 @@ class FindObjectMissionNode: public BaseNode, public uscauv::MissionControlPolic
        
        object_name_ = uscauv::param::load<std::string>( nh_rel, "object", "buoy");
        depth_ = uscauv::param::load<double>( nh_rel, "depth", 0.5);
+       distance_ = uscauv::param::load<double>( nh_rel, "distance", 1);
        startMissionControl( &FindObjectMissionNode::missionPlan, this );
      }  
 
@@ -83,9 +84,10 @@ class FindObjectMissionNode: public BaseNode, public uscauv::MissionControlPolic
     dive_token.complete();
 
     ROS_INFO("Moving to object...");
-    SimpleActionToken moveto_token = moveToObject( object_name_, 0 );
+    SimpleActionToken moveto_token = moveToObject( object_name_, distance_ );
     moveto_token.wait();
-
+    
+    
     /* SimpleActionToken find_object_token = findObject( object_name_ ); */
     
     /* SimpleActionToken motion_token = moveToward( 1, 0, 0.5, action_token::make_term_criteria( find_object_token ) ); */

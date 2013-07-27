@@ -45,11 +45,16 @@
 // uscauv
 #include <uscauv_common/base_node.h>
 #include <auv_missions/mission_control_policy.h>
+#include <auv_missions/MissionConfig.h>
 
 using namespace quickdev;
 
-class PitchRollMissionNode: public BaseNode, public uscauv::MissionControlPolicy
+using namespace auv_missions;
+
+class PitchRollMissionNode: public BaseNode, public uscauv::MissionControlPolicy, MultiReconfigure
 {
+
+  MissionConfig* config_;
   
  public:
   PitchRollMissionNode(): BaseNode("PitchRollMission")
@@ -62,12 +67,16 @@ class PitchRollMissionNode: public BaseNode, public uscauv::MissionControlPolicy
   void spinFirst()
      {
        startMissionControl( &PitchRollMissionNode::missionPlan, this );
+       addReconfigureServer<MissionConfig>("mission");
+       config_ = &getLatestConfig<MissionConfig>("mission");
      }  
 	 
   void missionPlan()
   {
     SimpleActionToken ori_token = zeroPitchRoll();
-    ori_token.wait();
+    SimpleActionToken depth_token = diveTo(config_->depth);
+    depth_token.wait();
+    
   }
 
   // Running spin() will cause this function to get called at the loop rate until this node is killed.
