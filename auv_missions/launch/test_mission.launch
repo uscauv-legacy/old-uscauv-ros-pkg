@@ -1,0 +1,17 @@
+
+<launch>
+  <arg name="pkg" value="auv_missions" />
+  <arg name="name" value="test_mission" />
+  <arg name="type" default="$(arg name)" />
+  <arg name="rate" default="60" />
+  <arg name="args" value="_loop_rate:=$(arg rate)" />
+
+  <node
+      pkg="$(arg pkg)"
+      type="$(arg type)"
+      name="$(arg name)"
+      args="$(arg args)"
+      launch-prefix="xterm -e gdb --args"
+      output="screen" />
+  
+</launch>

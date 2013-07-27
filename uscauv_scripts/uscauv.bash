@@ -278,6 +278,11 @@ alias uscauv-calibrate-all="uscauv-calibrate-ori && uscauv-calibrate-depth"
 alias uscauv-joy="rosrun joy joy_node"
 alias uscauv-reconfigure="rosrun rqt_reconfigure rqt_reconfigure"
 
+function uscauv-lock-frames()
+{
+    rosrun tf static_transform_publisher 0 0 0 0 0 0 $1 $2 100
+}
+
 function uscauv-plot-pid()
 {
     rqt_plot /control_server/pid/$1/feedback/x:y:e

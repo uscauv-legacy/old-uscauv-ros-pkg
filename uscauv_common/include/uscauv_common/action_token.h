@@ -122,35 +122,34 @@ protected:
 
 private:
 
-    void wrapCall( boost::function< void() > const & callback )
-    {
-      try
-	{
-	  callback();
-	}
-      catch(std::exception const & ex)
-	{
-	  ROS_ERROR( "Caught exception [ %s ] executing action.", ex.what() );
-	}
-      ROS_INFO("returned in wrapcall");
-      /// TODO: Figure out why assert px != 0 fails here
-      getStorage()->wait_condition_.notify_all();
-      ROS_INFO("notified all in wrapcall");
-    }
+    /* void wrapCall( boost::function< void() > const & callback ) */
+    /* { */
+    /*   try */
+    /* 	{ */
+    /* 	  callback(); */
+    /* 	} */
+    /*   catch(std::exception const & ex) */
+    /* 	{ */
+    /* 	  ROS_ERROR( "Caught exception [ %s ] executing action.", ex.what() ); */
+    /* 	} */
+    /*   ROS_INFO("returned in wrapcall"); */
+    /*   /// TODO: Figure out why assert px != 0 fails here */
+    /*   getStorage()->wait_condition_.notify_all(); */
+    /*   ROS_INFO("notified all in wrapcall"); */
+    /* } */
 
 public:
     ActionTokenBase()
     :
         storage_ptr_( boost::make_shared<_Storage>() )
     {
-        //
+
     }
 
     ActionTokenBase( ActionTokenBase const & other )
     :
         storage_ptr_( other.storage_ptr_ )
     {
-        //
     }
 
     ActionTokenBase( std::vector<boost::condition_variable *> child_conditions )
@@ -174,7 +173,7 @@ public:
     >
     void create( __Args&&... args )
     {
-      storage_ptr_->data_storage_ptr_ = boost::make_shared<__Caller>( boost::bind( &ActionTokenBase::wrapCall, this, boost::protect( boost::bind<void>(std::forward<__Args>(args)...) )) );
+      storage_ptr_->data_storage_ptr_ = boost::make_shared<__Caller>( std::forward<__Args>(args)... );
       storage_ptr_->data_storage_ptr_->detach();
       storage_ptr_->data_ptr_ = storage_ptr_->data_storage_ptr_.get();
     }
@@ -239,6 +238,10 @@ public:
     {
         return ok();
     }
+
+    ~ActionTokenBase()
+      {
+      }
 };
 
 template<class __Caller>
