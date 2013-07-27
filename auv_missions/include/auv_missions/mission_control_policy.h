@@ -569,49 +569,60 @@ namespace uscauv
 			    double const & distance)
     {
       ros::Rate loop_rate( action_loop_rate_hz_ );
-
+      
       ROS_INFO( "Moving to object [ %s ].", name.c_str() );
-
+      
       while( ros::ok() && token() )
 	{
-	  _TrackedObjectMsg object;
-	  
-	  /// Blocks until the tracked object message can be locked
-	  if( getMostConfidentObject( name, object ) )
-	    {
-	      ROS_INFO("[ moveToObject ]: Object [ %s ] not in sight.", name.c_str() );
-	      continue;
-	    }
-	  
-	  tf::Transform motion_to_object_tf;
-	  tf::poseMsgToTF( object.pose.pose, motion_to_object_tf );
-
+	    
 	  /// Lock the transforms
 	  {
 	    std::unique_lock<std::mutex> tf_lock( control_tf_mutex_ );
 
-	    /// Depth outside this function is expressed with Z axis pointing out of pool
-	    world_to_desired_tf_.getOrigin().setX( motion_to_object_tf.getOrigin().getX() );
-	    world_to_measurement_tf_.getOrigin().setX( distance );
-	      
-	    /// TODO: Change depth delta to something that's not a guess
-	    if( std::abs( world_to_desired_tf_.getOrigin().getZ() -
-			  world_to_measurement_tf_.getOrigin().getZ() ) < 0.05 &&
-		std::abs( world_to_desired_tf_.getOrigin().getY() -
-			  world_to_measurement_tf_.getOrigin().getY() ) < 0.05 &&
-		!token.success() )
+	    _TrackedObjectMsg object;
+
+	    world_to_measurement_tf_.getOrigin().setZ( 0 );
+	    world_to_measurement_tf_.getOrigin().setY( 0 );
+	    world_to_measurement_tf_.getOrigin().setX( 0 );
+	    
+	    /// Blocks until the tracked object message can be locked
+	    if( getMostConfidentObject( name, object ) )
 	      {
-		ROS_INFO("Move to object object [ %s ]. ", name.c_str() );
-		token.succeed();		  
+		ROS_DEBUG("[ moveToObject ]: Object [ %s ] not in sight.", name.c_str() );
+		world_to_desired_tf_.getOrigin().setZ( 0 );
+		world_to_desired_tf_.getOrigin().setY( 0 );
+		world_to_desired_tf_.getOrigin().setX( 1 );
+	      }
+	    else
+	      {
+		tf::Transform motion_to_object_tf;
+		tf::poseMsgToTF( object.pose.pose, motion_to_object_tf );
+
+		/// Depth outside this function is expressed with Z axis pointing out of pool
+		world_to_desired_tf_.getOrigin().setZ( motion_to_object_tf.getOrigin().getZ() );
+		world_to_desired_tf_.getOrigin().setY( motion_to_object_tf.getOrigin().getY() );
+		world_to_desired_tf_.getOrigin().setX( motion_to_object_tf.getOrigin().getX() - distance );
+	      
+		/// TODO: Change depth delta to something that's not a guess
+		if( std::abs( world_to_desired_tf_.getOrigin().getZ() -
+			      world_to_measurement_tf_.getOrigin().getZ() ) < 0.05 &&
+		    std::abs( world_to_desired_tf_.getOrigin().getY() -
+			      world_to_measurement_tf_.getOrigin().getY() ) < 0.05 &&
+		    std::abs( world_to_desired_tf_.getOrigin().getX() -
+			      world_to_measurement_tf_.getOrigin().getX() ) < 0.05 &&
+		    !token.success() )
+		  {
+		    ROS_INFO("Moved to object [ %s ]. ", name.c_str() );
+		    token.succeed();		  
+		  }
 	      }
 	  }
-	    
 	  loop_rate.sleep();
 	}
-      
+	  
       token.complete();	  
     }
-  
+    
     // ################################################################
     // Callback functions #############################################
     // ################################################################
