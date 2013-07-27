@@ -1,0 +1,59 @@
+%YAML:1.0
+# Generated: Fri Jul 26 23:08:15 2013
+# 
+# Input String: /home/francesca/groovy_workspace/sandbox/uscauv-ros-pkg/color_classification/bin/svm_trainer --input=/home/francesca/red_classifier/ --color=red --iterations=10 auto=true 
+# 
+# Training images: [ /home/francesca/red_classifier/frame0516.jpg ], [ /home/francesca/red_classifier/frame0517.jpg ], [ /home/francesca/red_classifier/frame0518.jpg ], [ /home/francesca/red_classifier/frame0519.jpg ], [ /home/francesca/red_classifier/frame0520.jpg ], [ /home/francesca/red_classifier/frame0521.jpg ], [ /home/francesca/red_classifier/frame0522.jpg ], 
+# Mask images: [ /home/francesca/red_classifier/frame0516_mask.jpg ], [ /home/francesca/red_classifier/frame0517_mask.jpg ], [ /home/francesca/red_classifier/frame0518_mask.jpg ], [ /home/francesca/red_classifier/frame0519_mask.jpg ], [ /home/francesca/red_classifier/frame0520_mask.jpg ], [ /home/francesca/red_classifier/frame0521_mask.jpg ], [ /home/francesca/red_classifier/frame0522_mask.jpg ], 
+# 
+red: !!opencv-ml-svm
+   svm_type: C_SVC
+   kernel: { type:RBF, gamma:1.5000000000000001e-04 }
+   C: 1.0000000000000001e-01
+   term_criteria: { epsilon:2.2204460492503131e-16, iterations:10 }
+   var_all: 2
+   var_count: 2
+   class_count: 2
+   class_labels: !!opencv-matrix
+      rows: 1
+      cols: 2
+      dt: i
+      data: [ -1, 1 ]
+   sv_total: 20
+   support_vectors:
+      - [ 87., 128. ]
+      - [ 20., 36. ]
+      - [ 5., 162. ]
+      - [ 30., 51. ]
+      - [ 12., 58. ]
+      - [ 15., 49. ]
+      - [ 3., 161. ]
+      - [ 0., 98. ]
+      - [ 3., 178. ]
+      - [ 2., 157. ]
+      - [ 0., 113. ]
+      - [ 11., 150. ]
+      - [ 6., 190. ]
+      - [ 5., 162. ]
+      - [ 30., 57. ]
+      - [ 15., 54. ]
+      - [ 6., 150. ]
+      - [ 12., 53. ]
+      - [ 4., 187. ]
+      - [ 30., 48. ]
+   decision_functions:
+      -
+         sv_count: 20
+         rho: -2.3718996345996834e-02
+         alpha: [ 1.0000000000000001e-01, 1.0000000000000001e-01,
+             1.0000000000000001e-01, 1.0000000000000001e-01,
+             1.0000000000000001e-01, 1.0000000000000001e-01,
+             1.0000000000000001e-01, 1.0000000000000001e-01,
+             1.0000000000000001e-01, 1.0000000000000001e-01,
+             -1.0000000000000001e-01, -1.0000000000000001e-01,
+             -1.0000000000000001e-01, -1.0000000000000001e-01,
+             -1.0000000000000001e-01, -1.0000000000000001e-01,
+             -1.0000000000000001e-01, -1.0000000000000001e-01,
+             -1.0000000000000001e-01, -1.0000000000000001e-01 ]
+         index: [ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15,
+             16, 17, 18, 19 ]
