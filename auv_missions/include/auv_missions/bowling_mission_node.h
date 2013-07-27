@@ -47,19 +47,24 @@
 #include <uscauv_common/base_node.h>
 
 #include <auv_missions/mission_control_policy.h>
+#include <auv_missions/MissionConfig.h>
 
 using namespace quickdev;
+using namespace auv_missions;
 
-class BowlingMissionNode: public BaseNode, public uscauv::MissionControlPolicy
+class BowlingMissionNode: public BaseNode, public uscauv::MissionControlPolicy, public MultiReconfigure
 {
   
   double init_depth_, buoy_depth_;
   double gate_time_;
   std::string object_;
+  MissionConfig * config_;
   
  public:
  BowlingMissionNode(): BaseNode("BowlingMission")
     {
+       addReconfigureServer<MissionConfig>("mission");
+       config_ = &getLatestConfig<MissionConfig>("mission");
     }
 
  private:
@@ -84,19 +89,19 @@ class BowlingMissionNode: public BaseNode, public uscauv::MissionControlPolicy
     SimpleActionToken heading_token = maintainHeading();
     heading_token.wait(1);
 
-    SimpleActionToken dive_token = diveTo( init_depth_ );
+    SimpleActionToken dive_token = diveTo( config_->depth );
     ROS_INFO("Diving...");
     dive_token.wait(5);
     
     /* /// Go forward */
     SimpleActionToken motion_token = moveToward( 1, 0 );
     ROS_INFO("Bowling...");
-    motion_token.wait(45.0);
+    motion_token.wait( config_->gate_time );
     motion_token.complete();
     dive_token.complete();
 
     ROS_INFO("Diving to buoy depth");
-    SimpleActionToken dive_token2 = diveTo( 2 );
+    SimpleActionToken dive_token2 = diveTo( config_->buoy_depth );
     dive_token2.wait(15);
 
     ROS_INFO("Searching for object...");
@@ -104,6 +109,7 @@ class BowlingMissionNode: public BaseNode, public uscauv::MissionControlPolicy
     SimpleActionToken motion_token2 = moveToward( 1, 0, 0.5 );
     motion_token2.wait(1);
     find_object_token.wait();
+    dive_token2.complete();
     motion_token2.complete();
     heading_token.complete();
     
