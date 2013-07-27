@@ -1,6 +1,6 @@
 <launch>
   <!-- Launch all necessary resources for mission control nodes to do their thing -->
-  <arg name="simulate" default="true" />
+  <arg name="simulate" default="false" />
   
   <!-- Controls -->
   <include file="$(find auv_controls)/launch/seabee3_controls.launch" />
@@ -15,23 +15,26 @@
     
     <include file="$(find xsens_driver)/launch/xsens_driver.launch" >
     </include>
-    
+        
     <node pkg="rosbag" type="record" name="rosbag_record"
-	  args="record -O $(find auv_missions)/bag /robot/cameras/downward/right/image_rect_color /robot/cameras/downward/right/camera_info /rosout /robot/sensors/depth
-		/tf"/>   
+    	  args="record -o $(find auv_missions)/bag
+    		/robot/cameras/forward/left/image_rect_color /robot/cameras/forward/left/camera_info /rosout /robot/sensors/depth
+    		/tf"/>
 
-    <group ns="robot/cameras" >
-      <include file="$(find uscauv_camera)/launch/monocular_camera.launch" >
-	<arg name="camera" value="camera1" />
-	<arg name="name" value="downward/right" />
-      </include>
-    </group>
+    <!-- <group ns="robot/cameras" > -->
+    <!--   <include file="$(find uscauv_camera)/launch/monocular_camera.launch" > -->
+    <!-- 	<arg name="camera" value="camera1" /> -->
+    <!-- 	<arg name="name" value="downward/right" /> -->
+    <!--   </include> -->
+    <!-- </group> -->
     
+  <include file="$(find auv_vision)/launch/vision_pipeline_bringup.launch" >
+    <arg name="camera" value="camera3" />
+    <arg name="camera_name" value="forward/left" />
+  </include>		    
+
   </group>
 
-  <include file="$(find auv_vision)/launch/vision_pipeline_bringup.launch" >
-    <arg name="camera" value="camera4" />
-    <arg name="camera_name" value="forward/left" />
-  </include>
+
 
 </launch>

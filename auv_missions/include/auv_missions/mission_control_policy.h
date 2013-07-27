@@ -197,12 +197,12 @@ namespace uscauv
       }
 
     quickdev::SimpleActionToken maintainHeading(double const & offset = 0 )
-    {
-      quickdev::SimpleActionToken token;
-      token.start( &MissionControlPolicy::maintainHeading_impl, this, token, offset);
-      active_tokens_.push_back( token );	
-      return token;
-    }
+      {
+	quickdev::SimpleActionToken token;
+	token.start( &MissionControlPolicy::maintainHeading_impl, this, token, offset);
+	active_tokens_.push_back( token );	
+	return token;
+      }
 
     /// Move in the direction of a unit vector expressed relative to the robot's CM frame
     quickdev::SimpleActionToken moveToward( double const & x, double const & y, double const & scale = 1, _TermCrit term_crit = _TermCrit() )
@@ -521,39 +521,43 @@ namespace uscauv
       while( ros::ok() && token() )
 	{
 	    
-	  _TrackedObjectMsg object;
-	  
-	  /// Blocks until the tracked object message can be locked
-	  if( getMostConfidentObject( name, object ) )
-	    {
-	      ROS_INFO("[ faceToObject ]: Object [ %s ] not in sight.", name.c_str() );
-	      continue;
-	    }
-	  
-	  tf::Transform motion_to_object_tf;
-	  tf::poseMsgToTF( object.pose.pose, motion_to_object_tf );
-
 	  /// Lock the transforms
-	    {
-	      std::unique_lock<std::mutex> tf_lock( control_tf_mutex_ );
+	  {
+	    std::unique_lock<std::mutex> tf_lock( control_tf_mutex_ );
 
-	      /// Depth outside this function is expressed with Z axis pointing out of pool
-	      world_to_desired_tf_.getOrigin().setZ( 0 );
-	      world_to_desired_tf_.getOrigin().setY( 0 );
-	      world_to_measurement_tf_.getOrigin().setZ( motion_to_object_tf.getOrigin().getZ() );
-	      world_to_measurement_tf_.getOrigin().setY( motion_to_object_tf.getOrigin().getY() );
+	    _TrackedObjectMsg object;
+
+	    world_to_measurement_tf_.getOrigin().setZ( 0 );
+	    world_to_measurement_tf_.getOrigin().setY( 0 );
+	    
+	    /// Blocks until the tracked object message can be locked
+	    if( getMostConfidentObject( name, object ) )
+	      {
+		ROS_DEBUG("[ faceToObject ]: Object [ %s ] not in sight.", name.c_str() );
+		world_to_desired_tf_.getOrigin().setZ( 0 );
+		world_to_desired_tf_.getOrigin().setY( 0 );
+	      }
+	    else
+	      {
+		tf::Transform motion_to_object_tf;
+		tf::poseMsgToTF( object.pose.pose, motion_to_object_tf );
+
+		/// Depth outside this function is expressed with Z axis pointing out of pool
+		world_to_desired_tf_.getOrigin().setZ( motion_to_object_tf.getOrigin().getZ() );
+		world_to_desired_tf_.getOrigin().setY( motion_to_object_tf.getOrigin().getY() );
 	      
-	      /// TODO: Change depth delta to something that's not a guess
-	      if( std::abs( world_to_desired_tf_.getOrigin().getZ() -
-			    world_to_measurement_tf_.getOrigin().getZ() ) < 0.05 &&
-		  std::abs( world_to_desired_tf_.getOrigin().getY() -
-			    world_to_measurement_tf_.getOrigin().getY() ) < 0.05 &&
-		  !token.success() )
-		{
-		  ROS_INFO("Faced object [ %s ]. ", name.c_str() );
-		  token.succeed();		  
-		}
-	    }
+		/// TODO: Change depth delta to something that's not a guess
+		if( std::abs( world_to_desired_tf_.getOrigin().getZ() -
+			      world_to_measurement_tf_.getOrigin().getZ() ) < 0.05 &&
+		    std::abs( world_to_desired_tf_.getOrigin().getY() -
+			      world_to_measurement_tf_.getOrigin().getY() ) < 0.05 &&
+		    !token.success() )
+		  {
+		    ROS_INFO("Faced object [ %s ]. ", name.c_str() );
+		    token.succeed();		  
+		  }
+	      }
+	  }
 	    
 	  loop_rate.sleep();
 	}
@@ -565,307 +569,318 @@ namespace uscauv
 			    double const & distance)
     {
       ros::Rate loop_rate( action_loop_rate_hz_ );
-
+      
       ROS_INFO( "Moving to object [ %s ].", name.c_str() );
-
+      
       while( ros::ok() && token() )
 	{
-	  _TrackedObjectMsg object;
-	  
-	  /// Blocks until the tracked object message can be locked
-	  if( getMostConfidentObject( name, object ) )
-	    {
-	      ROS_INFO("[ moveToObject ]: Object [ %s ] not in sight.", name.c_str() );
-	      continue;
-	    }
-	  
-	  tf::Transform motion_to_object_tf;
-	  tf::poseMsgToTF( object.pose.pose, motion_to_object_tf );
-
+	    
 	  /// Lock the transforms
-	    {
-	      std::unique_lock<std::mutex> tf_lock( control_tf_mutex_ );
-
-	      /// Depth outside this function is expressed with Z axis pointing out of pool
-	      world_to_desired_tf_.getOrigin().setX( distance );
-	      world_to_measurement_tf_.getOrigin().setX( motion_to_object_tf.getOrigin().getX() );
-	      
-	      /// TODO: Change depth delta to something that's not a guess
-	      if( std::abs( world_to_desired_tf_.getOrigin().getZ() -
-			    world_to_measurement_tf_.getOrigin().getZ() ) < 0.05 &&
-		  std::abs( world_to_desired_tf_.getOrigin().getY() -
-			    world_to_measurement_tf_.getOrigin().getY() ) < 0.05 &&
-		  !token.success() )
-		{
-		  ROS_INFO("Move to object object [ %s ]. ", name.c_str() );
-		  token.succeed();		  
-		}
-	    }
-	    
-	  loop_rate.sleep();
-	}
-      
-      token.complete();	  
-    }
-  
-  // ################################################################
-  // Callback functions #############################################
-  // ################################################################
-
- private:
-
-  void depthCallback( _DepthMsg::ConstPtr const & msg )
-  {
-    std::unique_lock< std::mutex > lock( last_depth_msg_mutex_ );
-
-    last_depth_msg_ = msg;
-  }
-
-  void killswitchCallback( _KillswitchMsg::ConstPtr const & msg )
-  {
-    std::unique_lock< std::mutex > lock( last_killswitch_msg_mutex_ );
-
-    if( last_killswitch_msg_ )
-      {
-	if( !last_killswitch_msg_->is_killed && msg->is_killed )
-	  killswitch_disabled_condition_.notify_all();
-	else if( last_killswitch_msg_->is_killed && !msg->is_killed )
-	  killswitch_enabled_condition_.notify_all();
-      }
-    last_killswitch_msg_ = msg;
-  }
-
-  void trackedObjectArrayCallback( _TrackedObjectArrayMsg::ConstPtr const & msg )
-  {
-    std::unique_lock<std::mutex> lock( last_tracked_object_msg_mutex_ );
-
-    last_tracked_object_msg_ = msg;
-  }
-
-  // ################################################################
-  // Misc. ##########################################################
-  // ################################################################
-
- private:
-  void missionControlThread( std::function< void() > const & mission_plan_function )
-  {
-    /// TODO: Wait for dervied class's spinFirst to complete
-      
-    ROS_INFO( "Welcome to USC AUV Mission Control." );
-      
-    while( ros::ok() )
-      {
-	/// Wait until killswitch is enabled
-	if( !auto_start_ )
 	  {
-	    std::unique_lock<std::mutex> killswitch_enabled_lock( killswitch_enabled_mutex_ );
+	    std::unique_lock<std::mutex> tf_lock( control_tf_mutex_ );
+
+	    _TrackedObjectMsg object;
+
+	    world_to_measurement_tf_.getOrigin().setZ( 0 );
+	    world_to_measurement_tf_.getOrigin().setY( 0 );
+	    world_to_measurement_tf_.getOrigin().setX( 0 );
 	    
-	    ROS_INFO("Waiting for killswitch enable.");
-
-	    killswitch_enabled_condition_.wait( killswitch_enabled_lock );
-	  }
-	else
-	  auto_start_ = false;
-	  
-	ROS_INFO("Killswitch enabled. Launching Mission Plan thread..." );
-	  
-	boost::thread external_loop_thread( &MissionControlPolicy::missionPlanThread, this, mission_plan_function );
-	  
-	/// Wait for killswitch to be disabled
-	{
-	  std::unique_lock<std::mutex> killswitch_disabled_lock( killswitch_disabled_mutex_ );
-	    
-	  killswitch_disabled_condition_.wait( killswitch_disabled_lock );
-	}
-	  
-	ROS_INFO("Killswitch disabled. Cancelling all active action tokens...");
-	  
-	/// Cancel all tokens
-	/// TODO: Find a way to ensure that all threads return before clear() is called, so that trajectories are guaranteed to be cancelled
-	for( quickdev::SimpleActionToken & action : active_tokens_ )
-	  {
-	    action.complete();
-	  }
-	active_tokens_.clear();
-	  
-	ROS_DEBUG("Killing Mission Plan thread...");
-	external_loop_thread.interrupt();
-	  
-	ROS_DEBUG("Restarting Mission Control loop...");
-      }
-      
-    ros::shutdown();
-    return;
-  }
-
-  void missionPlanThread( std::function< void() > const & mission_plan_function )
-  {
-    try
-      {
-	mission_plan_function();
-      }
-    catch( std::exception const & ex)
-      {
-	ROS_ERROR("Caught exception [ %s ] while trying to run Mission Plan",
-		  ex.what() );
-      }
-    ROS_INFO("Mission Plan finished cleanly.");
-
-    /// Hang around until the parent thread interrupts or the program is killed
-    while(1){ boost::this_thread::interruption_point(); }
-
-    ROS_INFO("was interrupted");
-      
-    return;
-  }
-
-  /// Broadcast the current value of world_to_desired and world_to_measurement
-  void updateTransformsThread()
-  {
-    ros::Rate loop_rate( control_loop_rate_hz_ );
-
-    while( ros::ok() )
-      {
-	/// Try to lock the coordinate frame transforms
-	{
-	  std::unique_lock< std::mutex > lock( control_tf_mutex_, std::try_to_lock );
-	  if( lock )
-	    {
-	      ros::Time now = ros::Time::now();
-	      
-	      std::vector< tf::StampedTransform > controls;
-		
-	      tf::StampedTransform desired( world_to_desired_tf_, now,
-					    "/world", "robot/controls/desired" );
-	      tf::StampedTransform measurement( world_to_measurement_tf_, now,
-						"/world", "robot/controls/measurement" );
-		
-	      controls.push_back( desired ); controls.push_back( measurement );
-		
-	      control_tf_broadcaster_.sendTransform( controls );
-	    }
-	}
-	  
-	loop_rate.sleep();
-      }
-  }
-    
-  // ################################################################
-  // Misc. ##########################################################
-  // ################################################################
-
-  int getMostConfidentObject( std::string const & name, _TrackedObjectMsg & msg )
-  {
-    std::unique_lock<std::mutex> lock( last_tracked_object_msg_mutex_ );
-
-    if( !last_tracked_object_msg_ )
-      return -1;
-
-    int idx = 0;
-    int min_idx = -1;
-    double min_var = -1;
-    for( _TrackedObjectMsg const & object: last_tracked_object_msg_->objects )
-      {
-	if( object.type == name )
-	  {
-	    if( min_var < 0 || object.variance < min_var )
+	    /// Blocks until the tracked object message can be locked
+	    if( getMostConfidentObject( name, object ) )
 	      {
-		min_idx = idx;
-		min_var = object.variance;
+		ROS_DEBUG("[ moveToObject ]: Object [ %s ] not in sight.", name.c_str() );
+		world_to_desired_tf_.getOrigin().setZ( 0 );
+		world_to_desired_tf_.getOrigin().setY( 0 );
+		world_to_desired_tf_.getOrigin().setX( 1 );
+	      }
+	    else
+	      {
+		tf::Transform motion_to_object_tf;
+		tf::poseMsgToTF( object.pose.pose, motion_to_object_tf );
+
+		/// Depth outside this function is expressed with Z axis pointing out of pool
+		world_to_desired_tf_.getOrigin().setZ( motion_to_object_tf.getOrigin().getZ() );
+		world_to_desired_tf_.getOrigin().setY( motion_to_object_tf.getOrigin().getY() );
+		world_to_desired_tf_.getOrigin().setX( motion_to_object_tf.getOrigin().getX() - distance );
+	      
+		/// TODO: Change depth delta to something that's not a guess
+		if( std::abs( world_to_desired_tf_.getOrigin().getZ() -
+			      world_to_measurement_tf_.getOrigin().getZ() ) < 0.05 &&
+		    std::abs( world_to_desired_tf_.getOrigin().getY() -
+			      world_to_measurement_tf_.getOrigin().getY() ) < 0.05 &&
+		    std::abs( world_to_desired_tf_.getOrigin().getX() -
+			      world_to_measurement_tf_.getOrigin().getX() ) < 0.05 &&
+		    !token.success() )
+		  {
+		    ROS_INFO("Moved to object [ %s ]. ", name.c_str() );
+		    token.succeed();		  
+		  }
 	      }
 	  }
-	++idx;
-      }
+	  loop_rate.sleep();
+	}
+	  
+      token.complete();	  
+    }
     
-    if( min_idx < 0 )
-      return -1;
-    else
-      {
-	msg = last_tracked_object_msg_->objects[ min_idx ];
-	return 0;
-      }
-  }
-    
-  int getTransform( std::string const & target_frame, tf::StampedTransform & output )
-  {
-    if( tf_listener_.canTransform( "/world", target_frame, ros::Time(0) ))
-      {
-	try
+    // ################################################################
+    // Callback functions #############################################
+    // ################################################################
+
+  private:
+
+    void depthCallback( _DepthMsg::ConstPtr const & msg )
+    {
+      std::unique_lock< std::mutex > lock( last_depth_msg_mutex_ );
+
+      last_depth_msg_ = msg;
+    }
+
+    void killswitchCallback( _KillswitchMsg::ConstPtr const & msg )
+    {
+      std::unique_lock< std::mutex > lock( last_killswitch_msg_mutex_ );
+
+      if( last_killswitch_msg_ )
+	{
+	  if( !last_killswitch_msg_->is_killed && msg->is_killed )
+	    killswitch_disabled_condition_.notify_all();
+	  else if( last_killswitch_msg_->is_killed && !msg->is_killed )
+	    killswitch_enabled_condition_.notify_all();
+	}
+      last_killswitch_msg_ = msg;
+    }
+
+    void trackedObjectArrayCallback( _TrackedObjectArrayMsg::ConstPtr const & msg )
+    {
+      std::unique_lock<std::mutex> lock( last_tracked_object_msg_mutex_ );
+
+      last_tracked_object_msg_ = msg;
+    }
+
+    // ################################################################
+    // Misc. ##########################################################
+    // ################################################################
+
+  private:
+    void missionControlThread( std::function< void() > const & mission_plan_function )
+    {
+      /// TODO: Wait for dervied class's spinFirst to complete
+      
+      ROS_INFO( "Welcome to USC AUV Mission Control." );
+      
+      while( ros::ok() )
+	{
+	  /// Wait until killswitch is enabled
+	  if( !auto_start_ )
+	    {
+	      std::unique_lock<std::mutex> killswitch_enabled_lock( killswitch_enabled_mutex_ );
+	    
+	      ROS_INFO("Waiting for killswitch enable.");
+
+	      killswitch_enabled_condition_.wait( killswitch_enabled_lock );
+	    }
+	  else
+	    auto_start_ = false;
+	  
+	  ROS_INFO("Killswitch enabled. Launching Mission Plan thread..." );
+	  
+	  boost::thread external_loop_thread( &MissionControlPolicy::missionPlanThread, this, mission_plan_function );
+	  
+	  /// Wait for killswitch to be disabled
 	  {
-	    tf_listener_.lookupTransform( "/world", target_frame, ros::Time(0), output );
-
+	    std::unique_lock<std::mutex> killswitch_disabled_lock( killswitch_disabled_mutex_ );
+	    
+	    killswitch_disabled_condition_.wait( killswitch_disabled_lock );
 	  }
-	catch(tf::TransformException & ex)
+	  
+	  ROS_INFO("Killswitch disabled. Cancelling all active action tokens...");
+	  
+	  /// Cancel all tokens
+	  /// TODO: Find a way to ensure that all threads return before clear() is called, so that trajectories are guaranteed to be cancelled
+	  for( quickdev::SimpleActionToken & action : active_tokens_ )
+	    {
+	      action.complete();
+	    }
+	  active_tokens_.clear();
+	  
+	  ROS_DEBUG("Killing Mission Plan thread...");
+	  external_loop_thread.interrupt();
+	  
+	  ROS_DEBUG("Restarting Mission Control loop...");
+	}
+      
+      ros::shutdown();
+      return;
+    }
+
+    void missionPlanThread( std::function< void() > const & mission_plan_function )
+    {
+      try
+	{
+	  mission_plan_function();
+	}
+      catch( std::exception const & ex)
+	{
+	  ROS_ERROR("Caught exception [ %s ] while trying to run Mission Plan",
+		    ex.what() );
+	}
+      ROS_INFO("Mission Plan finished cleanly.");
+
+      /// Hang around until the parent thread interrupts or the program is killed
+      while(1){ boost::this_thread::interruption_point(); }
+
+      ROS_INFO("was interrupted");
+      
+      return;
+    }
+
+    /// Broadcast the current value of world_to_desired and world_to_measurement
+    void updateTransformsThread()
+    {
+      ros::Rate loop_rate( control_loop_rate_hz_ );
+
+      while( ros::ok() )
+	{
+	  /// Try to lock the coordinate frame transforms
 	  {
-	    ROS_ERROR( "Caught exception [ %s ] looking up transform", ex.what() );
-	    return -1;
+	    std::unique_lock< std::mutex > lock( control_tf_mutex_, std::try_to_lock );
+	    if( lock )
+	      {
+		ros::Time now = ros::Time::now();
+	      
+		std::vector< tf::StampedTransform > controls;
+		
+		tf::StampedTransform desired( world_to_desired_tf_, now,
+					      "/world", "robot/controls/desired" );
+		tf::StampedTransform measurement( world_to_measurement_tf_, now,
+						  "/world", "robot/controls/measurement" );
+		
+		controls.push_back( desired ); controls.push_back( measurement );
+		
+		control_tf_broadcaster_.sendTransform( controls );
+	      }
 	  }
-	return 0;
-      }
-    else 
-      return -1;
-  }
+	  
+	  loop_rate.sleep();
+	}
+    }
     
-  void setTransformYaw( tf::Transform & transform, double const & yaw )
-  {
-    double roll, pitch, old_yaw;
-    transform.getBasis().getRPY( roll, pitch, old_yaw );
-    transform.getBasis().setRPY( roll, pitch, yaw );
-    return;
-  }
+    // ################################################################
+    // Misc. ##########################################################
+    // ################################################################
 
-  void setRotationMask( tf::Transform & transform, double const & yaw,  double const & pitch,  double const & roll,
-			bool const & yaw_mask = false,  bool const & pitch_mask = false,  bool const & roll_mask = false )
-  {
-    double old_roll, old_pitch, old_yaw;
-    transform.getBasis().getRPY( old_roll, old_pitch, old_yaw );
-    unsigned char mask = ( yaw_mask << 2 ) + ( pitch_mask << 1) + roll_mask;
+    int getMostConfidentObject( std::string const & name, _TrackedObjectMsg & msg )
+    {
+      std::unique_lock<std::mutex> lock( last_tracked_object_msg_mutex_ );
 
-    switch (mask)
-      {
-      case 0:
-	break;
-      case 1:
-	{
-	  transform.getBasis().setRPY( roll, old_pitch, old_yaw );
-	  break;
-	}
-      case 2:
-	{
-	  transform.getBasis().setRPY( old_roll, pitch, old_yaw );
-	  break;
-	}
-      case 3:
-	{
-	  transform.getBasis().setRPY( roll, pitch, old_yaw );
-	  break;
-	}
-      case 4:
-	{
-	  transform.getBasis().setRPY( old_roll, old_pitch, yaw );
-	  break;
-	}
-      case 5:
-	{
-	  transform.getBasis().setRPY( roll, old_pitch, yaw );
-	  break;
-	}
-      case 6:
-	{
-	  transform.getBasis().setRPY( old_roll, pitch, yaw );
-	  break;
-	}
-      case 7:
-	{
-	  transform.getBasis().setRPY( roll, pitch, yaw );
-	  break;
-	}
-      }
+      if( !last_tracked_object_msg_ )
+	return -1;
 
-    return;
-  }
+      int idx = 0;
+      int min_idx = -1;
+      double min_var = -1;
+      for( _TrackedObjectMsg const & object: last_tracked_object_msg_->objects )
+	{
+	  if( object.type == name )
+	    {
+	      if( min_var < 0 || object.variance < min_var )
+		{
+		  min_idx = idx;
+		  min_var = object.variance;
+		}
+	    }
+	  ++idx;
+	}
     
-};
+      if( min_idx < 0 )
+	return -1;
+      else
+	{
+	  msg = last_tracked_object_msg_->objects[ min_idx ];
+	  return 0;
+	}
+    }
+    
+    int getTransform( std::string const & target_frame, tf::StampedTransform & output )
+    {
+      if( tf_listener_.canTransform( "/world", target_frame, ros::Time(0) ))
+	{
+	  try
+	    {
+	      tf_listener_.lookupTransform( "/world", target_frame, ros::Time(0), output );
+
+	    }
+	  catch(tf::TransformException & ex)
+	    {
+	      ROS_ERROR( "Caught exception [ %s ] looking up transform", ex.what() );
+	      return -1;
+	    }
+	  return 0;
+	}
+      else 
+	return -1;
+    }
+    
+    void setTransformYaw( tf::Transform & transform, double const & yaw )
+    {
+      double roll, pitch, old_yaw;
+      transform.getBasis().getRPY( roll, pitch, old_yaw );
+      transform.getBasis().setRPY( roll, pitch, yaw );
+      return;
+    }
+
+    void setRotationMask( tf::Transform & transform, double const & yaw,  double const & pitch,  double const & roll,
+			  bool const & yaw_mask = false,  bool const & pitch_mask = false,  bool const & roll_mask = false )
+    {
+      double old_roll, old_pitch, old_yaw;
+      transform.getBasis().getRPY( old_roll, old_pitch, old_yaw );
+      unsigned char mask = ( yaw_mask << 2 ) + ( pitch_mask << 1) + roll_mask;
+
+      switch (mask)
+	{
+	case 0:
+	  break;
+	case 1:
+	  {
+	    transform.getBasis().setRPY( roll, old_pitch, old_yaw );
+	    break;
+	  }
+	case 2:
+	  {
+	    transform.getBasis().setRPY( old_roll, pitch, old_yaw );
+	    break;
+	  }
+	case 3:
+	  {
+	    transform.getBasis().setRPY( roll, pitch, old_yaw );
+	    break;
+	  }
+	case 4:
+	  {
+	    transform.getBasis().setRPY( old_roll, old_pitch, yaw );
+	    break;
+	  }
+	case 5:
+	  {
+	    transform.getBasis().setRPY( roll, old_pitch, yaw );
+	    break;
+	  }
+	case 6:
+	  {
+	    transform.getBasis().setRPY( old_roll, pitch, yaw );
+	    break;
+	  }
+	case 7:
+	  {
+	    transform.getBasis().setRPY( roll, pitch, yaw );
+	    break;
+	  }
+	}
+
+      return;
+    }
+    
+  };
     
 } // uscauv
 

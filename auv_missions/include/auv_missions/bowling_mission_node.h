@@ -53,7 +53,9 @@ using namespace quickdev;
 class BowlingMissionNode: public BaseNode, public uscauv::MissionControlPolicy
 {
   
-  double depth_;
+  double init_depth_, buoy_depth_;
+  double gate_time_;
+  std::string object_;
   
  public:
  BowlingMissionNode(): BaseNode("BowlingMission")
@@ -67,7 +69,10 @@ class BowlingMissionNode: public BaseNode, public uscauv::MissionControlPolicy
   {
     ros::NodeHandle nh_rel("~");
 
-    depth_ = uscauv::param::load<double>( nh_rel, "depth", 0.5);
+    init_depth_ = uscauv::param::load<double>( nh_rel, "init_depth", 0.5); 
+    buoy_depth_ = uscauv::param::load<double>( nh_rel, "buoy_depth", 3); 
+    gate_time_ = uscauv::param::load<double>( nh_rel, "gate_time", 30); 
+    object_ = uscauv::param::load<std::string>( nh_rel, "object", "buoy"); 
     startMissionControl( &BowlingMissionNode::missionPlan, this );
   }  
 
@@ -79,19 +84,34 @@ class BowlingMissionNode: public BaseNode, public uscauv::MissionControlPolicy
     SimpleActionToken heading_token = maintainHeading();
     heading_token.wait(1);
 
-    /* Dive to 1 meter */
-    /* SimpleActionToken dive_token = diveTo( depth_ ); */
-    /* ROS_INFO("Diving..."); */
-    /* dive_token.wait( ); */
-
-    SimpleActionToken dive_token = diveTo( depth_ );
+    SimpleActionToken dive_token = diveTo( init_depth_ );
     ROS_INFO("Diving...");
-    dive_token.wait(10.0 );
+    dive_token.wait(5);
     
     /* /// Go forward */
     SimpleActionToken motion_token = moveToward( 1, 0 );
     ROS_INFO("Bowling...");
-    motion_token.wait();
+    motion_token.wait(45.0);
+    motion_token.complete();
+    dive_token.complete();
+
+    ROS_INFO("Diving to buoy depth");
+    SimpleActionToken dive_token2 = diveTo( 2 );
+    dive_token2.wait(15);
+
+    ROS_INFO("Searching for object...");
+    SimpleActionToken find_object_token = findObject( object_ );
+    SimpleActionToken motion_token2 = moveToward( 1, 0, 0.5 );
+    motion_token2.wait(1);
+    find_object_token.wait();
+    motion_token2.complete();
+    heading_token.complete();
+    
+    ROS_INFO("Moving to object...");
+    SimpleActionToken moveto_token = moveToObject( object_, 0 );
+    
+    while(1){}
+    
     /* motion_token.wait(5); */
     /* motion_token.complete(); */
     /* while(1){ boost::this_thread::interruption_point();} */
