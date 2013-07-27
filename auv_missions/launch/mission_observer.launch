@@ -9,5 +9,11 @@
 
   <node pkg="image_view" type="image_view" name="match_view" 
 	args="image:=shape_matcher/image_matched" />
+
+  <node pkg="image_view" type="image_view" name="forward_view" 
+	args="image:=robot/cameras/forward/left/image_rect_color" />
+
+  <node pkg="image_view" type="image_view" name="color_view" 
+	args="image:=color_classifier/blaze_orange_classified" />
   
 </launch>
