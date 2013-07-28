@@ -105,7 +105,7 @@ class BowlingMissionNode: public BaseNode, public uscauv::MissionControlPolicy, 
     dive_token2.wait(15);
 
     ROS_INFO("Searching for object...");
-    SimpleActionToken find_object_token = findObject( object_ );
+    SimpleActionToken find_object_token = findObject( "buoy" );
     SimpleActionToken motion_token2 = moveToward( 1, 0, 0.5 );
     motion_token2.wait(1);
     find_object_token.wait();
@@ -114,7 +114,31 @@ class BowlingMissionNode: public BaseNode, public uscauv::MissionControlPolicy, 
     heading_token.complete();
     
     ROS_INFO("Moving to object...");
-    SimpleActionToken moveto_token = moveToObject( object_, 0 );
+    SimpleActionToken moveto_token = moveToObject( "buoy", config_->buoy_distance );
+    moveto_token.wait();
+    moveto_token.complete();
+    SimpleActionToken moveto_token2 = moveToObject( "buoy", 0 );
+    moveto_token2.wait(10);
+    moveto_token.complete();
+    SimpleActionToken motion_token3 = moveToward( -1, 0, 0.5 );
+    motion_token3.wait(10);
+    motion_token3.complete();
+
+    SimpleActionToken moveto_token3 = moveToObject( "traffic_light", 0 );
+    moveto_token3.wait(25);
+    moveto_token3.complete();
+
+    SimpleActionToken motion_token4 = moveToward( -1, 0, 0.5 );
+    motion_token4.wait(10);
+    motion_token4.complete();
+    
+    SimpleActionToken dive_token3 = diveTo( config_->depth );
+    dive_token3.wait(15);
+    SimpleActionToken heading_token2 = maintainHeading();
+    heading_token2.wait(2);
+
+    SimpleActionToken motion_token5 = moveToward( 1, 0 );
+    motion_token5.wait();
     
     while(1){}
     

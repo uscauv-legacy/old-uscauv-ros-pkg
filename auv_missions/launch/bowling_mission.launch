@@ -5,6 +5,8 @@
   <arg name="type" default="$(arg name)" />
   <arg name="rate" default="60" />
   <arg name="args" value="_loop_rate:=$(arg rate)" />
+  
+  <rosparam command="load" file="$(find auv_missions)/params/bowling.yaml" param="bowling_mission/mission" />
 
   <node
       pkg="$(arg pkg)"
