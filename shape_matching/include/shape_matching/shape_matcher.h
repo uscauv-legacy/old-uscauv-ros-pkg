@@ -191,12 +191,7 @@ class ShapeMatcherNode: public BaseNode, public ImageTransceiver, public MultiRe
 	int kernel_size = config_->kernel_size;
 	double const  floor_threshold = config_->floor_threshold;
 	kernel_size = (kernel_size % 2) ? kernel_size : kernel_size + 1;
-    
-	if( config_->use_blur )
-	  {
-	    cv::GaussianBlur( denoised, denoised, cv::Size(kernel_size, kernel_size), 0, 0);
-	  }
-	
+
 	if( config_->use_morph )
 	  {
 	    cv::morphologyEx( denoised, denoised, cv::MORPH_OPEN, 
@@ -204,6 +199,12 @@ class ShapeMatcherNode: public BaseNode, public ImageTransceiver, public MultiRe
 							 cv::Size( struct_elem_size, 
 								   struct_elem_size ) ) );
 	  }
+    
+	if( config_->use_blur )
+	  {
+	    cv::GaussianBlur( denoised, denoised, cv::Size(kernel_size, kernel_size), 0, 0);
+	  }
+
 	if( config_->use_floor)
 	  cv::threshold( denoised, denoised, floor_threshold, 0, cv::THRESH_TOZERO );
 	if( config_->use_otsu )

@@ -277,6 +277,7 @@ alias uscauv-calibrate-ori="rosservice call /xsens_driver/calibrate_rpy_ori 100"
 alias uscauv-calibrate-all="uscauv-calibrate-ori && uscauv-calibrate-depth"
 alias uscauv-joy="rosrun joy joy_node"
 alias uscauv-reconfigure="rosrun rqt_reconfigure rqt_reconfigure"
+alias uscauv-observe-mission="roslaunch auv_missions mission_observer.launch"
 
 function uscauv-lock-frames()
 {
