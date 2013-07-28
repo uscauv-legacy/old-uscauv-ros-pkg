@@ -1,0 +1,3 @@
+{attack_time: 7.5, buoy_depth: 2, buoy_distance: 2.0, depth: 0.5, gate_time: 45.0,
+  hedge_depth: 0.5, hedge_ori: 0.0, retreat_time: 15.0, retreat_vel: 2.0, target1: buoy,
+  target2: traffic_light_tube}
