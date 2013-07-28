@@ -125,9 +125,11 @@ class BowlingMissionNode: public BaseNode, public uscauv::MissionControlPolicy, 
     moveto_token2.complete();
     ROS_INFO("Retreating...");
     SimpleActionToken heading_token3 = maintainHeading();
+    SimpleActionToken dive_token4 = diveTo( config_->buoy_depth );
     heading_token3.wait(2);
     SimpleActionToken motion_token3 = moveToward( -1, 0, config_->retreat_vel );
     motion_token3.wait(config_->retreat_time);
+    dive_token4.complete();
     motion_token3.complete();
     heading_token3.complete();
     ROS_INFO("Retreated. Searching for traffic light");
@@ -149,10 +151,12 @@ class BowlingMissionNode: public BaseNode, public uscauv::MissionControlPolicy, 
       }
     ROS_INFO("Retreating...");
     SimpleActionToken heading_token4 = maintainHeading();
+    SimpleActionToken dive_token5 = diveTo( config_->buoy_depth );
     heading_token4.wait(2);
     SimpleActionToken motion_token4 = moveToward( -1, 0, config_->retreat_vel );
     motion_token4.wait(config_->retreat_time);
     motion_token4.complete();
+    dive_token5.complete();
     ROS_INFO("Moving to hedge depth");
     
     SimpleActionToken dive_token3 = diveTo( config_->depth );
