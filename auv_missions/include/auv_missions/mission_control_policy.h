@@ -453,9 +453,9 @@ namespace uscauv
       axis_command.twist.linear.x = x / mag * scale;
       axis_command.twist.linear.y = y / mag * scale;
 
-      ROS_INFO("tc %d", bool(term_crit) );
-      if( term_crit )
-	ROS_INFO("tf() %d", term_crit() );
+      /* ROS_INFO("tc %d", bool(term_crit) ); */
+      /* if( term_crit ) */
+      /* 	ROS_INFO("tf() %d", term_crit() ); */
 	
       while( !( term_crit && term_crit() ) && ros::ok() && token() )
 	{
@@ -465,18 +465,18 @@ namespace uscauv
 	}
 	
       /// Cancel trajectory
-      ROS_INFO("Canceling axis command");
+      /* ROS_INFO("Canceling axis command"); */
       {
 	axis_command.twist.linear.x = 0;
 	axis_command.twist.linear.y = 0;
 	  
 	axis_command_pub_.publish( axis_command );
       }
-      ROS_INFO("Cancelled");
+      /* ROS_INFO("Cancelled"); */
 	
       token.complete();
 	
-      ROS_INFO("returning");
+      /* ROS_INFO("returning"); */
     }
 
     void findObject_impl( quickdev::SimpleActionToken token, std::string const & name )

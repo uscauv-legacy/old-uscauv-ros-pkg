@@ -114,30 +114,55 @@ class BowlingMissionNode: public BaseNode, public uscauv::MissionControlPolicy, 
     heading_token.complete();
     
     ROS_INFO("Moving to object...");
-    SimpleActionToken moveto_token = moveToObject( "buoy", config_->buoy_distance );
+    SimpleActionToken moveto_token = moveToObject( config_->target1, config_->buoy_distance );
     moveto_token.wait();
+    ROS_INFO("Reached safe buoy distance.");
+    std::this_thread::sleep_for( std::chrono::seconds(5));    
     moveto_token.complete();
-    SimpleActionToken moveto_token2 = moveToObject( "buoy", 0 );
-    moveto_token2.wait(10);
-    moveto_token.complete();
-    SimpleActionToken motion_token3 = moveToward( -1, 0, 0.5 );
-    motion_token3.wait(10);
+    ROS_INFO("Going in for the kill...");
+    SimpleActionToken moveto_token2 = moveToObject( config_->target1, 0 );
+    std::this_thread::sleep_for( std::chrono::seconds(int(config_->attack_time)));    
+    moveto_token2.complete();
+    ROS_INFO("Retreating...");
+    SimpleActionToken heading_token3 = maintainHeading();
+    heading_token3.wait(2);
+    SimpleActionToken motion_token3 = moveToward( -1, 0, config_->retreat_vel );
+    motion_token3.wait(config_->retreat_time);
     motion_token3.complete();
+    heading_token3.complete();
+    ROS_INFO("Retreated. Searching for traffic light");
 
-    SimpleActionToken moveto_token3 = moveToObject( "traffic_light", 0 );
-    moveto_token3.wait(25);
-    moveto_token3.complete();
-
-    SimpleActionToken motion_token4 = moveToward( -1, 0, 0.5 );
-    motion_token4.wait(10);
+    SimpleActionToken moveto_token3 = moveToObject( config_->target2, config_->buoy_distance );
+    if( moveto_token3.wait(25) )
+      {
+	ROS_INFO("Reached safe traffic light distance");
+	std::this_thread::sleep_for( std::chrono::seconds(5));    
+	moveto_token3.complete();
+	SimpleActionToken moveto_token4 = moveToObject( config_->target2, 0 );
+	std::this_thread::sleep_for( std::chrono::seconds(int(config_->attack_time)));    
+	moveto_token4.complete();
+      }
+    else
+      {
+	ROS_INFO("Couldn't reach traffic light hold distance");
+	moveto_token3.complete();
+      }
+    ROS_INFO("Retreating...");
+    SimpleActionToken heading_token4 = maintainHeading();
+    heading_token4.wait(2);
+    SimpleActionToken motion_token4 = moveToward( -1, 0, config_->retreat_vel );
+    motion_token4.wait(config_->retreat_time);
     motion_token4.complete();
+    ROS_INFO("Moving to hedge depth");
     
     SimpleActionToken dive_token3 = diveTo( config_->depth );
     dive_token3.wait(15);
-    SimpleActionToken heading_token2 = maintainHeading();
-    heading_token2.wait(2);
+    heading_token4.complete();
+    ROS_INFO("Bowling for hedge");
+    SimpleActionToken heading_token5 = maintainHeading( config_->hedge_ori );
+    heading_token5.wait();
 
-    SimpleActionToken motion_token5 = moveToward( 1, 0 );
+    SimpleActionToken motion_token5 = moveToward( 1, 0, 2 );
     motion_token5.wait();
     
     while(1){}

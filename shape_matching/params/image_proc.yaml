@@ -1,3 +1,3 @@
 {debug_color: blaze_orange, emd_boundary: 0.4, floor_threshold: 30.0, kernel_size: 30,
-  signature_size: 30, struct_elem_size: 7, use_blur: true, use_floor: false, use_morph: true,
+  signature_size: 30, struct_elem_size: 5, use_blur: true, use_floor: false, use_morph: true,
   use_otsu: true}
