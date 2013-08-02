@@ -49,7 +49,7 @@
 
 class ThrusterAxisModelTestNode: public BaseNode
 {
-  uscauv::ReconfigurableThrusterAxisModel model;
+  uscauv::ReconfigurableThrusterAxisModel<uscauv::ThrusterModelBase> model;
 
  public:
  ThrusterAxisModelTestNode(): BaseNode("ThrusterAxisModelTest"), model("model/thrusters")

@@ -67,96 +67,6 @@ typedef auv_physics::SimulationInstruction _SimulationInstructionMsg;
 typedef auv_physics::SimulationState _SimulationStateMsg;
 typedef auv_physics::SimulationCommand _SimulationCommandSrv;
 
-template<class __KeyType, class __ValueType> 
-  class LookupTable
-{
- public:
-  std::vector<__KeyType> key_;
-  std::vector<__ValueType> value_;
-
-  LookupTable(){};
- LookupTable(std::vector<__KeyType> const & key,
-	     std::vector<__ValueType> const & value)
-   :
-  key_(key),
-    value_(value)
-    {
-      assert( key_.size() == value_.size() );
-    }
-
-  __ValueType lookupBinary(__KeyType const & key, double eps = 0.0) const
-  {
-    assert( key_.size() == value_.size() );
-    assert( key_.size() );
-    
-    int left = 0;
-    int right = value_.size() - 1;
-    int middle;
-    
-    while ( right >= left )
-      {
-	middle = ( left + right ) / 2;
-
-        __KeyType test_key = key_[middle];
-
-        if ( std::abs( test_key - key ) < eps )
-          return value_[middle];
-        else if ( test_key > key )
-          right = middle - 1;
-        else if (test_key < key )
-          left = middle + 1;
-      }
-
-    /// At this point left and right are the same, so the choice of index is arbitrary
-    ROS_WARN_STREAM( "Warning: Lookup for [ " << key << " ] failed." );
-    return value_[left];
-  }
-
-  __ValueType lookupClosest(__KeyType const & key) const
-  {
-    assert( key_.size() == value_.size() );
-    assert( key_.size() );
-    
-    double min_error;
-    int ii = 0;
-    int size = key_.size();
-    int min_index = 0;
-    min_error = std::abs( key_[ii] - key);
-    
-    for(; ii < size; ++ii)
-      {
-
-        double error = std::abs( key_[ii] - key );
-	if (error < min_error )
-          {
-            min_error = error;
-            min_index = ii;
-          }
-      }
-    
-    return value_[min_index];
-  }
-
-  int fromXmlRpc(XmlRpc::XmlRpcValue & xml_lookup, std::string const & key_name, std::string const & value_name)
-  {
-    XmlRpc::XmlRpcValue & xml_key   = xml_lookup[key_name];
-    XmlRpc::XmlRpcValue & xml_value = xml_lookup[value_name];
-    int key_size = xml_key.size(), value_size = xml_value.size();
-
-    if( xml_key.size() != xml_value.size() )
-      {
-	ROS_WARN("Lookup table key size does not match value size (key: %d) != (value: %d )", key_size, value_size);
-	return -1;
-      }
-    /// If key size isn't the same as value size at this point something has gone horribly wrong.
-    for(int i = 0; i < key_size; ++i)
-      {
-	key_.push_back( xml_key[i] );
-	value_.push_back( xml_value[i] );
-      }
-    return 0;
-  }
-};
 
 
 class ThrusterModel
@@ -706,10 +616,10 @@ class SimpleAUVPhysicsSimulatorNode
 	  }
 	else
 	  {
-	    const geometry_msgs::Point & p = request.command.initial_pose.position;
+	    const geometry_msgs::Point      & p = request.command.initial_pose.position;
 	    const geometry_msgs::Quaternion & q = request.command.initial_pose.orientation;
- 	    const geometry_msgs::Vector3 & t1 = request.command.initial_velocity.linear;
-	    const geometry_msgs::Vector3 & t2 = request.command.initial_velocity.angular;
+ 	    const geometry_msgs::Vector3    & t1 = request.command.initial_velocity.linear;
+	    const geometry_msgs::Vector3    & t2 = request.command.initial_velocity.angular;
 	    
 	    ROS_INFO( "Starting physics simulation..." );
 	    ROS_INFO( "Using pose with position: (%.2f, %.2f, %.2f), rotation: (%.2f, %.2f, %.2f, %.2f)",

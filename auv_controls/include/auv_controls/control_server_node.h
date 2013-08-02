@@ -70,7 +70,7 @@ class ControlServerNode: public BaseNode, public uscauv::PID6D, MultiReconfigure
   
  private:
 
-  uscauv::ReconfigurableThrusterAxisModel thruster_axis_model_;
+  uscauv::ReconfigurableThrusterAxisModel<uscauv::ThrusterModelSimpleLookup> thruster_axis_model_;
 
   _ControlServerConfig * config_;
   
@@ -113,7 +113,6 @@ class ControlServerNode: public BaseNode, public uscauv::PID6D, MultiReconfigure
     setObserved<PID6D::Axes::ROLL>  (0.0f);
     setObserved<PID6D::Axes::PITCH> (0.0f);
     setObserved<PID6D::Axes::YAW>   (0.0f);
-       
   }  
 
   // Running spin() will cause this function to get called at the loop rate until this node is killed.

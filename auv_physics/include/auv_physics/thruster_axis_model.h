@@ -51,6 +51,7 @@
 #include <uscauv_common/param_loader.h>
 #include <uscauv_common/multi_reconfigure.h>
 #include <uscauv_common/simple_math.h>
+#include <uscauv_common/lookup_table.h>
 #include <uscauv_common/defaults.h>
 #include <auv_msgs/MotorPowerArray.h>
 
@@ -59,23 +60,22 @@
 namespace uscauv
 {
 
-  class ThrusterModel
+  class ThrusterModelBase
   {
-    typedef XmlRpc::XmlRpcValue _XmlVal;
-    /// Data members
+   /// Data members
   protected:
+    typedef XmlRpc::XmlRpcValue _XmlVal;
     tf::Vector3 cm_to_thruster_;
     tf::Vector3 thrust_dir_;
  
   public:
 
-    ThrusterModel(){}
+    ThrusterModelBase(){}
   
-    virtual int load(std::string const & thruster_link, std::string const & cm_link = uscauv::defaults::CM_LINK)
+    virtual int load(std::string const & thruster_link, _XmlVal & xml_desc, std::string const & cm_link = uscauv::defaults::CM_LINK)
     {
       tf::TransformListener tf_listener;
       tf::StampedTransform cm_to_thruster_tf;
-      
 
       if( tf_listener.waitForTransform( cm_link, thruster_link, ros::Time(0),
 					ros::Duration(5.0), ros::Duration(0.1)) )
@@ -128,7 +128,38 @@ namespace uscauv
     
   };
 
-  class ReconfigurableThrusterModel: public ThrusterModel
+  class ThrusterModelSimpleLookup : public ThrusterModelBase
+  {
+  private:
+    uscauv::LookupTable<double, double> power_to_force_;
+    
+  public:
+
+    virtual int load(std::string const & thruster_link, _XmlVal & xml_desc, std::string const & cm_link = uscauv::defaults::CM_LINK)
+    {
+      if( ThrusterModelBase::load( thruster_link, xml_desc, cm_link ))
+	{
+	  return -1;
+	}
+
+      if( power_to_force_.fromXmlRpc( xml_desc, "power", "force" ) )
+	{
+	  ROS_WARN( "Failed to load power-force map for thruster." );
+	  return -1;
+	}
+
+      return 0;
+    }
+    
+    double powerToForce(double const & power ) const
+    {
+      return power_to_force_.lookupClosestSlow( power );
+    }
+    
+  };
+
+  template<class  __ThrusterModel>
+  class ReconfigurableThrusterModel: public __ThrusterModel
   {
   protected:
     auv_physics::ThrusterModelConfig config_;
@@ -138,7 +169,7 @@ namespace uscauv
     /// Same as base class, but direction can be inverted
     tf::Vector3 getThrustDir() const 
       {
-	return thrust_dir_ * ( config_.invert ? -1 : 1 );
+	return this->thrust_dir_ * ( config_.invert ? -1 : 1 );
       }
    
     double applyConstraints(double const & value) const 
@@ -166,8 +197,10 @@ namespace uscauv
   class ThrusterAxisModel
   {
   protected:
+    typedef ReconfigurableThrusterModel< __ThrusterModel> _ReconfigurableThrusterModel;
+    
     typedef XmlRpc::XmlRpcValue _XmlVal;
-    typedef std::map<std::string, __ThrusterModel> _NamedThrusterMap;
+    typedef std::map<std::string, _ReconfigurableThrusterModel> _NamedThrusterMap;
   public:
     typedef Eigen::Matrix<double, 6, 1> AxisVector;
     typedef Eigen::Matrix<double, Eigen::Dynamic, 1> ThrusterVector;
@@ -254,10 +287,10 @@ namespace uscauv
       for(std::map<std::string, _XmlVal>::iterator thruster_it = base_node.begin(); 
 	  thruster_it != base_node.end(); ++thruster_it)
 	{
-	  __ThrusterModel thruster;
+	  _ReconfigurableThrusterModel thruster;
 	  std::string thruster_tf_name = tf_prefix + "/" + std::string(thruster_it->first);
 	  
-	  if( thruster.load(thruster_tf_name) )
+	  if( thruster.load(thruster_tf_name, thruster_it->second) )
 	    {
 	      ROS_WARN( "Failed to load thruster model [ %s ].", thruster_it->first.c_str() );
 	      continue;
@@ -267,7 +300,7 @@ namespace uscauv
 	      ROS_DEBUG( "Load thruster model [ %s ] success.", thruster_it->first.c_str() );
 	    }	
 	  
-	  if ( all_thruster_models_.insert( std::pair<std::string, __ThrusterModel>(thruster_it->first, thruster) ).second == false )
+	  if ( all_thruster_models_.insert( std::pair<std::string, _ReconfigurableThrusterModel>(thruster_it->first, thruster) ).second == false )
 	    {
 	      ROS_WARN( "Thruster [ %s ] is already loaded. Ignoring...", thruster_it->first.c_str());
 	      continue;
@@ -310,28 +343,31 @@ namespace uscauv
 
   };
 
-  typedef ThrusterAxisModel<ThrusterModel> StaticThrusterAxisModel;
+  typedef ThrusterAxisModel<ThrusterModelBase> StaticThrusterAxisModel;
   
+  /// TODO: Make this compatible with new template ReconfigurableThrusterModel<>
+  template<class __ThrusterModel>
   class ReconfigurableThrusterAxisModel: 
-  public ThrusterAxisModel<ReconfigurableThrusterModel>,
+  public ThrusterAxisModel<__ThrusterModel>,
     public MultiReconfigure
   {
   protected:
+    typedef ThrusterAxisModel<__ThrusterModel> _BaseThrusterAxisModel;
     typedef auv_physics::ThrusterModelConfig _ThrusterModelConfig;
     
     bool ready_;
     
   public:
   ReconfigurableThrusterAxisModel(std::string const & param_ns = "model/thrusters"):
-    ThrusterAxisModel<ReconfigurableThrusterModel>( param_ns ),
+    ThrusterAxisModel<__ThrusterModel>( param_ns ),
       MultiReconfigure( param_ns ), ready_( false ) {}
     
     virtual void load(std::string const & tf_prefix = "robot/thrusters",
 		      std::string const & cm_link = uscauv::defaults::CM_LINK)
     {
-      loadModels( tf_prefix, cm_link );
+      _BaseThrusterAxisModel::loadModels( tf_prefix, cm_link );
 
-      for( typename _NamedThrusterMap::value_type const & thruster : all_thruster_models_ )
+      for( typename _BaseThrusterAxisModel::_NamedThrusterMap::value_type const & thruster : this->all_thruster_models_ )
 	{
 	  addReconfigureServer<_ThrusterModelConfig>( thruster.first, std::bind( &ReconfigurableThrusterAxisModel::reconfigureCallback, this, std::placeholders::_1, thruster.first ) );
 	}
@@ -349,8 +385,8 @@ namespace uscauv
   private:
     void reconfigureCallback( _ThrusterModelConfig const & config, std::string const & thruster_name)
     {
-      typename _NamedThrusterMap::iterator thruster_it = all_thruster_models_.find( thruster_name );
-      if ( thruster_it == all_thruster_models_.end() )
+      typename _BaseThrusterAxisModel::_NamedThrusterMap::iterator thruster_it = this->all_thruster_models_.find( thruster_name );
+      if ( thruster_it == this->all_thruster_models_.end() )
 	{
 	  ROS_WARN( "Received reconfigure request for a thruster model that is not loaded. Ignoring..." );
 	  return;
@@ -366,17 +402,17 @@ namespace uscauv
 
     void updateActiveThrusters()
     {
-      active_thruster_models_.clear();
+      this->active_thruster_models_.clear();
 
-      for( typename _NamedThrusterMap::value_type const & thruster : all_thruster_models_ )
+      for( typename _BaseThrusterAxisModel::_NamedThrusterMap::value_type const & thruster : this->all_thruster_models_ )
 	{
 	  if( thruster.second.getEnabled() )
 	    {
-	      active_thruster_models_.insert( thruster );
+	      this->active_thruster_models_.insert( thruster );
 	    }
 	}
       
-      computeThrusterAxisMatrix();
+      _BaseThrusterAxisModel::computeThrusterAxisMatrix();
     }
     
   };
