@@ -54,6 +54,7 @@
 #include <uscauv_common/lookup_table.h>
 #include <uscauv_common/defaults.h>
 #include <auv_msgs/MotorPowerArray.h>
+#include <geometry_msgs/Wrench.h>
 
 #include <auv_physics/ThrusterModelConfig.h>
 
@@ -62,7 +63,7 @@ namespace uscauv
 
   class ThrusterModelBase
   {
-   /// Data members
+    /// Data members
   protected:
     typedef XmlRpc::XmlRpcValue _XmlVal;
     tf::Vector3 cm_to_thruster_;
@@ -159,7 +160,7 @@ namespace uscauv
   };
 
   template<class  __ThrusterModel>
-  class ReconfigurableThrusterModel: public __ThrusterModel
+    class ReconfigurableThrusterModel: public __ThrusterModel
   {
   protected:
     auv_physics::ThrusterModelConfig config_;
@@ -194,78 +195,115 @@ namespace uscauv
   };
  
   template<class __ThrusterModel>
-  class ThrusterAxisModel
-  {
-  protected:
-    typedef ReconfigurableThrusterModel< __ThrusterModel> _ReconfigurableThrusterModel;
+    class ThrusterAxisModel
+    {
+    protected:
+      typedef ReconfigurableThrusterModel< __ThrusterModel> _ReconfigurableThrusterModel;
     
-    typedef XmlRpc::XmlRpcValue _XmlVal;
-    typedef std::map<std::string, _ReconfigurableThrusterModel> _NamedThrusterMap;
-  public:
-    typedef Eigen::Matrix<double, 6, 1> AxisVector;
-    typedef Eigen::Matrix<double, Eigen::Dynamic, 1> ThrusterVector;
+      typedef XmlRpc::XmlRpcValue _XmlVal;
+      typedef std::map<std::string, _ReconfigurableThrusterModel> _NamedThrusterMap;
+    public:
+      typedef Eigen::Matrix<double, 6, 1> AxisVector;
+      typedef Eigen::Matrix<double, Eigen::Dynamic, 1> ThrusterVector;
     
-  protected:
-    ros::NodeHandle nh_base_;
+    protected:
+      ros::NodeHandle nh_base_;
 
-    _NamedThrusterMap all_thruster_models_;
-    _NamedThrusterMap active_thruster_models_;
+      _NamedThrusterMap all_thruster_models_;
+      _NamedThrusterMap active_thruster_models_;
     
-    Eigen::Matrix<double, 6, Eigen::Dynamic> thruster_to_axis_;
+      Eigen::Matrix<double, 6, Eigen::Dynamic> thruster_to_axis_;
     
-    std::string param_ns_;
+      std::string param_ns_;
     
-  public:
-  ThrusterAxisModel(std::string const & param_ns = "model/thrusters"): 
-    param_ns_( param_ns )
+    public:
+    ThrusterAxisModel(std::string const & param_ns = "model/thrusters"): 
+      param_ns_( param_ns )
       {}
     
-    virtual void load(std::string const & tf_prefix = "robot/thrusters",
-		      std::string const & cm_link = uscauv::defaults::CM_LINK)
-    {
-      loadModels( tf_prefix, cm_link );
-      active_thruster_models_ = all_thruster_models_;
-      computeThrusterAxisMatrix();
-    }
+      virtual void load(std::string const & tf_prefix = "robot/thrusters",
+			std::string const & cm_link = uscauv::defaults::CM_LINK)
+      {
+	loadModels( tf_prefix, cm_link );
+	active_thruster_models_ = all_thruster_models_;
+	computeThrusterAxisMatrix();
+      }
     
-    AxisVector ThrusterToAxis( ThrusterVector const & thruster_vals)
-    {
-      ROS_ASSERT( thruster_vals.rows() == thruster_to_axis_.cols() );
+      AxisVector ThrusterToAxis( ThrusterVector const & thruster_vals)
+      {
+	ROS_ASSERT( thruster_vals.rows() == thruster_to_axis_.cols() );
 
-      return thruster_to_axis_ * thruster_vals;
-    }
+	return thruster_to_axis_ * thruster_vals;
+      }
     
-    /// Find a thruster combination to achieve the desired axis vals using least squares
-    ThrusterVector AxisToThruster( AxisVector const & axis_vals)
-    {
-      ThrusterVector const thrust =  thruster_to_axis_.colPivHouseholderQr().solve(axis_vals);
+      /// Find a thruster combination to achieve the desired axis vals using least squares
+      ThrusterVector AxisToThruster( AxisVector const & axis_vals)
+      {
+	ThrusterVector const thrust =  thruster_to_axis_.colPivHouseholderQr().solve(axis_vals);
       
      
-      if( !(thruster_to_axis_*thrust).isApprox( axis_vals ))
-	{
-	  double const mse = ( thruster_to_axis_ * thrust - axis_vals ).norm() / axis_vals.norm();
-	  ROS_ERROR("Requested axis values have no solution [ error %f ]!", mse );
-	}
-      return thrust;
-    }
-    
-    /// This function implicitly assumes that thruster_models_ is sorted as it was when load() was called.
-    auv_msgs::MotorPowerArray AxisToMotorArray( AxisVector const & axis_vals )
-      {
-	ThrusterVector const thruster_vals = AxisToThruster( axis_vals );
-
-	auv_msgs::MotorPowerArray motors;
-	
-	int row_idx = 0;
-	for(typename _NamedThrusterMap::const_iterator thruster_it = active_thruster_models_.begin();
-	    thruster_it != active_thruster_models_.end(); ++thruster_it, ++row_idx)
+	if( !(thruster_to_axis_*thrust).isApprox( axis_vals ))
 	  {
-	    auv_msgs::MotorPower mp;
-	    mp.name = thruster_it->first;
-	    mp.power = thruster_it->second.applyConstraints( thruster_vals(row_idx, 0) );
-	    motors.motors.push_back(mp);
+	    double const mse = ( thruster_to_axis_ * thrust - axis_vals ).norm() / axis_vals.norm();
+	    ROS_ERROR("Requested axis values have no solution [ error %f ]!", mse );
 	  }
-	return motors;
+	return thrust;
+      }
+    
+      /// This function implicitly assumes that thruster_models_ is sorted as it was when load() was called.
+      auv_msgs::MotorPowerArray AxisToMotorArray( AxisVector const & axis_vals )
+	{
+	  ThrusterVector const thruster_vals = AxisToThruster( axis_vals );
+
+	  auv_msgs::MotorPowerArray motors;
+	
+	  int row_idx = 0;
+	  for(typename _NamedThrusterMap::const_iterator thruster_it = active_thruster_models_.begin();
+	      thruster_it != active_thruster_models_.end(); ++thruster_it, ++row_idx)
+	    {
+	      auv_msgs::MotorPower mp;
+	      mp.name = thruster_it->first;
+	      mp.power = thruster_it->second.applyConstraints( thruster_vals(row_idx, 0) );
+	      motors.motors.push_back(mp);
+	    }
+	  return motors;
+	}
+
+      /// only works if thruster model has powertoforce() defined
+      geometry_msgs::Wrench MotorArrayToWrench( auv_msgs::MotorPowerArray const & motor_levels)
+	{
+	  std::map<std::string, double> motor_power_levels;
+	  for( auv_msgs::MotorPower const & motor: motor_levels.motors )
+	    {
+	      motor_power_levels.insert( std::make_pair( motor.name, motor.power ) );
+	    }
+	  ThrusterVector thruster_force;
+	  unsigned int thruster_idx = 0;
+	  for( typename _NamedThrusterMap::value_type const & thruster : active_thruster_models_ )
+	    {
+	      typename _NamedThrusterMap::const_iterator power_it = motor_power_levels.find( thruster.first );
+	      if( power_it != active_thruster_models_.end() )
+		{
+		  thruster_force( thruster_idx ) = thruster.powerToForce( power_it->second );
+		}
+	      else
+		{
+		  thruster_force( thruster_idx ) = 0;
+		}
+	    
+	      ++thruster_idx;
+	    }
+
+	  AxisVector wrench_on_body = ThrusterToAxis( thruster_force );
+	  geometry_msgs::Wrench wrench_on_body_msg;
+	  wrench_on_body_msg.force.x = wrench_on_body(0);
+	  wrench_on_body_msg.force.y = wrench_on_body(1);
+	  wrench_on_body_msg.force.z = wrench_on_body(2);
+	  wrench_on_body_msg.torque.x = wrench_on_body(3);
+	  wrench_on_body_msg.torque.y = wrench_on_body(4);
+	  wrench_on_body_msg.torque.z = wrench_on_body(5);
+	    
+	  return wrench_on_body_msg;
       }
     
     static AxisVector constructAxisVector(double const & x,  double const & y, 
@@ -347,10 +385,10 @@ namespace uscauv
   
   /// TODO: Make this compatible with new template ReconfigurableThrusterModel<>
   template<class __ThrusterModel>
-  class ReconfigurableThrusterAxisModel: 
-  public ThrusterAxisModel<__ThrusterModel>,
+    class ReconfigurableThrusterAxisModel: 
+  public ThrusterAxisModel< ReconfigurableThrusterModel<__ThrusterModel> >,
     public MultiReconfigure
-  {
+    {
   protected:
     typedef ThrusterAxisModel<__ThrusterModel> _BaseThrusterAxisModel;
     typedef auv_physics::ThrusterModelConfig _ThrusterModelConfig;
