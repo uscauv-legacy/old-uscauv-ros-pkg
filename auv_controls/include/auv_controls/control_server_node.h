@@ -45,10 +45,11 @@
 // uscauv
 #include <uscauv_common/base_node.h>
 #include <uscauv_common/multi_reconfigure.h>
+#include <uscauv_common/defaults.h>
 
 #include <auv_controls/ControlServerConfig.h>
 #include <auv_controls/controller.h>
-#include <auv_physics/thruster_axis_model.h>
+/* #include <auv_physics/thruster_axis_model.h> */
 
 #include <auv_msgs/MaskedTwist.h>
 #include <auv_msgs/MotorPowerArray.h>
@@ -56,8 +57,8 @@
 
 #include <eigen_conversions/eigen_msg.h>
 
-static std::string const DESIRED_FRAME_NAME = "robot/controls/desired";
-static std::string const MEASUREMENT_FRAME_NAME = "robot/controls/measurement";
+static std::string const DESIRED_FRAME_NAME = uscauv::defaults::DESIRED_LINK;
+static std::string const MEASUREMENT_FRAME_NAME = uscauv::defaults::MEASUREMENT_LINK;
 
 typedef auv_controls::ControlServerConfig _ControlServerConfig;
 
@@ -71,7 +72,7 @@ class ControlServerNode: public BaseNode, public uscauv::PID6D, MultiReconfigure
   
  private:
 
-  uscauv::ReconfigurableThrusterAxisModel<uscauv::ThrusterModelSimpleLookup> thruster_axis_model_;
+  /* uscauv::ReconfigurableThrusterAxisModel<uscauv::ThrusterModelSimpleLookup> thruster_axis_model_; */
 
   _ControlServerConfig * config_;
   
@@ -85,7 +86,7 @@ class ControlServerNode: public BaseNode, public uscauv::PID6D, MultiReconfigure
   tf::TransformListener tf_listener_;
   
  public:
- ControlServerNode(): BaseNode("ControlServer"), thruster_axis_model_("model/thrusters"), 
+ ControlServerNode(): BaseNode("ControlServer"), /* thruster_axis_model_("model/thrusters"),  */
     axis_command_value_( AxisValueVector::Zero() ), /* pose_command_value_( AxisValueVector::Zero() ), */
     axis_command_mask_( AxisMaskVector::Zero() ),
     nh_rel_("~") {}
@@ -102,8 +103,8 @@ class ControlServerNode: public BaseNode, public uscauv::PID6D, MultiReconfigure
     addReconfigureServer<_ControlServerConfig>( "scale" );
     config_ = &getLatestConfig<_ControlServerConfig>("scale");
 
-    /// Load thruster models
-    thruster_axis_model_.load("robot/thrusters");
+    /* /// Load thruster models */
+    /* thruster_axis_model_.load("robot/thrusters"); */
 
     /// Load PIDs
     loadController();
@@ -165,33 +166,7 @@ class ControlServerNode: public BaseNode, public uscauv::PID6D, MultiReconfigure
 	  }
       }
     
-    /* updateSetpoints(); */
   }
-
-  /* void updateSetpoints() */
-  /* { */
-  /*   AxisValueVector setpoint = pose_command_value_ /\* + axis_command_value_ *\/; */
-    
-  /*   setSetpoint<PID6D::Axes::SURGE>( setpoint(0) ); */
-  /*   setSetpoint<PID6D::Axes::SWAY> ( setpoint(1) ); */
-  /*   setSetpoint<PID6D::Axes::HEAVE>( setpoint(2) ); */
-  /*   setSetpoint<PID6D::Axes::ROLL> ( setpoint(3) ); */
-  /*   setSetpoint<PID6D::Axes::PITCH>( setpoint(4) ); */
-  /*   setSetpoint<PID6D::Axes::YAW>  ( setpoint(5) ); */
-
-  /*   /\* if( axis_command_mask_(0) ) *\/ */
-  /*   /\*   setSetpoint<PID6D::Axes::SURGE>( axis_command_value_(0) ); *\/ */
-  /*   /\* if( axis_command_mask_(1) ) *\/ */
-  /*   /\*   setSetpoint<PID6D::Axes::SWAY>( axis_command_value_(1) ); *\/ */
-  /*   /\* if( axis_command_mask_(2) ) *\/ */
-  /*   /\*   setSetpoint<PID6D::Axes::HEAVE>( axis_command_value_(2) ); *\/ */
-  /*   /\* if( axis_command_mask_(3) ) *\/ */
-  /*   /\*   setSetpoint<PID6D::Axes::ROLL>( axis_command_value_(3) ); *\/ */
-  /*   /\* if( axis_command_mask_(4) ) *\/ */
-  /*   /\*   setSetpoint<PID6D::Axes::PITCH>( axis_command_value_(4) ); *\/ */
-  /*   /\* if( axis_command_mask_(5) ) *\/ */
-  /*   /\*   setSetpoint<PID6D::Axes::YAW>( axis_command_value_(5) ); *\/ */
-  /* } */
 
   void updatePoseCommand()
   {

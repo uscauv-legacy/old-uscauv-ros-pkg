@@ -19,7 +19,6 @@
   <depend package="opende" />
 
   <depend package="uscauv_common" />
-
   <depend package="auv_msgs" />
 
   <export>

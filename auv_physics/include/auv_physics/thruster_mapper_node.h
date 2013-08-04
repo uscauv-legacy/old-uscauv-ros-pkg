@@ -1,5 +1,5 @@
 /***************************************************************************
- *  include/uscauv_common/defaults.h
+ *  include/auv_physics/thruster_mapper_node.h
  *  --------------------
  *
  *  Software License Agreement (BSD License)
@@ -36,27 +36,68 @@
  **************************************************************************/
 
 
-#ifndef USCAUV_USCAUVCOMMON_DEFAULTS
-#define USCAUV_USCAUVCOMMON_DEFAULTS
+#ifndef USCAUV_AUVPHYSICS_THRUSTERMAPPER
+#define USCAUV_AUVPHYSICS_THRUSTERMAPPER
 
 // ROS
 #include <ros/ros.h>
 
-namespace uscauv
+// uscauv
+#include <uscauv_common/base_node.h>
+#include <auv_physics/thruster_axis_model.h>
+
+#include <auv_msgs/MotorPowerArray.h>
+#include <geometry_msgs/Twist.h>
+#include <geometry_msgs/Wrench.h>
+
+typedef auv_msgs::MotorPower _MotorPowerMsg;
+typedef auv_msgs::MotorPowerArray _MotorPowerArrayMsg;
+
+typedef uscauv::ReconfigurableThrusterAxisModel<uscauv::ThrusterModelSimpleLookup> _ThrusterAxisModel;
+
+class ThrusterMapperNode: public BaseNode
 {
+ private:
+
+  _ThrusterAxisModel thruster_axis_model_;
+
+  /// ros
+  ros::NodeHandle nh_rel_;
+  ros::Publisher motor_pub_, wrench_pub_;
+  ros::Subscriber axis_sub_;
   
-  namespace defaults
+  
+
+ public:
+ ThrusterMapperNode(): BaseNode("ThrusterMapper"), thruster_axis_model_("model/thrusters"),
+    nh_rel_("~")
+      {
+      }
+
+ private:
+
+  // Running spin() will cause this function to be called before the node begins looping the spinOnce() function.
+  void spinFirst()
   {
-    static char const * const CM_LINK = "robot/structures/cm";
-    static char const * const MEASUREMENT_LINK = "robot/controls/measurement";
-    static char const * const DESIRED_LINK = "robot/controls/desired";
+    axis_sub_ = nh_rel_.subscribe( "axis_in", 10, &ThrusterMapperNode::axisCallback, this );
 
-    static char const * const STRUCTURE_PREFIX = "robot/structures";
-    static char const * const THRUSTER_PREFIX = "robot/thrusters";
-    static char const * const CAMERA_PREFIX = "robot/cameras";
-    static char const * const SENSOR_PREFIX = "robot/sensors";
-  } // defaults
+    motor_pub_ = nh_rel_.advertise< _MotorPowerArrayMsg >("motor_levels", 10);
+    wrench_pub_ = nh_rel_.advertise< geometry_msgs::Wrench>("predicted_wrench", 10);
     
-} // uscauv
+    thruster_axis_model_.load("robot/thrusters");
+  }  
 
-#endif // USCAUV_USCAUVCOMMON_DEFAULTS
+  // Running spin() will cause this function to get called at the loop rate until this node is killed.
+  void spinOnce()
+  {
+
+  }
+
+  void axisCallback( geometry_msgs::Twist::ConstPtr const & msg )
+  {
+    
+  }
+
+};
+
+#endif // USCAUV_AUVPHYSICS_THRUSTERMAPPER

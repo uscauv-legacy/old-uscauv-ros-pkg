@@ -1,5 +1,5 @@
 /***************************************************************************
- *  include/uscauv_common/defaults.h
+ *  nodes/thruster_mapper_node.cpp
  *  --------------------
  *
  *  Software License Agreement (BSD License)
@@ -36,27 +36,16 @@
  **************************************************************************/
 
 
-#ifndef USCAUV_USCAUVCOMMON_DEFAULTS
-#define USCAUV_USCAUVCOMMON_DEFAULTS
+#include <auv_physics/thruster_mapper_node.h>
 
-// ROS
-#include <ros/ros.h>
-
-namespace uscauv
+// Initialize ThrusterMapperNode and begin looping.
+int main(int argc, char ** argv)
 {
-  
-  namespace defaults
-  {
-    static char const * const CM_LINK = "robot/structures/cm";
-    static char const * const MEASUREMENT_LINK = "robot/controls/measurement";
-    static char const * const DESIRED_LINK = "robot/controls/desired";
+  ros::init(argc, argv, "thruster_mapper");
 
-    static char const * const STRUCTURE_PREFIX = "robot/structures";
-    static char const * const THRUSTER_PREFIX = "robot/thrusters";
-    static char const * const CAMERA_PREFIX = "robot/cameras";
-    static char const * const SENSOR_PREFIX = "robot/sensors";
-  } // defaults
-    
-} // uscauv
+  ThrusterMapperNode thruster_mapper;
 
-#endif // USCAUV_USCAUVCOMMON_DEFAULTS
+  thruster_mapper.spin();
+
+  return 0;
+}
