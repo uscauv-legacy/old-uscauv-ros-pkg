@@ -381,23 +381,22 @@ namespace uscauv
 
   };
 
-  typedef ThrusterAxisModel<ThrusterModelBase> StaticThrusterAxisModel;
+  /* typedef ThrusterAxisModel<ThrusterModelBase> StaticThrusterAxisModel; */
   
-  /// TODO: Make this compatible with new template ReconfigurableThrusterModel<>
   template<class __ThrusterModel>
     class ReconfigurableThrusterAxisModel: 
   public ThrusterAxisModel< ReconfigurableThrusterModel<__ThrusterModel> >,
     public MultiReconfigure
     {
   protected:
-    typedef ThrusterAxisModel<__ThrusterModel> _BaseThrusterAxisModel;
+    typedef ThrusterAxisModel< ReconfigurableThrusterModel<__ThrusterModel> > _BaseThrusterAxisModel;
     typedef auv_physics::ThrusterModelConfig _ThrusterModelConfig;
     
     bool ready_;
     
   public:
   ReconfigurableThrusterAxisModel(std::string const & param_ns = "model/thrusters"):
-    ThrusterAxisModel<__ThrusterModel>( param_ns ),
+    _BaseThrusterAxisModel( param_ns ),
       MultiReconfigure( param_ns ), ready_( false ) {}
     
     virtual void load(std::string const & tf_prefix = "robot/thrusters",

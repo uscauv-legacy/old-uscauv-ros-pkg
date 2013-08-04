@@ -47,59 +47,62 @@
 #include <auv_physics/thruster_axis_model.h>
 
 
+typedef uscauv::ReconfigurableThrusterAxisModel<uscauv::ThrusterModelSimpleLookup> _ThrusterAxisModel;
+typedef _ThrusterAxisModel::AxisVector _AxisVector;
+
 class ThrusterAxisModelTestNode: public BaseNode
 {
-  uscauv::ReconfigurableThrusterAxisModel<uscauv::ThrusterModelBase> model;
+  _ThrusterAxisModel model;
 
  public:
  ThrusterAxisModelTestNode(): BaseNode("ThrusterAxisModelTest"), model("model/thrusters")
-   {
-   }
+    {
+    }
 
  private:
 
   // Running spin() will cause this function to be called before the node begins looping the spinOnce() function.
   void spinFirst()
-     {
-       typedef std::map<std::string, uscauv::StaticThrusterAxisModel::AxisVector> _NamedScrewMap;
+  {
+    typedef std::map<std::string, _AxisVector> _NamedScrewMap;
 
-       ros::NodeHandle nh_rel("~");
+    ros::NodeHandle nh_rel("~");
        
-       double scale = uscauv::param::load<double>( nh_rel, "scale", 100 );
+    double scale = uscauv::param::load<double>( nh_rel, "scale", 100 );
 
-       model.load("robot/thrusters");
+    model.load("robot/thrusters");
 
-       _NamedScrewMap test_input = {
-	 {"forward", uscauv::StaticThrusterAxisModel::constructAxisVector(1,0,0,0,0,0)},
-	 {"backward", uscauv::StaticThrusterAxisModel::constructAxisVector(-1,0,0,0,0,0)},
-	 {"left", uscauv::StaticThrusterAxisModel::constructAxisVector(0,1,0,0,0,0)},
-	 {"right", uscauv::StaticThrusterAxisModel::constructAxisVector(0,-1,0,0,0,0)},
-	 {"up", uscauv::StaticThrusterAxisModel::constructAxisVector(0,0,1,0,0,0)},
-	 {"down", uscauv::StaticThrusterAxisModel::constructAxisVector(0,0,-1,0,0,0)},
-	 {"yaw+", uscauv::StaticThrusterAxisModel::constructAxisVector(0,0,0,0,0,1)},
-	 {"yaw-", uscauv::StaticThrusterAxisModel::constructAxisVector(0,0,0,0,0,-1)},
-	 {"roll+", uscauv::StaticThrusterAxisModel::constructAxisVector(0,0,0,1,0,0)},
-	 {"roll-", uscauv::StaticThrusterAxisModel::constructAxisVector(0,0,0,-1,0,0)},
-	 {"pitch+", uscauv::StaticThrusterAxisModel::constructAxisVector(0,0,0,0,1,0)},
-	 {"pitch-", uscauv::StaticThrusterAxisModel::constructAxisVector(0,0,0,0,-1,0)}
-       };
+    _NamedScrewMap test_input = {
+      {"forward", _ThrusterAxisModel::constructAxisVector(1,0,0,0,0,0)},
+      {"backward", _ThrusterAxisModel::constructAxisVector(-1,0,0,0,0,0)},
+      {"left", _ThrusterAxisModel::constructAxisVector(0,1,0,0,0,0)},
+      {"right", _ThrusterAxisModel::constructAxisVector(0,-1,0,0,0,0)},
+      {"up", _ThrusterAxisModel::constructAxisVector(0,0,1,0,0,0)},
+      {"down", _ThrusterAxisModel::constructAxisVector(0,0,-1,0,0,0)},
+      {"yaw+", _ThrusterAxisModel::constructAxisVector(0,0,0,0,0,1)},
+      {"yaw-", _ThrusterAxisModel::constructAxisVector(0,0,0,0,0,-1)},
+      {"roll+", _ThrusterAxisModel::constructAxisVector(0,0,0,1,0,0)},
+      {"roll-", _ThrusterAxisModel::constructAxisVector(0,0,0,-1,0,0)},
+      {"pitch+", _ThrusterAxisModel::constructAxisVector(0,0,0,0,1,0)},
+      {"pitch-", _ThrusterAxisModel::constructAxisVector(0,0,0,0,-1,0)}
+    };
 
-       for( _NamedScrewMap::const_iterator screw_it = test_input.begin();
-	    screw_it != test_input.end(); ++screw_it)
-	 {
-	   ROS_INFO_STREAM("[ " << screw_it->first << " ] axis input: " << screw_it->second.transpose());
-	   ROS_INFO_STREAM("[ " << screw_it->first << " ] thrust output: " <<
-			   model.AxisToThruster( screw_it->second * scale ).transpose() );
-	 }
+    for( _NamedScrewMap::const_iterator screw_it = test_input.begin();
+    	 screw_it != test_input.end(); ++screw_it)
+      {
+    	ROS_INFO_STREAM("[ " << screw_it->first << " ] axis input: " << screw_it->second.transpose());
+    	ROS_INFO_STREAM("[ " << screw_it->first << " ] thrust output: " <<
+    			model.AxisToThruster( screw_it->second * scale ).transpose() );
+      }
        
        
-     }  
+  }  
 
   // Running spin() will cause this function to get called at the loop rate until this node is killed.
   void spinOnce()
-     {
+  {
 
-     }
+  }
 
 };
 

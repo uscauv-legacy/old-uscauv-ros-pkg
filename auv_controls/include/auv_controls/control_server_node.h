@@ -52,6 +52,7 @@
 
 #include <auv_msgs/MaskedTwist.h>
 #include <auv_msgs/MotorPowerArray.h>
+#include <auv_msgs/Twist.h>
 
 #include <eigen_conversions/eigen_msg.h>
 
@@ -80,7 +81,7 @@ class ControlServerNode: public BaseNode, public uscauv::PID6D, MultiReconfigure
   /// ROS
   ros::NodeHandle nh_rel_;
   ros::Subscriber axis_command_sub_;
-  ros::Publisher motor_pub_;
+  ros::Publisher axis_pub_;
   tf::TransformListener tf_listener_;
   
  public:
@@ -96,7 +97,7 @@ class ControlServerNode: public BaseNode, public uscauv::PID6D, MultiReconfigure
   {
     axis_command_sub_ = nh_rel_.subscribe( "axis_cmd", 10, &ControlServerNode::axisCommandCallback, this );
 
-    motor_pub_ = nh_rel_.advertise<auv_msgs::MotorPowerArray>( "motor_levels", 10 );
+    axis_pub_ = nh_rel_.advertise<auv_msgs::Twist>( "axis_out", 10 );
        
     addReconfigureServer<_ControlServerConfig>( "scale" );
     config_ = &getLatestConfig<_ControlServerConfig>("scale");
@@ -127,9 +128,17 @@ class ControlServerNode: public BaseNode, public uscauv::PID6D, MultiReconfigure
     pose_control.block(0,0,3,1) *= config_->pose_scale_linear;
     pose_control.block(3,0,3,1) *= config_->pose_scale_angular;
 
-    auv_msgs::MotorPowerArray motor_control = thruster_axis_model_.AxisToMotorArray( pose_control + axis_command_value_ );
+    AxisValueVector all_control = pose_control + axis_command_value_;
     
-    motor_pub_.publish( motor_control );
+    geometry_msgs::Twist control_out;
+    control_out.linear.x = all_control(0);
+    control_out.linear.y = all_control(1);
+    control_out.linear.z = all_control(2);
+    control_out.angular.x = all_control(3);
+    control_out.angular.y = all_control(4);
+    control_out.angular.z = all_control(5);
+    
+    axis_pub_.publish( control_out );
   }
   
  private:

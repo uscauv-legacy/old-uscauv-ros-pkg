@@ -42,6 +42,8 @@
 // ROS
 #include <ros/ros.h>
 
+#include <uscauv_common/param_loader.h>
+
 namespace uscauv
 {
 
@@ -117,21 +119,35 @@ namespace uscauv
 
     int fromXmlRpc(XmlRpc::XmlRpcValue & xml_lookup, std::string const & key_name, std::string const & value_name)
     {
-      XmlRpc::XmlRpcValue & xml_key   = xml_lookup[key_name];
-      XmlRpc::XmlRpcValue & xml_value = xml_lookup[value_name];
-      int key_size = xml_key.size(), value_size = xml_value.size();
-
-      if( xml_key.size() != xml_value.size() )
+      
+      try
 	{
-	  ROS_WARN("Lookup table key size does not match value size (key: %d) != (value: %d )", key_size, value_size);
+	  XmlRpc::XmlRpcValue xml_key   = uscauv::param::lookup<XmlRpc::XmlRpcValue>( xml_lookup, key_name );
+	  XmlRpc::XmlRpcValue xml_value = uscauv::param::lookup<XmlRpc::XmlRpcValue>( xml_lookup, value_name );
+	  int key_size = xml_key.size(), value_size = xml_value.size();
+
+	  if( xml_key.size() != xml_value.size() )
+	    {
+	      ROS_WARN("Lookup table key size does not match value size (key: %d) != (value: %d )", key_size, value_size);
+	      return -1;
+	    }
+      
+	  key_ = uscauv::param::XmlRpcValueConverter<std::vector<double> >::convert( xml_key );
+	  value_ = uscauv::param::XmlRpcValueConverter<std::vector<double> >::convert( xml_value );
+	}
+      catch( XmlRpc::XmlRpcException const & ex )
+	{
+	  ROS_WARN("Caught exception [ %s ] loading lookup table with key [ %s ], value [ %s ].",
+		   ex.getMessage().c_str(), key_name.c_str(), value_name.c_str() );
 	  return -1;
 	}
+
       /// If key size isn't the same as value size at this point something has gone horribly wrong.
-      for(int i = 0; i < key_size; ++i)
-	{
-	  key_.push_back( xml_key[i] );
-	  value_.push_back( xml_value[i] );
-	}
+      /* for(int i = 0; i < key_size; ++i) */
+      /* 	{ */
+      /* 	  key_.push_back( xml_key[i] ); */
+      /* 	  value_.push_back( xml_value[i] ); */
+      /* 	} */
       return 0;
     }
   };
