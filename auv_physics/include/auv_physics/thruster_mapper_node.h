@@ -55,6 +55,8 @@ typedef auv_msgs::MotorPowerArray _MotorPowerArrayMsg;
 
 typedef uscauv::ReconfigurableThrusterAxisModel<uscauv::ThrusterModelSimpleLookup> _ThrusterAxisModel;
 
+static const double MAX_MOTOR_VAL = 100;
+
 class ThrusterMapperNode: public BaseNode
 {
  private:
@@ -66,8 +68,6 @@ class ThrusterMapperNode: public BaseNode
   ros::Publisher motor_pub_, wrench_pub_;
   ros::Subscriber axis_sub_;
   
-  
-
  public:
  ThrusterMapperNode(): BaseNode("ThrusterMapper"), thruster_axis_model_("model/thrusters"),
     nh_rel_("~")
@@ -81,8 +81,8 @@ class ThrusterMapperNode: public BaseNode
   {
     axis_sub_ = nh_rel_.subscribe( "axis_in", 10, &ThrusterMapperNode::axisCallback, this );
 
-    motor_pub_ = nh_rel_.advertise< _MotorPowerArrayMsg >("motor_levels", 10);
-    wrench_pub_ = nh_rel_.advertise< geometry_msgs::Wrench>("predicted_wrench", 10);
+    motor_pub_ = nh_rel_.advertise<_MotorPowerArrayMsg>("motor_levels", 10);
+    wrench_pub_ = nh_rel_.advertise<geometry_msgs::Wrench>("thruster_wrench", 10);
     
     thruster_axis_model_.load("robot/thrusters");
   }  
@@ -95,7 +95,72 @@ class ThrusterMapperNode: public BaseNode
 
   void axisCallback( geometry_msgs::Twist::ConstPtr const & msg )
   {
+    _ThrusterAxisModel::AxisVector desired_axis;
+    desired_axis <<
+      msg->linear.x,
+      msg->linear.y,
+      msg->linear.z,
+      msg->angular.x,
+      msg->angular.y,
+      msg->angular.z;
+
+    _MotorPowerArrayMsg motor_levels = thruster_axis_model_.AxisToMotorArray( desired_axis );
+
+    /**
+     * Normalize thrusters on the same axis to have maximum possible motor value
+     * Future versions will do this without explicitly mapping axes to thrusters
+     */
+    normalizeAxes( motor_levels );
     
+    motor_pub_.publish( motor_levels );
+
+    /// Get predicted wrench on auv body due to firing thrusters 
+    geometry_msgs::Wrench wrench_on_body = thruster_axis_model_.MotorArrayToWrench( motor_levels );
+    wrench_pub_.publish( wrench_on_body );
+    
+  }
+ private:
+  
+  void normalizeAxes( _MotorPowerArrayMsg & msg )
+  {
+    if( normalizeMotorPair( msg, "thruster1", "thruster2" ) ||
+	normalizeMotorPair( msg, "thruster3", "thruster4" ) ||
+	normalizeMotorPair( msg, "thruster5", "thruster6" ) )
+      ROS_ERROR("Failed to normalize motor vals.");
+  }
+
+  int normalizeMotorPair( _MotorPowerArrayMsg & msg, std::string const & motor1, std::string const & motor2 )
+  {
+    int motor1_idx = getMotorIndex(msg, motor1), motor2_idx = getMotorIndex(msg, motor2);
+    if( motor1_idx < 0 || motor2_idx < 0)
+      return -1;
+
+    double & power1 = msg.motors[ motor1_idx ].power;
+    double & power2 = msg.motors[ motor2_idx ].power;
+
+    double max = std::max( fabs( power1), fabs( power2 ) );
+
+    if(max <= MAX_MOTOR_VAL )
+      return 0;
+    
+    power1 *= MAX_MOTOR_VAL/max;
+    power2 *= MAX_MOTOR_VAL/max;
+    
+    return 0;
+  }
+
+  int getMotorIndex( _MotorPowerArrayMsg & msg, std::string const & name )
+  {
+    unsigned int idx = 0;
+    
+    for( _MotorPowerMsg & motor : msg.motors )
+      {
+	if( motor.name == name )
+	  return idx;
+	++idx;
+      }
+    
+    return -1;
   }
 
 };

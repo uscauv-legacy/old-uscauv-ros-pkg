@@ -277,14 +277,17 @@ namespace uscauv
 	    {
 	      motor_power_levels.insert( std::make_pair( motor.name, motor.power ) );
 	    }
-	  ThrusterVector thruster_force;
+	  
+	  ThrusterVector thruster_force; 
+	  thruster_force.resize( active_thruster_models_.size(), 1 );
+	  
 	  unsigned int thruster_idx = 0;
 	  for( typename _NamedThrusterMap::value_type const & thruster : active_thruster_models_ )
 	    {
-	      typename _NamedThrusterMap::const_iterator power_it = motor_power_levels.find( thruster.first );
-	      if( power_it != active_thruster_models_.end() )
+	      std::map<std::string, double>::const_iterator power_it = motor_power_levels.find( thruster.first );
+	      if( power_it != motor_power_levels.end() )
 		{
-		  thruster_force( thruster_idx ) = thruster.powerToForce( power_it->second );
+		  thruster_force( thruster_idx ) = thruster.second.powerToForce( power_it->second );
 		}
 	      else
 		{

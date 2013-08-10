@@ -149,6 +149,8 @@ class JoystickPolicy
     if( msg->axes.size() != axes_msg_map_.size() || msg->buttons.size() != button_msg_map_.size() )
       {
 	ROS_WARN( "Received joystick message is not compatible with current mapping scheme. Ignoring...");
+	ROS_WARN("Axes: [ loaded: %lu, received: %lu ], Buttons: [ loaded: %lu, received: %lu ].", 
+		 axes_msg_map_.size(), msg->axes.size(), button_msg_map_.size(), msg->buttons.size() );
 	return;
       }
     

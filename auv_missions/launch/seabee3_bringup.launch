@@ -5,7 +5,7 @@
   <!-- Controls -->
   <include file="$(find auv_controls)/launch/seabee3_controls.launch" />
 
-  <!-- Seabee3 and Xsens Drivers -->
+  <!-- Hardware -->
   <group unless="$(arg simulate)" >
 
     <remap from="seabee3/motor_vals" to="seabee3_adapter/motor_vals" />
@@ -15,7 +15,7 @@
     
     <include file="$(find xsens_driver)/launch/xsens_driver.launch" >
     </include>
-        
+    
     <!-- <node pkg="rosbag" type="record" name="rosbag_record" -->
     <!-- 	  args="record -o $(find auv_missions)/bag -->
     <!-- 		/robot/cameras/forward/left/image_rect_color /robot/cameras/forward/left/camera_info /rosout /robot/sensors/depth -->
@@ -28,10 +28,20 @@
     <!--   </include> -->
     <!-- </group> -->
     
-  <include file="$(find auv_vision)/launch/vision_pipeline_bringup.launch" >
-    <arg name="camera" value="camera3" />
-    <arg name="camera_name" value="forward/left" />
-  </include>		    
+    <include file="$(find auv_vision)/launch/vision_pipeline_bringup.launch" >
+      <arg name="camera" value="camera3" />
+      <arg name="camera_name" value="forward/left" />
+    </include>		    
+
+  </group>
+
+  <group if="$(arg simulate)" >
+
+    <remap from="physics_simulator/thruster_wrench" to="thruster_mapper/thruster_wrench" />
+
+    <include file="$(find auv_physics)/launch/physics_simulator_bringup.launch" >
+      <arg name="robot" value="seabee3" />
+    </include>
 
   </group>
 

@@ -1,9 +1,13 @@
 <launch>
 
-  <remap from="seabee3_adapter/motor_levels" to="control_server/motor_levels" />
+  <remap from="thruster_mapper/axis_in" to="control_server/axis_out" />
+  <remap from="seabee3_adapter/motor_levels" to="thruster_mapper/motor_levels" />
 
   <!-- Main Controller -->
   <include file="$(find auv_controls)/launch/control_server.launch" />
+
+  <!-- Thruster Mapper -->
+  <include file="$(find auv_physics)/launch/thruster_mapper.launch" />
 
   <!-- Adapter -->
   <include file="$(find auv_controls)/launch/seabee3_adapter.launch" />

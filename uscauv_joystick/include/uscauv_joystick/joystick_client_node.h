@@ -83,20 +83,17 @@ class JoystickClientNode: public BaseNode, public JoystickPolicy
       {
 	_MaskedTwistMsg axis_command;
 	
-	if( !getButton("overdrive") )
-	  {
-	    /// The ROS API for populating messages is great!
-	    axis_command.mask.linear.x = true;
-	    axis_command.mask.linear.y = true;
-	    axis_command.mask.linear.z = false;
-	    axis_command.mask.angular.x = false;
-	    axis_command.mask.angular.y = false;
-	    axis_command.mask.angular.z = true;
-
-	    axis_command.twist.linear.x = getAxis("linear.x");
-	    axis_command.twist.linear.y = getAxis("linear.y");
-	    axis_command.twist.angular.z = getAxis("angular.z");
-	  }
+	/// The ROS API for populating messages is great!
+	axis_command.mask.linear.x = true;
+	axis_command.mask.linear.y = true;
+	axis_command.mask.linear.z = false;
+	axis_command.mask.angular.x = false;
+	axis_command.mask.angular.y = false;
+	axis_command.mask.angular.z = true;
+	
+	axis_command.twist.linear.x = getAxis("linear.x");
+	axis_command.twist.linear.y = getAxis("linear.y");
+	axis_command.twist.angular.z = getAxis("angular.z");
 	
 	axis_command_pub_.publish( axis_command );
       }

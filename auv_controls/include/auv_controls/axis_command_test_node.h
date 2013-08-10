@@ -52,10 +52,13 @@
 #define EIGEN_DONT_VECTORIZE
 #define EIGEN_DISABLE_UNALIGNED_ARRAY_ASSERT
 
+typedef uscauv::ThrusterAxisModel<uscauv::ThrusterModelBase> _ThrusterAxisModel;
+typedef _ThrusterAxisModel::AxisVector _AxisVector;
+
 class AxisCommandTestNode: public BaseNode, public JoystickPolicy
 {
-  typedef std::map<std::string, uscauv::StaticThrusterAxisModel::AxisVector, std::less<std::string>, 
-    Eigen::aligned_allocator< std::pair<const std::string, uscauv::StaticThrusterAxisModel::AxisVector> > > _NamedScrewMap;
+  typedef std::map<std::string, _AxisVector, std::less<std::string>, 
+    Eigen::aligned_allocator< std::pair<const std::string, _AxisVector> > > _NamedScrewMap;
   typedef auv_msgs::MaskedTwist _MaskedTwistMsg;
   _NamedScrewMap test_input_;
   _NamedScrewMap::iterator current_input_;
@@ -69,18 +72,18 @@ class AxisCommandTestNode: public BaseNode, public JoystickPolicy
     {
       test_input_ = 
 	{
-	  {"surge+", uscauv::StaticThrusterAxisModel::constructAxisVector(1,0,0,0,0,0)},
-	  {"surge-", uscauv::StaticThrusterAxisModel::constructAxisVector(-1,0,0,0,0,0)},
-	  {"sway+", uscauv::StaticThrusterAxisModel::constructAxisVector(0,1,0,0,0,0)},
-	  {"sway-", uscauv::StaticThrusterAxisModel::constructAxisVector(0,-1,0,0,0,0)},
-	  {"heave+", uscauv::StaticThrusterAxisModel::constructAxisVector(0,0,1,0,0,0)},
-	  {"heave-", uscauv::StaticThrusterAxisModel::constructAxisVector(0,0,-1,0,0,0)},
-	  {"yaw+", uscauv::StaticThrusterAxisModel::constructAxisVector(0,0,0,0,0,1)},
-	  {"yaw-", uscauv::StaticThrusterAxisModel::constructAxisVector(0,0,0,0,0,-1)},
-	  {"roll+", uscauv::StaticThrusterAxisModel::constructAxisVector(0,0,0,1,0,0)},
-	  {"roll-", uscauv::StaticThrusterAxisModel::constructAxisVector(0,0,0,-1,0,0)},
-	  {"pitch+", uscauv::StaticThrusterAxisModel::constructAxisVector(0,0,0,0,1,0)},
-	  {"pitch-", uscauv::StaticThrusterAxisModel::constructAxisVector(0,0,0,0,-1,0)}
+	  {"surge+", _ThrusterAxisModel::constructAxisVector(1,0,0,0,0,0)},
+	  {"surge-", _ThrusterAxisModel::constructAxisVector(-1,0,0,0,0,0)},
+	  {"sway+", _ThrusterAxisModel::constructAxisVector(0,1,0,0,0,0)},
+	  {"sway-", _ThrusterAxisModel::constructAxisVector(0,-1,0,0,0,0)},
+	  {"heave+", _ThrusterAxisModel::constructAxisVector(0,0,1,0,0,0)},
+	  {"heave-", _ThrusterAxisModel::constructAxisVector(0,0,-1,0,0,0)},
+	  {"yaw+", _ThrusterAxisModel::constructAxisVector(0,0,0,0,0,1)},
+	  {"yaw-", _ThrusterAxisModel::constructAxisVector(0,0,0,0,0,-1)},
+	  {"roll+", _ThrusterAxisModel::constructAxisVector(0,0,0,1,0,0)},
+	  {"roll-", _ThrusterAxisModel::constructAxisVector(0,0,0,-1,0,0)},
+	  {"pitch+", _ThrusterAxisModel::constructAxisVector(0,0,0,0,1,0)},
+	  {"pitch-", _ThrusterAxisModel::constructAxisVector(0,0,0,0,-1,0)}
       };
 
     }
@@ -128,7 +131,7 @@ class AxisCommandTestNode: public BaseNode, public JoystickPolicy
       }
   }
 
-  void  applyAxisVector( uscauv::StaticThrusterAxisModel::AxisVector const &  vec, 
+  void  applyAxisVector( _AxisVector const &  vec, 
 			 _MaskedTwistMsg & cmd )
   {
     cmd.mask.linear.x  = true;

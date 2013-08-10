@@ -304,6 +304,8 @@ function uscauv-publish-killswitch()
     rostopic pub /robot/sensors/kill_switch seabee3_msgs/KillSwitch $@
 }
 
+
+
 ## The greatest idea ###########################################
 alias roslaunch="uscauv-print-logo && roslaunch $@"
 

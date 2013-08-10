@@ -54,7 +54,7 @@ typedef seabee3_msgs::MotorVals _MotorValsMsg;
 typedef auv_msgs::MotorPower _MotorPowerMsg;
 typedef auv_msgs::MotorPowerArray _MotorPowerArrayMsg;
 
-static const double MAX_MOTOR_VAL = 100;
+/* static const double MAX_MOTOR_VAL = 100; */
 
 static const std::map< std::string, int> thruster_map =
   {
@@ -119,33 +119,33 @@ class Seabee3AdapterNode: public BaseNode
 		
       }
 
-    normalizeMotors( motor_vals );
+    /* normalizeMotors( motor_vals ); */
 
     motor_vals_pub_.publish( motor_vals );
   }
 
  private:
   
-  void normalizeMotors(_MotorValsMsg & msg )
-  {
-    normalizeAxis(msg, seabee3_common::movement::Axes::SPEED );
-    normalizeAxis(msg, seabee3_common::movement::Axes::STRAFE);
-    normalizeAxis(msg, seabee3_common::movement::Axes::DEPTH );
-  }
+  /* void normalizeMotors(_MotorValsMsg & msg ) */
+  /* { */
+  /*   normalizeAxis(msg, seabee3_common::movement::Axes::SPEED ); */
+  /*   normalizeAxis(msg, seabee3_common::movement::Axes::STRAFE); */
+  /*   normalizeAxis(msg, seabee3_common::movement::Axes::DEPTH ); */
+  /* } */
   
-  void normalizeAxis(_MotorValsMsg & msg, int const & axis)
-  {
-    int motor1_id = seabee3_common::movement::ThrusterPairs::values[axis][0];
-    int motor2_id = seabee3_common::movement::ThrusterPairs::values[axis][1];
-
-    double max = std::max( abs(msg.motors[motor1_id]), abs(msg.motors[motor2_id]) );
-
-    if(max <= MAX_MOTOR_VAL )
-      return;
+  /* void normalizeAxis(_MotorValsMsg & msg, int const & axis) */
+  /* { */
+  /*   int motor1_id = seabee3_common::movement::ThrusterPairs::values[axis][0]; */
+  /*   int motor2_id = seabee3_common::movement::ThrusterPairs::values[axis][1]; */
     
-    msg.motors[motor1_id] *= MAX_MOTOR_VAL/max;
-    msg.motors[motor2_id] *= MAX_MOTOR_VAL/max;
-  }
+  /*   double max = std::max( fabs(msg.motors[motor1_id]), fabs(msg.motors[motor2_id]) ); */
+
+  /*   if(max <= MAX_MOTOR_VAL ) */
+  /*     return; */
+    
+  /*   msg.motors[motor1_id] *= MAX_MOTOR_VAL/max; */
+  /*   msg.motors[motor2_id] *= MAX_MOTOR_VAL/max; */
+  /* } */
 
 };
 

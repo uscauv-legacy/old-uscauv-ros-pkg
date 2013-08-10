@@ -1,0 +1,10 @@
+<launch>
+
+  <arg name="robot" default="seabee3" />
+    
+  <include file="$(find auv_physics)/launch/physics_simulator.launch" />
+
+  <!-- Params -->
+  <include file="$(find global_config)/launch/environment_params.launch" />
+
+</launch>

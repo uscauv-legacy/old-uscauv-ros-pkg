@@ -49,11 +49,13 @@
 
 #include <auv_controls/ControlServerConfig.h>
 #include <auv_controls/controller.h>
+
+#include <tf/transform_listener.h>
 /* #include <auv_physics/thruster_axis_model.h> */
 
 #include <auv_msgs/MaskedTwist.h>
 #include <auv_msgs/MotorPowerArray.h>
-#include <auv_msgs/Twist.h>
+#include <geometry_msgs/Twist.h>
 
 #include <eigen_conversions/eigen_msg.h>
 
@@ -98,7 +100,7 @@ class ControlServerNode: public BaseNode, public uscauv::PID6D, MultiReconfigure
   {
     axis_command_sub_ = nh_rel_.subscribe( "axis_cmd", 10, &ControlServerNode::axisCommandCallback, this );
 
-    axis_pub_ = nh_rel_.advertise<auv_msgs::Twist>( "axis_out", 10 );
+    axis_pub_ = nh_rel_.advertise<geometry_msgs::Twist>( "axis_out", 10 );
        
     addReconfigureServer<_ControlServerConfig>( "scale" );
     config_ = &getLatestConfig<_ControlServerConfig>("scale");
