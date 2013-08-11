@@ -33,6 +33,10 @@
       <arg name="camera_name" value="forward/left" />
     </include>		    
 
+    <include file="$(find uscauv_visualization)/launch/link_model.launch" >
+      <arg name="parent" value="/robot/controls/measurement" />
+    </include>
+
   </group>
 
   <group if="$(arg simulate)" >
@@ -41,6 +45,10 @@
 
     <include file="$(find auv_physics)/launch/physics_simulator_bringup.launch" >
       <arg name="robot" value="seabee3" />
+    </include>
+    
+    <include file="$(find uscauv_visualization)/launch/link_model.launch" >
+      <arg name="parent" value="/simulated_pose" />
     </include>
 
   </group>

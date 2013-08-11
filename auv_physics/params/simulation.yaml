@@ -1,0 +1,6 @@
+auto_start: false
+drag:
+  angular: {x: 0.04, y: 0.04, z: 0.04}
+  linear: {x: 0.4, y: 0.4, z: 0.4}
+force_neutral_buoyancy: true
+surface_level: 0.0

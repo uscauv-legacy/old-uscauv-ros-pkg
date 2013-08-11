@@ -2,7 +2,7 @@
 
   <arg name="type" default="xbox360" />
 
-  <node pkg="joy" type="joy_node" name="joy" />
+  <node pkg="joy" type="joy_node" name="joy" output="screen" />
 
   <include file="$(find joystick_config)/launch/upload_joystick_assignments.launch">
     <arg name="type" value="$(arg type)" />

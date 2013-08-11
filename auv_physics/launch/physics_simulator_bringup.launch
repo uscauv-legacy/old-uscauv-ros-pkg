@@ -6,5 +6,7 @@
 
   <!-- Params -->
   <include file="$(find global_config)/launch/environment_params.launch" />
+  
+  <rosparam command="load" file="$(find auv_physics)/params/simulation.yaml" param="physics_simulator/simulation" />
 
 </launch>

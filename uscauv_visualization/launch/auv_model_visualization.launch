@@ -1,10 +1,10 @@
 <launch>
   
-  <arg name="fixed_frame" default="/cm_link" />
+  <arg name="fixed-frame" default="/robot/structures/cm" />
     
   <!-- Launch rviz with our config file -->
   <node pkg="rviz" type="rviz" name="auv_visualization"
 	args="--display-config=$(find uscauv_visualization)/config/model_visualization.rviz
-	      --fixed-frame=$(arg fixed_frame)" />
+	      --fixed-frame=$(arg fixed-frame)" />
 
 </launch>

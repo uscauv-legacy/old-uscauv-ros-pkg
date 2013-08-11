@@ -47,10 +47,12 @@
 
 /// dynamics
 #include <ode/ode.h>
+#include <auv_physics/ode_conversions.h>
 
 /// dynamic reconfigure
 #include <dynamic_reconfigure/server.h>
 #include <auv_physics/PhysicsSimulatorConfig.h>
+#include <auv_physics/DragConfig.h>
 
 /// Simulation Commands
 #include <auv_physics/SimulationInstruction.h>
@@ -65,6 +67,7 @@
 #include <uscauv_common/param_loader.h>
 #include <uscauv_common/lookup_table.h>
 #include <uscauv_common/defaults.h>
+#include <uscauv_common/transform_utils.h>
 #include <uscauv_common/base_node.h>
 
 typedef auv_msgs::MotorPower _MotorPowerMsg;
@@ -75,9 +78,11 @@ typedef auv_physics::SimulationState _SimulationStateMsg;
 typedef auv_physics::SimulationCommand _SimulationCommandSrv;
 
 typedef auv_physics::PhysicsSimulatorConfig _PhysicsSimulatorConfig;
+typedef auv_physics::DragConfig _DragConfig;
 
 typedef geometry_msgs::Wrench _WrenchMsg;
 
+#define dDouble
 
 class AUVDynamicsModel
 {
@@ -156,7 +161,6 @@ class PhysicsSimulatorNode: public BaseNode, public MultiReconfigure
   /// Simulation data
   bool sim_running_;
   double loop_rate_hz_;
-  ros::Time last_update_time_;
   
   /// msg
   _WrenchMsg last_wrench_msg_;
@@ -167,6 +171,8 @@ class PhysicsSimulatorNode: public BaseNode, public MultiReconfigure
   double water_density_;
   
   _PhysicsSimulatorConfig config_;
+  _DragConfig * linear_drag_config_, * angular_drag_config_;
+  
   
   /// physics world
   double simulation_delta_;
@@ -201,10 +207,16 @@ class PhysicsSimulatorNode: public BaseNode, public MultiReconfigure
     auv_world_ = dWorldCreate();
     auv_body_  = dBodyCreate(auv_world_);
 
+    dWorldSetCFM(auv_world_, 1e-3);
+    dWorldSetERP(auv_world_, 0.8);
+
     /// Get ready ------------------------------------
     ros::NodeHandle nh_rel("~");
-
+    
     addReconfigureServer<_PhysicsSimulatorConfig>("simulation", &PhysicsSimulatorNode::reconfigureCallback, this );
+    addReconfigureServer<_DragConfig>("simulation/drag/linear"); addReconfigureServer<_DragConfig>("simulation/drag/angular");
+    linear_drag_config_ = &getLatestConfig<_DragConfig>("simulation/drag/linear");
+    angular_drag_config_ = &getLatestConfig<_DragConfig>("simulation/drag/angular");
     
     simulation_delta_ = 1.0 / getLoopRate();
     
@@ -259,7 +271,7 @@ class PhysicsSimulatorNode: public BaseNode, public MultiReconfigure
     /// Set gravity in the z-direction
     dWorldSetGravity(auv_world_, 0.0, 0.0, gravity_);
 
-    /// Get water density lookup ------------------------------------
+    /// get water density lookup ------------------------------------
     XmlRpc::XmlRpcValue wtd_map;
     if( !nh.getParam("environment/maps/water_temp_density", wtd_map) )
       {
@@ -310,12 +322,12 @@ class PhysicsSimulatorNode: public BaseNode, public MultiReconfigure
  private:
   void simulateAndPublish()
   {
-    /// timing
     ros::Time now = ros::Time::now();
 
-    /// Apply forces on the body ------------------------------------
+    /// Apply forces to the body ------------------------------------
     simulateBuoyancy();
     simulateThrusters();
+    simulateDrag();
     
     /// Step simulation and publish the results ------------------------------------
     
@@ -329,6 +341,13 @@ class PhysicsSimulatorNode: public BaseNode, public MultiReconfigure
     getBodyPose( world_to_auv_vec, world_to_auv_quat );
 
     tf::Transform world_to_auv ( world_to_auv_quat, world_to_auv_vec );
+    
+    if( !uscauv::isValid( world_to_auv ) )
+      {
+	ROS_ERROR("ODE exploded. Halting simulation...");
+	stopSimulation();
+	return;
+      }
 
     tf::Transform world_to_imu( world_to_auv_quat, tf::Vector3(0, 0, 0) );
     
@@ -344,9 +363,6 @@ class PhysicsSimulatorNode: public BaseNode, public MultiReconfigure
     outgoing_transforms.push_back( world_to_depth_stamped );
 
     pose_br_.sendTransform( outgoing_transforms );
-
-    /// update our timekeeping
-    last_update_time_ = now;
 
     return;
   }
@@ -385,6 +401,30 @@ class PhysicsSimulatorNode: public BaseNode, public MultiReconfigure
 		       last_wrench_msg_.torque.y, last_wrench_msg_.torque.z );
     
   }
+
+ /// Not physical at all. 
+ void simulateDrag()
+ {
+   /// Velocities returned by ODE are expressed in world coordinates, so we must transform them into the auv's body coordinate system
+   tf::Transform const auv_to_world = tf::Transform( uscauv::QuaternionODEToTF( dBodyGetQuaternion( auv_body_ ) ) ).inverse();
+   
+   tf::Vector3 const linear_vel  = auv_to_world * uscauv::Vector3ODEToTF( dBodyGetLinearVel( auv_body_ ) );
+   tf::Vector3 const angular_vel = auv_to_world * uscauv::Vector3ODEToTF( dBodyGetAngularVel( auv_body_ ) );
+
+   /// first part of drag eqn
+   double const f = 0.5 * water_density_;
+
+   /// vector in which each element is proportional to velocity^2, with the opposite sign of the original velocity vector
+   tf::Vector3 linear_drag = -linear_vel*linear_vel.absolute() * f;
+   tf::Vector3 angular_drag = -angular_vel*angular_vel.absolute() * f;
+   
+   
+   dBodyAddRelForce( auv_body_, linear_drag.getX() * linear_drag_config_->x,
+   		     linear_drag.getY() * linear_drag_config_->y, linear_drag.getZ() * linear_drag_config_->z );
+
+   dBodyAddRelTorque( auv_body_, angular_drag.getX() * angular_drag_config_->x,
+   		      angular_drag.getY() * angular_drag_config_->y, angular_drag.getZ() * angular_drag_config_->z );
+ }
   
 
  private:
@@ -430,8 +470,6 @@ class PhysicsSimulatorNode: public BaseNode, public MultiReconfigure
 
   bool startSimulation(_SimulationCommandSrv::Request & request)
   {
-    ros::Time now = ros::Time::now();
-
     const geometry_msgs::Point & p = request.command.initial_pose.position;
     const geometry_msgs::Quaternion & q = request.command.initial_pose.orientation;
     const geometry_msgs::Vector3 & t1 = request.command.initial_velocity.linear;
@@ -451,7 +489,6 @@ class PhysicsSimulatorNode: public BaseNode, public MultiReconfigure
     /// TODO: Integrate velocity over time elapsed since message was published
     
     /// update simulator state data
-    last_update_time_ = now;
     sim_running_ = true;
 
     clearState();
@@ -477,27 +514,6 @@ class PhysicsSimulatorNode: public BaseNode, public MultiReconfigure
   {
     last_wrench_msg_ = *msg;
   }
-
-  /* void motorPowerCallback(_MotorPowerArrayMsg::ConstPtr msg) */
-  /* { */
-  /*   /// TODO: Step simulation before applying new motor forces     */
-  /*   if ( !sim_running_ ) */
-  /*     return; */
-
-  /*   for(std::vector<_MotorPowerMsg>::const_iterator power_it = msg->motors.begin(); power_it != msg->motors.end(); ++power_it) */
-  /*     { */
-  /*   	std::map<std::string, ThrusterModel>::iterator model_it = thruster_models_.find( power_it->name ) ; */
-  /*   	if ( model_it == thruster_models_.end() ) */
-  /*   	  { */
-  /*   	    ROS_WARN( "Received thruster power, but no model is loaded. [ %s ]", power_it->name.c_str() ); */
-  /*   	    continue; */
-  /*   	  } */
-	
-  /*   	model_it->second.updateForce( power_it->power ); */
-  /*     } */
-    
-  /*   return; */
-  /* } */
 
   void reconfigureCallback(auv_physics::PhysicsSimulatorConfig const & config)
   {
