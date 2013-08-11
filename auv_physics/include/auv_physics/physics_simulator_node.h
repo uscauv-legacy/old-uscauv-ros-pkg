@@ -214,9 +214,10 @@ class PhysicsSimulatorNode: public BaseNode, public MultiReconfigure
     ros::NodeHandle nh_rel("~");
     
     addReconfigureServer<_PhysicsSimulatorConfig>("simulation", &PhysicsSimulatorNode::reconfigureCallback, this );
-    addReconfigureServer<_DragConfig>("simulation/drag/linear"); addReconfigureServer<_DragConfig>("simulation/drag/angular");
-    linear_drag_config_ = &getLatestConfig<_DragConfig>("simulation/drag/linear");
-    angular_drag_config_ = &getLatestConfig<_DragConfig>("simulation/drag/angular");
+    addReconfigureServer<_DragConfig>("drag/linear"); 
+    addReconfigureServer<_DragConfig>("drag/angular");
+    linear_drag_config_ = &getLatestConfig<_DragConfig>("drag/linear");
+    angular_drag_config_ = &getLatestConfig<_DragConfig>("drag/angular");
     
     simulation_delta_ = 1.0 / getLoopRate();
     

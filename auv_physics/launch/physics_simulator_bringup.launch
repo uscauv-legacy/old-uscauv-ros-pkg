@@ -2,11 +2,10 @@
 
   <arg name="robot" default="seabee3" />
     
-  <include file="$(find auv_physics)/launch/physics_simulator.launch" />
-
   <!-- Params -->
   <include file="$(find global_config)/launch/environment_params.launch" />
   
-  <rosparam command="load" file="$(find auv_physics)/params/simulation.yaml" param="physics_simulator/simulation" />
+  <rosparam command="load" ns="physics_simulator" file="$(find auv_physics)/params/simulation.yaml"  />
+  <include file="$(find auv_physics)/launch/physics_simulator.launch" />
 
 </launch>
