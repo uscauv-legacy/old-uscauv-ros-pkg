@@ -99,8 +99,7 @@ QUICKDEV_DECLARE_NODE_CLASS( Seabee3Driver )
     {
         QUICKDEV_GET_RUNABLE_NODEHANDLE( nh_rel );
 	
-	/// TODO: Change default value to 895, figure out how to properly resolve param namespace
-	surface_pressure_ = ros::ParamReader<double, 1>::readParam( nh_rel, "surface_pressure", 666);
+	surface_pressure_ = ros::ParamReader<double, 1>::readParam( nh_rel, "surface_pressure",  666);
 		
 	motor_dirs_[movement::MotorControllerIDs::FWD_RIGHT_THRUSTER] =     -1;
         motor_dirs_[movement::MotorControllerIDs::FWD_LEFT_THRUSTER] =      -1;

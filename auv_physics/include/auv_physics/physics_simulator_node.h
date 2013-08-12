@@ -62,6 +62,7 @@
 /// AUV messages
 #include <auv_msgs/MotorPower.h>
 #include <auv_msgs/MotorPowerArray.h>
+#include <seabee3_msgs/Depth.h>
 
 #include <uscauv_common/multi_reconfigure.h>
 #include <uscauv_common/param_loader.h>
@@ -72,6 +73,7 @@
 
 typedef auv_msgs::MotorPower _MotorPowerMsg;
 typedef auv_msgs::MotorPowerArray _MotorPowerArrayMsg;
+typedef seabee3_msgs::Depth _DepthMsg;
 
 typedef auv_physics::SimulationInstruction _SimulationInstructionMsg;
 typedef auv_physics::SimulationState _SimulationStateMsg;
@@ -150,6 +152,7 @@ class PhysicsSimulatorNode: public BaseNode, public MultiReconfigure
   /// Publishers and subscribers
   ros::Subscriber water_temp_sub_;
   ros::Subscriber thruster_wrench_sub_;
+  ros::Publisher depth_pub_;
   tf::Transform transform_;
 
   /// Services
@@ -192,8 +195,8 @@ class PhysicsSimulatorNode: public BaseNode, public MultiReconfigure
   ~PhysicsSimulatorNode()
     {
       /// destroy dynamics world. What happens if this is called without calling dWorldCreate()?
-      dWorldDestroy( auv_world_ );
-      dBodyDestroy( auv_body_ );
+      dWorldDestroy(auv_world_);
+      dBodyDestroy(auv_body_);
       
     } // Destructor
   
@@ -212,9 +215,10 @@ class PhysicsSimulatorNode: public BaseNode, public MultiReconfigure
 
     /// Get ready ------------------------------------
     ros::NodeHandle nh_rel("~");
+    ros::NodeHandle nh;
     
     addReconfigureServer<_PhysicsSimulatorConfig>("simulation", &PhysicsSimulatorNode::reconfigureCallback, this );
-    addReconfigureServer<_DragConfig>("drag/linear"); 
+    addReconfigureServer<_DragConfig>("drag/linear");
     addReconfigureServer<_DragConfig>("drag/angular");
     linear_drag_config_ = &getLatestConfig<_DragConfig>("drag/linear");
     angular_drag_config_ = &getLatestConfig<_DragConfig>("drag/angular");
@@ -226,6 +230,8 @@ class PhysicsSimulatorNode: public BaseNode, public MultiReconfigure
     /// Subscribe to topics ------------------------------------
     water_temp_sub_ = nh_rel.subscribe("water_temp", 10, &PhysicsSimulatorNode::waterTempCallback, this);
     thruster_wrench_sub_ = nh_rel.subscribe("thruster_wrench", 10, &PhysicsSimulatorNode::thrusterWrenchCallback, this );
+
+    depth_pub_ = nh.advertise<_DepthMsg>( uscauv::defaults::DEPTH_TOPIC, 10 );
     
     /// Begin service servers ------------------------------------
     simulation_cmd_server_ = nh_rel.advertiseService("simulation_cmd", &PhysicsSimulatorNode::simulationCommandCallback, this);
@@ -350,6 +356,8 @@ class PhysicsSimulatorNode: public BaseNode, public MultiReconfigure
 	return;
       }
 
+    // Publish transforms #############################################
+    
     tf::Transform world_to_imu( world_to_auv_quat, tf::Vector3(0, 0, 0) );
     
     tf::Transform world_to_depth( tf::Quaternion::getIdentity(), tf::Vector3(0, 0, world_to_auv_vec.getZ() ) );
@@ -364,6 +372,11 @@ class PhysicsSimulatorNode: public BaseNode, public MultiReconfigure
     outgoing_transforms.push_back( world_to_depth_stamped );
 
     pose_br_.sendTransform( outgoing_transforms );
+
+    // Publish messages ###############################################
+    _DepthMsg depth;
+    depth.value = world_to_auv_vec.getZ();
+    depth_pub_.publish( depth );    
 
     return;
   }

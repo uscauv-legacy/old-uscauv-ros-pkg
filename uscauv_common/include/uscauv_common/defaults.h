@@ -61,6 +61,9 @@ namespace uscauv
     static char const * const CAMERA_PREFIX = "robot/cameras";
     static char const * const SENSOR_PREFIX = "robot/sensors";
 
+    static char const * const DEPTH_TOPIC = "robot/sensors/depth";
+    static char const * const KILLSWITCH_TOPIC = "robot/sensors/kill_switch";
+
   } // defaults
     
 } // uscauv

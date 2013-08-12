@@ -29,7 +29,7 @@
     <!-- </group> -->
     
     <include file="$(find auv_vision)/launch/vision_pipeline_bringup.launch" >
-      <arg name="camera" value="camera3" />
+      <arg name="camera" value="camera4" />
       <arg name="camera_name" value="forward/left" />
     </include>		    
 

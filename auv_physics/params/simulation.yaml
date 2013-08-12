@@ -1,6 +1,6 @@
 drag:
-  angular: {x: 0.4, y: 0.4, z: 0.4}
-  linear: {x: 0.04, y: 0.04, z: 0.04}
+  angular: {x: 0.08, y: 0.08, z: 0.08}
+  linear: {x: 1, y: 1, z: 1}
 loop_rate: 1000
 simulation: {auto_start: false, damping: true, drag: true, force_neutral_buoyancy: true,
   gravity: true, surface_level: 0.0, thrusters: true}
