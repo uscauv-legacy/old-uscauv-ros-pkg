@@ -255,7 +255,7 @@ function waitcam()
 
 }
 
-alias wc="waitcam"
+alias wcam="waitcam"
 
 # A descendent of ls /dev/seabee
 function lsb()
