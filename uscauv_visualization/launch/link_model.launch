@@ -1,0 +1,7 @@
+<launch>
+
+  <arg name="parent" />
+
+  <node pkg="tf" type="static_transform_publisher" name="sensor_to_model_tf" args="0 0 0 0 0 0 $(arg parent) /robot/structures/cm 100" />
+
+</launch>
