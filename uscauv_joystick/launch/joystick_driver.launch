@@ -1,6 +1,6 @@
 <launch>
 
-  <arg name="type" default="xbox360" />
+  <arg name="type" default="ps3" />
 
   <node pkg="joy" type="joy_node" name="joy" output="screen" />
 

@@ -1,0 +1,38 @@
+<launch>
+
+
+  <!-- RVIZ (for matched objects) -->
+  <include file="$(find uscauv_visualization)/launch/auv_model_visualization.launch">
+    <arg name="fixed-frame" value="/world" />
+  </include>
+  
+  <include file="$(find uscauv_visualization)/launch/object_visualizer.launch"/>
+
+  <include file="$(find auv_model)/launch/upload_model.launch" >
+    <arg name="robot" value="seabee3" />
+  </include>
+
+  <include file="$(find uscauv_visualization)/launch/link_model.launch" >
+    <arg name="parent" value="/world" />
+  </include>
+  
+  <!-- Image View -->
+  <!-- <node name="$(arg camera)_view" type="image_view" pkg="image_view" -->
+  <!-- 	args="image:=$(arg full_camera_name)/image_rect_color_scaled" /> -->
+
+  <!-- <node name="color_view" type="image_view" pkg="image_view" -->
+  <!-- 	args="image:=color_classifier/blaze_orange_classified" /> -->
+  
+  <!-- <node pkg="image_view" type="image_view" name="denoise_view" -->
+  <!-- 	args="image:=shape_matcher/image_denoised" /> -->
+  
+  <!-- <node pkg="image_view" type="image_view" name="contours_view" -->
+  <!-- 	args="image:=shape_matcher/image_contours" /> -->
+  
+  <!-- <node pkg="image_view" type="image_view" name="match_view" -->
+  <!-- 	args="image:=shape_matcher/image_matched" /> -->
+  
+  <!-- <node pkg="image_view" type="image_view" name="flow_view" -->
+  <!-- 	args="image:=optical_flow/image_debug" /> -->
+  
+</launch>

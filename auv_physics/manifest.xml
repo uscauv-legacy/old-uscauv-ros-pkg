@@ -21,11 +21,11 @@
   <depend package="uscauv_common" />
   <depend package="auv_msgs" />
   <depend package="seabee3_msgs" />
+  
+  <rosdep name="libvtk" />
 
   <export>
     <cpp cflags="-I${prefix}/include -I${prefix}/cfg/cpp" lflags="-L${prefix}/lib -Wl,-rpath,${prefix}/lib -lauv_physics"/>
   </export>
   
 </package>
-
-

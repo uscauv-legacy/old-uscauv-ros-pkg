@@ -19,7 +19,7 @@
   <depend package="object_tracking" />
 
   <rosdep name="tesseract" />
-  <rosdep name="leptonica" />
+  <rosdep name="libleptonica-dev" />
 
 </package>
 

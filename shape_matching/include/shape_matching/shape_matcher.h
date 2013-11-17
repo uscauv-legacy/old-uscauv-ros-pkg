@@ -81,7 +81,7 @@ struct ContourData
   cv::Mat eigenval_;
   double radius_; /// radius of bounding circle
   double rotation_; /// rotation from XY in radians (right-handed)
-  
+
 };
 
 typedef std::map<std::string, ContourData> _NamedContourData;
@@ -97,7 +97,6 @@ class ShapeMatcherNode: public BaseNode, public ImageTransceiver, public MultiRe
   _ImageLoader template_images_;
   _ShapeMatcherConfig* config_;
   uscauv::EncodedColorSubscriber encoded_image_sub_;
-  
   
   /// ros interfaces
   ros::Publisher match_pub_;

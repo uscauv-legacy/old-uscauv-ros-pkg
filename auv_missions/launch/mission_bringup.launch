@@ -11,5 +11,7 @@
   </include>
 
   <include file="$(find auv_missions)/launch/$(arg mission)_mission.launch" />
+
+  <include file="$(find uscauv_joystick)/launch/joystick_client.launch" />
   
 </launch>

@@ -5,6 +5,11 @@
   <!-- Controls -->
   <include file="$(find auv_controls)/launch/seabee3_controls.launch" />
 
+  <!-- <include file="$(find auv_vision)/launch/vision_pipeline_bringup.launch" > -->
+  <!--   <arg name="camera" value="camera4" /> -->
+  <!--   <arg name="camera_name" value="forward/left" /> -->
+  <!-- </include>		     -->
+
   <!-- Hardware -->
   <group unless="$(arg simulate)" >
 
@@ -20,18 +25,6 @@
     <!-- 	  args="record -o $(find auv_missions)/bag -->
     <!-- 		/robot/cameras/forward/left/image_rect_color /robot/cameras/forward/left/camera_info /rosout /robot/sensors/depth -->
     <!-- 		/tf /control_server/motor_levels"/> -->
-
-    <!-- <group ns="robot/cameras" > -->
-    <!--   <include file="$(find uscauv_camera)/launch/monocular_camera.launch" > -->
-    <!-- 	<arg name="camera" value="camera1" /> -->
-    <!-- 	<arg name="name" value="downward/right" /> -->
-    <!--   </include> -->
-    <!-- </group> -->
-    
-    <include file="$(find auv_vision)/launch/vision_pipeline_bringup.launch" >
-      <arg name="camera" value="camera4" />
-      <arg name="camera_name" value="forward/left" />
-    </include>		    
 
     <include file="$(find uscauv_visualization)/launch/link_model.launch" >
       <arg name="parent" value="/robot/controls/measurement" />

@@ -1,6 +1,6 @@
 <launch>
   
-  <arg name="joystick" default="xbox360" />
+  <arg name="joystick" default="ps3" />
 
   <remap from="joystick_client/joy" to="/joy" />  
 
