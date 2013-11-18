@@ -85,8 +85,7 @@ class FindObjectMissionNode: public BaseNode, public uscauv::MissionControlPolic
     SimpleActionToken dive_token = diveTo( config_->target1_depth );
     ROS_INFO("Diving to target1 depth...");
     dive_token.wait(5);       
-    dive_token.complete();
-
+    
     ROS_INFO("Searching for target1...");
     SimpleActionToken find_object_token = findObject( config_->target1 );
     SimpleActionToken motion_token = moveToward( 1, 0, 0.5 );
