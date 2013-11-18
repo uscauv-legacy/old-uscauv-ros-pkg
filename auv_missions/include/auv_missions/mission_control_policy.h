@@ -580,7 +580,7 @@ namespace uscauv
     {
       ros::Rate loop_rate( action_loop_rate_hz_ );
 
-      ROS_INFO( "Facing to object [ %s ].", name.c_str() );
+      ROS_INFO( "Moving to object [ %s ].", name.c_str() );
 
       while( ros::ok() && token() )
 	{
@@ -594,7 +594,7 @@ namespace uscauv
 	    /// Blocks until the tracked object message can be locked
 	    if( getMostConfidentObject( name, object ) )
 	      {
-		ROS_DEBUG("[ faceToObject ]: Object [ %s ] not in sight.", name.c_str() );
+		ROS_DEBUG("[ moveToObject ]: Object [ %s ] not in sight.", name.c_str() );
 
 		world_to_desired_tf_.getOrigin().setZ( 0 );
 		world_to_desired_tf_.getOrigin().setY( 0 );
@@ -623,7 +623,7 @@ namespace uscauv
 			      world_to_measurement_tf_.getOrigin().getY() ) < 0.05 &&
 		    !token.success() )
 		  {
-		    ROS_INFO("Faced object [ %s ]. ", name.c_str() );
+		    ROS_INFO("Moved to object [ %s ]. ", name.c_str() );
 		    token.succeed();		  
 		  }
 	      }

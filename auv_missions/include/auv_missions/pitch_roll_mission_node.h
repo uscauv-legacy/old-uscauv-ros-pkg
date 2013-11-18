@@ -74,7 +74,7 @@ class PitchRollMissionNode: public BaseNode, public uscauv::MissionControlPolicy
   void missionPlan()
   {
     SimpleActionToken ori_token = zeroPitchRoll();
-    SimpleActionToken depth_token = diveTo(config_->depth);
+    SimpleActionToken depth_token = diveTo(config_->start_depth);
     depth_token.wait();
 
     /* SimpleActionToken motion_token = moveToward(-1, 0, 1); */

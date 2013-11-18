@@ -1,0 +1,2 @@
+{target1_depth: 1, target1_distance: 2.0, start_depth: 1, target1: buoy,
+target1_hold_time: 3, retreat_time: 15.0, target1_attack_time: 7.5 }

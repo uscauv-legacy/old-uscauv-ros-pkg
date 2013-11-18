@@ -46,19 +46,23 @@
 // uscauv
 #include <uscauv_common/base_node.h>
 #include <auv_missions/mission_control_policy.h>
+#include <auv_missions/MissionConfig.h>
 
 using namespace quickdev;
+using namespace auv_missions;
 
-class FindObjectMissionNode: public BaseNode, public uscauv::MissionControlPolicy
+class FindObjectMissionNode: public BaseNode, public uscauv::MissionControlPolicy,
+  public MultiReconfigure
 {
 
-  std::string object_name_;
-  double depth_, distance_;
+  MissionConfig * config_;
   
  public:
   FindObjectMissionNode(): BaseNode("FindObjectMission")
-   {
-   }
+    {
+      addReconfigureServer<MissionConfig>("mission");
+      config_ = &getLatestConfig<MissionConfig>("mission");
+    }
 
  private:
 
@@ -67,9 +71,6 @@ class FindObjectMissionNode: public BaseNode, public uscauv::MissionControlPolic
      {
        ros::NodeHandle nh_rel("~");
        
-       object_name_ = uscauv::param::load<std::string>( nh_rel, "object", "buoy");
-       depth_ = uscauv::param::load<double>( nh_rel, "depth", 0.5);
-       distance_ = uscauv::param::load<double>( nh_rel, "distance", 1);
        startMissionControl( &FindObjectMissionNode::missionPlan, this );
      }  
 
@@ -77,15 +78,45 @@ class FindObjectMissionNode: public BaseNode, public uscauv::MissionControlPolic
   {
     SimpleActionToken ori_token = zeroPitchRoll();
     ori_token.wait(2.0);
+
+    SimpleActionToken heading_token = maintainHeading();
+    heading_token.wait(1);
     
-    SimpleActionToken dive_token = diveTo( depth_ );
-    ROS_INFO("Diving...");
+    SimpleActionToken dive_token = diveTo( config_->target1_depth );
+    ROS_INFO("Diving to target1 depth...");
     dive_token.wait(5);       
     dive_token.complete();
 
-    ROS_INFO("Moving to object...");
-    SimpleActionToken moveto_token = moveToObject( object_name_, distance_ );
+    ROS_INFO("Searching for target1...");
+    SimpleActionToken find_object_token = findObject( config_->target1 );
+    SimpleActionToken motion_token = moveToward( 1, 0, 0.5 );
+    motion_token.wait(1);
+    find_object_token.wait();
+    dive_token.complete();
+    motion_token.complete();
+    heading_token.complete();
+
+    ROS_INFO("Moving to target1...");
+    SimpleActionToken moveto_token = moveToObject( config_->target1, config_->target1_distance );
     moveto_token.wait();
+
+    ROS_INFO("Reached safe target1 distance.");
+    std::this_thread::sleep_for( std::chrono::seconds(int(config_->target1_hold_time)));    
+    moveto_token.complete();
+    ROS_INFO("Going in for the kill...");
+    SimpleActionToken moveto_token2 = moveToObject( config_->target1, 0 );
+    std::this_thread::sleep_for( std::chrono::seconds(int(config_->target1_attack_time)));    
+    moveto_token2.complete();
+    ROS_INFO("Retreating...");
+    SimpleActionToken heading_token3 = maintainHeading();
+    SimpleActionToken dive_token4 = diveTo( config_->target1_depth );
+    heading_token3.wait(2);
+    SimpleActionToken motion_token3 = moveToward( -1, 0, config_->retreat_vel );
+    motion_token3.wait(config_->retreat_time);
+    dive_token4.complete();
+    motion_token3.complete();
+    heading_token3.complete();
+    ROS_INFO("Retreated. Searching for traffic light");
     
     
     /* SimpleActionToken find_object_token = findObject( object_name_ ); */

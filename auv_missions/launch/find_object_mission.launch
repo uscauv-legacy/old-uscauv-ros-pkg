@@ -5,6 +5,8 @@
   <arg name="rate" default="60" />
   <arg name="args" value="_loop_rate:=$(arg rate) _distance:=0" />
 
+  <rosparam command="load" file="$(find auv_missions)/params/find_object.yaml" param="find_object_mission/mission" />
+
   <node
       pkg="$(arg pkg)"
       type="$(arg type)"
