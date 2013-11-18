@@ -75,6 +75,20 @@ namespace uscauv
       return ( value > upper ) ? upper : ( value < lower ) ? lower : value;
     }
 
+  template<typename __NumericType>
+    static inline bool in_range_open(__NumericType lower, __NumericType upper, __NumericType val )
+    {
+      assert( lower < upper );      
+      return ( val > lower || val < upper );
+    }
+
+    template<typename __NumericType>
+    static inline bool in_range_closed(__NumericType lower, __NumericType upper, __NumericType val )
+    {
+      assert( lower <= upper );      
+      return ( val >= lower || val <= upper );
+    }
+
 } // uscauv
 
 #endif // USCAUV_USCAUVCOMMON_SIMPLEMATH

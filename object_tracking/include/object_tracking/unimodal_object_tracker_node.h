@@ -54,12 +54,15 @@
 #include <uscauv_common/simple_math.h>
 #include <uscauv_common/defaults.h>
 #include <uscauv_common/tic_toc.h>
+#include <uscauv_common/macros.h>
 #include <auv_msgs/MatchedShape.h>
 #include <auv_msgs/MatchedShapeArray.h>
 #include <auv_msgs/TrackedObject.h>
 #include <auv_msgs/TrackedObjectArray.h>
 
 #include <cmath>
+#include <map>
+#include <unordered_set>
 
 /// linalg
 #include <Eigen/LU>
@@ -89,26 +92,42 @@ typedef object_tracking::ObjectTrackerConfig _ObjectTrackerConfig;
 
 /// template arguments are dims for state/update/control vectors
 typedef uscauv::LinearKalmanFilter<8>   _ObjectKalmanFilter;
-typedef std::vector<_ObjectKalmanFilter> _KalmanFilterVector;
 typedef _ObjectKalmanFilter::Control<8> _FullStateControl;
 typedef _ObjectKalmanFilter::Update<4>  _PositionUpdate;
 
 /// For using estimates from optical flow - not implemented yet
 typedef _ObjectKalmanFilter::Update<2>  _FlowVelocityUpdate;
 
+typedef std::unordered_set<std::string> _ColorSet;
+
 /// TODO: Sort filters_ based on uncertainty
+
+struct FilterStorage
+{
+  _ObjectKalmanFilter filter_;
+  std::string color_;
+};
+
+typedef std::vector<FilterStorage> _KalmanFilterVector;
+
 struct ObjectTrackerStorage
 {
-  std::vector<_ObjectKalmanFilter> filters_;
+  std::vector<FilterStorage> filters_;
   double ideal_radius_;
-  bool tracked_;
-  std::string name_;
+  
+  std::string type_;
+  _ColorSet colors_;
+  
   ros::Time last_predict_time_;
   _TrackedObjectConfig config_;
 };
 
-typedef std::map<std::string, std::string>          _NamedAttributeMap;
-typedef std::map<std::string, ObjectTrackerStorage> _AttributeTrackerMap;
+
+/* typedef std::map<std::string, ObjectTrackerStorage> _AttributeTrackerMap; */
+typedef std::multimap<std::string, std::string>     _ShapeTrackerMap;
+typedef std::pair<_ShapeTrackerMap::iterator, _ShapeTrackerMap::iterator> _ShapeTrackerMapRange;
+
+typedef std::map<std::string, ObjectTrackerStorage> _NamedTrackerMap;
 
 /** 
  * Gaussian pdf, but we take the modulus of term 4 because it's a rotatation.
@@ -152,8 +171,8 @@ class UnimodalObjectTrackerNode: public BaseNode, public MultiReconfigure
   _ObjectKalmanFilter::StateMatrix  initial_cov_;
 
   /// algorithm
-  _NamedAttributeMap name_size_color_map_;
-  _AttributeTrackerMap trackers_;
+  _ShapeTrackerMap shape_tracker_map_;
+  _NamedTrackerMap trackers_;
   _PositionUpdate::TransitionType measurement_transition_;
 
   /// other
@@ -186,114 +205,115 @@ class UnimodalObjectTrackerNode: public BaseNode, public MultiReconfigure
 	 shape_it != msg->shapes.end(); ++shape_it)
       {
 
-	std::string const & attr = shape_it->type + "/" + shape_it->color;
-	
-	/// Quit if we don't have the object or aren't tracking it
-	_AttributeTrackerMap::iterator tracker = trackers_.find( attr );
-	if( tracker == trackers_.end() /* || !tracker->second.tracked_ */ ) continue;
+	/// Find all of the trackers that are tracking objects with this shape
+	_ShapeTrackerMapRange match_range = shape_tracker_map_.equal_range( shape_it->type );
 
-	// ################################################################
-	// Project to 3d ##################################################
-	// ################################################################
-	ObjectTrackerStorage & storage = tracker->second;
-	tf::Vector3 camera_to_object_vec;	
+	if( match_range.first == match_range.second ) continue;
 
-	if( !camera_model_.initialized() )
+
+	/// Process the measurement for each compatible tracker
+	for( _ShapeTrackerMap::iterator tracker_it = match_range.first; tracker_it != match_range.second;
+	     ++tracker_it )
 	  {
-	    ROS_WARN( "Camera model is not ready.");
-	    return;
-	  }
+	    
+	    // ################################################################
+	    // Project to 3d ##################################################
+	    // ################################################################
 
-	if( depth_method_ == "monocular" )
-	  {
-	    camera_to_object_vec = 
-	      uscauv::reprojectObjectTo3d( camera_model_, cv::Point2d( shape_it->x, shape_it->y),
-					   shape_it->scale, storage.ideal_radius_ );
-	  }
-	else
-	  {
-	    ROS_ERROR("Bad depth method.");
-	    return;
-	  }
-	
-	// ################################################################
-	// Update filter ##################################################
-	// ################################################################
+	    _NamedTrackerMap::iterator tracker = trackers_.find( tracker_it->second );
 
-	/// Get measurement update params, then update
-	_PositionUpdate::VectorType update_mean;
-	update_mean << 
-	  camera_to_object_vec.x(),
-	  camera_to_object_vec.y(), 
-	  camera_to_object_vec.z(),
-	  shape_it->theta;
+	    // Shouldn't happen - shape_tracker_map should only contain names of trackers in the map trackers_
+	    ROS_ASSERT( tracker != trackers_.end() );
 
-	int idx = 0;
-	int max_idx = -1;
-	double max_prob = 0;
-	_KalmanFilterVector & filters = storage.filters_;
-	int neighbors = 0;
-	for(_KalmanFilterVector::iterator filter_it = filters.begin(); filter_it != filters.end();
-	    ++filter_it, ++idx )
-	  {
-	    _PositionUpdate::VectorType state_pos = measurement_transition_*filter_it->state_;
-	    _PositionUpdate::VectorType diff_term = state_pos - update_mean;
+	    ObjectTrackerStorage & storage = tracker->second;
 
-	    double const d = getGaussianPDFPosition( update_mean, state_pos, measurement_transition_ * filter_it->cov_ * measurement_transition_.transpose(), storage.config_.symmetry );
-	    double const dist_euclidian = diff_term.block(0,0,3,1).norm();
-	    double const dist_angular = uscauv::ring_distance<double>( diff_term(3), 0, storage.config_.symmetry );
-	    ROS_DEBUG("PDF val: %0.20f, dist: %f, angle %f", d, dist_euclidian, dist_angular);
+	    // If this particular tracker cannot assume the color of the matched shape, we ignore it
+	    if( storage.colors_.find( shape_it->color ) == storage.colors_.end() )
+	      continue;
+	    
+	    tf::Vector3 camera_to_object_vec;	
 
-	    if( dist_euclidian <= storage.config_.exclude_distance
-		&& dist_angular <= storage.config_.exclude_angle
-		&& d > max_prob )
+	    if( !camera_model_.initialized() )
 	      {
-		max_prob = d;
-		max_idx = idx;
-		neighbors++;
-	      }	    
-	  }
-	ROS_DEBUG("Found %d neighbor filters.", neighbors);
-	/// Spawn a new filter if none of the current filters are a good match for the measurement
-	if( max_idx == -1 )
-	  {
-	    _ObjectKalmanFilter::StateVector initial_state = measurement_transition_.transpose() * update_mean;
+		ROS_WARN( "Camera model is not ready.");
+		return;
+	      }
 
-	    storage.filters_.push_back( _ObjectKalmanFilter( initial_state, initial_cov_ ) );
-	    ROS_DEBUG_STREAM("Spawned filter ( " << initial_state.transpose() << " ).");
-	  }
-	else
-	  {
-	    storage.filters_.at(max_idx).update<4>( update_mean, update_cov_, 
-						    measurement_transition_ );
-	  }
+	    if( depth_method_ == "monocular" )
+	      {
+		camera_to_object_vec = 
+		  uscauv::reprojectObjectTo3d( camera_model_, cv::Point2d( shape_it->x, shape_it->y),
+					       shape_it->scale, storage.ideal_radius_ );
+	      }
+	    else
+	      {
+		ROS_ERROR("Bad depth method.");
+		return;
+	      }
 	
+	    // ################################################################
+	    // Update filter ##################################################
+	    // ################################################################
 
-	/// TODO: Compute modified mahalanobis distance between mean and measurement
-	/* _PositionUpdate::VectorType diff_term =  */
-	/*   update_mean - measurement_transition_ * storage.filter_.state_; */
-	/* /// Rotation lives in modular space */
-	/* diff_term(3) = uscauv::ring_distance<double>( diff_term(3), 0, uscauv::TWO_PI ); */
+	    /// Get measurement update params, then update
+	    _PositionUpdate::VectorType update_mean;
+	    update_mean << 
+	      camera_to_object_vec.x(),
+	      camera_to_object_vec.y(), 
+	      camera_to_object_vec.z(),
+	      shape_it->theta;
 
-	/* _PositionUpdate::CovarianceType state_pos_cov =  */
-	/*   measurement_transition_ * storage.filter_.cov_ * measurement_transition_.transpose(); */
+	    int idx = 0;
+	    int max_idx = -1;
+	    double max_prob = 0;
+	    _KalmanFilterVector & filters = storage.filters_;
+	    int neighbors = 0;
+	    for(_KalmanFilterVector::iterator filter_it = filters.begin(); filter_it != filters.end();
+		++filter_it, ++idx )
+	      {
+		_ObjectKalmanFilter & filter = filter_it->filter_;
+		
+		_PositionUpdate::VectorType state_pos = measurement_transition_*filter.state_;
+		_PositionUpdate::VectorType diff_term = state_pos - update_mean;
 
-	/* double mahalanobis_pos = diff_term.transpose() * state_pos_cov.inverse() * diff_term; */
-	
-	/* if( mahalanobis_pos > storage.mahalanobis_thresh_pos_ ) */
-	/*   { */
-	/*     ROS_INFO("Got mahalanobis distance %f. Discarding...", mahalanobis_pos); */
-	/*     continue; */
-	/*   } */
-	
-	/* storage.filter_.update<4>( update_mean, storage.update_cov_, */
-	/* 			   measurement_transition_ ); */
-	
-	/* /// update time */
-	/* storage.last_update_time_ = msg->header.stamp; */
-      }
-  }
+		double const d = getGaussianPDFPosition( update_mean, state_pos, measurement_transition_ * filter.cov_ * measurement_transition_.transpose(), storage.config_.symmetry );
+		double const dist_euclidian = diff_term.block(0,0,3,1).norm();
+		double const dist_angular = uscauv::ring_distance<double>( diff_term(3), 0, storage.config_.symmetry );
+		ROS_DEBUG("PDF val: %0.20f, dist: %f, angle %f", d, dist_euclidian, dist_angular);
 
+		if( dist_euclidian <= storage.config_.exclude_distance
+		    && dist_angular <= storage.config_.exclude_angle
+		    && d > max_prob )
+		  {
+		    max_prob = d;
+		    max_idx = idx;
+		    neighbors++;
+		  }	    
+	      }
+	    ROS_DEBUG("Found %d neighbor filters.", neighbors);
+	    /// Spawn a new filter if none of the current filters are a good match for the measurement
+	    if( max_idx == -1 )
+	      {
+		_ObjectKalmanFilter::StateVector initial_state = measurement_transition_.transpose() * update_mean;
+
+		FilterStorage new_filter;
+		new_filter.filter_ = _ObjectKalmanFilter( initial_state, initial_cov_ );
+		new_filter.color_ = shape_it->color;
+
+		storage.filters_.push_back( new_filter );
+		ROS_DEBUG_STREAM("Spawned filter ( " << initial_state.transpose() << " ).");
+	      }
+	    else
+	      {
+		FilterStorage & updated_filter = storage.filters_.at(max_idx);
+		updated_filter.filter_.update<4>( update_mean, update_cov_, measurement_transition_ );
+		updated_filter.color_ = shape_it->color;
+	      }
+	    
+	  } // matched trackers
+      } // matched shapes
+  } //callback
+  
   /// cache camera info
   void cameraInfoCallback( _CameraInfo::ConstPtr const & msg )
   {
@@ -307,13 +327,13 @@ class UnimodalObjectTrackerNode: public BaseNode, public MultiReconfigure
     camera_model_.fromCameraInfo( last_camera_info_ );
   }
 
-  void updateTrackerParams(_TrackedObjectConfig const & config, std::string const & name)
+  void updateTrackerParams(_TrackedObjectConfig const & config, std::string const & type)
   {
-    ObjectTrackerStorage & tracker = trackers_.at( name_size_color_map_.at( name ) );
+    ObjectTrackerStorage & tracker = trackers_.at( type );
 
     tracker.config_ = config;
 
-    ROS_INFO("Updated tracker params [ %s ].", name.c_str() );
+    ROS_INFO("Updated tracker params [ %s ].", type.c_str() );
   }
 
   void reconfigureCallback( _ObjectTrackerConfig const & config )
@@ -350,7 +370,7 @@ class UnimodalObjectTrackerNode: public BaseNode, public MultiReconfigure
 					 &UnimodalObjectTrackerNode::cameraInfoCallback, 
 					 this);
 
-    tracked_object_pub_ = nh_base.advertise<_TrackedObjectArrayMsg>("/robot/sensors/tracked_objects", 10);
+    tracked_object_pub_ = nh_base.advertise<_TrackedObjectArrayMsg>("robot/sensors/tracked_objects", 10);
 
     depth_method_ = uscauv::param::load<std::string>( nh_rel_, "depth_method", "monocular" );
     motion_frame_ = uscauv::param::load<std::string>( nh_rel_, "motion_frame", uscauv::defaults::CM_LINK );
@@ -375,35 +395,34 @@ class UnimodalObjectTrackerNode: public BaseNode, public MultiReconfigure
 	if( object_it->first == "global" )
 	  continue;
 	
-	std::string const attr = std::string(object_it->second["shape"]) + "/" +
-	  std::string(object_it->second["color"]);
-	name_size_color_map_[ object_it->first] = attr;
-	   
+	std::string const attr = std::string(object_it->second["shape"]);
+	
+	_NamedXmlMap xml_colors = uscauv::param::lookup<_NamedXmlMap>(object_it->second, "colors");
+	
 	ObjectTrackerStorage tracker;
-	tracker.name_ = object_it->first;
+	tracker.type_ = object_it->first;
 	tracker.ideal_radius_ = object_it->second["ideal_radius"];
-	tracker.tracked_ = false;
 	tracker.last_predict_time_ = ros::Time::now();
 
+	for(_NamedXmlMap::iterator color_it = xml_colors.begin(); color_it != xml_colors.end(); ++color_it)
+	  {
+	    tracker.colors_.insert( color_it->first );
+	  }
+
 	/// have to add the new object before or the lookup in the reconfigure callback will fail to find it
-	trackers_[ attr ] = tracker;
+	shape_tracker_map_.insert( std::make_pair( attr, tracker.type_ ));
+	trackers_.insert( std::make_pair( tracker.type_, tracker ) );
+	
+	/* trackers_[ attr ] = tracker; */
 	   
 	/// set up reconfigure (loads tracker with control_cov and initial_cov params)
 	addReconfigureServer<_TrackedObjectConfig>
 	  ( object_it->first, std::bind( &UnimodalObjectTrackerNode::updateTrackerParams, this,
-					 std::placeholders::_1, object_it->first ) );
+					 std::placeholders::_1, tracker.type_ ));
 
-	/// initialize kalman filter at location (0,0,0,0) with diagonal covariance set by reconfigure
-	/// All transforms are set to identity
-	/* ObjectTrackerStorage & tracker_added = trackers_.at(attr); */
-	/* tracker_added.filter_ = _ObjectKalmanFilter( _ObjectKalmanFilter::StateVector::Zero(), */
-	/* 					     tracker_added.initial_cov_ ); */
-
-	/* tracker_added.last_predict_time_ = ros::Time::now();	 */
 
 	ROS_INFO("Loaded object [ %s ] with attributes [ %s ].", 
 		 object_it->first.c_str(), attr.c_str() );
-	/* ROS_INFO_STREAM( tracker_added.filter_ ); */
       }
    
     /// global object tracker settings ( model/objects/global )
@@ -423,14 +442,10 @@ class UnimodalObjectTrackerNode: public BaseNode, public MultiReconfigure
     std::vector< tf::StampedTransform > object_transforms;
     _TrackedObjectArrayMsg tracked_objects;
     
-    for( _NamedAttributeMap::const_iterator name_it = name_size_color_map_.begin(); 
-	 name_it != name_size_color_map_.end(); ++name_it )
+    for( _NamedTrackerMap::iterator tracker_it = trackers_.begin(); tracker_it != trackers_.end();
+	 ++tracker_it)
       {
-	ObjectTrackerStorage & storage = trackers_.at( name_it->second );
-	/* _ObjectKalmanFilter::StateVector const & state = storage.filter_.state_; */
-	  
-	/* if( !storage.tracked_ ) */
-	/*   continue; */
+	ObjectTrackerStorage & storage = tracker_it->second;
 
 	/// Control input step
 	ros::Time now = ros::Time::now();
@@ -456,11 +471,13 @@ class UnimodalObjectTrackerNode: public BaseNode, public MultiReconfigure
 	for(_KalmanFilterVector::iterator filter_it = filters.begin(); filter_it != filters.end();
 	    ++filter_it )
 	  {
+	    _ObjectKalmanFilter & filter = filter_it->filter_;
+	    
 	    /// no control input
-	    filter_it->predict<8>( _FullStateControl::VectorType::Zero(),
+	    filter.predict<8>( _FullStateControl::VectorType::Zero(),
 				   control_cov_, state_transition );
 	    
-	    double const det = Eigen::PartialPivLU<_ObjectKalmanFilter::StateMatrix>( filter_it->cov_ ).determinant();
+	    double const det = Eigen::PartialPivLU<_ObjectKalmanFilter::StateMatrix>( filter.cov_ ).determinant();
 	    if( det <= config_.kill_var )
 	      {
 	
@@ -475,7 +492,7 @@ class UnimodalObjectTrackerNode: public BaseNode, public MultiReconfigure
 	      }
 	    else
 	      {
-		ROS_DEBUG_STREAM("Killed filter ( " << filter_it->state_.transpose() << " ) Det: " << det << ".");
+		ROS_DEBUG_STREAM("Killed filter ( " << filter.state_.transpose() << " ) Det: " << det << ".");
 	      }
 	  }
 	storage.filters_ = surviving_filters;
@@ -489,7 +506,9 @@ class UnimodalObjectTrackerNode: public BaseNode, public MultiReconfigure
 	for(_KalmanFilterVector::iterator filter_it = filters.begin(); filter_it != filters.end();
 	    ++filter_it, ++idx)
 	  {
-	    _ObjectKalmanFilter::StateVector const & state = filter_it->state_;
+	    _ObjectKalmanFilter & filter = filter_it->filter_;
+	    
+	    _ObjectKalmanFilter::StateVector const & state = filter.state_;
 	    
 	    tf::Vector3 observer_to_object_vec = tf::Vector3( state(0), state(1), state(2) );
 	    /// setRPY uses R=around X, P=around Y, Y=around Z, so we are rotating around Z
@@ -522,25 +541,35 @@ class UnimodalObjectTrackerNode: public BaseNode, public MultiReconfigure
 	    std::string frame_name;
 	    
 	    if( idx == min_idx )
-	      frame_name = std::string( "object/" + storage.name_ );
+	      frame_name = std::string( "object/" + storage.type_ );
 	    else
 	      {
 		std::stringstream ss;
-		ss << "object/" << storage.name_ << "_hyp" << aux_idx;
+		ss << "object/" << storage.type_ << "_hyp" << aux_idx;
 		frame_name = ss.str();
 		++aux_idx;
 	      }
 
 	    /// Add TrackedObject msg for object
 	    /// TODO: Don't recalulate det, add color, add children, add covariance for pose
-	    double const det = Eigen::PartialPivLU<_ObjectKalmanFilter::StateMatrix>( filter_it->cov_ ).determinant();
+	    double const det = Eigen::PartialPivLU<_ObjectKalmanFilter::StateMatrix>( filter.cov_ ).determinant();
 	    if( det <= config_.pass_var )
 	      {
 		_TrackedObjectMsg object;
 		object.variance = det;
 		object.symmetry = storage.config_.symmetry;
-		object.color = "NOT IMPLEMENTED";
-		object.type = storage.name_;
+		object.color = filter_it->color_;
+		object.type = storage.type_;
+
+		object.header.frame_id = motion_frame_;
+		/// Time of latest filter prediction, not measurement
+		object.header.stamp = ros::Time::now();
+
+		if( idx == min_idx )
+		  object.is_best_estimate = true;
+		else
+		  object.is_best_estimate = false;
+
 		tf::poseTFToMsg( motion_to_object_tf, object.pose.pose );
 		tracked_objects.objects.push_back( object );
 		

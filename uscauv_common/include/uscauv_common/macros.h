@@ -1,5 +1,5 @@
 /***************************************************************************
- *  include/uscauv_common/defaults.h
+ *  include/uscauv_common/macros.h
  *  --------------------
  *
  *  Software License Agreement (BSD License)
@@ -36,36 +36,26 @@
  **************************************************************************/
 
 
-#ifndef USCAUV_USCAUVCOMMON_DEFAULTS
-#define USCAUV_USCAUVCOMMON_DEFAULTS
+#ifndef USCAUV_USCAUVCOMMON_MACROS
+#define USCAUV_USCAUVCOMMON_MACROS
 
 // ROS
 #include <ros/ros.h>
 
-namespace uscauv
-{
-  
-  namespace defaults
-  {
-    
-    static char const * const WORLD_LINK = "/world";
-    static char const * const CM_LINK = "/robot/structures/cm";
-    static char const * const CV_LINK = "robot/structures/cv";
-    static char const * const MEASUREMENT_LINK = "/robot/controls/measurement";
-    static char const * const DESIRED_LINK = "/robot/controls/desired";
-    static char const * const IMU_LINK = "/robot/sensors/imu";
-    static char const * const DEPTH_LINK = "/robot/sensors/depth";
+// Silly text macros ##############################################
 
-    static char const * const STRUCTURE_PREFIX = "/robot/structures";
-    static char const * const THRUSTER_PREFIX = "/robot/thrusters";
-    static char const * const CAMERA_PREFIX = "/robot/cameras";
-    static char const * const SENSOR_PREFIX = "/robot/sensors";
+#define par(X) \
+  "( " << X << " )"
 
-    static char const * const DEPTH_TOPIC = "robot/sensors/depth";
-    static char const * const KILLSWITCH_TOPIC = "robot/sensors/kill_switch";
+#define brk(X) \
+  "[ " << X << " ]"
 
-  } // defaults
-    
-} // uscauv
+/// TODO: Implement safer version of this
+/* namespace uscauv */
+/* { */
 
-#endif // USCAUV_USCAUVCOMMON_DEFAULTS
+/*   std::string collapse_stream(std::ostream const & ss); */
+
+/*   } */
+
+#endif // USCAUV_USCAUVCOMMON_MACROS

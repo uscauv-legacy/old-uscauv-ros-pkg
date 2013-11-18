@@ -2,7 +2,7 @@
   <arg name="pkg" value="uscauv_visualization" />
   <arg name="name" value="object_visualizer" />
   <arg name="type" default="$(arg name)" />
-  <arg name="rate" default="1" /> <!-- This node really doesn't do very much-->
+  <arg name="rate" default="60" /> 
   <arg name="args" value="_loop_rate:=$(arg rate)" />
 
   <node
