@@ -117,7 +117,10 @@ private:
 
     QUICKDEV_DECLARE_NODE_CONSTRUCTOR( XsensDriver )
     {
-        initPolicies<QUICKDEV_GET_RUNABLE_POLICY()>();
+        initPolicies<QUICKDEV_GET_RUNABLE_POLICY()>
+	  (
+	   "spin_ros_thread_param", false
+	   );
     }
 
     QUICKDEV_SPIN_FIRST()
@@ -149,9 +152,10 @@ private:
         _CalibrateRPYOriServiceServerPolicy::registerCallback( quickdev::auto_bind( &XsensDriverNode::calibrateRPYOriCB, this ) );
 
         initPolicies
-        <
-            _CalibrateAmbientLinearAccelServiceServerPolicy,
-            _CalibrateRPYOriServiceServerPolicy
+	  <
+	  _CalibrateAmbientLinearAccelServiceServerPolicy,
+	  _CalibrateRPYOriServiceServerPolicy,
+	  quickdev::RunablePolicy
         >
         (
             "enable_key_ids", true,
