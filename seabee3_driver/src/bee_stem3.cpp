@@ -62,11 +62,11 @@ void BeeStem3::initialize()
 
 bool BeeStem3::connect( std::string const & port )
 {
-    printf( "making new serial object..." );
+    ROS_INFO( "making new serial object..." );
     if( itsPort ) delete itsPort;
     itsPort = new SerialPort();
     // set a default config for our serial port:
-    printf( "configuring new serial object..." );
+    ROS_INFO( "configuring new serial object..." );
     itsPort->configure( port.c_str(), 57600, "8N1", false, false, 1 );
     //  itsPort->setBlocking(true);
 
@@ -125,7 +125,7 @@ bool BeeStem3::getSensors( int &accelX, int &accelY, int &accelZ, int &compassHe
 
     if ( size <= 0 )
     {
-        printf( "ERROR: Couldn't read accel_data." );
+        ROS_ERROR( "Couldn't read accel_data." );
         return false;
     }
 
@@ -139,7 +139,7 @@ bool BeeStem3::getSensors( int &accelX, int &accelY, int &accelZ, int &compassHe
 
     if ( size <= 0 )
     {
-        printf( "ERROR: Couldn't read adc_data." );
+        ROS_ERROR( "Couldn't read adc_data." );
         return false;
     }
 
@@ -173,7 +173,7 @@ bool BeeStem3::getSensors( int &accelX, int &accelY, int &accelZ, int &compassHe
 
     if ( size <= 0 )
     {
-        printf( "ERROR: Couldn't read desired_heading." );
+        ROS_ERROR( "Couldn't read desired_heading." );
         return false;
     }
 
@@ -186,7 +186,7 @@ bool BeeStem3::getSensors( int &accelX, int &accelY, int &accelZ, int &compassHe
 
     if ( size <= 0 )
     {
-        printf( "ERROR: Couldn't read desired_depth." );
+        ROS_ERROR( "Couldn't read desired_depth." );
         return false;
     }
 
@@ -199,7 +199,7 @@ bool BeeStem3::getSensors( int &accelX, int &accelY, int &accelZ, int &compassHe
 
     if ( size <= 0 )
     {
-        printf( "ERROR: Couldn't read desired_speed." );
+        ROS_ERROR( "Couldn't read desired_speed." );
         return false;
     }
 
@@ -211,7 +211,7 @@ bool BeeStem3::getSensors( int &accelX, int &accelY, int &accelZ, int &compassHe
 
     if ( size <= 0 )
     {
-        printf( "ERROR: Couldn't read marker_drop." );
+        ROS_ERROR( "Couldn't read marker_drop." );
         return false;
     }
 
@@ -220,7 +220,7 @@ bool BeeStem3::getSensors( int &accelX, int &accelY, int &accelZ, int &compassHe
 
     if ( size <= 0 )
     {
-        printf( "ERROR: Couldn't read comp_accel." );
+        ROS_ERROR( "Couldn't read comp_accel." );
         return false;
     }
 
@@ -229,7 +229,7 @@ bool BeeStem3::getSensors( int &accelX, int &accelY, int &accelZ, int &compassHe
 
     if ( size <= 0 )
     {
-        printf( "ERROR: Couldn't read comp_mag." );
+        ROS_ERROR( "Couldn't read comp_mag." );
         return false;
     }
 
@@ -238,7 +238,7 @@ bool BeeStem3::getSensors( int &accelX, int &accelY, int &accelZ, int &compassHe
 
     if ( size <= 0 )
     {
-        printf( "ERROR: Couldn't read comp_heading." );
+        ROS_ERROR( "Couldn't read comp_heading." );
         return false;
     }
 
@@ -257,7 +257,7 @@ bool BeeStem3::getSensors( int &accelX, int &accelY, int &accelZ, int &compassHe
 
     if ( size <= 0 )
     {
-        printf( "ERROR: Couldn't read comp_tilt." );
+        ROS_ERROR( "Couldn't read comp_tilt." );
         return false;
     }
 
@@ -266,7 +266,7 @@ bool BeeStem3::getSensors( int &accelX, int &accelY, int &accelZ, int &compassHe
 
     if ( size <= 0 )
     {
-        printf( "ERROR: Couldn't read battery." );
+        ROS_ERROR( "Couldn't read battery." );
         return false;
     }
 
@@ -275,7 +275,7 @@ bool BeeStem3::getSensors( int &accelX, int &accelY, int &accelZ, int &compassHe
 
     if ( size <= 0 )
     {
-        printf( "ERROR: Couldn't read pid." );
+        ROS_ERROR( "Couldn't read pid." );
         return false;
     }
 
@@ -300,14 +300,14 @@ bool BeeStem3::getSensors( int &accelX, int &accelY, int &accelZ, int &compassHe
 
     if ( size <= 0 )
     {
-        printf( "ERROR: Couldn't read kill switch." );
+        ROS_ERROR( "Couldn't read kill switch." );
         return false;
     }
 
     killSwitch = kill_switch;
 
 
-    /*  printf("INFO: desired_depth[0] = %x, desired_depth[1] = %x, depthOutput= %x",
+    /*  ROS_INFO("desired_depth[0] = %x, desired_depth[1] = %x, depthOutput= %x",
      (0x00ff & pid[10]),
      ((0x00ff & pid[11]) << 8) & 0x0ff00,
      depthOutput); */
@@ -319,7 +319,7 @@ bool BeeStem3::setPID( int pidMode, float k, float p, float i, float d )
 {
     if( itsPort && !itsPort->connected() ) return false;
 
-    printf( "INFO: pidMode: %d, k %f, p %f, i %f, %f", pidMode, k, p, i, d );
+    ROS_INFO( "pidMode: %d, k %f, p %f, i %f, %f", pidMode, k, p, i, d );
 
     char pidCmdK;
     char pidCmdP;
@@ -358,7 +358,7 @@ bool BeeStem3::setPID( int pidMode, float k, float p, float i, float d )
         pidCmdD = 0x33;
         break;
     case PID_DISABLE:
-        printf( "INFO: Disable PID." );
+        ROS_INFO( "Disable PID." );
         itsPort->write( &pidDepthEn, 1 );
         itsPort->write( &dis, 1 );
         itsPort->write( &pidHeadingEn, 1 );
@@ -366,7 +366,7 @@ bool BeeStem3::setPID( int pidMode, float k, float p, float i, float d )
         return true;
         break;
     case PID_ENABLE:
-        printf( "INFO: Enable PID." );
+        ROS_INFO( "Enable PID." );
         itsPort->write( &pidDepthEn, 1 );
         itsPort->write( &en, 1 );
         //itsPort->write(&pidHeadingEn, 1);
@@ -374,7 +374,7 @@ bool BeeStem3::setPID( int pidMode, float k, float p, float i, float d )
         return true;
         break;
     default:
-        printf( "ERROR: Invalid PID mode specified." );
+        ROS_ERROR( "Invalid PID mode specified." );
         return false;
     }
 
@@ -438,7 +438,7 @@ void BeeStem3::setThruster( int num, int val )
      */
 
     mMotorControllerState[num] = val; //save the new state
-    // printf( "Set thruster [%d]:%d\n", num, val );
+    // ROS_INFO( "Set thruster [%d]:%d\n", num, val );
     char thrusterCmd = 0xff;
     //char temp;
 
@@ -456,7 +456,7 @@ void BeeStem3::setThruster( int num, int val )
     // send set thruster command to Propeller
     itsPort->write( &num, 1 );
     //while(itsPort->read(&temp, 1) != 0)
-    //  printf("%c", temp);
+    //  ROS_INFO("%c", temp);
     //std::cout << std::endl;
 
     // send set thruster command to Propeller
@@ -482,9 +482,9 @@ void BeeStem3::setThruster( int num, int val )
  char depthUpper = ((0x00ff00 &depth) >> 8) & 0x00ff;
  char depthLower = (depth & 0x00ff);
 
- printf("INFO: Writing Heading Upper %x", headingUpper);
+ ROS_INFO("Writing Heading Upper %x", headingUpper);
  itsPort->write(&headingUpper,1);
- printf("INFO: Writing Heading Lower %x", headingLower);
+ ROS_INFO("Writing Heading Lower %x", headingLower);
  itsPort->write(&headingLower,1);
 
  itsPort->write(&setDesiredDepthCmd, 1);
@@ -517,9 +517,9 @@ bool BeeStem3::setDesiredHeading( int16_t heading )
     char headingUpper = ( ( 0x00ff00 & heading ) >> 8 ) & 0x00ff;
     char headingLower = ( heading & 0x00ff );
 
-    printf( "INFO: Writing Heading Upper %x", headingUpper );
+    ROS_INFO( "Writing Heading Upper %x", headingUpper );
     itsPort->write( &headingUpper, 1 );
-    printf( "INFO: Writing Heading Lower %x", headingLower );
+    ROS_INFO( "Writing Heading Lower %x", headingLower );
     itsPort->write( &headingLower, 1 );
 
     return true;
@@ -543,9 +543,9 @@ bool BeeStem3::setDesiredDepth( int16_t depth )
     char depthUpper = ( ( 0x00ff00 & depth ) >> 8 ) & 0x00ff;
     char depthLower = ( depth & 0x00ff );
 
-    printf( "INFO: Writing Depth Upper %x", depthUpper );
+    ROS_INFO( "Writing Depth Upper %x", depthUpper );
     itsPort->write( &depthUpper, 1 );
-    printf( "INFO: Writing Depth Lower %x", depthLower );
+    ROS_INFO( "Writing Depth Lower %x", depthLower );
     itsPort->write( &depthLower, 1 );
 
     return true;
@@ -566,7 +566,7 @@ bool BeeStem3::setDesiredSpeed( char speed )
     // send set desired values command to Propeller
     itsPort->write( &setDesiredSpeedCmd, 1 );
 
-    printf( "INFO: Setting speed: %d\n", speed );
+    ROS_INFO( "Setting speed: %d\n", speed );
     itsPort->write( &speed, 1 );
 
     return true;

@@ -41,7 +41,9 @@
 #include <quickdev/node.h>
 
 // policies
-#include <quickdev/robot_driver_policy.h>
+/* #include <quickdev/robot_driver_policy.h> */
+#include <quickdev/tf_tranceiver_policy.h>
+#include <quickdev/multi_publisher.h>
 #include <quickdev/service_server_policy.h>
 #include <quickdev/reconfigure_policy.h>
 
@@ -71,7 +73,7 @@ typedef seabee3_msgs::CalibrateDouble _CalibrateSurfacePressureService;
 
 typedef seabee3_driver::FakeSeabeeConfig _FakeSeabeeCfg;
 
-typedef quickdev::RobotDriverPolicy<_MotorValsMsg> _RobotDriver;
+/* typedef quickdev::RobotDriverPolicy<_MotorValsMsg> _RobotDriver; */
 typedef quickdev::ServiceServerPolicy<_FiringDeviceActionService, 0> _Shooter1ServiceServer;
 typedef quickdev::ServiceServerPolicy<_FiringDeviceActionService, 1> _Shooter2ServiceServer;
 typedef quickdev::ServiceServerPolicy<_FiringDeviceActionService, 2> _Dropper1ServiceServer;
@@ -82,13 +84,17 @@ typedef quickdev::TfTranceiverPolicy _TfTranceiverPolicy;
 
 using namespace seabee3_common;
 
-QUICKDEV_DECLARE_NODE( Seabee3Driver, _RobotDriver, _Shooter1ServiceServer, _Shooter2ServiceServer, _Dropper1ServiceServer, _Dropper2ServiceServer, _CalibrateSurfacePressureServiceServer, _FakeSeabeeLiveParams )
+QUICKDEV_DECLARE_NODE( Seabee3Driver, quickdev::TfTranceiverPolicy,  _Shooter1ServiceServer, _Shooter2ServiceServer, _Dropper1ServiceServer, _Dropper2ServiceServer, _CalibrateSurfacePressureServiceServer, _FakeSeabeeLiveParams )
 
 QUICKDEV_DECLARE_NODE_CLASS( Seabee3Driver )
 {
     BeeStem3Driver bee_stem3_driver_;
     std::array<int, movement::NUM_MOTOR_CONTROLLERS> motor_dirs_;
     double surface_pressure_;
+
+    ros::Subscriber motor_val_sub_;
+
+    ros::MultiPublisher<> multi_pub_;
 
     QUICKDEV_DECLARE_NODE_CONSTRUCTOR( Seabee3Driver )
     {
@@ -108,7 +114,10 @@ QUICKDEV_DECLARE_NODE_CLASS( Seabee3Driver )
         motor_dirs_[movement::MotorControllerIDs::STRAFE_TOP_THRUSTER] =    -1;
         motor_dirs_[movement::MotorControllerIDs::STRAFE_BOTTOM_THRUSTER] = -1;
 
-        _RobotDriver::registerCallback( quickdev::auto_bind( &Seabee3DriverNode::motorValsCB, this ) );
+        /* _RobotDriver::registerCallback( quickdev::auto_bind( &Seabee3DriverNode::motorValsCB, this ) ); */
+
+	motor_val_sub_ = nh_rel.subscribe("seabee3/motor_vals", 10, &Seabee3DriverNode::motorValsCB, this );
+
         _Shooter1ServiceServer::registerCallback( quickdev::auto_bind( &Seabee3DriverNode::shooter1CB, this ) );
         _Shooter2ServiceServer::registerCallback( quickdev::auto_bind( &Seabee3DriverNode::shooter2CB, this ) );
         _Dropper1ServiceServer::registerCallback( quickdev::auto_bind( &Seabee3DriverNode::dropper1CB, this ) );
@@ -118,22 +127,26 @@ QUICKDEV_DECLARE_NODE_CLASS( Seabee3Driver )
 
         initPolicies
         <
-            _RobotDriver,
-            _Shooter1ServiceServer,
-            _Shooter2ServiceServer,
-            _Dropper1ServiceServer,
-	    _Dropper2ServiceServer,
-	    _CalibrateSurfacePressureServiceServer
+	  quickdev::TfTranceiverPolicy,
+	  _Shooter1ServiceServer,
+	  _Shooter2ServiceServer,
+	  _Dropper1ServiceServer,
+	  _Dropper2ServiceServer,
+	  _CalibrateSurfacePressureServiceServer,
+	  quickdev::RunablePolicy,
+	  _FakeSeabeeLiveParams
         >
         (
             "enable_key_ids", true, // enable keys with IDs appended for all policies in this group
+	    "spin_ros_thread_param", false,
             "robot_name_param", std::string( "seabee3" ),
             "service_name_param0", std::string( "/seabee3/shooter1" ),
             "service_name_param1", std::string( "/seabee3/shooter2" ),
             "service_name_param2", std::string( "/seabee3/dropper1" ),
             "service_name_param3", std::string( "/seabee3/dropper2" ),
-	    "service_name_param4", std::string( "/seabee3/calibrate_surface_pressure" )
-        );
+	    "service_name_param4", std::string( "/seabee3/calibrate_surface_pressure" ),
+	    "reconfigure_namespace_param", std::string( "reconfigure" )
+       );
 
         // initialize any remaining policies
         initPolicies<quickdev::policy::ALL>();
@@ -284,7 +297,7 @@ QUICKDEV_DECLARE_NODE_CLASS( Seabee3Driver )
 	      
 	      if( config_.simulate )
 		{
-		  PRINT_INFO( "Setting motor id %zu to %d", i, motor_value );
+		  PRINT_INFO( "Setting motor id %zu to %ld", i, motor_value );
                 }
 	      else
                 {

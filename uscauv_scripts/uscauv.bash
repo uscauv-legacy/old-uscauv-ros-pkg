@@ -315,3 +315,6 @@ alias uscauv-master-seabee="export ROS_MASTER_URI=http://seabee:11311"
 
 alias uscauv-ssh-seabee="ssh -Xv janetkim@seabee"
 alias uscauv-arp-scan="sudo arp-scan --interface=eth0 --localnet"
+
+alias uscauv-echo-pressure="rostopic echo /robot/sensors/internal_pressure"
+alias uscauv-echo-depth="rostopic echo /robot/sensors/depth"

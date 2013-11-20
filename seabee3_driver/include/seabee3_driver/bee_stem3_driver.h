@@ -41,6 +41,7 @@
 #define SEABEE3DRIVER_BEESTEM3DRIVER_H_
 
 #include <seabee3_driver/bee_stem3.h>
+#include <ros/ros.h>
 #include <map>
 #include <iostream>
 #include <stdlib.h>

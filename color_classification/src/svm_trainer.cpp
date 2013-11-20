@@ -42,6 +42,8 @@
 #include <opencv2/ml/ml.hpp>
 #include <opencv/cxcore.h>
 
+#include <uscauv_common/macros.h>
+
 /// Boost filesystem
 #include <boost/filesystem.hpp>
 
@@ -258,7 +260,7 @@ int main(int argc, const char ** argv)
   std::cout << "Training SVM..." << std::endl;
   std::cout << "Kernel type: [ " << kernel_str << " ]" << std::endl;
   std::cout << "Max iterations: " << (int)iterations << ", Error penalty: " << error_penalty << std::endl;
-
+  std::cout << "Grid search: " << brk( std::boolalpha << auto_train ) << std::endl;
   
     /// Initialize SVM Params ------------------------------------
   cv::SVMParams svm_params;

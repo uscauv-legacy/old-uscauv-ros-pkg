@@ -37,8 +37,8 @@
 #define SEABEE3DRIVER_BEESTEM3_H_
 
 #include <seabee3_common/movement.h>
-#include <quickdev/serial.h>
-//#include <common_utils/types.h>      // for byte
+#include <uscauv_common/serial.h>
+
 #include <string>
 #include <vector>
 

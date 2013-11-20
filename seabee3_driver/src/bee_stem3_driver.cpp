@@ -39,35 +39,35 @@ BeeStem3Driver::BeeStem3Driver(){}
 
 BeeStem3Driver::BeeStem3Driver( std::string const & port )
 {
-    connect( port );
+  connect( port );
 }
 
 void BeeStem3Driver::connect( std::string const & port, bool const & force_connect )
 {
-    if( flags_.port_connected_ && !force_connect ) return;
+  if( flags_.port_connected_ && !force_connect ) return;
 
-    port_ = port;
-    flags_.port_connected_ = bee_stem_3_.connect( port );
+  port_ = port;
+  flags_.port_connected_ = bee_stem_3_.connect( port );
 
-    dropper1_ready_ = true;
-    dropper2_ready_ = true;
-    shooter1_ready_ = true;
-    shooter2_ready_ = true;
+  dropper1_ready_ = true;
+  dropper2_ready_ = true;
+  shooter1_ready_ = true;
+  shooter2_ready_ = true;
 }
 
 void BeeStem3Driver::reconnect( std::string const & port )
 {
-    connect( port, true );
+  connect( port, true );
 }
 
 void BeeStem3Driver::reconnect()
 {
-    reconnect( port_ );
+  reconnect( port_ );
 }
 
 bool const & BeeStem3Driver::connected() const
 {
-    return flags_.port_connected_;
+  return flags_.port_connected_;
 }
 
 // ######################################################################
@@ -78,112 +78,113 @@ BeeStem3Driver::~BeeStem3Driver()
 // ######################################################################
 void BeeStem3Driver::initPose()
 {
-    if( !flags_.port_connected_ ) return;
+  if( !flags_.port_connected_ ) return;
 
-    bee_stem_3_.setPID( 0, HEADING_K, HEADING_P, HEADING_I, HEADING_D );
-    bee_stem_3_.setPID( 1, DEPTH_K, DEPTH_P, DEPTH_I, DEPTH_D );
+  bee_stem_3_.setPID( 0, HEADING_K, HEADING_P, HEADING_I, HEADING_D );
+  bee_stem_3_.setPID( 1, DEPTH_K, DEPTH_P, DEPTH_I, DEPTH_D );
 
-    int accelX, accelY, accelZ;
-    int compassHeading, compassPitch, compassRoll;
-    int internalPressure, externalPressure;
-    int headingK, headingP, headingD, headingI, headingOutput;
-    int depthK, depthP, depthD, depthI, depthOutput;
-    int desiredHeading, desiredDepth, desiredSpeed;
-    char killSwitch;
+  int accelX, accelY, accelZ;
+  int compassHeading, compassPitch, compassRoll;
+  int internalPressure, externalPressure;
+  int headingK, headingP, headingD, headingI, headingOutput;
+  int depthK, depthP, depthD, depthI, depthOutput;
+  int desiredHeading, desiredDepth, desiredSpeed;
+  char killSwitch;
 
-    bool successful = bee_stem_3_.getSensors( accelX, accelY, accelZ, compassHeading, compassPitch, compassRoll, internalPressure, externalPressure, desiredHeading, desiredDepth, desiredSpeed, headingK,
-            headingP, headingD, headingI, headingOutput, depthK, depthP, depthD, depthI, depthOutput, killSwitch );
+  bool successful = bee_stem_3_.getSensors( accelX, accelY, accelZ, compassHeading, compassPitch, compassRoll, internalPressure, externalPressure, desiredHeading, desiredDepth, desiredSpeed, headingK,
+					    headingP, headingD, headingI, headingOutput, depthK, depthP, depthD, depthI, depthOutput, killSwitch );
 
-    if ( successful ) std::cout << "Initial communication with microcontroller completed." << std::endl;
-    else std::cerr << "Initial communication with microcontroller failed." << std::endl;
+  if ( successful ) ROS_INFO_STREAM( "Initial communication with microcontroller completed.");
+    
+  else ROS_ERROR_STREAM( "Initial communication with microcontroller failed." );
 
-    flags_.position_initialized_ = successful;
+  flags_.position_initialized_ = successful;
 }
 
 void BeeStem3Driver::readPressure( int & intl_pressure, int & extl_pressure )
 {
-    if( !flags_.port_connected_ ) return;
+  if( !flags_.port_connected_ ) return;
 
-    int accelX, accelY, accelZ, compassHeading, compassPitch, compassRoll, desiredHeading, desiredDepth, desiredSpeed, headingK, headingP, headingD, headingI, headingOutput, depthK, depthP, depthD,
-            depthI, depthOutput;
-    char killSwitch;
+  int accelX, accelY, accelZ, compassHeading, compassPitch, compassRoll, desiredHeading, desiredDepth, desiredSpeed, headingK, headingP, headingD, headingI, headingOutput, depthK, depthP, depthD,
+    depthI, depthOutput;
+  char killSwitch;
 
-    bee_stem_3_.getSensors( accelX, accelY, accelZ, compassHeading, compassPitch, compassRoll, intl_pressure, extl_pressure, desiredHeading, desiredDepth, desiredSpeed, headingK, headingP, headingD,
-            headingI, headingOutput, depthK, depthP, depthD, depthI, depthOutput, killSwitch );
+  bee_stem_3_.getSensors( accelX, accelY, accelZ, compassHeading, compassPitch, compassRoll, intl_pressure, extl_pressure, desiredHeading, desiredDepth, desiredSpeed, headingK, headingP, headingD,
+			  headingI, headingOutput, depthK, depthP, depthD, depthI, depthOutput, killSwitch );
 
 }
 
 void BeeStem3Driver::readKillSwitch( int8_t & kill_switch )
 {
-    if( !flags_.port_connected_ ) return;
+  if( !flags_.port_connected_ ) return;
 
-    int accelX, accelY, accelZ, compassHeading, compassPitch, compassRoll, desiredHeading, desiredDepth, desiredSpeed, headingK, headingP, headingD, headingI, headingOutput, depthK, depthP, depthD,
-            depthI, depthOutput, intlPressure, extPressure;
-    char ks;
+  int accelX, accelY, accelZ, compassHeading, compassPitch, compassRoll, desiredHeading, desiredDepth, desiredSpeed, headingK, headingP, headingD, headingI, headingOutput, depthK, depthP, depthD,
+    depthI, depthOutput, intlPressure, extPressure;
+  char ks;
 
-    bee_stem_3_.getSensors( accelX, accelY, accelZ, compassHeading, compassPitch, compassRoll, intlPressure, extPressure, desiredHeading, desiredDepth, desiredSpeed, headingK, headingP, headingD,
-            headingI, headingOutput, depthK, depthP, depthD, depthI, depthOutput, ks );
+  bee_stem_3_.getSensors( accelX, accelY, accelZ, compassHeading, compassPitch, compassRoll, intlPressure, extPressure, desiredHeading, desiredDepth, desiredSpeed, headingK, headingP, headingD,
+			  headingI, headingOutput, depthK, depthP, depthD, depthI, depthOutput, ks );
 
-    kill_switch = ks;
+  kill_switch = ks;
 }
 
 bool const & BeeStem3Driver::getDeviceStatus( int const & device_id ) const
 {
-    static const bool default_result = false;
-    switch ( device_id )
+  static const bool default_result = false;
+  switch ( device_id )
     {
     case FiringDeviceIDs::DROPPER_STAGE1:
-        return dropper1_ready_;
+      return dropper1_ready_;
     case FiringDeviceIDs::DROPPER_STAGE2:
-        return dropper2_ready_;
+      return dropper2_ready_;
     case FiringDeviceIDs::SHOOTER1:
-        return shooter1_ready_;
+      return shooter1_ready_;
     case FiringDeviceIDs::SHOOTER2:
-        return shooter2_ready_;
+      return shooter2_ready_;
     }
-    return default_result;
+  return default_result;
 }
 
 void BeeStem3Driver::fireDevice( int device_id )
 {
-    if( !flags_.port_connected_ ) return;
+  if( !flags_.port_connected_ ) return;
 
-    switch ( device_id )
+  switch ( device_id )
     {
     case FiringDeviceIDs::SHOOTER1:
-        std::cout << "Firing torpedo! " << shooter1_params_.trigger_time_ << std::endl;
-        bee_stem_3_.setThruster( MotorControllerIDs::SHOOTER, shooter1_params_.trigger_value_ );
-        usleep( shooter1_params_.trigger_time_ * 1000 );
-        bee_stem_3_.setThruster( MotorControllerIDs::SHOOTER, 0 );
-        shooter1_ready_= false;
-        break;
+      ROS_INFO_STREAM( "Firing torpedo! " << shooter1_params_.trigger_time_ );
+      bee_stem_3_.setThruster( MotorControllerIDs::SHOOTER, shooter1_params_.trigger_value_ );
+      usleep( shooter1_params_.trigger_time_ * 1000 );
+      bee_stem_3_.setThruster( MotorControllerIDs::SHOOTER, 0 );
+      shooter1_ready_= false;
+      break;
     case FiringDeviceIDs::SHOOTER2:
-        std::cout << "Firing torpedo! " << shooter2_params_.trigger_time_ << std::endl;
-        bee_stem_3_.setThruster( MotorControllerIDs::SHOOTER, shooter2_params_.trigger_value_ );
-        usleep( shooter2_params_.trigger_time_ * 1000 );
-        bee_stem_3_.setThruster( MotorControllerIDs::SHOOTER, 0 );
-        shooter2_ready_= false;
-        break;
+      ROS_INFO_STREAM( "Firing torpedo! " << shooter2_params_.trigger_time_ );
+      bee_stem_3_.setThruster( MotorControllerIDs::SHOOTER, shooter2_params_.trigger_value_ );
+      usleep( shooter2_params_.trigger_time_ * 1000 );
+      bee_stem_3_.setThruster( MotorControllerIDs::SHOOTER, 0 );
+      shooter2_ready_= false;
+      break;
     case FiringDeviceIDs::DROPPER_STAGE1:
-        std::cout << "Dropping first marker!" << std::endl;
-        bee_stem_3_.setThruster( MotorControllerIDs::DROPPER_STAGE1, dropper1_params_.trigger_value_ );
-        usleep( dropper1_params_.trigger_time_ * 1000 );
-        bee_stem_3_.setThruster( MotorControllerIDs::DROPPER_STAGE1, 0 );
-        dropper1_ready_ = false;
-        break;
+      ROS_INFO_STREAM("Dropping first marker!" );
+      bee_stem_3_.setThruster( MotorControllerIDs::DROPPER_STAGE1, dropper1_params_.trigger_value_ );
+      usleep( dropper1_params_.trigger_time_ * 1000 );
+      bee_stem_3_.setThruster( MotorControllerIDs::DROPPER_STAGE1, 0 );
+      dropper1_ready_ = false;
+      break;
     case FiringDeviceIDs::DROPPER_STAGE2:
-        std::cout << "Dropping second marker!" << std::endl;
-        bee_stem_3_.setThruster( MotorControllerIDs::DROPPER_STAGE2, dropper2_params_.trigger_value_ );
-        usleep( dropper2_params_.trigger_time_ * 1000 );
-        bee_stem_3_.setThruster( MotorControllerIDs::DROPPER_STAGE2, 0 );
-        dropper2_ready_ = false;
-        break;
+      ROS_INFO_STREAM("Dropping second marker!" );
+      bee_stem_3_.setThruster( MotorControllerIDs::DROPPER_STAGE2, dropper2_params_.trigger_value_ );
+      usleep( dropper2_params_.trigger_time_ * 1000 );
+      bee_stem_3_.setThruster( MotorControllerIDs::DROPPER_STAGE2, 0 );
+      dropper2_ready_ = false;
+      break;
     }
 }
 
 void BeeStem3Driver::setThruster( int id, int value )
 {
-    if( !flags_.port_connected_ ) return;
+  if( !flags_.port_connected_ ) return;
 
-    bee_stem_3_.setThruster( id, value );
+  bee_stem_3_.setThruster( id, value );
 }
