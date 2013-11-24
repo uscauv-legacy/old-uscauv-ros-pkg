@@ -129,6 +129,13 @@ class OpticalFlowNode: public BaseNode, public ImageTransceiver, public MultiRec
 			     USCAUV_AUVVISION_OPTICALFLOW_MAXFEATURES,
 			     feature_quality, 2*feature_radius);
 
+    /// Deal with the case where no features are found
+    if( !new_features.size() )
+      {
+	ready_ = false;
+	return;
+      }
+
     if( !ready_ )
       {
 	new_image.copyTo( prev_image_ );
