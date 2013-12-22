@@ -22,4 +22,9 @@
         name="$(arg name)"
         args="$(arg args)"
         output="screen" />
+    
+    <!-- Load orientation calibration -->
+    <rosparam command="load" file="$(find xsens_driver)/params/orientation.yaml"
+	      param="xsens_driver/calibration/orientation" />
+    
 </launch>

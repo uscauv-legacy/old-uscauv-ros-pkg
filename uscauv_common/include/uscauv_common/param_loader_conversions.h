@@ -1,0 +1,62 @@
+/***************************************************************************
+ *  include/uscauv_common/param_loader_conversions.h
+ *  --------------------
+ *
+ *  Software License Agreement (BSD License)
+ *
+ *  Copyright (c) 2013, Dylan Foster (turtlecannon@gmail.com)
+ *  All rights reserved.
+ *
+ *  Redistribution and use in source and binary forms, with or without
+ *  modification, are permitted provided that the following conditions are
+ *  met:
+ *
+ *  * Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ *  * Redistributions in binary form must reproduce the above
+ *    copyright notice, this list of conditions and the following disclaimer
+ *    in the documentation and/or other materials provided with the
+ *    distribution.
+ *  * Neither the name of USC AUV nor the names of its
+ *    contributors may be used to endorse or promote products derived from
+ *    this software without specific prior written permission.
+ *
+ *  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+ *  "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+ *  LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+ *  A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+ *  OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+ *  SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+ *  LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+ *  DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+ *  THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ *  (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+ *  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ *
+ **************************************************************************/
+
+
+#ifndef USCAUV_USCAUVCOMMON_PARAMLOADERCONVERSIONS
+#define USCAUV_USCAUVCOMMON_PARAMLOADERCONVERSIONS
+
+// ROS
+#include <ros/ros.h>
+#include <tf/transform_datatypes.h>
+
+#include <uscauv_common/param_loader.h>
+
+// ################################################################
+// Common parameter conversions ###################################
+// ################################################################
+
+/// Convert between an XmlRpc value map with x/y/z fields and a tf::Vector3
+USCAUV_DECLARE_PARAM_LOADER_CONVERSION( tf::Vector3, param,
+					/// The function begins here:
+					tf::Vector3 vector;
+					vector.setX( lookup<double>(param, "x") );
+					vector.setY( lookup<double>(param, "y") );
+					vector.setZ( lookup<double>(param, "z") );
+					return vector;
+					)
+
+#endif // USCAUV_USCAUVCOMMON_PARAMLOADERCONVERSIONS

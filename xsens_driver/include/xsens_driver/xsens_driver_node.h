@@ -38,6 +38,10 @@
 
 #include <quickdev/node.h>
 
+#include <uscauv_common/param_loader.h>
+#include <uscauv_common/param_loader_conversions.h>
+#include <uscauv_common/param_writer.h>
+
 // policies
 #include <quickdev/tf_tranceiver_policy.h>
 #include <quickdev/service_server_policy.h>
@@ -133,6 +137,10 @@ private:
         nh_rel.param( "linear_acceleration_stdev", linear_acceleration_stdev_, 0.098 );
         nh_rel.param( "ambient_linear_accel_calibration_steps", ambient_linear_accel_calibration_steps_, 550 );
         nh_rel.param( "ori_calibration_steps", ori_calibration_steps_, 110 );
+
+	/// Get orientation calibration
+	relative_orientation_offset_ = uscauv::param::load<tf::Vector3>( nh_rel, "calibration/orientation", tf::Vector3(0, 0, 0) );
+	
 
         multi_pub_.addPublishers
         <
@@ -268,13 +276,26 @@ private:
 
     // entry point for service
     QUICKDEV_DECLARE_SERVICE_CALLBACK( calibrateRPYOriCB, _CalibrateRPYSrv )
-    {
+      {
+	QUICKDEV_GET_RUNABLE_NODEHANDLE( nh_rel );
+      
         runRPYOriCalibration( request.num_samples );
+
+	/// Write to the parameter server
+	XmlRpc::XmlRpcValue calibration;
+	calibration["x"] = relative_orientation_offset_.x();
+	calibration["y"] = relative_orientation_offset_.y();
+	calibration["z"] = relative_orientation_offset_.z();
+	nh_rel.setParam("calibration/orientation", calibration );
+
+	uscauv::param::save(nh_rel, "calibration/orientation", 
+			    "xsens_driver", "params/orientation.yaml" );
+	
 
         response.calibration = unit::implicit_convert( relative_orientation_offset_ );
 
         return true;
-    }
+      }
 
     // entry point for service
     QUICKDEV_DECLARE_SERVICE_CALLBACK( calibrateAmbientLinearAccelCB, _CalibrateRPYSrv )
