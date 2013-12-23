@@ -11,6 +11,8 @@ include($ENV{ROS_ROOT}/core/rosbuild/rosbuild.cmake)
 
 rosbuild_init()
 
+rosbuild_include(uscauv_build generate_common_header)
+
 #set the default path for built executables to the "bin" directory
 set(EXECUTABLE_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/bin)
 #set the default path for built libraries to the "lib" directory
@@ -21,9 +23,14 @@ rosbuild_find_ros_package(dynamic_reconfigure)
 include(${dynamic_reconfigure_PACKAGE_PATH}/cmake/cfgbuild.cmake)
 gencfg()
 
+# Generates uscauv_common.h header including everything else in this package
+generate_common_header(${PROJECT_SOURCE_DIR}/include uscauv_common uscauv_common.h)
+
 # Include auto-generated dynamic reconfigure headers
 include_directories(${PROJECT_SOURCE_DIR}/cfg/cpp)
 
 rosbuild_add_boost_directories()
 
 rosbuild_add_library( uscauv_common src/base_node.cpp src/image_transceiver.cpp src/multi_reconfigure.cpp src/graphics.cpp src/image_loader.cpp src/timing.cpp src/pose_integrator.cpp src/simple_math.cpp src/param_loader.cpp src/image_geometry.cpp src/tic_toc.cpp src/defaults.cpp src/color_codec.cpp src/action_token.cpp src/lookup_table.cpp src/transform_utils.cpp src/serial.cpp src/macros.cpp src/param_writer.cpp src/param_loader_conversions.cpp )
+
+

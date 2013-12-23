@@ -49,7 +49,7 @@
 // Common parameter conversions ###################################
 // ################################################################
 
-/// Convert between an XmlRpc value map with x/y/z fields and a tf::Vector3
+/// Convert between an XmlRpcValue map with x/y/z fields and a tf::Vector3
 USCAUV_DECLARE_PARAM_LOADER_CONVERSION( tf::Vector3, param,
 					/// The function begins here:
 					tf::Vector3 vector;
