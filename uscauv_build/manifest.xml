@@ -1,0 +1,19 @@
+<package>
+  <description brief="uscauv_build">
+
+     uscauv_build
+
+  </description>
+  <author>nalyd</author>
+  <license>BSD</license>
+  <review status="unreviewed" notes=""/>
+  <url>http://ros.org/wiki/uscauv_build</url>
+
+  <depend package="rosbuild" />
+  <export>
+    <rosbuild cmake_directory="${prefix}/cmake" />
+  </export>
+
+</package>
+
+
