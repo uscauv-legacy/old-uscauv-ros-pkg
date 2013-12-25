@@ -59,6 +59,7 @@
 /// cpp11
 #include <random>
 
+/// Arbitrary
 #define USCAUV_AUVVISION_OPTICALFLOW_MAXFEATURES 1024
 
 typedef cv_bridge::CvImage _CvImage;
