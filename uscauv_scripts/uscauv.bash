@@ -318,3 +318,23 @@ alias uscauv-arp-scan="sudo arp-scan --interface=eth0 --localnet"
 
 alias uscauv-echo-pressure="rostopic echo /robot/sensors/internal_pressure"
 alias uscauv-echo-depth="rostopic echo /robot/sensors/depth"
+
+######################################################################
+# roshv: Launch an hist_view node. Use tab completion to see all
+#        available image topics
+roshv (){
+  if [ -z "$1" ]
+  then
+    echo "Usage: roshv TopicName"
+    echo " (Press [tab] for TopicName autocompletion)"
+  else
+    rosrun uscauv_utilities hist_view image:=$1
+  fi
+}
+_roshv()
+{
+  topics=`_rostopic_list_cache | grep "sensor_msgs/.*Image" | cut -d' ' -f 3 | uniq`
+  local cur=${COMP_WORDS[COMP_CWORD]}
+  COMPREPLY=( $(compgen -W "${topics}" -- $cur) )
+}
+complete -F _roshv roshv
