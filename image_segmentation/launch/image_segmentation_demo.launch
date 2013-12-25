@@ -2,17 +2,22 @@
 
   <arg name="camera" />
   <arg name="rate" default="60" />
+  <arg name="scale" default="0.5" />
 
-  <remap from="image_segmentation/image_color" to="$(arg camera)/image_rect_color" />
+  <remap from="image_segmentation/image_color" to="$(arg camera)/image_rect_color_scaled" />
 
   <include file="$(find image_segmentation)/launch/image_segmentation.launch" />
 
   <!-- Camera -->
   <include file="$(find uscauv_camera)/launch/monocular_camera.launch" >
     <arg name="camera" value="$(arg camera)" />
+    <arg name="scale" value="$(arg scale)" />
   </include>
 
   <node pkg="image_view" type="image_view" name="segments_view" 
 	args="image:=image_segmentation/image_segmented" />
+
+  <node pkg="image_view" type="image_view" name="camera_view" 
+	args="image:=$(arg camera)/image_rect_color_scaled" />
 
 </launch>

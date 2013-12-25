@@ -12,5 +12,7 @@
       name="$(arg name)"
       args="$(arg args)"
       output="screen" />
+
+  <include file="$(find vision_config)/launch/upload_segmentation.launch" />
   
 </launch>

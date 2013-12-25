@@ -81,4 +81,7 @@ USCAUV_DECLARE_DURATION_TRAITS( std::chrono::hours,        "hours"        );
 #define toc_info_stream(__DurationType, __Args)		\
   ROS_INFO_STREAM( make_toc_stream(__DurationType, __Args) );
 
+#define toc_debug_stream(__DurationType, __Args)		\
+  ROS_DEBUG_STREAM( make_toc_stream(__DurationType, __Args) );
+
 #endif // USCAUV_USCAUVCOMMON_TICTOC

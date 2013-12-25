@@ -43,6 +43,7 @@
 #include <ros/ros.h>
 
 #include <uscauv_common/multi_reconfigure.h>
+#include <uscauv_common/tic_toc.h>
 
 #include <image_segmentation/GraphBasedSegmentationConfig.h>
 #include <image_segmentation/segment-image.h>
@@ -82,6 +83,8 @@ namespace uscauv
 	
 	image<rgb> converted_input(input.cols, input.rows, false);
 	
+	{
+	  tic;
 	for(int idy = 0; idy < input.rows; ++idy )
 	  {
 	    for(int idx = 0; idx < input.cols; ++idx )
@@ -92,14 +95,23 @@ namespace uscauv
 		converted_input.access[idy][idx].r = px[2];
 	      }
 	  }
-	
+	toc_debug_stream(std::chrono::milliseconds, "Input conversion");
+	}
 
 	int n_components;
 
-	image<rgb> * seg = segment_image( &converted_input, config_.sigma, config_.k, config_.min, &n_components );
+	image<rgb> * seg;
+
+	{
+	  tic;
+	  seg= segment_image( &converted_input, config_.sigma, config_.k, config_.min, &n_components );
+	  toc_debug_stream(std::chrono::milliseconds, "Segmentation");
+	}
 
 	cv::Mat output(input.rows, input.cols, CV_8UC3);
 
+	{
+	  tic;
 	for(int idy = 0; idy < output.rows; ++idy )
 	  {
 	    for(int idx = 0; idx < output.cols; ++idx )
@@ -110,7 +122,8 @@ namespace uscauv
 		px[2] = seg->access[idy][idx].r;
 	      }
 	  }
-	
+	toc_debug_stream(std::chrono::milliseconds, "Output conversion");
+	}
 	delete seg;
 	
 	return output;
