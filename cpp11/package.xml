@@ -1,0 +1,25 @@
+<?xml version="1.0"?>
+<package>
+  <name>cpp11</name>
+  <version>1.0.0</version>
+  <description>The whole point of this package is to export the gcc -std=c++0x flag to any packages that include it (thereby enabling c++0x support)
+  This is a bit trickier with catkin than with rosbuild. Previously it was possible to add it to the cflags field of the export element in manifest.xml but catkin removes this ability.
+  Catkin passes all flags using the catkin_package() macro in the package's CMakeLists.txt, but this doesn't support direct passing of cflags (this is an open issue on the ROS github). 
+  To get around this we use the CFG_EXTRAS argument to catkin_package(). This specifies a cmake file (cpp11.cmake) which will be automatically called by include() when another package
+  find_package()s this one. Inside that file we use add_definitions() to set the c++0x flag. This should work with chained dependencies as long as each package lists cpp11 in the CATKIN_DEPENDS 
+  argument to their catkin_package() call. They have to list cpp11 as a run_depends in their package.xml to do this (this is obviously not a runtime dependency) which is a bit silly.
+  </description>
+
+  <maintainer email="turtlecannon@gmail.com">Dylan Foster</maintainer>
+
+  <license>BSD</license>
+
+  <author >Dylan Foster</author>
+
+  <buildtool_depend>catkin</buildtool_depend>
+
+
+  <!-- The export tag contains other, unspecified, tags -->
+  <export>
+  </export>
+</package>

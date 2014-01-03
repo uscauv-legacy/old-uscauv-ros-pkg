@@ -1,9 +1,12 @@
 cmake_minimum_required(VERSION 2.8.3)
-project(uscauv_ros_pkg)
+project(cpp11)
 
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
 find_package(catkin REQUIRED)
 
-catkin_metapackage()
+# Searches in the cmake/ directory
+catkin_package(
+  CFG_EXTRAS cpp11.cmake
+)
