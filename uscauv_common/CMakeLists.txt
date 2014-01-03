@@ -5,7 +5,7 @@ project(uscauv_common)
 
 # Load catkin and all dependencies required for this package
 # Only catkin packages may be called as components (system dependencies must be found separately)
-find_package(catkin REQUIRED COMPONENTS roscpp tf cpp11 sensor_msgs cv_bridge image_transport image_geometry auv_msgs dynamic_reconfigure)
+find_package(catkin REQUIRED COMPONENTS roscpp tf cpp11 sensor_msgs cv_bridge image_transport image_geometry auv_msgs dynamic_reconfigure uscauv_build)
 
 find_package(OpenCV REQUIRED)
 
@@ -28,7 +28,7 @@ generate_dynamic_reconfigure_options(
 # CATKIN_MIGRATION: removed during catkin migration
 # Generates uscauv_common.h header including everything else in this package
 # rosbuild_include(uscauv_build generate_common_header)
-# generate_common_header(${PROJECT_SOURCE_DIR}/include uscauv_common uscauv_common.h)
+generate_common_header(${PROJECT_SOURCE_DIR}/include uscauv_common uscauv_common.h)
 
 # # Include auto-generated dynamic reconfigure headers
 include_directories(${PROJECT_SOURCE_DIR}/cfg/cpp)

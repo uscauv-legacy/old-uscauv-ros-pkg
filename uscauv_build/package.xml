@@ -1,0 +1,17 @@
+<package>
+  <name>uscauv_build</name>
+  <description>
+    uscauv_build
+  </description>
+  <author>Dylan Foster</author>
+  <maintainer email="turtlecannon@gmail.com">Dylan Foster</maintainer>
+  <license>BSD</license>
+  <version>0.0.0</version>
+  
+  <buildtool_depend>catkin</buildtool_depend>
+    
+  <export>
+  </export>
+</package>
+
+
