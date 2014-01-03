@@ -43,7 +43,4 @@ catkin_package(
     LIBRARIES ${PROJECT_NAME}
 )
 
-# TODO: Include action_token
-add_library( uscauv_common src/base_node.cpp src/image_transceiver.cpp src/multi_reconfigure.cpp src/graphics.cpp src/image_loader.cpp src/timing.cpp src/pose_integrator.cpp src/simple_math.cpp src/param_loader.cpp src/image_geometry.cpp src/tic_toc.cpp src/defaults.cpp src/color_codec.cpp src/lookup_table.cpp src/transform_utils.cpp src/serial.cpp src/macros.cpp src/param_writer.cpp src/param_loader_conversions.cpp )
-
-# add_library( uscauv_common src/base_node.cpp src/image_transceiver.cpp src/multi_reconfigure.cpp src/graphics.cpp src/image_loader.cpp src/timing.cpp src/pose_integrator.cpp src/simple_math.cpp src/param_loader.cpp src/image_geometry.cpp src/tic_toc.cpp src/defaults.cpp src/color_codec.cpp src/action_token.cpp src/lookup_table.cpp src/transform_utils.cpp src/serial.cpp src/macros.cpp src/param_writer.cpp src/param_loader_conversions.cpp )
+add_library( uscauv_common src/base_node.cpp src/image_transceiver.cpp src/multi_reconfigure.cpp src/graphics.cpp src/image_loader.cpp src/timing.cpp src/pose_integrator.cpp src/simple_math.cpp src/param_loader.cpp src/image_geometry.cpp src/tic_toc.cpp src/defaults.cpp src/color_codec.cpp src/action_token.cpp src/lookup_table.cpp src/transform_utils.cpp src/serial.cpp src/macros.cpp src/param_writer.cpp src/param_loader_conversions.cpp )
