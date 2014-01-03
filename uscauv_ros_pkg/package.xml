@@ -1,0 +1,17 @@
+<?xml version="1.0"?>
+<package>
+  <name>uscauv_ros_pkg</name>
+  <version>0.0.0</version>
+  <description>The uscauv_ros_pkg package</description>
+  <maintainer email="turtlecannon@gmail.com">Dylan Foster</maintainer>
+
+  <license>BSD</license>
+
+  <buildtool_depend>catkin</buildtool_depend>
+
+  <export>
+    <!-- You can specify that this package is a metapackage here: -->
+    <metapackage/>
+
+  </export>
+</package>
