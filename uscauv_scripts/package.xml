@@ -1,0 +1,18 @@
+<package>
+  <name>uscauv_scripts</name>
+  <version>0.0.0</version>
+  <description>uscauv_scripts</description>
+  <maintainer email="turtlecannon@gmail.com">Dylan Foster</maintainer>
+
+  <license>BSD</license>
+
+  <url type="website">http://ros.org/wiki/uscauv_scripts</url>
+  <!-- <url type="bugtracker"></url> -->
+
+  <author>Dylan Foster</author>
+
+  <!-- Dependencies which this package needs to build itself. -->
+  <buildtool_depend>catkin</buildtool_depend>
+
+
+</package>

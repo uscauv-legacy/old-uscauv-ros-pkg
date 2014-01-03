@@ -1,0 +1,23 @@
+<package>
+  <name>uscauv_camera</name>
+  <version>0.0.0</version>
+  <description>Utilities for cameras used by the USC AUV Team.</description>
+  <maintainer email="turtlecannon@gmail.com">Dylan Foster</maintainer>
+
+  <license>BSD</license>
+
+  <url type="website">http://ros.org/wiki/uscauv_camera</url>
+  <!-- <url type="bugtracker"></url> -->
+
+  <author>Dylan Foster</author>
+
+  <!-- Dependencies which this package needs to build itself. -->
+  <buildtool_depend>catkin</buildtool_depend>
+
+  <!-- Dependencies needed to compile this package. -->
+
+  <!-- Dependencies needed after this package is compiled. -->
+
+  <!-- Dependencies needed only for running tests. -->
+
+</package>
