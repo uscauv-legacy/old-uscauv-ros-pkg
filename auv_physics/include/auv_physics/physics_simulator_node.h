@@ -84,7 +84,8 @@ typedef auv_physics::DragConfig _DragConfig;
 
 typedef geometry_msgs::Wrench _WrenchMsg;
 
-#define dDouble
+
+/* #define dDouble */
 
 class AUVDynamicsModel
 {
@@ -102,12 +103,16 @@ class AUVDynamicsModel
     XmlRpc::XmlRpcValue & xml_tensor = xml_model["inertial_tensor"];
 
     volume_ = xml_model["volume"];
+
+    std::vector<double> tensor_vec = uscauv::param::lookup<std::vector<double> >(xml_model, "inertial_tensor");
+
+    float mass = float( uscauv::param::lookup<double>(xml_model, "mass"));
     
     /// Last six arguments are the non-redundant elements of the inertial tensor 
-    dMassSetParameters( &mass_, xml_model["mass"],
+    dMassSetParameters( &mass_, mass,
 			0.0, 0.0, 0.0,
-			xml_tensor[0], xml_tensor[4], xml_tensor[8],
-			xml_tensor[1], xml_tensor[2], xml_tensor[5] );
+			float(tensor_vec[0]),float( tensor_vec[4]),float( tensor_vec[8]),
+			float(tensor_vec[1]),float( tensor_vec[2]),float( tensor_vec[5]));
     
     /// Look up the transform to the center of volume ------------------------------------
     tf::TransformListener tf_listener;
