@@ -1,0 +1,44 @@
+<package>
+  <name>auv_vision</name>
+  <version>0.0.0</version>
+  <description>auv_vision</description>
+  <maintainer email="turtlecannon@gmail.com">Dylan Foster</maintainer>
+
+  <license>BSD</license>
+
+  <url type="website">http://ros.org/wiki/auv_vision</url>
+  <!-- <url type="bugtracker"></url> -->
+
+  <author>nalyd</author>
+
+  <!-- Dependencies which this package needs to build itself. -->
+  <buildtool_depend>catkin</buildtool_depend>
+
+  <!-- Dependencies needed to compile this package. -->
+  <build_depend>roscpp</build_depend>
+  <build_depend>opencv2</build_depend>
+  <build_depend>uscauv_common</build_depend>
+  <build_depend>dynamic_reconfigure</build_depend>
+  <build_depend>color_classification</build_depend>
+  <build_depend>shape_matching</build_depend>
+  <build_depend>object_tracking</build_depend>
+
+  <!-- Dependencies needed after this package is compiled. -->
+  <run_depend>roscpp</run_depend>
+  <run_depend>opencv2</run_depend>
+  <run_depend>uscauv_common</run_depend>
+  <run_depend>dynamic_reconfigure</run_depend>
+  <run_depend>color_classification</run_depend>
+  <run_depend>shape_matching</run_depend>
+  <run_depend>object_tracking</run_depend>
+
+  <!-- Dependencies needed only for running tests. -->
+  <!-- <test_depend>roscpp</test_depend> -->
+  <!-- <test_depend>opencv2</test_depend> -->
+  <!-- <test_depend>uscauv_common</test_depend> -->
+  <!-- <test_depend>dynamic_reconfigure</test_depend> -->
+  <!-- <test_depend>color_classification</test_depend> -->
+  <!-- <test_depend>shape_matching</test_depend> -->
+  <!-- <test_depend>object_tracking</test_depend> -->
+
+</package>

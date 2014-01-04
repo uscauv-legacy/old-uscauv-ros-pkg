@@ -1,0 +1,60 @@
+<package>
+  <name>auv_missions</name>
+  <version>0.0.0</version>
+  <description>auv_missions</description>
+  <maintainer email="turtlecannon@gmail.com">Dylan Foster</maintainer>
+
+  <license>BSD</license>
+
+  <url type="website">http://ros.org/wiki/auv_missions</url>
+  <!-- <url type="bugtracker"></url> -->
+
+  <author>nalyd</author>
+
+  <!-- Dependencies which this package needs to build itself. -->
+  <buildtool_depend>catkin</buildtool_depend>
+
+  <!-- Dependencies needed to compile this package. -->
+  <build_depend>roscpp</build_depend>
+  <build_depend>cpp11</build_depend>
+  <build_depend>uscauv_common</build_depend>
+  <build_depend>seabee3_common</build_depend>
+  <build_depend>auv_physics</build_depend>
+  <build_depend>auv_controls</build_depend>
+  <build_depend>auv_vision</build_depend>
+  <build_depend>auv_msgs</build_depend>
+  <build_depend>seabee3_msgs</build_depend>
+  <build_depend>tf</build_depend>
+  <build_depend>eigen_conversions</build_depend>
+
+  <!-- Dependencies needed after this package is compiled. -->
+  <run_depend>roscpp</run_depend>
+  <run_depend>cpp11</run_depend>
+  <run_depend>uscauv_common</run_depend>
+  <run_depend>seabee3_common</run_depend>
+  <run_depend>auv_physics</run_depend>
+  <run_depend>auv_controls</run_depend>
+  <run_depend>auv_vision</run_depend>
+  <run_depend>auv_msgs</run_depend>
+  <run_depend>seabee3_msgs</run_depend>
+  <run_depend>tf</run_depend>
+  <run_depend>eigen_conversions</run_depend>
+
+  <!-- Dependencies needed only for running tests. -->
+  <!-- <test_depend>roscpp</test_depend> -->
+  <!-- <test_depend>cpp11</test_depend> -->
+  <!-- <test_depend>uscauv_common</test_depend> -->
+  <!-- <test_depend>seabee3_common</test_depend> -->
+  <!-- <test_depend>auv_physics</test_depend> -->
+  <!-- <test_depend>auv_controls</test_depend> -->
+  <!-- <test_depend>auv_vision</test_depend> -->
+  <!-- <test_depend>auv_msgs</test_depend> -->
+  <!-- <test_depend>seabee3_msgs</test_depend> -->
+  <!-- <test_depend>tf</test_depend> -->
+  <!-- <test_depend>eigen_conversions</test_depend> -->
+
+<export>
+    <cpp lflags="-L${prefix}/lib -Wl,-rpath,${prefix}/lib -lauv_missions" cflags="-I${prefix}/include -I${prefix}/cfg/cpp"/>
+</export>
+
+</package>

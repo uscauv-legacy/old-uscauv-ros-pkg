@@ -1,53 +1,38 @@
 <package>
-  <name>uscauv_common</name>
+  <name>uscauv_utilities</name>
   <version>0.0.0</version>
-  <description>uscauv_common</description>
+  <description></description>
   <maintainer email="turtlecannon@gmail.com">Dylan Foster</maintainer>
 
   <license>BSD</license>
 
-  <url type="website">http://ros.org/wiki/uscauv_common</url>
+  <url type="website">http://ros.org/wiki/color_classification</url>
   <!-- <url type="bugtracker"></url> -->
 
-  <author></author>
+  <author>Dylan Foster</author>
 
   <!-- Dependencies which this package needs to build itself. -->
   <buildtool_depend>catkin</buildtool_depend>
 
   <!-- Dependencies needed to compile this package. -->
   <build_depend>roscpp</build_depend>
-  <build_depend>tf</build_depend>
-  <build_depend>cpp11</build_depend>
+  <build_depend>opencv2</build_depend>
   <build_depend>sensor_msgs</build_depend>
   <build_depend>cv_bridge</build_depend>
   <build_depend>image_transport</build_depend>
-  <build_depend>image_geometry</build_depend>
-  <build_depend>opencv2</build_depend>
-  <build_depend>auv_msgs</build_depend>
-  <!-- <build_depend>uscauv_build</build_depend> -->
 
   <!-- Dependencies needed after this package is compiled. -->
   <run_depend>roscpp</run_depend>
-  <run_depend>tf</run_depend>
+  <run_depend>opencv2</run_depend>
   <run_depend>sensor_msgs</run_depend>
   <run_depend>cv_bridge</run_depend>
   <run_depend>image_transport</run_depend>
-  <run_depend>image_geometry</run_depend>
-  <run_depend>opencv2</run_depend>
-  <run_depend>auv_msgs</run_depend>
-  <run_depend>cpp11</run_depend>
 
   <!-- Dependencies needed only for running tests. -->
   <!-- <test_depend>roscpp</test_depend> -->
-  <!-- <test_depend>tf</test_depend> -->
-  <!-- <test_depend>cpp11</test_depend> -->
+  <!-- <test_depend>opencv2</test_depend> -->
   <!-- <test_depend>sensor_msgs</test_depend> -->
   <!-- <test_depend>cv_bridge</test_depend> -->
   <!-- <test_depend>image_transport</test_depend> -->
-  <!-- <test_depend>image_geometry</test_depend> -->
-  <!-- <test_depend>opencv2</test_depend> -->
-  <!-- <test_depend>auv_msgs</test_depend> -->
-  <!-- <test_depend>quickdev_cpp</test_depend> -->
-  <!-- <test_depend>uscauv_build</test_depend> -->
 
 </package>
