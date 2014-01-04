@@ -1,20 +1,26 @@
-cmake_minimum_required(VERSION 2.4.6)
-include($ENV{ROS_ROOT}/core/rosbuild/rosbuild.cmake)
+# Catkin User Guide: http://www.ros.org/doc/groovy/api/catkin/html/user_guide/user_guide.html
+# Catkin CMake Standard: http://www.ros.org/doc/groovy/api/catkin/html/user_guide/standards.html
+cmake_minimum_required(VERSION 2.8.3)
+project(uscauv_utilities)
+# Load catkin and all dependencies required for this package
+# TODO: remove all from COMPONENTS that are not catkin packages.
+find_package(catkin REQUIRED COMPONENTS roscpp sensor_msgs cv_bridge image_transport)
 
-# Set the build type.  Options are:
-#  Coverage       : w/ debug symbols, w/o optimization, w/ code-coverage
-#  Debug          : w/ debug symbols, w/o optimization
-#  Release        : w/o debug symbols, w/ optimization
-#  RelWithDebInfo : w/ debug symbols, w/ optimization
-#  MinSizeRel     : w/o debug symbols, w/ optimization, stripped binaries
-#set(ROS_BUILD_TYPE RelWithDebInfo)
+find_package(OpenCV REQUIRED)
 
-rosbuild_init()
+include_directories(include ${catkin_INCLUDE_DIRS} ${OpenCV_INCLUDE_DIRS})
 
-#set the default path for built executables to the "bin" directory
-set(EXECUTABLE_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/bin)
-#set the default path for built libraries to the "lib" directory
-set(LIBRARY_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/lib)
+catkin_package(
+  DEPENDS OpenCV
+  CATKIN_DEPENDS roscpp sensor_msgs cv_bridge image_transport
+  INCLUDE_DIRS include
+  LIBRARIES # TODO
+)
 
-# Static image publisher node
-rosbuild_add_executable( static_image_publisher nodes/static_image_publisher_node.cpp )
+add_executable( static_image_publisher nodes/static_image_publisher_node.cpp )
+target_link_libraries( static_image_publisher ${catkin_LIBRARIES} ${OpenCV_LIBRARIES})
+
+# Copies this script into devel space so that it is in our PYTHONPATH
+install(PROGRAMS bin/hist_view
+  DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
+)

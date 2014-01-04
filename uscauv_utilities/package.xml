@@ -1,7 +1,7 @@
 <package>
   <name>uscauv_utilities</name>
   <version>0.0.0</version>
-  <description></description>
+  <description>Miscellaneous USC AUV tools. Currently contains a node to publish static images and a histogram viewer node.</description>
   <maintainer email="turtlecannon@gmail.com">Dylan Foster</maintainer>
 
   <license>BSD</license>
