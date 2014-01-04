@@ -1,31 +1,23 @@
-cmake_minimum_required(VERSION 2.4.6)
-include($ENV{ROS_ROOT}/core/rosbuild/rosbuild.cmake)
+# Catkin User Guide: http://www.ros.org/doc/groovy/api/catkin/html/user_guide/user_guide.html
+# Catkin CMake Standard: http://www.ros.org/doc/groovy/api/catkin/html/user_guide/standards.html
+cmake_minimum_required(VERSION 2.8.3)
+project(seabee3_actions)
+# Load catkin and all dependencies required for this package
+# TODO: remove all from COMPONENTS that are not catkin packages.
+find_package(catkin REQUIRED COMPONENTS actionlib_msgs genmsg seabee3_msgs)
 
-# Set the build type.  Options are:
-#  Coverage       : w/ debug symbols, w/o optimization, w/ code-coverage
-#  Debug          : w/ debug symbols, w/o optimization
-#  Release        : w/o debug symbols, w/ optimization
-#  RelWithDebInfo : w/ debug symbols, w/ optimization
-#  MinSizeRel     : w/o debug symbols, w/ optimization, stripped binaries
-#set(ROS_BUILD_TYPE RelWithDebInfo)
+add_action_files(DIRECTORY action FILES
+  Configure.action
+  FollowTrajectory.action
+  MakeTrajectory.action
+  MatchContours.action
+  )
 
-rosbuild_find_ros_package( actionlib_msgs )
-include( ${actionlib_msgs_PACKAGE_PATH}/cmake/actionbuild.cmake )
-genaction()
+generate_messsages(DEPENDENCIES actionlib_msgs seabee3_msgs)
 
-rosbuild_init()
-
-
-#set the default path for built executables to the "bin" directory
-set(EXECUTABLE_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/bin)
-#set the default path for built libraries to the "lib" directory
-set(LIBRARY_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/lib)
-
-# uncomment if you have defined messages
-rosbuild_genmsg()
-# uncomment if you have defined services
-#rosbuild_gensrv()
-# uncomment if you have defined dynamic reconfigure files
-# Note: requires "rosbuild_include( quickdev_build dynamic_reconfigure )"
-#quickdev_gencfg()
-
+catkin_package(
+    DEPENDS 
+    CATKIN_DEPENDS actionlib seabee3_msgs
+    INCLUDE_DIRS # TODO include
+    LIBRARIES # TODO
+)

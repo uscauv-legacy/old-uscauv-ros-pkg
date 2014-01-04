@@ -4,9 +4,9 @@ cmake_minimum_required(VERSION 2.8.3)
 project(shape_matching)
 # Load catkin and all dependencies required for this package
 find_package(catkin REQUIRED COMPONENTS roscpp uscauv_common dynamic_reconfigure auv_msgs)
-find_package(Opencv REQUIRED)
+find_package(OpenCV REQUIRED)
 
-include(include cfg/cpp ${catkin_INCLUDE_DIRS} ${OpenCV_INCLUDE_DIRS})
+include_directories(include cfg/cpp ${catkin_INCLUDE_DIRS} ${OpenCV_INCLUDE_DIRS})
 
 # dynamic reconfigure
 generate_dynamic_reconfigure_options(

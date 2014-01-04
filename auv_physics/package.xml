@@ -10,7 +10,6 @@
   <!-- <url type="bugtracker"></url> -->
 
   <author>Dylan Foster</author>
-o
   <!-- Dependencies which this package needs to build itself. -->
   <buildtool_depend>catkin</buildtool_depend>
 

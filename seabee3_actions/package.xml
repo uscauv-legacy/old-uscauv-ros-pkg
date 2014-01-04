@@ -16,10 +16,12 @@
 
   <!-- Dependencies needed to compile this package. -->
   <build_depend>actionlib</build_depend>
+  <build_depend>actionlib_msgs</build_depend>
   <build_depend>seabee3_msgs</build_depend>
 
   <!-- Dependencies needed after this package is compiled. -->
   <run_depend>actionlib</run_depend>
+  <run_depend>actionlib_msgs</run_depend>
   <run_depend>seabee3_msgs</run_depend>
 
   <!-- Dependencies needed only for running tests. -->

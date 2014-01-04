@@ -5,7 +5,7 @@
   </description>
   <version>1.0.0</version>
   <author>nalyd</author>
-  <maintainer email="turtlecannon@gmail.com">nalyd</maintainer>
+  <maintainer email="turtlecannon@gmail.com">Dylan Foster</maintainer>
   <license>BSD</license>
   <url>http://ros.org/wiki/auv_msgs</url>
   
