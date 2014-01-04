@@ -1,30 +1,21 @@
-cmake_minimum_required(VERSION 2.4.6)
-include($ENV{ROS_ROOT}/core/rosbuild/rosbuild.cmake)
+# Catkin User Guide: http://www.ros.org/doc/groovy/api/catkin/html/user_guide/user_guide.html
+# Catkin CMake Standard: http://www.ros.org/doc/groovy/api/catkin/html/user_guide/standards.html
+cmake_minimum_required(VERSION 2.8.3)
+project(seabee3_common)
+# Load catkin and all dependencies required for this package
+# TODO: remove all from COMPONENTS that are not catkin packages.
+find_package(catkin REQUIRED COMPONENTS seabee3_msgs seabee3_actions visualization_msgs image_geometry)
 
-# Set the build type.  Options are:
-#  Coverage       : w/ debug symbols, w/o optimization, w/ code-coverage
-#  Debug          : w/ debug symbols, w/o optimization
-#  Release        : w/o debug symbols, w/ optimization
-#  RelWithDebInfo : w/ debug symbols, w/ optimization
-#  MinSizeRel     : w/o debug symbols, w/ optimization, stripped binaries
-set(ROS_BUILD_TYPE Release)
+include_directories(include ${catkin_INCLUDE_DIRS})
 
-rosbuild_init()
-rosbuild_include( quickdev_cpp add_library_auto )
+# catkin_package parameters: http://ros.org/doc/groovy/api/catkin/html/dev_guide/generated_cmake_api.html#catkin-package
 
-#set the default path for built executables to the "bin" directory
-set(EXECUTABLE_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/bin)
-#set the default path for built libraries to the "lib" directory
-set(LIBRARY_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/lib)
+catkin_package(
+    DEPENDS 
+    CATKIN_DEPENDS seabee3_msgs seabee3_actions visualization_msgs image_geometry
+    INCLUDE_DIRS include
+    LIBRARIES ${PROJECT_NAME}
+)
 
-# uncomment if you have defined messages
-#rosbuild_genmsg()
-# uncomment if you have defined services
-#rosbuild_gensrv()
-# uncomment if you have defined dynamic reconfigure files
-# Note: requires "rosbuild_include( quickdev_cpp dynamic_reconfigure )"
-#quickdev_gencfg()
-
-add_subdirectory( src )
-add_subdirectory( nodes )
-add_subdirectory( nodelets )
+add_library(${PROJECT_NAME} src/colors.cpp src/movement/cpp)
+target_link_libraries(${PROJECT_NAME} ${catkin_LIBRARIES})
