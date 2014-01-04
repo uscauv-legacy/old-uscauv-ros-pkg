@@ -14,10 +14,6 @@
   <!-- Dependencies which this package needs to build itself. -->
   <buildtool_depend>catkin</buildtool_depend>
 
-  <!-- Dependencies needed to compile this package. -->
-
-  <!-- Dependencies needed after this package is compiled. -->
-
-  <!-- Dependencies needed only for running tests. -->
+  <run_depend>camera1394</run_depend>
 
 </package>
