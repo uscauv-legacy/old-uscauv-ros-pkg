@@ -23,7 +23,9 @@
   <build_depend>auv_physics</build_depend>
   <build_depend>auv_msgs</build_depend>
   <build_depend>seabee3_msgs</build_depend>
+  <build_depend>eigen</build_depend>
   <build_depend>eigen_conversions</build_depend>
+  <build_depend>dynamic_reconfigure</build_depend>
 
   <!-- Dependencies needed after this package is compiled. -->
   <run_depend>roscpp</run_depend>
@@ -34,7 +36,12 @@
   <run_depend>auv_physics</run_depend>
   <run_depend>auv_msgs</run_depend>
   <run_depend>seabee3_msgs</run_depend>
+  <run_depend>eigen</run_depend>
   <run_depend>eigen_conversions</run_depend>
+  <run_depend>dynamic_reconfigure</run_depend>
+
+  <build_depend>message_generation</build_depend>
+  <run_depend>message_runtime</run_depend>
 
   <!-- Dependencies needed only for running tests. -->
   <!-- <test_depend>roscpp</test_depend> -->
@@ -46,9 +53,5 @@
   <!-- <test_depend>auv_msgs</test_depend> -->
   <!-- <test_depend>seabee3_msgs</test_depend> -->
   <!-- <test_depend>eigen_conversions</test_depend> -->
-
-<export>
-    <cpp lflags="-L${prefix}/lib -Wl,-rpath,${prefix}/lib -lauv_controls" cflags="-I${prefix}/include -I${prefix}/cfg/cpp"/>
-</export>
 
 </package>
