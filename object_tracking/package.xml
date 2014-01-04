@@ -19,8 +19,7 @@
   <build_depend>auv_msgs</build_depend>
   <build_depend>image_geometry</build_depend>
   <build_depend>dynamic_reconfigure</build_depend>
-  <build_depend>shape_matching</build_depend>
-  <build_depend>color_classification</build_depend>
+  <build_depend>eigen</build_depend>
 
   <!-- Dependencies needed after this package is compiled. -->
   <run_depend>uscauv_common</run_depend>
@@ -29,6 +28,7 @@
   <run_depend>dynamic_reconfigure</run_depend>
   <run_depend>shape_matching</run_depend>
   <run_depend>color_classification</run_depend>
+  <run_depend>eigen</run_depend>
 
   <!-- Dependencies needed only for running tests. -->
   <!-- <test_depend>uscauv_common</test_depend> -->
@@ -37,9 +37,5 @@
   <!-- <test_depend>dynamic_reconfigure</test_depend> -->
   <!-- <test_depend>shape_matching</test_depend> -->
   <!-- <test_depend>color_classification</test_depend> -->
-
-<export>
-    <cpp lflags="-Wl,-rpath,${prefix}/lib -L${prefix}/lib -lobject_tracking" cflags="`pkg-config --cflags eigen3` -I${prefix}/include"/>
-</export>
 
 </package>

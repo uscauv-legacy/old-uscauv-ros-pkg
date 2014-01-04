@@ -33,8 +33,6 @@ generate_common_header(${PROJECT_SOURCE_DIR}/include uscauv_common uscauv_common
 # # Include auto-generated dynamic reconfigure headers
 include_directories(${PROJECT_SOURCE_DIR}/cfg/cpp)
 
-
-
 # catkin_package parameters: http://ros.org/doc/groovy/api/catkin/html/dev_guide/generated_cmake_api.html#catkin-package
 catkin_package(
     DEPENDS OpenCV
