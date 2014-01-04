@@ -1,0 +1,35 @@
+<package>
+  <name>uscauv_joystick</name>
+  <version>0.0.0</version>
+  <description>uscauv_joystick</description>
+  <maintainer email="turtlecannon@gmail.com">Dylan Foster</maintainer>
+  <license>BSD</license>
+  <url type="website">http://ros.org/wiki/uscauv_joystick</url>
+  <author>Dylan Foster</author>
+
+  <!-- Dependencies which this package needs to build itself. -->
+  <buildtool_depend>catkin</buildtool_depend>
+
+  <!-- Dependencies needed to compile this package. -->
+  <build_depend>sensor_msgs</build_depend>
+  <build_depend>uscauv_common</build_depend>
+  <build_depend>roscpp</build_depend>
+
+  <!-- Dependencies needed after this package is compiled. -->
+  <run_depend>sensor_msgs</run_depend>
+  <run_depend>uscauv_common</run_depend>
+  <run_depend>roscpp</run_depend>
+  
+  <!-- Only a runtime dependency in the sense that the launch files in this package require it -->
+  <run_depend>joy</run_depend>
+
+  <!-- Dependencies needed only for running tests. -->
+  <!-- <test_depend>sensor_msgs</test_depend> -->
+  <!-- <test_depend>uscauv_common</test_depend> -->
+  <!-- <test_depend>roscpp</test_depend> -->
+
+<export>
+    <cpp lflags="-L${prefix}/lib -Wl,-rpath,${prefix}/lib -luscauv_joystick" cflags="-I${prefix}/include"/>
+</export>
+
+</package>
