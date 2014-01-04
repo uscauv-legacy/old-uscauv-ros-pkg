@@ -19,9 +19,6 @@
   <build_depend>opencv2</build_depend>
   <build_depend>uscauv_common</build_depend>
   <build_depend>dynamic_reconfigure</build_depend>
-  <build_depend>color_classification</build_depend>
-  <build_depend>shape_matching</build_depend>
-  <build_depend>object_tracking</build_depend>
 
   <!-- Dependencies needed after this package is compiled. -->
   <run_depend>roscpp</run_depend>
