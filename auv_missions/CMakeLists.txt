@@ -10,7 +10,7 @@ find_package(Boost REQUIRED COMPONENTS thread)
 
 include_directories(include cfg/cpp ${catkin_INCLUDE_DIRS} ${Boost_INCLUDE_DIRS})
 
-generate_dynamic_reconigure_options(
+generate_dynamic_reconfigure_options(
   cfg/Mission.cfg
   cfg/MissionControl.cfg
 )

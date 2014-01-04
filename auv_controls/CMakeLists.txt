@@ -6,7 +6,7 @@ project(auv_controls)
 # TODO: remove all from COMPONENTS that are not catkin packages.
 find_package(catkin REQUIRED COMPONENTS roscpp cpp11 uscauv_joystick dynamic_reconfigure
   uscauv_common seabee3_common auv_physics auv_msgs seabee3_msgs eigen_conversions
-  message_generation)
+  message_generation std_msgs)
 
 find_package(Eigen REQUIRED)
 
@@ -17,17 +17,21 @@ add_message_files(
   FeedbackLoop.msg
   )
 
+generate_messages(DEPENDENCIES std_msgs)
+
+
 generate_dynamic_reconfigure_options(
   cfg/ControlServer.cfg
   cfg/PID.cfg
-)
+  )
 
 catkin_package(
-    DEPENDS 
-    CATKIN_DEPENDS roscpp cpp11 uscauv_joystick uscauv_common seabee3_common auv_physics auv_msgs seabee3_msgs eigen_conversions message_runtime
-    INCLUDE_DIRS include cfg/cpp
-    LIBRARIES ${PROJECT_NAME}
-)
+  DEPENDS 
+  CATKIN_DEPENDS roscpp cpp11 uscauv_joystick uscauv_common seabee3_common 
+  auv_physics auv_msgs seabee3_msgs eigen_conversions message_runtime std_msgs
+  INCLUDE_DIRS include cfg/cpp
+  LIBRARIES ${PROJECT_NAME}
+  )
 
 add_library(${PROJECT_NAME} src/pid.cpp src/controller.cpp)
 add_dependencies(${PROJECT_NAME} ${PROJECT_NAME}_gencfg ${PROJECT_NAME}_generate_messages_cpp)

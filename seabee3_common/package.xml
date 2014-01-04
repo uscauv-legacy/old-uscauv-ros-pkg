@@ -25,8 +25,12 @@
   <run_depend>seabee3_actions</run_depend>
   <run_depend>visualization_msgs</run_depend>
   <run_depend>image_geometry</run_depend>
+  
+  <build_depend>cpp11</build_depend>
+  <run_depend>cpp11</run_depend>
 
-  <!-- Dependencies needed only for running tests. -->
+  
+  <!-- dependencies needed only for running tests. -->
   <!-- <test_depend>quickdev_cpp</test_depend> -->
   <!-- <test_depend>nodelet</test_depend> -->
   <!-- <test_depend>seabee3_msgs</test_depend> -->
