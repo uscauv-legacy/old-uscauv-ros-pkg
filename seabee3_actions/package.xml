@@ -24,8 +24,8 @@
   <run_depend>actionlib_msgs</run_depend>
   <run_depend>seabee3_msgs</run_depend>
 
-  <!-- Dependencies needed only for running tests. -->
-  <!-- <test_depend>actionlib</test_depend> -->
-  <!-- <test_depend>seabee3_msgs</test_depend> -->
+
+  <build_depend>message_generation</build_depend>
+  <run_depend>message_runtime</run_depend>
 
 </package>
