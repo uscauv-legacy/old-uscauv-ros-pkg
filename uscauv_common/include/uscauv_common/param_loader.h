@@ -95,6 +95,11 @@ namespace uscauv
 		  ROS_WARN("Caught XmlRpc exception [ %s ] loading element at idx [ %d ]. Skipping...", ex.getMessage().c_str(), idx);
 		  continue;
 		}
+	      catch(std::exception & ex)
+		{
+		  ROS_WARN("Caught exception [ %s ] loading element at idx [ %d ]. Skipping...", ex.what(), idx);
+		  continue;
+		}
 		
 	      output.push_back ( p );
 	    }
@@ -123,6 +128,11 @@ namespace uscauv
 		catch( typename XmlRpc::XmlRpcException & ex)
 		  {
 		    ROS_WARN("Caught XmlRpc exception [ %s ] loading element [ %s ]. Skipping...", ex.getMessage().c_str(), elem.first.c_str());
+		    continue;
+		  }
+		catch(std::exception & ex)
+		  {
+		    ROS_WARN("Caught exception [ %s ] loading element [ %s ]. Skipping...", ex.what(), elem.first.c_str());
 		    continue;
 		  }
 	    
@@ -171,13 +181,15 @@ namespace uscauv
     // ################################################################
 
     template<typename __ParamType>
-      static __ParamType lookup( XmlRpcValue & base_param, std::string const & param_name, __ParamType default_value)
+    static __ParamType lookup( XmlRpcValue & base_param, std::string const & param_name, __ParamType default_value, bool const & quiet = false)
       {
 	if( base_param.hasMember( param_name ) )
 	  return XmlRpcValueConverter<__ParamType>::convert(base_param[ param_name ]);
 	
-	ROS_WARN_STREAM("Couldn't find param [ " << param_name << " ]. Using default value [ " <<
-			toString(default_value) << " ]." );
+	if(!quiet){
+	  ROS_WARN_STREAM("Couldn't find param [ " << param_name << " ]. Using default value [ " <<
+			  toString(default_value) << " ]." );
+	}
 	
 	return default_value;
       }
@@ -222,6 +234,13 @@ namespace uscauv
 		
 		return default_value;
 	      }
+	    catch( std::exception & ex )
+	      {
+		ROS_WARN("Caught exception [ %s ] while loading param [ %s ]. Using default [ %s ].",
+			 ex.what(), resolved_name.c_str(), toString(default_value).c_str());
+		
+		return default_value;
+	      }
 	    ROS_INFO("Loaded param [ %s ] with value [ %s ].", 
 		     resolved_name.c_str(), toString(return_value).c_str());
 	  
@@ -258,6 +277,13 @@ namespace uscauv
 		ros::shutdown();
 		return __ParamType();
 	      }
+	    catch( std::exception & ex)
+	      {	
+		ROS_FATAL("Caught exception [ %s ] loading param [ %s ].  Shutting down...",
+			  ex.what(), resolved_name.c_str());
+		ros::shutdown();
+		return __ParamType();
+	      }
 	    
 	    ROS_INFO("Loaded param [ %s ] with value [ %s ].", 
 		     resolved_name.c_str(), toString(return_value).c_str());
@@ -284,12 +310,12 @@ namespace uscauv
     {									\
       template<>							\
 	struct XmlRpcValueConverter<__ParamType>			\
+      {									\
+	static __ParamType convert( XmlRpcValue & var_name ) throw(std::exception) \
 	{								\
-	  static __ParamType convert( XmlRpcValue & var_name )		\
-	  {								\
-	    conversion;							\
-	  }								\
-	};								\
+	  conversion;							\
+	}								\
+      };								\
     }									\
   }									\
 
