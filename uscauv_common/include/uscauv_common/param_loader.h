@@ -45,6 +45,15 @@
 #include <XmlRpcValue.h>
 #include <XmlRpcException.h>
 
+#include <exception>
+
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////
+// You can define USCAUV_PARAM_LOADER_DISALLOW_EMPTY_MAPS or USCAUV_PARAM_LOADER_DISALLOW_EMPTY_VECTORS
+// to throw exceptions when a parameter vector / map is empty. This can be the only way to catch these
+// errors automatically in the case of many nested XmlRpcValueConvert::convert calls.
+/////////////////////////////////////////////////////////////////////////////////////////////////////
+
 // ################################################################
 // ################################################################
 
@@ -102,7 +111,16 @@ namespace uscauv
 		}
 		
 	      output.push_back ( p );
+	      
 	    }
+	  
+#ifdef USCAUV_PARAM_LOADER_DISALLOW_EMPTY_VECTORS
+	  if ( !output.size() )
+	    {
+	      throw std::length_error("Empty parameter vector");
+	    }
+#endif
+
 	  return output;
 	}
 	
@@ -139,6 +157,13 @@ namespace uscauv
 		ROS_INFO("Loaded map param element [ %s ].", elem.first.c_str() );
 		output.insert( p );
 	      }
+    
+#ifdef USCAUV_PARAM_LOADER_DISALLOW_EMPTY_MAPS
+	  if ( !output.size() )
+	    {
+	      throw std::length_error("Empty parameter map");
+	    }
+#endif
 	
 	    return output;
 	  }
