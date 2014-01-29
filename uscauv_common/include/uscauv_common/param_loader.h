@@ -196,7 +196,7 @@ namespace uscauv
 
     /// Intended to be wrapped in try/catch blocks
     template<typename __ParamType>
-      static __ParamType lookup( XmlRpcValue & base_param, std::string const & param_name) throw( XmlRpc::XmlRpcException )
+      static __ParamType lookup( XmlRpcValue & base_param, std::string const & param_name) 
       {
 	if( !base_param.hasMember( param_name ) )
 	  {
@@ -311,7 +311,7 @@ namespace uscauv
       template<>							\
 	struct XmlRpcValueConverter<__ParamType>			\
       {									\
-	static __ParamType convert( XmlRpcValue & var_name ) throw(std::exception) \
+	static __ParamType convert( XmlRpcValue & var_name )		\
 	{								\
 	  conversion;							\
 	}								\
