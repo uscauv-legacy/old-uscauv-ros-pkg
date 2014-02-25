@@ -50,6 +50,9 @@
 #define brk(X) \
   "[ " << X << " ]"
 
+#define quote(X) \
+  "\"" << X << "\""
+
 /// TODO: Implement safer version of this
 /* namespace uscauv */
 /* { */
