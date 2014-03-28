@@ -1,0 +1,15 @@
+<package>
+  <description brief="dvl_driver">
+
+     dvl_driver
+
+  </description>
+  <author>USC AUV</author>
+  <license>BSD</license>
+  <review status="unreviewed" notes=""/>
+  <url>http://ros.org/wiki/dvl_driver</url>
+  <depend package="rospy"/>
+
+</package>
+
+
