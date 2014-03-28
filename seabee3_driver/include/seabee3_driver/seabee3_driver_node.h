@@ -115,8 +115,9 @@ QUICKDEV_DECLARE_NODE_CLASS( Seabee3Driver )
         motor_dirs_[movement::MotorControllerIDs::STRAFE_BOTTOM_THRUSTER] = -1;
 
         /* _RobotDriver::registerCallback( quickdev::auto_bind( &Seabee3DriverNode::motorValsCB, this ) ); */
-
-	motor_val_sub_ = nh_rel.subscribe("seabee3/motor_vals", 10, &Seabee3DriverNode::motorValsCB, this );
+	
+	ros::NodeHandle nh;
+	motor_val_sub_ = nh.subscribe("seabee3/motor_vals", 10, &Seabee3DriverNode::motorValsCB, this );
 
         _Shooter1ServiceServer::registerCallback( quickdev::auto_bind( &Seabee3DriverNode::shooter1CB, this ) );
         _Shooter2ServiceServer::registerCallback( quickdev::auto_bind( &Seabee3DriverNode::shooter2CB, this ) );
