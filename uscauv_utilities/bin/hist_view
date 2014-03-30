@@ -53,6 +53,10 @@ class hist_viewer:
     self.bins = np.arange(256).reshape(256,1)
     self.gray_supported = ["mono8", "mono16"]
     self.bgr_supported = ["bgr8", "bgr16", "bgra8", "bgra16", "rgb8", "rgb16", "rgba8", "rgba16" ]
+    self.nbins = rospy.get_param('~bins', 256)
+    self.range = rospy.get_param('~range', 255)
+    self.xrange = np.linspace(0, self.range, self.nbins)
+    self.snapshot = rospy.get_param('~snapshot', False)
 
   def callback(self,msg):
     try:
@@ -61,8 +65,9 @@ class hist_viewer:
         elif msg.encoding in self.bgr_supported:
             im = np.asarray(self.bridge.imgmsg_to_cv(msg, "bgr8"))
         else:
-            print 'Unsupported encoding: [ ', msg.encoding, ' ].'
-            return
+          im = np.asarray(self.bridge.imgmsg_to_cv(msg, "passthrough"))
+            # print 'Unsupported encoding: [ ', msg.encoding, ' ].'
+            # return
         
     except CvBridgeError, e:
         print e
@@ -77,14 +82,13 @@ class hist_viewer:
         fig.canvas.set_window_title( self.window_name )
         self.lines = plt.plot([], [], [], [], [], [])
         self.ax = plt.gca()
-        self.xrange = range(256) # Image data is 8-bit -> 256 bins
 
     if len(im.shape) == 2:
         color = [(0, 0, 0)]
     elif im.shape[2] == 3:
         color = [ (1,0,0),(0,1,0),(0,0,1) ]
     for ch, col in enumerate(color):
-        hist_item = cv2.calcHist([im],[ch],None,[256],[0,256])
+        hist_item = cv2.calcHist([im],[ch],None,[self.nbins],[0,self.range])
         self.lines[ch].set_xdata( self.xrange )
         self.lines[ch].set_ydata( hist_item )
         self.lines[ch].set_color( col )
@@ -97,8 +101,9 @@ class hist_viewer:
     
 
 def main(args):
-  hv = hist_viewer()
   rospy.init_node('hist_view', anonymous=True)
+  
+  hv = hist_viewer()
   try:
     rospy.spin()
   except KeyboardInterrupt:
